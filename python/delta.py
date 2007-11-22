@@ -35,13 +35,13 @@ class Delta_jmp(Delta):
 		d.addvals(values_l=v_l)
 
 def delta_parse(f):
-	from delta_parse2 import SpmDelta_parser
+	from delta_parse import SpmDelta_parser
 	ll = Delta()
 	parser = SpmDelta_parser(ll)
 	return parser.parse(f, seq_limit=8)
 
 def delta_jmp_parse(f):
-	from delta_parse2 import SpmDelta_parser
+	from delta_parse import SpmDelta_parser
 	ll = Delta_jmp()
 	parser = SpmDelta_parser(ll)
 	return parser.parse(f, seq_limit=8)

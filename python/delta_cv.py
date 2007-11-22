@@ -76,7 +76,7 @@ class Delta_cv(object):
 		return delta_cv
 
 def delta_cv_parse(f):
-	from delta_parse2 import SpmDelta_parser
+	from delta_parse import SpmDelta_parser
 	ll = Delta_cv()
 	parser = SpmDelta_parser(ll)
 	return parser.parse(f, seq_limit=8, float_str=True)

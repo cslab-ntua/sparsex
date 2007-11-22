@@ -195,7 +195,7 @@ class Delta_zi(object):
 	def get_size(self):
 		pass
 
-from delta_parse2 import SpmDelta_parser
+from delta_parse import SpmDelta_parser
 def do_sizes(f):
 	ll = Delta_size(
 		keepers = (Delta_jmp(), Delta_cv(), Delta_ci(), Delta_cvi())
