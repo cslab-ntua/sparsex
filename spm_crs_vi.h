@@ -2,68 +2,53 @@
 #define __SPM_CRS_H__
 
 #include <inttypes.h>
-
-#define SPM_CRS_VI_VIDX_TYPE uint8_t
-
-typedef struct {
-	double                 *values;
-	uint64_t               *col_ind, *row_ptr;
-	SPM_CRS_VI_VIDX_TYPE   *val_ind;
-	uint64_t               nz, nrows, ncols;
-} spm_crsvi64_double_t;
-
-typedef struct {
-	float                  *values;
-	uint64_t               *col_ind, *row_ptr;
-	SPM_CRS_VI_VIDX_TYPE   *val_ind;
-	uint64_t               nz, nrows, ncols;
-} spm_crsvi64_float_t;
-
-
-typedef struct {
-	double                 *values;
-	uint32_t               *col_ind, *row_ptr;
-	SPM_CRS_VI_VIDX_TYPE   *val_ind;
-	uint64_t               nz, nrows, ncols;
-} spm_crsvi32_double_t;
-
-typedef struct {
-	float                  *values;
-	uint32_t               *col_ind, *row_ptr;
-	SPM_CRS_VI_VIDX_TYPE   *val_ind;
-	uint64_t               nz, nrows, ncols;
-} spm_crsvi32_float_t;
-
-spm_crsvi32_double_t *
-spm_crsvi32_double_init_mmf(char *mmf_file, 
-                          unsigned long *rows_nr, unsigned long *cols_nr,
-                          unsigned long *nz_nr);
-
-spm_crsvi32_float_t *
-spm_crsvi32_float_init_mmf(char *mmf_file, 
-                         unsigned long *rows_nr, unsigned long *cols_nr,
-                         unsigned long *nz_nr);
-
-spm_crsvi64_double_t *
-spm_crsvi64_double_init_mmf(char *mmf_file, 
-                          unsigned long *rows_nr, unsigned long *cols_nr,
-			  unsigned long *nz_nr);
-
-spm_crsvi64_float_t *
-spm_crsvi64_float_init_mmf(char *mmf_file, 
-                         unsigned long *rows_nr, unsigned long *cols_nr,
-                         unsigned long *nz_nr);
-
-void spm_crsvi32_double_destroy(spm_crsvi32_double_t *crsvi);
-void spm_crsvi32_float_destroy(spm_crsvi32_float_t *crsvi);
-void spm_crsvi64_double_destroy(spm_crsvi64_double_t *crsvi);
-void spm_crsvi64_float_destroy(spm_crsvi64_float_t *crsvi);
-
-
 #include "spmv_method.h"
-spmv_double_fn_t spm_crsvi32_double_multiply;
-spmv_double_fn_t spm_crsvi64_double_multiply;
-spmv_float_fn_t spm_crsvi32_float_multiply;
-spmv_float_fn_t spm_crsvi64_float_multiply;
+
+//#define SPM_CRS_VI_VIDX_TYPE uint8_t
+
+#define UINT_TYPE(bits) uint ## bits ## _t
+#define _NAME(val_type, ci_bits, vi_bits, name) \
+	spm_crs ## ci_bits ## _vi ## vi_bits ## _ ## val_type ## name
+
+#define DECLARE_CRS_VI(val_type, ci_bits, vi_bits)        \
+	typedef struct {                                  \
+		val_type            *values;              \
+		UINT_TYPE(ci_bits)  *col_ind, *row_ptr;   \
+		UINT_TYPE(vi_bits)  *val_ind;             \
+		uint64_t            nz, nrows, ncols;     \
+	} _NAME(val_type, ci_bits, vi_bits, _t);          \
+	                                                  \
+	_NAME(val_type, ci_bits, vi_bits, _t) *           \
+	_NAME(val_type, ci_bits, vi_bits, _init_mmf)(     \
+		char *mmf_file,                           \
+		unsigned long *rows_nr,                   \
+		unsigned long *cols_nr,                   \
+		unsigned long *nz_nr                      \
+	);                                                \
+	                                                  \
+	void                                              \
+	_NAME(val_type, ci_bits, vi_bits, _destroy)(      \
+		_NAME(val_type, ci_bits, vi_bits, _t) *m  \
+	);                                                \
+	                                                  \
+	spmv_ ## val_type ## _fn_t                        \
+	_NAME(val_type, ci_bits, vi_bits, _multiply);     \
+
+
+DECLARE_CRS_VI(double, 32, 8)
+DECLARE_CRS_VI(double, 32, 16)
+DECLARE_CRS_VI(double, 32, 32)
+
+DECLARE_CRS_VI(float, 32, 8)
+DECLARE_CRS_VI(float, 32, 16)
+DECLARE_CRS_VI(float, 32, 32)
+
+DECLARE_CRS_VI(double, 64, 8)
+DECLARE_CRS_VI(double, 64, 16)
+DECLARE_CRS_VI(double, 64, 32)
+
+DECLARE_CRS_VI(float, 64, 8)
+DECLARE_CRS_VI(float, 64, 16)
+DECLARE_CRS_VI(float, 64, 32)
 
 #endif

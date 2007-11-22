@@ -47,11 +47,19 @@ spm_crs.o:  spm_crs.c spm_crs.h
 	$(LD) -i spm_crs{64,32}_{double,float}.o -o spm_crs.o
 
 spm_crsvi.o:  spm_crs_vi.c spm_crs_vi.h
-	$(COMPILE) -DSPM_CRS_VI_BITS=64 -DELEM_TYPE=float  -o spm_crsvi64_float.o -c $<
-	$(COMPILE) -DSPM_CRS_VI_BITS=32 -DELEM_TYPE=float  -o spm_crsvi32_float.o -c $<
-	$(COMPILE) -DSPM_CRS_VI_BITS=64 -DELEM_TYPE=double -o spm_crsvi64_double.o -c $<
-	$(COMPILE) -DSPM_CRS_VI_BITS=32 -DELEM_TYPE=double -o spm_crsvi32_double.o -c $<
-	$(LD) -i spm_crsvi{64,32}_{double,float}.o -o spm_crsvi.o
+	for t in double float; do                       \
+	   for ci in 32 64; do                          \
+	      for vi in 32 16 8; do                     \
+	         $(COMPILE)                             \
+		      -DELEM_TYPE=$$t                   \
+		      -DSPM_CRSVI_CI_BITS=$$ci          \
+		      -DSPM_CRSVI_VI_BITS=$$vi          \
+		      -o spm_crs$${ci}_vi$${vi}_$${t}.o \
+		      -c $<;                            \
+	      done                                      \
+	   done                                         \
+	done
+	$(LD) -i spm_crs{64,32}_vi{32,16,8}_{double,float}.o -o spm_crsvi.o
 
 spmv_loops.o: spmv_loops.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_float.o
@@ -100,7 +108,7 @@ vals_idx: vals_idx.c
 %.o: %.c
 	$(COMPILE) -c $<
 %.i: %.c
-	$(COMPILE) -E $< > $@
+	$(COMPILE) -E $< | indent -kr > $@
 
 clean:
 	rm -rf *.s *.o *.i spmv_crs spmv_crsvi
