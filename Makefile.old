@@ -1,0 +1,83 @@
+.PHONY: all clean
+
+#all: spmv spmv-noxmiss dmv vxv spm_crsr_test
+all: spmv dmv vxv spmv_check spmv_lib.o
+
+CACHE_BYTES ?= $(shell cpu/cache_bytes.sh)
+CPU         ?= $(shell cpu/cpu_info.sh)
+MHZ         ?= $(shell cpu/cpu_mhz.sh)
+CL_BYTES    ?= $(shell cpu/cl_bytes.sh)
+GCC         ?= gcc-4.2
+CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -Wno-unused-variable
+CFLAGS      += -g -fPIC
+#CFLAGS      += -funroll-all-loops #-march=nocona
+DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
+DEFS        += -DCPU_$(CPU) -DCPU_MHZ=$(MHZ)
+DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
+LIBS         = -lm
+INC          = -Iprfcnt -Idebug
+UR_TARGETS   = dmv.c
+FPIC_TARGETS = dynarray.c
+spmv_deps    = matrix.o method.o spm_crsr.o beanbag.o  mmf.o spm_parse.o spm_delta.o spm_crs.o spm_delta_vec.o #spmv_ur.o
+spmv_lib_deps = matrix.o method.o spm_crsr.o beanbag.o  mmf.o spm_parse.o spm_delta.o spm_crs.o spm_delta_vec.o #spmv_ur.o
+
+
+
+$(patsubst %.c,%.s,$(UR_TARGETS)): %.s : %.c
+	$(GCC) $(CFLAGS) -funroll-loops $(INC) $(DEFS) -fverbose-asm -S $<
+
+$(patsubst %.c,%.o,$(UR_TARGETS)): %.o : %.c
+	$(GCC) $(CFLAGS) -funroll-loops $(INC) $(DEFS) -c $<
+
+#$(patsubst %.c,%.o,$(FPIC_TARGETS)): %.o : %.c
+#	$(GCC) $(CFLAGS) -fPIC $(INC) $(DEFS) -c $<
+
+spm_crsr_test.o: spm_crsr.c
+	$(GCC) $(CFLAGS) $(INC) $(DEFS) -DSPM_CRSR_TEST -c $< -o $@
+
+spmv_check.o: spmv.c
+	$(GCC) $(CFLAGS) $(INC) $(DEFS) -DLOOPS=1 -DSPMV_CHECK -c $< -o $@
+
+spm_crs32.o: spm_crs.c
+	$(GCC) $(CFLAGS) $(INC) $(DEFS) -DSPM_CRS_BITS=32 -c $< -o $@
+
+spm_crs32.i: spm_crs.c
+	 $(GCC) $(INC) $(DEFS) -DSPM_CRS_BITS=32 -E $< | indent -kr > $@
+
+spm_crs64.o: spm_crs.c
+	$(GCC) $(CFLAGS) $(INC) $(DEFS) -DSPM_CRS_BITS=64 -c $< -o $@
+
+spm_crs.o: spm_crs64.o spm_crs32.o
+	$(LD) -i $^ -o $@
+
+%.s: %.c
+	$(GCC) $(CFLAGS) $(INC) $(DEFS) -S $<
+%.o: %.c
+	$(GCC) $(CFLAGS) $(INC) $(DEFS) -c $<
+%.i: %.c
+	$(GCC) $(INC) $(DEFS) -E $< | indent -kr > $@
+
+spm_crsr_test: spm_crsr_test.o method.o beanbag.o matrix.o mmf.o spm_parse.o
+	$(GCC) $^ $(LIBS) -o spm_crsr_test
+
+spmv: $(spmv_deps) spmv.o
+	$(GCC) $^ $(LIBS) -o spmv
+
+spmv_lib.o : $(spmv_lib_deps) spmv.o dynarray.o
+	$(LD) -i $^ -o $@
+
+spmv_check: $(spmv_deps) spmv_check.o
+	$(GCC) $^ $(LIBS) -o spmv_check
+
+
+dmv: matrix.o dmv.o 
+	$(GCC) $^ $(LIBS) -o dmv
+
+vxv: matrix.o vxv.o
+	$(GCC) $^ $(LIBS) -o vxv
+
+spmv-noxmiss: matrix.o spmv-noxmiss.o
+	$(GCC) $^ $(LIBS) -o spmv-noxmiss
+
+clean:
+	rm -rf *.s *.o *.i spmv spmv_check spmv-noxmiss vxv dmv
