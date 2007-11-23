@@ -33,10 +33,11 @@
 #endif
 
 #include "vector.h"
+#include "mmf.h"
 #include "dynarray.h"
 #include "ext_prog.h"
 #include "spm_crs_vi.h"
-#include "mmf.h"
+#include "spmv_method.h"
 
 #define _CON7(a,b,c,d,e,f,g) a ## b ## c ## d ## e ## f ## g
 #define CON7(a,b,c,d,e,f,g) _CON7(a,b,c,d,e,f,g)
@@ -237,3 +238,10 @@ void SPM_CRS_VI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		__asm__ __volatile__ ("# loop end\n\t");
 	}
 }
+
+#define XSPMV_METH_INIT(x,y,z) SPMV_METH_INIT(x,y,z)
+XSPMV_METH_INIT(
+	SPM_CRS_VI_NAME(_multiply),
+	SPM_CRS_VI_NAME(_init_mmf),
+	sizeof(ELEM_TYPE)
+)
