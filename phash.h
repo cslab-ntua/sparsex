@@ -38,9 +38,16 @@ struct phash {
 struct phash *phash_new(ul_t minsize, ul_t defval);
 void phash_free(struct phash *phash);
 ul_t phash_grow(struct phash *phash);
-ul_t phash_shrink(struct phash *phash);
+//ul_t phash_shrink(struct phash *phash);
 ul_t phash_insert(struct phash *phash, ul_t key, ul_t val);
-ul_t phash_delete(struct phash *phash, ul_t key);
-ul_t phash_lookup(struct phash *phash, ul_t key);
+//ul_t phash_delete(struct phash *phash, ul_t key);
+int phash_lookup(struct phash *phash, ul_t key, ul_t *val);
+
+static inline ul_t phash_elements(struct phash *phash)
+{
+	return (phash->used - phash->dummies);
+}
+
+typedef struct phash phash_t;
 
 #endif
