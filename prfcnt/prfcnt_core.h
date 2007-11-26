@@ -244,7 +244,7 @@ static prfcnt_event_t __evnts[] = {
  */
 static const int __evnts_selected[] = {
 	EVENT_INSTR_RETIRED,
-	EVENT_RESOURCE_STALL,
+	EVENT_BR_RETIRED,
 };
 
 /*
