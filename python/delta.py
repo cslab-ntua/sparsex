@@ -3,7 +3,7 @@ import pyspm
 from delta_helpers import delta_sp, delta_sp_jump, delta_de
 
 class Delta(object):
-	def __init__(self, type=pyspm.TYPE_DOUBLE, seq_limit=8):
+	def __init__(self, type=pyspm.TYPE_DOUBLE):
 		self.delta = pyspm.delta(type=type)
 		self.delta.prepare()
 
@@ -40,11 +40,11 @@ def delta_parse(f):
 	parser = SpmDelta_parser(ll)
 	return parser.parse(f, seq_limit=8)
 
-def delta_jmp_parse(f):
+def delta_jmp_parse(f, seq_limit=8):
 	from delta_parse import SpmDelta_parser
 	ll = Delta_jmp()
 	parser = SpmDelta_parser(ll)
-	return parser.parse(f, seq_limit=8)
+	return parser.parse(f, seq_limit=seq_limit)
 
 def delta_get_size(d):
 	props = d.getprops()
@@ -53,8 +53,10 @@ def delta_get_size(d):
 if __name__ == '__main__':
 	from sys import argv
 	import os
+	seq_limit = os.getenv("SPM_DELTA_SEQ_LIMIT")
+	seq_limit = int(seq_limit) if seq_limit is not None else 8
 	for f in argv[1:]:
-		d = delta_jmp_parse(f)
+		d = delta_jmp_parse(f, seq_limit)
 		size = delta_get_size(d)
 		time, flops = d.bench_jmp()
-		print "pyspm_delta_jmp %s %d %s %s" % (os.path.basename(f), size, time, flops)
+		print "pyspm_delta_jmp.%s %s %d %s %s" % (seq_limit, os.path.basename(f), size, time, flops)
