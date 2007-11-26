@@ -538,6 +538,10 @@ pyspm_delta_getprops(pyspm_delta_t *self)
 	PyDict_SetItemString(d, "nrows", item);
 	Py_DECREF(item);
 
+	item = PyLong_FromUnsignedLong(self->ctl_size);
+	PyDict_SetItemString(d, "ctl_size", item);
+	Py_DECREF(item);
+
 	return d;
 }
 
@@ -627,8 +631,7 @@ pyspm_delta_bench(pyspm_delta_t *self, PyObject *args)
 		                             &self->delta, loops, self->delta.ncols);
 	}
 	
-	ret = (double)(loops*self->delta.nnz*2)/(1000*1000*ret);
-	return PyFloat_FromDouble(ret);
+	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
 }
 
 static PyObject *
@@ -649,8 +652,7 @@ pyspm_delta_jmp_bench(pyspm_delta_t *self, PyObject *args)
 		                             &self->delta, loops, self->delta.ncols);
 	}
 	
-	ret = (double)(loops*self->delta.nnz*2)/(1000*1000*ret);
-	return PyFloat_FromDouble(ret);
+	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
 }
 
 /*

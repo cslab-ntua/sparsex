@@ -46,10 +46,15 @@ def delta_jmp_parse(f):
 	parser = SpmDelta_parser(ll)
 	return parser.parse(f, seq_limit=8)
 
+def delta_get_size(d):
+	props = d.getprops()
+	return props['ctl_size'] + props['nnz']*8
+
 if __name__ == '__main__':
 	from sys import argv
 	import os
 	for f in argv[1:]:
 		d = delta_jmp_parse(f)
-		flops = d.bench_jmp()
-		print "%s pyspm_delta_jmp %s" % (os.path.basename(f), flops)
+		size = delta_get_size(d)
+		time, flops = d.bench_jmp()
+		print "pyspm_delta_jmp %s %d %s %s" % (os.path.basename(f), size, time, flops)

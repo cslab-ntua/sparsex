@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <libgen.h>
 
 #include "spm_crs.h"
 #include "spmv_loops.h"
@@ -24,7 +25,7 @@ int main(int argc, char **argv)
 	flops = (double)(loops*nz_nr*2)/(1000*1000*time);
 	size = nz_nr*(8 + 4) + cols_nr*4;
 
-	printf("spm_crs32_double %s %lu %lf %lf\n", argv[1], size, time, flops);
+	printf("spm_crs32_double %s %lu %lf %lf\n", basename(argv[1]), size, time, flops);
 	
 	return 0;
 }

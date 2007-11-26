@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <libgen.h>
 
 #include "method.h"
 #include "spm_crs_vi.h"
@@ -56,7 +57,7 @@ int main(int argc, char **argv)
 	time = spmv_double_bench_loop(m->fn, crsvi,loops, cols_nr);
 	flops = (double)(loops*nz_nr*2)/(1000*1000*time);
 
-	printf("%s %s %lu %lf %lf\n", method_str, argv[1], spm_size(crsvi), time, flops);
+	printf("%s %s %lu %lf %lf\n", method_str, basename(argv[1]), spm_size(crsvi), time, flops);
 	
 	return 0;
 }
