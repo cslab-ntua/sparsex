@@ -47,7 +47,7 @@ class SpmDelta_state(object):
 class SpmDelta_parser(object):
 	def __init__(self, ll, **kwargs):
 		 self.ll = ll
-		 self.progress = kwargs.get('progess', True)
+		 self.progress = kwargs.get('progess', False)
 
 		 self._rows = 0
 	
