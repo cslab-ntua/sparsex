@@ -15,7 +15,7 @@
 		val_type            *values;              \
 		UINT_TYPE(ci_bits)  *col_ind, *row_ptr;   \
 		UINT_TYPE(vi_bits)  *val_ind;             \
-		uint64_t            nz, nrows, ncols;     \
+		uint64_t            nz, nrows, ncols, nv; \
 	} _NAME(val_type, ci_bits, vi_bits, _t);          \
 	                                                  \
 	_NAME(val_type, ci_bits, vi_bits, _t) *           \

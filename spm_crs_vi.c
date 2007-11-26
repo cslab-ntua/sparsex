@@ -71,6 +71,7 @@ static void crsvi_initialize(crs_vi_state_t **crs_vi_state_ptr,
 	crsvi->ncols = cols_nr;
 	crsvi->nrows = rows_nr;
 	crsvi->nz = 0;
+	crsvi->nv = 0;
 
 	crsvi_st->crs_vi = crsvi;
 
@@ -94,6 +95,7 @@ static void *crsvi_finalize(crs_vi_state_t *crsvi_st)
 	SPM_CRSVI_CI_TYPE *rowptr = dynarray_alloc(crsvi_st->sp_rowptr);
 
 	assert(crs_vi->nz == dynarray_size(crsvi_st->sp_valind));
+	assert(crs_vi->nv == dynarray_size(crsvi_st->sp_values));
 	*rowptr = crs_vi->nz;
 
 	crs_vi->values = dynarray_destroy(crsvi_st->sp_values);
@@ -122,6 +124,7 @@ static void add_val(crs_vi_state_t *crsvi_st, double val)
 		assert(idx == dynarray_size(crsvi_st->sp_values));
 		ELEM_TYPE *v = dynarray_alloc(crsvi_st->sp_values);
 		*v = (ELEM_TYPE)val;
+		crsvi_st->crs_vi->nv++;
 	}
 
 	SPM_CRSVI_VI_TYPE *val_idx = dynarray_alloc(crsvi_st->sp_valind);
@@ -206,6 +209,16 @@ void SPM_CRS_VI_NAME(_destroy)(SPM_CRSVI_TYPE *crs_vi)
 	free(crs_vi);
 }
 
+unsigned long SPM_CRS_VI_NAME(_size)(SPM_CRSVI_TYPE *crsvi)
+{
+	unsigned long ret;
+	ret  = crsvi->nv*sizeof(ELEM_TYPE);
+	ret += crsvi->nz*(sizeof(SPM_CRSVI_VI_TYPE) + sizeof(SPM_CRSVI_CI_TYPE));
+	ret += crsvi->ncols*sizeof(SPM_CRSVI_CI_TYPE);
+
+	return ret;
+}
+
 void SPM_CRS_VI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	SPM_CRSVI_TYPE *crs_vi = (SPM_CRSVI_TYPE *)spm;
@@ -230,9 +243,10 @@ void SPM_CRS_VI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	}
 }
 
-#define XSPMV_METH_INIT(x,y,z) SPMV_METH_INIT(x,y,z)
+#define XSPMV_METH_INIT(x,y,z,w) SPMV_METH_INIT(x,y,z,w)
 XSPMV_METH_INIT(
 	SPM_CRS_VI_NAME(_multiply),
 	SPM_CRS_VI_NAME(_init_mmf),
+	SPM_CRS_VI_NAME(_size),
 	sizeof(ELEM_TYPE)
 )

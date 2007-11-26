@@ -41,6 +41,7 @@ int main(int argc, char **argv)
 	method_t *m = method_get(method_str);
 	spmv_method_t *spmv_m = m->data;
 	spmv_load_fn_t *mmf_init = spmv_m->mmf_init;
+	spmv_size_fn_t *spm_size = spmv_m->size;
 	void *crsvi;
 	unsigned long rows_nr, cols_nr, nz_nr, loops;
 	double time=0, flops;
@@ -55,7 +56,7 @@ int main(int argc, char **argv)
 	time = spmv_double_bench_loop(m->fn, crsvi,loops, cols_nr);
 	flops = (double)(loops*nz_nr*2)/(1000*1000*time);
 
-	printf("%s: %lf %lf\n", method_str, time, flops);
+	printf("%s %s %lu %lf %lf\n", method_str, argv[1], spm_size(crsvi), time, flops);
 	
 	return 0;
 }
