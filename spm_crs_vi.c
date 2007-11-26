@@ -1,10 +1,10 @@
 #include <stdlib.h>
-#include <emmintrin.h>
 #include <inttypes.h>
-#include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <assert.h>
+#include <time.h>
 	
 #ifndef SPM_CRSVI_CI_BITS
 #define SPM_CRSVI_CI_BITS 32
@@ -38,6 +38,7 @@
 #include "ext_prog.h"
 #include "spm_crs_vi.h"
 #include "spmv_method.h"
+#include "phash.h"
 
 #define _CON7(a,b,c,d,e,f,g) a ## b ## c ## d ## e ## f ## g
 #define CON7(a,b,c,d,e,f,g) _CON7(a,b,c,d,e,f,g)
@@ -45,14 +46,10 @@
 	CON7(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, name)
 #define SPM_CRSVI_TYPE SPM_CRS_VI_NAME(_t)
 
-#ifndef VALS_EXTP
-#define VALS_EXTP "./python/vals_idx.py"
-#endif
-
 struct crs_vi_state_s {
 	SPM_CRSVI_TYPE *crs_vi;
 	dynarray_t   *sp_values, *sp_colind, *sp_rowptr, *sp_valind;
-	extp_t       *vals_extp;
+	phash_t      *vhash;
 	FILE         *vals_in, *vals_out;
 };
 typedef struct crs_vi_state_s crs_vi_state_t;
@@ -82,9 +79,9 @@ static void crsvi_initialize(crs_vi_state_t **crs_vi_state_ptr,
 	crsvi_st->sp_colind = dynarray_create(sizeof(SPM_CRSVI_CI_TYPE), nz_nr);
 	crsvi_st->sp_rowptr = dynarray_create(sizeof(SPM_CRSVI_CI_TYPE), rows_nr);
 	
-	crsvi_st->vals_extp = extp_open(VALS_EXTP, &crsvi_st->vals_in, &crsvi_st->vals_out);
-	//fcntl(fileno(crsvi_st->vals_in), F_SETFL, O_NONBLOCK);
-	//fcntl(fileno(crsvi_st->vals_out), F_SETFL, O_NONBLOCK);
+	/* if this fails we need to make phash code more generic */
+	assert(sizeof(double) == sizeof(unsigned long));
+	crsvi_st->vhash = phash_new(12, 0);
 
 	SPM_CRSVI_CI_TYPE *rowptr = dynarray_alloc(crsvi_st->sp_rowptr);
 	*rowptr = 0;
@@ -104,7 +101,7 @@ static void *crsvi_finalize(crs_vi_state_t *crsvi_st)
 	crs_vi->col_ind = dynarray_destroy(crsvi_st->sp_colind);
 	crs_vi->row_ptr = dynarray_destroy(crsvi_st->sp_rowptr);
 
-	extp_close(crsvi_st->vals_extp, crsvi_st->vals_in, crsvi_st->vals_out);
+	phash_free(crsvi_st->vhash);
 
 	free(crsvi_st);
 
@@ -112,42 +109,19 @@ static void *crsvi_finalize(crs_vi_state_t *crsvi_st)
 }
 
 #define BUFLEN 1024
-static void add_val(crs_vi_state_t *crsvi_st, char *val_str)
+static void add_val(crs_vi_state_t *crsvi_st, double val)
 {
-	static char buff[BUFLEN], *s;
+	static unsigned long key;
 	unsigned long idx;
-	int err;
 	
-	err = fputs(val_str, crsvi_st->vals_out);
-	if (err == EOF){
-		fprintf(stderr, "cant write into vals_out\n");
-		exit(1);
-	}
-	fflush(crsvi_st->vals_out);
-	
-	s = fgets(buff, BUFLEN-1, crsvi_st->vals_in);
-	if (s == NULL){
-		fprintf(stderr, "reding from extp: got nothing\n");
-		exit(1);
-	}
-
-	if (sscanf(s, "%lu", &idx) != 1){
-		fprintf(stderr, "sscanf failed\n");
-		exit(1);
-	}
-	
-	if (idx >= dynarray_size(crsvi_st->sp_values)){
-		double _v;
-		char *endptr;
-
+	memcpy(&key, &val, sizeof(unsigned long));
+	int exists = phash_lookup(crsvi_st->vhash, key, &idx);
+	if (!exists){
+		idx = phash_elements(crsvi_st->vhash);
+		phash_insert(crsvi_st->vhash, key, idx);
 		assert(idx == dynarray_size(crsvi_st->sp_values));
 		ELEM_TYPE *v = dynarray_alloc(crsvi_st->sp_values);
-		_v = strtod(val_str, &endptr);
-		if (*endptr != '\n'){
-			fprintf(stderr, "error in strtod\n");
-			exit(1);
-		}
-		*v = (ELEM_TYPE)_v;
+		*v = (ELEM_TYPE)val;
 	}
 
 	SPM_CRSVI_VI_TYPE *val_idx = dynarray_alloc(crsvi_st->sp_valind);
@@ -160,8 +134,11 @@ SPM_CRSVI_TYPE *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file,
 {
 	crs_vi_state_t *crsvi_st;
 	FILE *f;
-	char *val=NULL;
+	double val;
 	unsigned long row, col, prev_row=0, i;
+	time_t t0, tn;
+	char *report;
+	unsigned long report_rows;
 
 	f = mmf_init(mmf_file, rows_nr, cols_nr, nz_nr);
 
@@ -172,15 +149,29 @@ SPM_CRSVI_TYPE *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file,
 	*rowptr = 0;
 	prev_row = 0;
 
+	report = getenv("SPM_CRSVI_REPORT");
+	if (report != NULL){
+		report_rows = atol(report);
+		if (!report_rows) 
+			report_rows = 1024;
+	} else {
+		report_rows = 0;
+	}
+
 	unsigned long empty_rows;
-	while (mmf_get_next_vstr(f, &row, &col, &val)){
+	t0 = time(NULL);
+	while (mmf_get_next(f, &row, &col, &val)){
 		crsvi->nz++;
 		
 		/* row indices */
 		if (prev_row < row){
-			#if 0
-			if (row % 1024 == 0){
-				printf("row:%lu\n", row);
+			#if 1
+			if (report_rows && row % report_rows == 0){
+				tn = time(NULL);
+				double ratio = (double)row/(tn - t0);
+				unsigned long remaining = *rows_nr - row;
+				printf("%s [ %lf m] remaining: %lu rows/sec:%lf ETA:%lf m\n", 
+				        mmf_file, (double)(tn-t0)/60.0, remaining, ratio, (double)remaining/(ratio*60.0));
 			}
 			#endif
 			empty_rows = row -prev_row -1;

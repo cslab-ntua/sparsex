@@ -23,7 +23,7 @@ PYLIBS       = $(shell python2.5-config --ldflags)
 PYCFLAGS     = $(shell python2.5-config --cflags) 
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = ext_prog.o vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o  
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -80,6 +80,9 @@ libspmv.o: $(libspmv_deps)
 	$(LD) -i $(libspmv_deps) -o libspmv.o
 
 dynarray.o: dynarray.c dynarray.h
+	$(COMPILE) -c $< -o $@
+
+phash.o: phash.c phash.h
 	$(COMPILE) -c $< -o $@
 
 ext_prog.o: ext_prog.c ext_prog.h
