@@ -8,7 +8,7 @@
 #include "tsc.h"
 #include "prfcnt.h"
 
-#define SPMV_PRFCNT
+//#define SPMV_PRFCNT
 
 float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix, 
                              unsigned long loops, unsigned long cols_nr)
