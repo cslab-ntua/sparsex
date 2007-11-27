@@ -59,4 +59,4 @@ if __name__ == '__main__':
 		d = delta_jmp_parse(f, seq_limit)
 		size = delta_get_size(d)
 		time, flops = d.bench_jmp()
-		print "pyspm_delta_jmp.%s %s %d %s %s" % (seq_limit, os.path.basename(f), size, time, flops)
+		print "%s pyspm_delta_jmp.%s %d %s %s" % (os.path.basename(f), seq_limit, size, time, flops)

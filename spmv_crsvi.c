@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 	time = spmv_double_bench_loop(m->fn, crsvi,loops, cols_nr);
 	flops = (double)(loops*nz_nr*2)/(1000*1000*time);
 
-	printf("%s %s %lu %lf %lf\n", method_str, basename(argv[1]), spm_size(crsvi), time, flops);
+	printf("%s %s %lu %lf %lf\n", basename(argv[1]), method_str, spm_size(crsvi), time, flops);
 	
 	return 0;
 }

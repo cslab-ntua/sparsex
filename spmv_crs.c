@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 	flops = (double)(loops*nz_nr*2)/(1000*1000*time);
 	size = nz_nr*(8 + 4) + cols_nr*4;
 
-	printf("spm_crs32_double %s %lu %lf %lf\n", basename(argv[1]), size, time, flops);
+	printf("%s spm_crs32_double %lu %lf %lf\n", basename(argv[1]), size, time, flops);
 	
 	return 0;
 }
