@@ -84,8 +84,6 @@ static void crsvi_initialize(crs_vi_state_t **crs_vi_state_ptr,
 	assert(sizeof(double) == sizeof(unsigned long));
 	crsvi_st->vhash = phash_new(12, 0);
 
-	SPM_CRSVI_CI_TYPE *rowptr = dynarray_alloc(crsvi_st->sp_rowptr);
-	*rowptr = 0;
 	*crs_vi_state_ptr = crsvi_st;
 }
 
@@ -182,7 +180,7 @@ SPM_CRSVI_TYPE *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file,
 			for (i=0; i<empty_rows; i++){
 				*(rowptr+i) = *(rowptr+i-1);
 			}
-			*(rowptr+i) = crsvi->nz;
+			*(rowptr+i) = crsvi->nz - 1;
 			prev_row = row;
 		}
 
@@ -237,6 +235,7 @@ void SPM_CRS_VI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		__asm__ __volatile__ ("# loop start\n\t");
 		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) { 
 			yr += (values[val_ind[j]] * x[col_ind[j]]);
+			//printf("i:%lu j:%lu val_ind:%ld col_ind:%lu v:%lf x:%lf yr:%lf\n", i, j, (long)val_ind[j], (unsigned long)col_ind[j], values[val_ind[j]], x[col_ind[j]], yr);
 		}
 		y[i] = yr;
 		__asm__ __volatile__ ("# loop end\n\t");
