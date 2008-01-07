@@ -1,5 +1,5 @@
-#ifndef __SPM_CRS_H__
-#define __SPM_CRS_H__
+#ifndef __SPM_CRS_VI_H__
+#define __SPM_CRS_VI_H__
 
 #include <inttypes.h>
 #include "spmv_method.h"

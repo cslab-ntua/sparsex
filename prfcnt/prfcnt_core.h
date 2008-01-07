@@ -243,8 +243,8 @@ static prfcnt_event_t __evnts[] = {
  * intruction)
  */
 static const int __evnts_selected[] = {
+	EVENT_FP_COMP_OPS,
 	EVENT_INSTR_RETIRED,
-	EVENT_BR_RETIRED,
 };
 
 /*

@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv_crs spmv_crsvi spmv_crs64
+all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
@@ -91,6 +91,9 @@ ext_prog.o: ext_prog.c ext_prog.h
 spmv_crsvi: libspmv.o dynarray.o spmv_crsvi.o
 	$(COMPILE) libspmv.o dynarray.o spmv_crsvi.o -o $@
 
+spmv_crsvi_check: libspmv.o dynarray.o spmv_crsvi_check.o
+	$(COMPILE) libspmv.o dynarray.o spmv_crsvi_check.o -o $@
+
 spmv_crs: libspmv.o dynarray.o spmv_crs.o
 	$(COMPILE) libspmv.o dynarray.o spmv_crs.o -o $@
 
@@ -117,4 +120,4 @@ vals_idx: vals_idx.c
 	$(COMPILE) -E $< | indent -kr > $@
 
 clean:
-	rm -rf *.s *.o *.i spmv_crs spmv_crs64 spmv_crsvi
+	rm -rf *.s *.o *.i spmv_crs spmv_crs64 spmv_crsvi spmv_crsvi_check
