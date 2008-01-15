@@ -155,6 +155,9 @@ void SPMDELTA_NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *ou
 			}
 			break;
 
+			#define ALIGN(buf,a) (void *) (((unsigned long) (buf) + (a-1)) & ~(a-1))
+			#define ALIGN_UC(align) (uc = ALIGN(uc, align))
+
 			case SPM_DELTA_FL_UNIT_SP_UC:
 			//printf("\t[SP_UC] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
 			yr += (*v++)*(*myx);
@@ -167,6 +170,7 @@ void SPMDELTA_NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *ou
 			
 			case SPM_DELTA_FL_UNIT_SP_US:
 			//printf("\t[SP_US] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
+			ALIGN_UC(2);
 			yr += (*v++)*(*myx);
 			for (i=1; i<size; i++){
 				myx += us_get(uc);
@@ -176,6 +180,7 @@ void SPMDELTA_NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *ou
 			break;
 
 			case SPM_DELTA_FL_UNIT_SP_UI:
+			ALIGN_UC(4);
 			//printf("\t[SP_UI] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
 			yr += (*v++) * (*myx);
 			for (i=1; i<size; i++){

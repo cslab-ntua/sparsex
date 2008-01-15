@@ -355,7 +355,7 @@ pyspm_delta_sp_add_cols(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 		ci_deltas_from[i] = ci_delta;
 	}
 
-	void *ci_deltas_to = dynarray_alloc_nr(self->ctl_da,size*ci_size);
+	void *ci_deltas_to = dynarray_alloc_nr_aligned(self->ctl_da,size*ci_size, ci_size);
 	spm_delta_cisize_copy(ci_deltas_to, ci_deltas_from, size, ci_cisize);
 
 	free(ci_deltas_from);

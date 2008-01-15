@@ -88,6 +88,24 @@ void *dynarray_alloc_nr(struct dynarray *da, unsigned long nr)
 	return ret;
 }
 
+void *dynarray_alloc_nr_aligned(struct dynarray *da,
+                                unsigned long nr, unsigned long align)
+{
+	void *ret;
+	int nr_padd;
+
+	nr_padd = (align - (da->elems_idx  & (align-1))) & (align -1);
+	while (da->elems_idx + nr + nr_padd >= da->elems_nr){
+		dynarray_expand(da);
+	}
+
+	da->elems_idx += nr_padd;
+	ret = dynarray_get(da, da->elems_idx);
+	da->elems_idx += nr;
+
+	return ret;
+}
+
 void dynarray_dealloc_nr(struct dynarray *da, unsigned long nr)
 {
 	da->elems_idx -= nr;
