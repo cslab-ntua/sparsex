@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check
+all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
@@ -15,7 +15,7 @@ CFLAGS      += -g
 DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
 DEFS        += -DCPU_$(CPU) -DCPU_MHZ=$(MHZ)
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
-LIBS         = -lm
+LIBS         = -lm -lpthread
 INC          = -Iprfcnt
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 COMPILE_UR   = $(COMPILE) -funroll-loops
@@ -23,7 +23,7 @@ PYLIBS       = $(shell python2.5-config --ldflags)
 PYCFLAGS     = $(shell python2.5-config --cflags) 
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o  spm_crs_mt.o spmv_loops_mt.o mt_lib.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -46,6 +46,15 @@ spm_crs.o:  spm_crs.c spm_crs.h
 	$(COMPILE) -DSPM_CRS_BITS=32 -DELEM_TYPE=double -o spm_crs32_double.o -c $<
 	$(LD) -i spm_crs{64,32}_{double,float}.o -o spm_crs.o
 
+spm_crs_mt.o:  spm_crs_mt.c spm_crs_mt.h
+	for t in double float; do                             \
+	  for ci in 32 64; do                                 \
+	    $(COMPILE) -DSPM_CRS_BITS=$$ci -DELEM_TYPE=$$t    \
+	               -o spm_crs$${ci}_$${t}_mt.o -c $< ;    \
+	  done                                                \
+	done
+	$(LD) -i spm_crs{64,32}_{double,float}_mt.o -o spm_crs_mt.o
+
 spm_crsvi.o:  spm_crs_vi.c spm_crs_vi.h
 	for t in double float; do                       \
 	   for ci in 32 64; do                          \
@@ -66,6 +75,11 @@ spmv_loops.o: spmv_loops.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_double.o
 	$(LD) -i spmv_loops_{float,double}.o -o spmv_loops.o
 
+spmv_loops_mt.o: spmv_loops_mt.c spmv_method.h vector.h
+	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_mt_float.o
+	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_double.o
+	$(LD) -i spmv_loops_mt_{float,double}.o -o spmv_loops_mt.o
+
 spm_delta.o: spm_delta_mul.c spm_delta.h vector.h
 	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_mul_float.o
 	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_mul_double.o
@@ -82,6 +96,9 @@ libspmv.o: $(libspmv_deps)
 dynarray.o: dynarray.c dynarray.h
 	$(COMPILE) -c $< -o $@
 
+mt_lib.o: mt_lib.c mt_lib.h
+	$(COMPILE) -c $< -o $@
+
 phash.o: phash.c phash.h
 	$(COMPILE) -c $< -o $@
 
@@ -89,16 +106,19 @@ ext_prog.o: ext_prog.c ext_prog.h
 	$(COMPILE) -c $< -o $@
 
 spmv_crsvi: libspmv.o dynarray.o spmv_crsvi.o
-	$(COMPILE) libspmv.o dynarray.o spmv_crsvi.o -o $@
+	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crsvi.o -o $@
 
 spmv_crsvi_check: libspmv.o dynarray.o spmv_crsvi_check.o
-	$(COMPILE) libspmv.o dynarray.o spmv_crsvi_check.o -o $@
+	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crsvi_check.o -o $@
 
 spmv_crs: libspmv.o dynarray.o spmv_crs.o
-	$(COMPILE) libspmv.o dynarray.o spmv_crs.o -o $@
+	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs.o -o $@
+
+spmv_crs_mt: libspmv.o dynarray.o spmv_crs_mt.o
+	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs_mt.o -o $@
 
 spmv_crs64: libspmv.o dynarray.o spmv_crs64.o
-	$(COMPILE) libspmv.o dynarray.o spmv_crs64.o -o $@
+	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs64.o -o $@
 
 cv_simple: cv_simple.o libspmv.o dynarray.o
 	$(COMPILE_UR)  cv_simple.o libspmv.o dynarray.o -o $@

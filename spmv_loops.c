@@ -10,7 +10,7 @@
 
 //#define SPMV_PRFCNT
 
-float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix, 
+float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
                              unsigned long loops, unsigned long cols_nr)
 {
 
@@ -53,10 +53,10 @@ float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
 	prfcnt_report(&prfcnt);
 	prfcnt_shut(&prfcnt);
 	#endif
-	
+
 	VECTOR_NAME(_destroy)(x);
 	VECTOR_NAME(_destroy)(y);
-	
+
 	return secs;
 }
 
