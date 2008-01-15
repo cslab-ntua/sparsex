@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt
+all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
@@ -116,6 +116,9 @@ spmv_crs: libspmv.o dynarray.o spmv_crs.o
 
 spmv_crs_mt: libspmv.o dynarray.o spmv_crs_mt.o
 	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs_mt.o -o $@
+
+spmv_crs_mt_check: libspmv.o dynarray.o spmv_crs_mt_check.o
+	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs_mt_check.o -o $@
 
 spmv_crs64: libspmv.o dynarray.o spmv_crs64.o
 	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs64.o -o $@

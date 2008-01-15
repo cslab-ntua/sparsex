@@ -68,14 +68,14 @@ spm_mt_t *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 		unsigned long elems, rows;
 		crs_mt[i].row_start = cur_row;
 		for (elems=0,rows=0; ; ){
-			elems += crs->row_ptr[i+1] - crs->row_ptr[i];
+			elems += crs->row_ptr[cur_row+1] - crs->row_ptr[cur_row];
 			cur_row++;
-			//printf("i:%d nr_cpus:%d cur_row:%lu rows_nr:%lu\n", i, nr_cpus, cur_row, *rows_nr);
+			//printf("i:%d nr_cpus:%d cur_row:%lu rows_nr:%lu elems:%lu elems_limit:%lu\n", i, nr_cpus, cur_row, *rows_nr, elems, elems_limit);
 			if (i != (nr_cpus -1)){
 				if ( elems >= elems_limit )
 					break;
 			} else {
-				if ( cur_row == *rows_nr)
+				if (cur_row == *rows_nr)
 					break;
 			}
 		}
@@ -93,8 +93,8 @@ spm_mt_t *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 void SPM_CRS_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm;
-	ELEM_TYPE *x = out->elements;
-	ELEM_TYPE *y = in->elements;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *y = out->elements;
 	ELEM_TYPE *values = crs_mt->crs->values;
 	SPM_CRS_IDX_TYPE *row_ptr = crs_mt->crs->row_ptr;
 	SPM_CRS_IDX_TYPE *col_ind = crs_mt->crs->col_ind;
