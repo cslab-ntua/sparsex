@@ -20,10 +20,10 @@ INC          = -Iprfcnt
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 COMPILE_UR   = $(COMPILE) -funroll-loops
 PYLIBS       = $(shell python2.5-config --ldflags)
-PYCFLAGS     = $(shell python2.5-config --cflags) 
+PYCFLAGS     = $(shell python2.5-config --cflags)
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o  spm_crs_mt.o spmv_loops_mt.o mt_lib.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o  spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -33,10 +33,10 @@ vector.o: vector.c vector.h
 mmf.o: mmf.c mmf.h
 	$(COMPILE) -c $< -o $@
 
-method.o: method.c method.h 
+method.o: method.c method.h
 	$(COMPILE) -c $< -o $@
 
-spm_parse.o: spm_parse.c spm_parse.h 
+spm_parse.o: spm_parse.c spm_parse.h
 	$(COMPILE) -c $< -o $@
 
 spm_crs.o:  spm_crs.c spm_crs.h
@@ -84,6 +84,13 @@ spm_delta.o: spm_delta_mul.c spm_delta.h vector.h
 	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_mul_float.o
 	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_mul_double.o
 	$(LD) -i spm_delta_mul_{float,double}.o -o spm_delta.o
+
+spm_delta_mt.o: spm_delta_mt_part.c spm_delta_mt.h spm_delta_mt_mul.c
+	$(COMPILE_UR) -DELEM_TYPE=float  -c spm_delta_mt_mul.c -o spm_delta_mt_mul_float.o
+	$(COMPILE_UR) -DELEM_TYPE=double  -c spm_delta_mt_mul.c -o spm_delta_mt_mul_double.o
+	$(COMPILE) -c spm_delta_mt_part.c -o spm_delta_mt_part.o
+	$(LD) -i spm_delta_mt_{mul_{float,double},part}.o -o spm_delta_mt.o
+
 
 spm_delta_cv.o: spm_delta_cv_mul.c spm_delta_cv.h spm_delta.h vector.h
 	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_cv_mul_float.o
@@ -143,4 +150,4 @@ vals_idx: vals_idx.c
 	$(COMPILE) -E $< | indent -kr > $@
 
 clean:
-	rm -rf *.s *.o *.i spmv_crs spmv_crs64 spmv_crsvi spmv_crsvi_check
+	rm -rf *.s *.o *.i spmv_crs{,64,vi,vi_check,_mt,_mt_check}

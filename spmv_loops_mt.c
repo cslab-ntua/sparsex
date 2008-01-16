@@ -16,10 +16,10 @@ static unsigned long loops_nr = 0;
 static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *)arg;
+	//printf("Hello I'm thread on cpu:%d\n", spm_mt_thread->cpu);
 	setaffinity_oncpu(spm_mt_thread->cpu);
 	int i;
 
-	printf("Hello I'm thread on cpu:%d\n", spm_mt_thread->cpu);
 	for (i=0; i<loops_nr; i++){
 		pthread_barrier_wait(&barrier);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);

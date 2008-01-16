@@ -29,15 +29,15 @@ static inline int is_aligned(unsigned long ptr, unsigned int align)
 
 void spm_delta_ctl_print(unsigned char flags, unsigned int size)
 {
-	printf("nr:%d sp:%d nr_seq:%d ci_size:%d size:%d\n", 
-               !!spm_delta_fl_isnr(flags), 
-               !!spm_delta_fl_issp(flags), 
+	printf("nr:%d sp:%d nr_seq:%d ci_size:%d size:%d\n",
+               !!spm_delta_fl_isnr(flags),
+               !!spm_delta_fl_issp(flags),
                !!spm_delta_fl_isnrseq(flags),
 	       spm_delta_fl_getcisize(flags),
 	       size);
 }
 
-spm_delta_t *spm_delta_create(unsigned long rows_nr, unsigned long cols_nr, 
+spm_delta_t *spm_delta_create(unsigned long rows_nr, unsigned long cols_nr,
                               unsigned long nz_nr)
 {
 	spm_delta_t *delta;
@@ -95,11 +95,11 @@ static inline unsigned long delta_colind_get_delta(delta_state_t *delta_state, u
 
 
 static void delta_init(parse_state_t *parse_state, void **delta_state_ptr,
-                       unsigned long rows_nr, unsigned long cols_nr, 
+                       unsigned long rows_nr, unsigned long cols_nr,
                        unsigned long nz_nr)
 {
 	spm_delta_t   *delta;
-	delta_state_t *delta_state; 
+	delta_state_t *delta_state;
 
 	delta = spm_delta_create(rows_nr, cols_nr, nz_nr);
 	delta_state = malloc(sizeof(delta_state_t));
@@ -117,7 +117,7 @@ static void delta_init(parse_state_t *parse_state, void **delta_state_ptr,
 
 	delta_state->delta = delta;
 	delta_state->ctl_bb = beanbag_create(sizeof(char), 4096);
-	delta_state->val_indx = 0; 
+	delta_state->val_indx = 0;
 	delta_state->col_indx = 0;
 	delta_state->row_indx = 0;
 	delta_state->new_row = 0;
@@ -125,7 +125,7 @@ static void delta_init(parse_state_t *parse_state, void **delta_state_ptr,
 	delta_state->sp.idx = 0;
 	delta_state->sp.idx_consumed = 0;
 	delta_state->sp.ci_max = SPM_DELTA_CISIZE_U8;
-	
+
 	*delta_state_ptr = delta_state;
 }
 
@@ -209,7 +209,7 @@ static unsigned long delta_uc_to_ul(unsigned char **uc_ptr)
 }
 #endif
 
-static void delta_do_new_row(parse_state_t *parse_state, 
+static void delta_do_new_row(parse_state_t *parse_state,
                              delta_state_t *delta_state,
 			     unsigned char *ctl_flags)
 {
@@ -244,7 +244,7 @@ static void delta_do_finalize_unit(parse_state_t *parse_state, delta_state_t *de
 	if ( delta_state->new_row ){
 		delta_do_new_row(parse_state, delta_state, ctl_flags);
 	}
-	
+
 	//printf("DE: size:%u rind:%lu ", size, delta_state->row_indx);
 	//spm_delta_ctl_print(*ctl_flags, *ctl_size);
 
@@ -264,7 +264,7 @@ static void delta_do_finalize_unit(parse_state_t *parse_state, delta_state_t *de
 }
 
 static void delta_do_sp_finalize(parse_state_t *parse_state,
-                                 delta_state_t *delta_state, 
+                                 delta_state_t *delta_state,
                                  delta_sp_state_t *sp_state,
                                  unsigned char size)
 {
@@ -291,7 +291,7 @@ static void delta_do_sp_finalize(parse_state_t *parse_state,
 
 	//printf("SP: size:%u rind:%lu ci_max:%u ", size, delta_state->row_indx, sp_state->ci_max);
 	//spm_delta_ctl_print(*ctl_flags,*ctl_size);
-	
+
 	sp_idx = sp_state->idx_consumed;
 
 	ci_deltas = beanbag_alloc_nr(delta_state->ctl_bb,ci_deltas_size*size);
@@ -416,7 +416,7 @@ static spm_parser_t delta_parser = {
 	.finalize = delta_final,
 };
 
-spm_delta_t *spm_delta_init_mmf(char *mmf_file, 
+spm_delta_t *spm_delta_init_mmf(char *mmf_file,
                                 unsigned long *rows_nr, unsigned long *cols_nr,
                                 unsigned long *nz_nr)
 {
@@ -434,6 +434,7 @@ spm_delta_t *spm_delta_init_mmf(char *mmf_file,
 #endif
 
 
+#if 0
 void spm_delta_multiply(spm_delta_t *delta, vector_t *in, vector_t *out)
 {
 	elem_t *x = in->elements, *y = out->elements, *values = delta->values;
@@ -458,7 +459,7 @@ void spm_delta_multiply(spm_delta_t *delta, vector_t *in, vector_t *out)
 			//printf("--new_row: (result for %lu: %lf)\n", y_indx, yr);
 			yr = 0;
 			myx = x;
-		} 
+		}
 		//printf("y_indx: %lu x_indx: %lu\n", y_indx, (unsigned long)(myx-x));
 
 		switch ( flags & SPM_DELTA_FL_UNIT_MASK ){
@@ -482,7 +483,7 @@ void spm_delta_multiply(spm_delta_t *delta, vector_t *in, vector_t *out)
 				v++;
 			}
 			break;
-			
+
 			case SPM_DELTA_FL_UNIT_SP_US:
 			for ( i = 0; i<size; i++){
 				myx += us_get(uc);
@@ -520,4 +521,5 @@ void spm_delta_multiply(spm_delta_t *delta, vector_t *in, vector_t *out)
 	y[y_indx] = yr;
 	return;
 }
+#endif
 //METHOD_INIT(spm_delta_multiply, spm_delta_init_mmf)

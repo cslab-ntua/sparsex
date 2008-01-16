@@ -7,8 +7,11 @@
 #include "matrix.h"
 #include "spm_delta.h"
 #include "spm_delta_cv.h"
+#include "spm_mt.h"
+#include "spm_delta_mt.h"
 #include "spm_crs.h"
 #include "spmv_loops.h"
+#include "spmv_loops_mt.h"
 #include "cv.h"
 
 typedef struct {
@@ -48,7 +51,7 @@ enum {
 };
 
 
-#define value_error(str) PyErr_SetString(PyExc_ValueError, str) 
+#define value_error(str) PyErr_SetString(PyExc_ValueError, str)
 #define index_error(str) PyErr_SetString(PyExc_IndexError, str)
 
 #define value_error_on(cond,ret)                 \
@@ -91,7 +94,7 @@ pyspm_delta_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	return (PyObject *)self;
 }
 
-static int 
+static int
 pyspm_delta_init(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 {
 	static char *kw[] = {"type", NULL};
@@ -104,25 +107,25 @@ pyspm_delta_init(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 
 	return 0;
 }
-PyDoc_STRVAR(delta_init_doc, 
+PyDoc_STRVAR(delta_init_doc,
 "delta structure\n\
   initialization arguments:\n\
    type=TYPE_DOUBLE : type of elements (TYPE_DOUBLE or TYPE_FLOAT)");
 
-static void 
+static void
 pyspm_delta_dealloc(PyObject *obj)
 {
 	pyspm_delta_t *self = (pyspm_delta_t *)obj;
 
 	if (self->ctl_da )
 		self->delta.ctl = dynarray_destroy(self->ctl_da);
-	
+
 	if (self->val_da)
 		self->delta.values = dynarray_destroy(self->val_da);
-	
+
 	if (self->delta.ctl)
 		free(self->delta.ctl);
-	
+
 	if (self->delta.values)
 		free(self->delta.values);
 
@@ -135,7 +138,7 @@ pyspm_delta_string(pyspm_delta_t *self)
 	return PyString_FromFormat("nnz:%lu ncols:%lu nrows:%lu "
 	                           "values:%p ctl:%p "
 				   "val_da:%p ctl_da:%p",
-				    self->delta.nnz, 
+				    self->delta.nnz,
 				    self->delta.ncols, self->delta.nrows,
 				    self->delta.values, self->delta.ctl,
 				    self->ctl_da, self->val_da);
@@ -189,7 +192,7 @@ pyspm_delta_de_add_unit(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 	static char *kw[] = {"size", "ci_delta", "nr_delta", NULL};
 	static char fmt[] = "Ik|I";
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw, 
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw,
 	                                 &size, &ci_delta, &nr_delta)){
 		return NULL;
 	}
@@ -216,7 +219,7 @@ pyspm_delta_de_add_unit(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 	da_uc_put_ul(self->ctl_da, ci_delta);
 
 	//printf("%s: flags:%u (%p) size:%u (%p) \n", __FUNCTION__, *ctl_flags, ctl_flags, *ctl_size, ctl_size);
-	
+
 	Py_RETURN_NONE;
 }
 PyDoc_STRVAR(delta_de_add_unit_doc, "add control information for a dense unit");
@@ -230,8 +233,8 @@ pyspm_delta_sp_add_unit_jmp(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 	unsigned long ci_delta=0, ci_delta_max=0;
 	static char *kw[] = {"size", "ci_delta", "ci_delta_max", "nr_delta", NULL};
 	static char *fmt = "Ikk|I";
-	
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw, 
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw,
 	                                 &size, &ci_delta, &ci_delta_max, &nr_delta)){
 		return NULL;
 	}
@@ -249,7 +252,7 @@ pyspm_delta_sp_add_unit_jmp(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 	spm_delta_fl_setsp(ctl_flags);
 	spm_delta_fl_setcisize(ctl_flags, ci_cisize);
 	*ctl_size = (unsigned char)size;
-	
+
 	if (nr_delta > 1){
 		spm_delta_fl_setnr(ctl_flags);
 		da_uc_put_ul(self->ctl_da, nr_delta);
@@ -271,8 +274,8 @@ pyspm_delta_sp_add_unit(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 	unsigned int nr_delta=0, ci_delta_max=0, size=0;
 	static char *kw[] = {"size", "ci_delta_max", "nr_delta", NULL};
 	static char *fmt = "Ik|I";
-	
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw, 
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw,
 	                                 &size, &ci_delta_max, &nr_delta)){
 		return NULL;
 	}
@@ -290,7 +293,7 @@ pyspm_delta_sp_add_unit(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 	spm_delta_fl_setsp(ctl_flags);
 	spm_delta_fl_setcisize(ctl_flags, ci_cisize);
 	*ctl_size = (unsigned char)size;
-	
+
 	if (nr_delta > 1){
 		spm_delta_fl_setnr(ctl_flags);
 		da_uc_put_ul(self->ctl_da, nr_delta);
@@ -315,8 +318,8 @@ pyspm_delta_sp_add_cols(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 
 	value_error_on(!self->ctl_da, NULL);
 
-	if ( !PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw, 
-	                                  &ci_delta_max, 
+	if ( !PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw,
+	                                  &ci_delta_max,
 	                                  &PyList_Type, &ci_delta_l)) {
 		return NULL;
 	}
@@ -381,7 +384,7 @@ pyspm_delta_getctl(pyspm_delta_t *self, PyObject *args)
 	} else {
 		index_error_on(1, NULL);
 	}
-	
+
 	return PyInt_FromLong((long)ret);
 }
 
@@ -439,7 +442,7 @@ pyspm_delta_addvals(pyspm_delta_t *self, PyObject *args, PyObject *kwds)
 		} else {
 			double *_val = (double *)elems;
 			*_val++ = val;
-			elems = _val; 
+			elems = _val;
 		}
 	}
 
@@ -521,7 +524,7 @@ static PyObject *
 pyspm_delta_getprops(pyspm_delta_t *self)
 {
 	PyObject *d, *item;
-	
+
 	if ( !(d = PyDict_New()) ){
 		return NULL;
 	}
@@ -550,7 +553,7 @@ pyspm_delta_check(pyspm_delta_t *self, PyObject *args)
 {
 	char *file=NULL;
 	unsigned long loops=1;
-	
+
 	if ( !PyArg_ParseTuple(args, "s|k", &file, &loops) ){
 		return NULL;
 	}
@@ -562,7 +565,7 @@ pyspm_delta_check(pyspm_delta_t *self, PyObject *args)
 		spm_crs64_float_t *crs;
 		crs = spm_crs64_float_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
 		spmv_float_check_loop(
-			crs, &self->delta, 
+			crs, &self->delta,
 			spm_crs64_float_multiply, spm_delta_float_multiply,
 			loops, cols_nr, nz_nr);
 		spm_crs64_float_destroy(crs);
@@ -570,7 +573,7 @@ pyspm_delta_check(pyspm_delta_t *self, PyObject *args)
 		spm_crs64_double_t *crs;
 		crs = spm_crs64_double_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
 		spmv_double_check_loop(
-			crs, &self->delta, 
+			crs, &self->delta,
 			spm_crs64_double_multiply, spm_delta_double_multiply,
 			loops, cols_nr, nz_nr);
 		spm_crs64_double_destroy(crs);
@@ -584,7 +587,7 @@ pyspm_delta_jmp_check(pyspm_delta_t *self, PyObject *args)
 {
 	char *file=NULL;
 	unsigned long loops=1;
-	
+
 	if ( !PyArg_ParseTuple(args, "s|k", &file, &loops) ){
 		return NULL;
 	}
@@ -596,7 +599,7 @@ pyspm_delta_jmp_check(pyspm_delta_t *self, PyObject *args)
 		spm_crs64_float_t *crs;
 		crs = spm_crs64_float_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
 		spmv_float_check_loop(
-			crs, &self->delta, 
+			crs, &self->delta,
 			spm_crs64_float_multiply, spm_delta_float_jmp_multiply,
 			loops, cols_nr, nz_nr);
 		spm_crs64_float_destroy(crs);
@@ -604,7 +607,7 @@ pyspm_delta_jmp_check(pyspm_delta_t *self, PyObject *args)
 		spm_crs64_double_t *crs;
 		crs = spm_crs64_double_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
 		spmv_double_check_loop(
-			crs, &self->delta, 
+			crs, &self->delta,
 			spm_crs64_double_multiply, spm_delta_double_jmp_multiply,
 			loops, cols_nr, nz_nr);
 		spm_crs64_double_destroy(crs);
@@ -618,7 +621,7 @@ pyspm_delta_bench(pyspm_delta_t *self, PyObject *args)
 {
 	unsigned long loops=128;
 	double ret;
-	
+
 	if ( !PyArg_ParseTuple(args, "|k", &loops) ){
 		return NULL;
 	}
@@ -630,7 +633,7 @@ pyspm_delta_bench(pyspm_delta_t *self, PyObject *args)
 		ret = spmv_double_bench_loop(spm_delta_double_multiply,
 		                             &self->delta, loops, self->delta.ncols);
 	}
-	
+
 	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
 }
 
@@ -639,7 +642,7 @@ pyspm_delta_jmp_bench(pyspm_delta_t *self, PyObject *args)
 {
 	unsigned long loops=128;
 	double ret;
-	
+
 	if ( !PyArg_ParseTuple(args, "|k", &loops) ){
 		return NULL;
 	}
@@ -651,7 +654,37 @@ pyspm_delta_jmp_bench(pyspm_delta_t *self, PyObject *args)
 		ret = spmv_double_bench_loop(spm_delta_double_jmp_multiply,
 		                             &self->delta, loops, self->delta.ncols);
 	}
-	
+
+	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
+}
+
+static PyObject *
+pyspm_delta_jmp_mt_bench(pyspm_delta_t *self, PyObject *args)
+{
+	unsigned long loops=128;
+	double ret;
+
+
+	if ( !PyArg_ParseTuple(args, "|k", &loops) ){
+		return NULL;
+	}
+
+	spm_mt_t *spm_mt = spm_delta_jmp_mt_partition(self->delta.ctl,
+	                                          self->delta.nnz,
+	                                          &self->delta);
+
+	if ( self->el_type == PYSPM_TYPE_FLOAT){
+		ret = spmv_float_bench_mt_loop(spm_delta_mt_float_jmp_multiply,
+		                             spm_mt,
+		                             loops,
+					     self->delta.ncols);
+	} else {
+		ret = spmv_double_bench_mt_loop(spm_delta_mt_double_jmp_multiply,
+		                             spm_mt,
+		                             loops,
+					     self->delta.ncols);
+	}
+
 	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
 }
 
@@ -676,6 +709,7 @@ static PyMethodDef pyspm_delta_methods[] = {
 	{"check_jmp", (PyCFunction)pyspm_delta_jmp_check, METH_VARARGS, "" },
 	{"bench", (PyCFunction)pyspm_delta_bench, METH_VARARGS, "" },
 	{"bench_jmp", (PyCFunction)pyspm_delta_jmp_bench, METH_VARARGS, "" },
+	{"mt_bench_jmp", (PyCFunction)pyspm_delta_jmp_mt_bench, METH_VARARGS, "" },
 	{NULL}
 };
 
@@ -777,7 +811,7 @@ pyspm_delta_cv_init(pyspm_delta_cv_t *self, PyObject *args, PyObject *kwds)
 	return 0;
 }
 
-static void 
+static void
 pyspm_delta_cv_dealloc(PyObject *obj)
 {
 	pyspm_delta_cv_t *self = (pyspm_delta_cv_t *)obj;
@@ -834,7 +868,7 @@ pyspm_delta_cv_add_unit(pyspm_delta_cv_t *self, PyObject *args, PyObject *kwds)
 
 	if ( !PyArg_ParseTupleAndKeywords(args, kwds, fmt, kw,
 	                                  &u_s, &ci_s, &vi_s,
-	                                  &ci_jmp, &ri_jmp, 
+	                                  &ci_jmp, &ri_jmp,
                                           &sp) ){
 		return NULL;
 	}
@@ -862,11 +896,11 @@ pyspm_delta_cv_add_unit(pyspm_delta_cv_t *self, PyObject *args, PyObject *kwds)
 	}
 
 	da_uc_put_ul(self->ctl_da, ci_jmp);
-	
+
 	Py_RETURN_NONE;
 }
 
-static int 
+static int
 pyspm_delta_add_uindices(dynarray_t *da, PyObject *i_list, int i_size)
 {
 	int i;
@@ -878,7 +912,7 @@ pyspm_delta_add_uindices(dynarray_t *da, PyObject *i_list, int i_size)
 	}
 
 	index_to = dynarray_alloc_nr(da, size*i_bytes);
-	
+
 	for (i=0; i<size; i++){
 		PyObject *py_i = PyList_GetItem(i_list, i);
 		if ( !PyInt_Check(py_i) ){
@@ -921,7 +955,7 @@ pyspm_delta_cv_add_ci(pyspm_delta_cv_t *self, PyObject *args, PyObject *kwds)
 }
 
 #if 0
-static int 
+static int
 pyspm_delta_add_sindices(dynarray_t *da, PyObject *i_list, int i_size)
 {
 	int i;
@@ -933,7 +967,7 @@ pyspm_delta_add_sindices(dynarray_t *da, PyObject *i_list, int i_size)
 	}
 
 	index_to = dynarray_alloc_nr(da, size*i_bytes);
-	
+
 	for (i=0; i<size; i++){
 		PyObject *py_i = PyList_GetItem(i_list, i);
 		if ( !PyInt_Check(py_i) ){
@@ -1014,7 +1048,7 @@ pyspm_delta_cv_add_vals(pyspm_delta_cv_t *self, PyObject *args, PyObject *kwds)
 		} else {
 			double *_val = (double *)elems;
 			*_val++ = val;
-			elems = _val; 
+			elems = _val;
 		}
 	}
 
@@ -1061,7 +1095,7 @@ pyspm_delta_cv_check(pyspm_delta_cv_t *self, PyObject *args)
 {
 	char *file=NULL;
 	unsigned long loops=1;
-	
+
 	if ( !PyArg_ParseTuple(args, "s|k", &file, &loops) ){
 		return NULL;
 	}
@@ -1073,7 +1107,7 @@ pyspm_delta_cv_check(pyspm_delta_cv_t *self, PyObject *args)
 		spm_crs64_float_t *crs;
 		crs = spm_crs64_float_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
 		spmv_float_check_loop(
-			crs, &self->delta_cv, 
+			crs, &self->delta_cv,
 			spm_crs64_float_multiply, spm_delta_cv_float_jmp_multiply,
 			loops, cols_nr, nz_nr);
 		spm_crs64_float_destroy(crs);
@@ -1081,7 +1115,7 @@ pyspm_delta_cv_check(pyspm_delta_cv_t *self, PyObject *args)
 		spm_crs64_double_t *crs;
 		crs = spm_crs64_double_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
 		spmv_double_check_loop(
-			crs, &self->delta_cv, 
+			crs, &self->delta_cv,
 			spm_crs64_double_multiply, spm_delta_cv_double_jmp_multiply,
 			loops, cols_nr, nz_nr);
 		spm_crs64_double_destroy(crs);
@@ -1095,7 +1129,7 @@ pyspm_delta_cv_bench(pyspm_delta_cv_t *self, PyObject *args)
 {
 	unsigned long loops=128;
 	double ret;
-	
+
 	if ( !PyArg_ParseTuple(args, "|k", &loops) ){
 		return NULL;
 	}
@@ -1107,7 +1141,7 @@ pyspm_delta_cv_bench(pyspm_delta_cv_t *self, PyObject *args)
 		ret = spmv_double_bench_loop(spm_delta_cv_double_jmp_multiply,
 		                             &self->delta_cv, loops, self->delta_cv.ncols);
 	}
-	
+
 	ret = (double)(loops*self->delta_cv.nnz*2)/(1000*1000*ret);
 	return PyFloat_FromDouble(ret);
 }
@@ -1179,7 +1213,7 @@ pyspm_delta_cisize(PyObject *self, PyObject *args)
 	//value_error_on(!cidelta, NULL);
 
 	long ret = spm_delta_cisize(cidelta);
-	
+
 	return PyInt_FromLong(ret);
 }
 
@@ -1193,7 +1227,7 @@ pyspm_delta_visize(PyObject *self, PyObject *args)
 	//value_error_on(!cidelta, NULL);
 
 	long ret = spm_delta_visize(videlta);
-	
+
 	return PyInt_FromLong(ret);
 }
 
@@ -1250,13 +1284,13 @@ pyspm_setaffinity(PyObject *self, PyObject *args)
 	cpu_set_t cpu_mask;
 	CPU_ZERO(&cpu_mask);
 	CPU_SET(cpu, &cpu_mask);
-	
+
 	err = sched_setaffinity(0, sizeof(cpu_set_t), &cpu_mask);
 	if ( err ){
 		perror("sched_setaffinity");
 		exit(1);
 	}
-	
+
 	Py_RETURN_NONE;
 }
 
@@ -1291,7 +1325,7 @@ initpyspm(void)
 
 	Py_INCREF(&pyspm_delta_cv_type);
 	PyModule_AddObject(m, "delta_cv", (PyObject *)&pyspm_delta_cv_type);
-	
+
 	PyModule_AddIntConstant(m,"TYPE_FLOAT",PYSPM_TYPE_FLOAT);
 	PyModule_AddIntConstant(m,"TYPE_DOUBLE",PYSPM_TYPE_DOUBLE);
 	PyModule_AddIntConstant(m,"CRS32" ,PYSPM_CRS_32);

@@ -71,12 +71,17 @@ spm_mt_t *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 			elems += crs->row_ptr[cur_row+1] - crs->row_ptr[cur_row];
 			cur_row++;
 			//printf("i:%d nr_cpus:%d cur_row:%lu rows_nr:%lu elems:%lu elems_limit:%lu\n", i, nr_cpus, cur_row, *rows_nr, elems, elems_limit);
+			#if 0
 			if (i != (nr_cpus -1)){
 				if ( elems >= elems_limit )
 					break;
 			} else {
 				if (cur_row == *rows_nr)
 					break;
+			}
+			#endif
+			if (elems >= elems_limit){
+				break;
 			}
 		}
 
