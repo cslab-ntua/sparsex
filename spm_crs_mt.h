@@ -1,5 +1,5 @@
-#ifndef __SPM_CRS_MT__
-#define __SPM_CRS_MT__
+#ifndef __SPM_CRS_MT_H__
+#define __SPM_CRS_MT_H__
 
 #include <inttypes.h>
 

@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check
+all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
@@ -23,7 +23,7 @@ PYLIBS       = $(shell python2.5-config --ldflags)
 PYCFLAGS     = $(shell python2.5-config --cflags)
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o  spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o  spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -70,6 +70,21 @@ spm_crsvi.o:  spm_crs_vi.c spm_crs_vi.h
 	done
 	$(LD) -i spm_crs{64,32}_vi{32,16,8}_{double,float}.o -o spm_crsvi.o
 
+spm_crsvi_mt.o:  spm_crs_vi_mt.c spm_crs_vi_mt.h
+	for t in double float; do                          \
+	   for ci in 32 64; do                             \
+	      for vi in 32 16 8; do                        \
+	         $(COMPILE)                                \
+		      -DELEM_TYPE=$$t                      \
+		      -DSPM_CRSVI_CI_BITS=$$ci             \
+		      -DSPM_CRSVI_VI_BITS=$$vi             \
+		      -o spm_crs$${ci}_vi$${vi}_mt_$${t}.o \
+		      -c $<;                               \
+	      done                                         \
+	   done                                            \
+	done
+	$(LD) -i spm_crs{64,32}_vi{32,16,8}_mt_{double,float}.o -o spm_crsvi_mt.o
+
 spmv_loops.o: spmv_loops.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_float.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_double.o
@@ -115,6 +130,9 @@ ext_prog.o: ext_prog.c ext_prog.h
 spmv_crsvi: libspmv.o dynarray.o spmv_crsvi.o
 	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crsvi.o -o $@
 
+spmv_crsvi_mt: libspmv.o dynarray.o spmv_crsvi_mt.o
+	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crsvi_mt.o -o $@
+
 spmv_crsvi_check: libspmv.o dynarray.o spmv_crsvi_check.o
 	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crsvi_check.o -o $@
 
@@ -150,4 +168,4 @@ vals_idx: vals_idx.c
 	$(COMPILE) -E $< | indent -kr > $@
 
 clean:
-	rm -rf *.s *.o *.i spmv_crs{,64,vi,vi_check,_mt,_mt_check}
+	rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check}

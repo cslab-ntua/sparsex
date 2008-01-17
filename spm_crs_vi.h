@@ -31,6 +31,11 @@
 		_NAME(val_type, ci_bits, vi_bits, _t) *m  \
 	);                                                \
 	                                                  \
+	unsigned long                                     \
+	_NAME(val_type, ci_bits, vi_bits, _size)(         \
+		_NAME(val_type, ci_bits, vi_bits, _t) *m  \
+	);                                                \
+	                                                  \
 	spmv_ ## val_type ## _fn_t                        \
 	_NAME(val_type, ci_bits, vi_bits, _multiply);     \
 
@@ -50,5 +55,9 @@ DECLARE_CRS_VI(double, 64, 32)
 DECLARE_CRS_VI(float, 64, 8)
 DECLARE_CRS_VI(float, 64, 16)
 DECLARE_CRS_VI(float, 64, 32)
+
+#undef UNIT_TYPE
+#undef _NAME
+#undef DECLARE_CRS_VI
 
 #endif
