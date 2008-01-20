@@ -16,4 +16,4 @@ do
 		./spmv_crsvi $file $uvals
 	fi
 
-done | tee ~/spm-results.$(date +%Y%m%d.%k:%M:%S).$(hostname)
+done | tee ~/spm-results.$(date +%Y%m%d.%H:%M:%S).$(hostname)
