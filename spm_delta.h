@@ -61,6 +61,11 @@ static inline void spm_delta_fl_setnr(unsigned char *ctl)
 	*ctl |= (1<<SPM_DELTA_FL_NR_SHIFT);
 }
 
+static inline void spm_delta_fl_clearnr(unsigned char *ctl)
+{
+	*ctl &= ~(1<<SPM_DELTA_FL_NR_SHIFT);
+}
+
 static inline int spm_delta_fl_isnr(unsigned char ctl)
 {
 	return (ctl & (1<<SPM_DELTA_FL_NR_SHIFT) );

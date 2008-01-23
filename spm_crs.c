@@ -137,6 +137,7 @@ void SPM_CRS_NAME(_destroy)(SPM_CRS_TYPE *crs)
 
 void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
+	//printf("++%s\n", __FUNCTION__);
 	SPM_CRS_TYPE *crs = (SPM_CRS_TYPE *)spm;
 	ELEM_TYPE *y = out->elements;
 	ELEM_TYPE *x = in->elements;
@@ -149,10 +150,12 @@ void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	unsigned long i, j;
 	for(i=0; i<n; i++) {
 		yr = (ELEM_TYPE)0;
+		//printf("row_ptr_i: %lu row_ptr_i+1: %lu \n", (unsigned long)row_ptr[i], (unsigned long)row_ptr[i+1]);
 		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) { 
 			yr += (values[j] * x[col_ind[j]]);
 		}
 		y[i] = yr;
+		//printf("++y[%lu] = %lf\n", i, yr);
 		#if 0
 		__asm__ __volatile__ (
 			" movntq %[val], (%[mem]) \n\t" 

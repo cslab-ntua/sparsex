@@ -509,7 +509,7 @@ pyspm_delta_finalize(pyspm_delta_t *self, PyObject *args)
 	self->delta.values = dynarray_destroy(self->val_da);
 	self->ctl_da = self->val_da = NULL;
 
-	//printf("nnz=%lu, self->delta.nnz=%lu\n", nnz, self->delta.nnz);
+	//printf("nnz=%lu, self->delta.nnz=%lu ctl_size:%lu\n", nnz, self->delta.nnz, ctl_size);
 	value_error_on(nnz != self->delta.nnz, NULL);
 
 	self->delta.nnz = nnz;
@@ -688,6 +688,43 @@ pyspm_delta_jmp_mt_bench(pyspm_delta_t *self, PyObject *args)
 	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
 }
 
+static PyObject *
+pyspm_delta_jmp_mt_check(pyspm_delta_t *self, PyObject *args)
+{
+	char *file=NULL;
+	unsigned long loops=1;
+
+
+	if ( !PyArg_ParseTuple(args, "s|k", &file, &loops) ){
+		return NULL;
+	}
+
+	value_error_on(file==NULL, NULL);
+
+	spm_mt_t *spm_mt = spm_delta_jmp_mt_partition(self->delta.ctl,
+	                                          self->delta.nnz,
+	                                          &self->delta);
+
+	unsigned long rows_nr, cols_nr, nz_nr;
+	if ( self->el_type == PYSPM_TYPE_FLOAT){
+		spm_crs32_float_t *crs;
+		crs = spm_crs32_float_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
+		spmv_float_check_mt_loop(crs, spm_mt,
+		                         spm_crs32_float_multiply,
+		                         spm_delta_mt_float_jmp_multiply,
+		                         loops, self->delta.ncols);
+	} else {
+		spm_crs32_double_t *crs;
+		crs = spm_crs32_double_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
+		spmv_double_check_mt_loop(crs, spm_mt,
+		                          spm_crs32_double_multiply,
+		                          spm_delta_mt_double_jmp_multiply,
+		                          loops, self->delta.ncols);
+	}
+
+	Py_RETURN_NONE;
+}
+
 /*
  * pyspm.delta methods
  */
@@ -710,6 +747,7 @@ static PyMethodDef pyspm_delta_methods[] = {
 	{"bench", (PyCFunction)pyspm_delta_bench, METH_VARARGS, "" },
 	{"bench_jmp", (PyCFunction)pyspm_delta_jmp_bench, METH_VARARGS, "" },
 	{"mt_bench_jmp", (PyCFunction)pyspm_delta_jmp_mt_bench, METH_VARARGS, "" },
+	{"mt_check_jmp", (PyCFunction)pyspm_delta_jmp_mt_check, METH_VARARGS, "" },
 	{NULL}
 };
 

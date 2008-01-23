@@ -6,7 +6,7 @@
 
 typedef struct {
 	void *delta;
-	unsigned long nnz, ctl_start, ctl_end;
+	unsigned long nnz, ctl_start, row_start, val_start;
 } spm_delta_mt_t;
 
 spm_mt_t *spm_delta_jmp_mt_partition(unsigned char *ctl, unsigned long nnz, void *delta);

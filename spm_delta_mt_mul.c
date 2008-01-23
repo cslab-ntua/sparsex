@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "spm_delta.h"
 #include "spm_delta_mt.h"
@@ -24,6 +25,8 @@ static void spm_delta_ctl_print(unsigned char flags, unsigned int size)
 #endif
 
 
+#if 0
+/* XXX: This is br0ken */
 void SPMDELTA_MT_NAME(_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	spm_delta_mt_t *delta_mt = matrix;
@@ -117,32 +120,34 @@ void SPMDELTA_MT_NAME(_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out
 	return;
 }
 //METHOD_INIT(spm_delta_multiply, spm_delta_init_mmf)
+#endif
 
 void SPMDELTA_MT_NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	spm_delta_mt_t *delta_mt = matrix;
 	SPMDELTA_TYPE *delta = (SPMDELTA_TYPE *)delta_mt->delta;
 	ELEM_TYPE *x = in->elements, *y = out->elements, *values = delta->values;
-	register unsigned long y_indx=0;
-	register ELEM_TYPE yr = 0;
-	register ELEM_TYPE *v = values;
-	register const ELEM_TYPE *v_end = values + delta_mt->nnz;
+	register unsigned long y_indx = delta_mt->row_start;
+	register ELEM_TYPE yr = (ELEM_TYPE)0;
+	register ELEM_TYPE *v = values + delta_mt->val_start;
+	register const ELEM_TYPE *v_end = v + delta_mt->nnz;
 	register ELEM_TYPE *myx = x;
 	register unsigned char *uc = delta->ctl + delta_mt->ctl_start;
 
+	//printf("y_indx:%lu ctl:%p ctl_start:%lu (%lu)\n", y_indx, delta->ctl, delta_mt->ctl_start, (unsigned long)pthread_self());
 	for (;;) {
 		register unsigned char flags = uc_get(uc);
 		register unsigned char size = uc_get(uc);
 		//spm_delta_ctl_print(flags, size);
 		if ( spm_delta_fl_isnr(flags) ){
 			y[y_indx] = yr;
+			//printf("--new_row (%lu): (result for %lu: %lf)\n", (unsigned long)pthread_self(), y_indx, yr);
 			if ( spm_delta_fl_isnrseq(flags) ){
 				y_indx++;
 			} else {
 				y_indx += uc_get_ul(uc);
 			}
-			//printf("--new_row: (result for %lu: %lf)\n", y_indx, yr);
-			yr = 0;
+			yr = (ELEM_TYPE)0;
 			myx = x;
 		}
 		//printf("y_indx: %lu x_indx: %lu\n", y_indx, (unsigned long)(myx-x));
@@ -217,6 +222,8 @@ void SPMDELTA_MT_NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE 
 	}
 
 	y[y_indx] = yr;
+	//printf("--end (%lu): (result for %lu: %lf)\n", (unsigned long)pthread_self(), y_indx, yr);
+	//printf("(%lu) : last uc: %lu\n", (unsigned long)pthread_self(), uc - delta->ctl);
 	return;
 }
 
