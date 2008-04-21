@@ -6,6 +6,8 @@
 #include "spm_crs_vi_mt.h"
 #include "mt_lib.h"
 
+#include "pthread.h"
+
 #if SPM_CRSVI_CI_BITS == 32
 #define  SPM_CRSVI_CI_TYPE uint32_t
 #elif SPM_CRSVI_CI_BITS == 64
@@ -112,6 +114,7 @@ void SPM_CRSVI_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	const register SPM_CRSVI_VI_TYPE *val_ind = crsvi_mt->crsvi->val_ind;
 	const unsigned long row_start = crsvi_mt->row_start;
 	const unsigned long row_end = crsvi_mt->row_end;
+	//printf("(%lu) row_start: %lu row_end: %lu\n", pthread_self(), row_start, row_end);
 	register ELEM_TYPE yr;
 
 	register unsigned long i, j=0;
@@ -120,9 +123,10 @@ void SPM_CRSVI_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		__asm__ __volatile__ ("# loop start\n\t");
 		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) {
 			yr += (values[val_ind[j]] * x[col_ind[j]]);
-			//printf("i:%lu j:%lu val_ind:%ld col_ind:%lu v:%lf x:%lf yr:%lf\n", i, j, (long)val_ind[j], (unsigned long)col_ind[j], values[val_ind[j]], x[col_ind[j]], yr);
+			//printf("(%lu) i:%lu j:%lu val_ind:%ld col_ind:%lu v:%lf x:%lf yr:%lf\n", (unsigned long)pthread_self(),i, j, (long)val_ind[j], (unsigned long)col_ind[j], values[val_ind[j]], x[col_ind[j]], yr);
 		}
 		y[i] = yr;
+		//printf("(%lu): y[%lu] = %lf\n", (unsigned long)pthread_self(), i, (double)yr);
 		__asm__ __volatile__ ("# loop end\n\t");
 	}
 }

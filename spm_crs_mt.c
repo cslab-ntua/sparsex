@@ -6,6 +6,8 @@
 #include "spm_crs.h"
 #include "spm_crs_mt.h"
 
+#include "pthread.h"
+
 #if SPM_CRS_BITS == 32
 #define  SPM_CRS_IDX_TYPE uint32_t
 #elif SPM_CRS_BITS == 64
