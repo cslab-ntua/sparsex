@@ -4,23 +4,27 @@ from mmf import MMF
 import string
 from struct import pack, unpack
 
-def hash_freq_print(hfreq, total, desc):
-	lfreq = list(hfreq.iteritems())
-	lfreq.sort(cmp = lambda x,y: cmp(y[1], x[1]))
+def lfreq_print(lfreq, total, desc):
 	pt = 0
 	print "%s (%ld/%ld => %f)" %( desc, len(lfreq), total, float(total)/float(len(lfreq)))
-	for i in lfreq:
-		p = 100*(float(i[1])/float(total))
+	for i in lfreq.__reversed__():
+		p = 100*(float(i[0])/float(total))
 		pt += p
-		print "%-10s %10d %10.1f %10.1f"  % (hex(i[0]), i[1], p, pt)
+		print "%-10s %10d %10.1f %10.1f"  % (hex(i[1]), i[0], p, pt)
 	print
-	
-def hash_freq_split(hfreq, fmt_new, fmt_old):
+
+def hfreq2list(hfreq):
+	rev = lambda t: (t[1],t[0])
+	hlist = list([ rev(hfreq.popitem()) for i in xrange(len(hfreq)) ])
+	hlist.sort()
+	return hlist
+
+def lfreq_split(lfreq, fmt_new, fmt_old):
 	ret = {}
-	for v, freq in hfreq.iteritems():
+	for i in xrange(len(lfreq)):
+		freq,v = lfreq.pop()
 		for nv in unpack(fmt_new, pack(fmt_old, v)):
 			ret[nv] = ret.get(nv, 0) + freq
-	
 	return ret
 		
 
@@ -43,13 +47,18 @@ if __name__ == '__main__':
 			cnt += 1
 			if (progress and cnt % (1024*1024) == 0):
 				print cnt, nnz, float(cnt)/float(nnz)
-		hash_freq_print(hfreq, nnz, '64-bits')
 
-		hfreq = hash_freq_split(hfreq, "II", "L")
-		hash_freq_print(hfreq, nnz*2, '32-bits')
+		lfreq = hfreq2list(hfreq)
+		lfreq_print(lfreq, nnz, '64-bits')
 
-		hfreq = hash_freq_split(hfreq, "HH", "I")
-		hash_freq_print(hfreq, nnz*4, '16-bits')
+		hfreq = lfreq_split(lfreq, "II", "L")
+		lfreq = hfreq2list(hfreq)
+		lfreq_print(lfreq, nnz*2, '32-bits')
 
-		hfreq = hash_freq_split(hfreq, "BB", "H")
-		hash_freq_print(hfreq, nnz*8, '8-bits')
+		hfreq = lfreq_split(lfreq, "HH", "I")
+		lfreq = hfreq2list(hfreq)
+		lfreq_print(lfreq, nnz*4, '16-bits')
+
+		hfreq = lfreq_split(lfreq, "BB", "H")
+		lfreq = hfreq2list(hfreq)
+		lfreq_print(lfreq, nnz*8, '8-bits')
