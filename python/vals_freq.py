@@ -41,7 +41,7 @@ if __name__ == '__main__':
 			u64 = string.atol(po.readline(), 16)
 			hfreq[u64] = hfreq.get(u64, 0) + 1
 			cnt += 1
-			if (progess and cnt % (1024*1024) == 0):
+			if (progress and cnt % (1024*1024) == 0):
 				print cnt, nnz, float(cnt)/float(nnz)
 		hash_freq_print(hfreq, nnz, '64-bits')
 
