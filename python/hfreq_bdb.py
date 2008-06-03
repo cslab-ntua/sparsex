@@ -6,15 +6,19 @@ from os import makedirs
 from os.path import dirname, isdir
 from struct import pack, unpack
 
-def hfreq_bdb_init(db_file):
+def hfreq_bdb_init(db_file, cache_size=None):
 	""" initialize (open) a bdb frequency hash """
 	db_dir = dirname(db_file)
 	if not isdir(db_dir):
 		makedirs(db_dir)
 	db = DB()
+	if cache_size is not None:
+		db.set_cachesize (
+			cache_size / (1024*1024*1024),
+			cache_size % (1024*1024*1024)
+		)
 	db.open(db_file, dbtype=DB_HASH, flags=DB_CREATE)
 	return db
-
 
 def hfreq_bdb_add(db, v, freq=1):
 	try:

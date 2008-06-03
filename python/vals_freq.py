@@ -5,11 +5,18 @@ from itertools import imap
 import string
 import sys
 import os
-import cPickle
+import fcntl
+import time
 
 from mmf import MMF
 from toplist import Toplist
 from hfreq_bdb import hfreq_bdb_init, hfreq_bdb_add, bdb_iteritems, hfreq_bdb_get
+from progress import progress_iter
+
+def set_nonblock(fd):
+	flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+	flags = flags | os.O_NONBLOCK
+	fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 
 def lfreq_print(lfreq, total, desc):
 	pt = 0
@@ -46,7 +53,10 @@ def lfreq_split(lfreq, fmt_new, fmt_old):
 	return ret
 
 def hfreq_split_bdb(hfreq_bdb, fmt_new, fmt_old, new_hfreq_bdb):
-	for v,freq in bdb_iteritems(hfreq_bdb):
+	iterator = bdb_iteritems(hfreq_bdb)
+	if show_progress:
+		iterator = progress_iter(iterator, len(hfreq_bdb), prefix="SPLIT ")
+	for v,freq in iterator:
 		v = unpack("L", v)[0]
 		for nv in unpack(fmt_new, pack(fmt_old, v)):
 			hfreq_bdb_add(new_hfreq_bdb, pack("L", nv), freq)
@@ -57,24 +67,6 @@ def lfreq_split_bdb(lfreq, fmt_new, fmt_old, db):
 		for nv in unpack(fmt_new, pack(fmt_old, v)):
 			hfreq_bdb_add(db, pack("L", nv), freq)
 
-def mmf_val_ul_iter(mmf, po, pi):
-	""" iterator which produces longs (long) from a mmf iterator
-	    po, pi : pipe for the conversion of val string, to long (string)
-	"""
-	for i,j,v in mmf.iter_flstr():
-		pi.write(v + "\n")
-		pi.flush()
-		ret = string.atol(po.readline(), 16)
-		yield ret
-
-def mmf_val_bin_iter(mmf, po, pi):
-	""" iterator which produces longs (binary) from a mmf iterator
-	    po, pi : pipe for the conversion of val string, to long (string)
-	"""
-	return imap(
-		lambda x: pack("L", x), mmf_val_ul_iter(mmf, po, pi)
-	)
-
 def hfreq_mmf(mmf, po, pi):
 	hfreq = {}
 	cnt = 0
@@ -84,8 +76,6 @@ def hfreq_mmf(mmf, po, pi):
 		u64 = string.atol(po.readline(), 16)
 		hfreq[u64] = hfreq.get(u64, 0) + 1
 		cnt += 1
-		#if (progress and cnt & (256*1024 -1) == 0):
-		#	sys.stderr.write("%d %d %lf\n" % (cnt, nnz, float(cnt)/float(nnz)) )
 	return hfreq
 
 def bdb_file(mmf_file, file):
@@ -95,15 +85,22 @@ def bdb_file(mmf_file, file):
 def hfreq_mmf_bdb(mmf, po, pi, db):
 	if len(db) != 0:
 		return
-	for i,j,v in mmf.iter_flstr():
+	iterator = mmf.iter_flstr()
+	if show_progress:
+		iterator = progress_iter(iterator, mmf.entries, prefix="MMF ")
+	for i,j,v in iterator:
 		pi.write(v + "\n")
 		pi.flush()
 		ul = string.atol(po.readline(), 16)
 		hfreq_bdb_add(db, pack("L", ul))
+	db.sync()
 	
 def hfreq_bdb_tlist(db, size=10):
 	tl = Toplist(size)
-	for v, freq in bdb_iteritems(db):
+	iterator = bdb_iteritems(db)
+	if show_progress:
+		iterator =  progress_iter(iterator, len(db), prefix="TLIST ")
+	for v, freq in iterator:
 		v = unpack("L", v)[0]
 		tl.add((freq, v))
 	return tl
@@ -118,21 +115,25 @@ def vals_freq_bdb(mmf_file, po, pi):
 		sys.stderr.write(mmf_file + "\n")
 		
 		f = bdb_file(mmf.file, '64.db')
-		db = hfreq_bdb_init(f)
+		db = hfreq_bdb_init(f, cache_size / 2)
 		hfreq_mmf_bdb(mmf, po, pi, db)
-		tl = hfreq_bdb_tlist(db)
-		print "%2s %s" % ("64", tlist_repr(tl))
-		sys.stdout.flush()
+		#tl = hfreq_bdb_tlist(db)
+		#print "%2s %s" % ("64", tlist_repr(tl))
+		#sys.stdout.flush()
 
 		args = (("32", "II", "L"), ("16", "HH", "I"), ("8",  "BB", "H"))
 		for bits, new_fmt, old_fmt in  args:
 			f = bdb_file(mmf.file, bits + '.db')
 			db_old = db
-			db = hfreq_bdb_init(f)
+			db = hfreq_bdb_init(f, cache_size / 2)
+			print "--SPLIT", bits
 			hfreq_split_bdb(db_old, new_fmt, old_fmt, db)
-			tl = hfreq_bdb_tlist(db)
-			print "%2s %s" % (bits, tlist_repr(tl))
-			sys.stdout.flush()
+			db_old.close()
+			#print "--TLIST", bits
+			#tl = hfreq_bdb_tlist(db)
+			#print "%2s %s" % (bits, tlist_repr(tl))
+			#sys.stdout.flush()
+		db.close()
 
 def vals_freq(mmf_file, po, pi):
 		mmf = MMF(mmf_file)
@@ -147,10 +148,12 @@ def vals_freq(mmf_file, po, pi):
 			lfrq = hfreq2list(hfreq)
 			lfreq_print(lfreq, nnz(64/int(bits)), bits + '-bits')
 
-progress = True
+show_progress = True
+cache_size = 1024*1024*1024
 if __name__ == '__main__':
-	from sys import argv, exit
+	from sys import argv
 	po, pi = popen2("d2ul")
+	#set_nonblock(po)
 	for f in argv[1:]:
 		vals_freq_bdb(f, po, pi)
 		#vals_freq(f, po, pi)

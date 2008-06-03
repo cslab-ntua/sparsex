@@ -18,7 +18,7 @@ def progress(itotal, iprint_sh=10, cb=cb_pstderr, prefix=''):
 		return f
 	return d
 
-def progress_iter(iterator, itotal, iprint_sh=10, cb=cb_pstderr, prefix=''):
+def progress_iter(iterator, itotal, iprint_sh=13, cb=cb_pstderr, prefix=''):
 	cnt = 0
 	mask = (1<<iprint_sh) - 1
 	for item in iterator:
@@ -50,7 +50,8 @@ if __name__ == '__main__':
 	print t1-t0
 
 	t0 = time()
-	for i in progress_iter(i1(), l):
+	iterator = i1()
+	for i in progress_iter(iterator, l):
 		pass
 	t1 = time()
 	print t1-t0
