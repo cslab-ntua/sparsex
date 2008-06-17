@@ -78,9 +78,25 @@ def hfreq_mmf(mmf, po, pi):
 		cnt += 1
 	return hfreq
 
+def hfreq_mmf_xor(mmf, po, pi):
+	hfreq = {}
+	cnt = 0
+	u64_old = long(0)
+	for i,j,v in mmf.iter_flstr():
+		pi.write(v + "\n")
+		pi.flush()
+		u64 = string.atol(po.readline(), 16)
+		hfreq[u64] = hfreq.get(u64 ^ u64_old, 0) + 1
+		u64_old = u64
+		cnt += 1
+	return hfreq
+
 def bdb_file(mmf_file, file):
 	store_dir='/home/kkourt/work/research/spmv/datafiles/stats.bdb/'
-	return store_dir + os.path.basename(mmf_file) + '/vals_freq-' + file
+	f = store_dir + os.path.basename(mmf_file) + '/vals_freq-' + file
+	if os.path.exists(f):
+		raise RuntimeError
+	return f
 
 def hfreq_mmf_bdb(mmf, po, pi, db):
 	if len(db) != 0:
@@ -93,6 +109,21 @@ def hfreq_mmf_bdb(mmf, po, pi, db):
 		pi.flush()
 		ul = string.atol(po.readline(), 16)
 		hfreq_bdb_add(db, pack("L", ul))
+	db.sync()
+
+def hfreq_mmf_xor_bdb(mmf, po, pi, db):
+	if len(db) != 0:
+		return
+	iterator = mmf.iter_flstr()
+	if show_progress:
+		iterator = progress_iter(iterator, mmf.entries, prefix="MMF ")
+	ul_old = 0
+	for i,j,v in iterator:
+		pi.write(v + "\n")
+		pi.flush()
+		ul = string.atol(po.readline(), 16)
+		hfreq_bdb_add(db, pack("L", ul ^ ul_old))
+		ul_old = ul
 	db.sync()
 	
 def hfreq_bdb_tlist(db, size=10):
@@ -108,22 +139,22 @@ def hfreq_bdb_tlist(db, size=10):
 def tlist_repr(tl):
 	return [(hex(long(i[1])), i[0]) if i is not None else None for i in tl]
 
-def vals_freq_bdb(mmf_file, po, pi):
+def vals_freq_bdb(mmf_file, po, pi, mmf_bdb=hfreq_mmf_bdb, fprefix=''):
 		mmf = MMF(mmf_file)
 		nnz = mmf.entries
 		print '%s -------' % mmf_file
 		sys.stderr.write(mmf_file + "\n")
 		
-		f = bdb_file(mmf.file, '64.db')
+		f = bdb_file(mmf.file, fprefix + '64.db')
 		db = hfreq_bdb_init(f, cache_size / 2)
-		hfreq_mmf_bdb(mmf, po, pi, db)
+		mmf_bdb(mmf, po, pi, db)
 		#tl = hfreq_bdb_tlist(db)
 		#print "%2s %s" % ("64", tlist_repr(tl))
 		#sys.stdout.flush()
 
 		args = (("32", "II", "L"), ("16", "HH", "I"), ("8",  "BB", "H"))
 		for bits, new_fmt, old_fmt in  args:
-			f = bdb_file(mmf.file, bits + '.db')
+			f = bdb_file(mmf.file, fprefix + bits + '.db')
 			db_old = db
 			db = hfreq_bdb_init(f, cache_size / 2)
 			print "--SPLIT", bits
@@ -155,5 +186,6 @@ if __name__ == '__main__':
 	po, pi = popen2("d2ul")
 	#set_nonblock(po)
 	for f in argv[1:]:
-		vals_freq_bdb(f, po, pi)
+		#vals_freq_bdb(f, po, pi)
+		vals_freq_bdb(f, po, pi, hfreq_mmf_xor_bdb, fprefix="xor-")
 		#vals_freq(f, po, pi)
