@@ -4,10 +4,10 @@ all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_che
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
-CACHE_BYTES ?= $(shell cpu/cache_bytes.sh)
-CPU         ?= $(shell cpu/cpu_info.sh)
-MHZ         ?= $(shell cpu/cpu_mhz.sh)
-CL_BYTES    ?= $(shell cpu/cl_bytes.sh)
+CACHE_BYTES ?= $(shell $(shell rsrc resource cache_bytes.sh))
+CPU         ?= $(shell $(shell rsrc resource cpu_info.sh))
+MHZ         ?= $(shell $(shell rsrc resource cpu_mhz.sh))
+CL_BYTES    ?= $(shell $(shell rsrc resource cl_bytes.sh))
 GCC         ?= gcc-4.2
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
@@ -16,7 +16,7 @@ DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
 DEFS        += -DCPU_$(CPU) -DCPU_MHZ=$(MHZ)
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 LIBS         = -lm -lpthread
-INC          = -Iprfcnt
+INC          = -I$(shell rsrc resource 'prfcnt')
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 COMPILE_UR   = $(COMPILE) -funroll-loops
 PYLIBS       = $(shell python2.5-config --ldflags)
