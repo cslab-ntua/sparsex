@@ -180,7 +180,8 @@ def vals_freq(mmf_file, po, pi):
 			lfreq_print(lfreq, nnz(64/int(bits)), bits + '-bits')
 
 show_progress = True
-cache_size = 1024*1024*1024
+cache_perc = 0.85 # percentage of total memory allocated to the cache
+cache_size = int((os.sysconf('SC_PHYS_PAGES')*os.sysconf('SC_PAGESIZE'))*cache_perc)
 if __name__ == '__main__':
 	from sys import argv
 	po, pi = popen2("d2ul")
