@@ -43,7 +43,6 @@ def hfreq_bdb2list(hfreq_bdb):
 	hlist.sort()
 	return hlist
 
-
 def lfreq_split(lfreq, fmt_new, fmt_old):
 	ret = {}
 	for i in xrange(len(lfreq)):
@@ -91,10 +90,10 @@ def hfreq_mmf_xor(mmf, po, pi):
 		cnt += 1
 	return hfreq
 
-def bdb_file(mmf_file, file):
+def bdb_file(mmf_file, file, new=True):
 	store_dir='/home/kkourt/work/research/spmv/datafiles/stats.bdb/'
 	f = store_dir + os.path.basename(mmf_file) + '/vals_freq-' + file
-	if os.path.exists(f):
+	if new and os.path.exists(f):
 		raise RuntimeError
 	return f
 
@@ -128,16 +127,32 @@ def hfreq_mmf_xor_bdb(mmf, po, pi, db):
 	
 def hfreq_bdb_tlist(db, size=10):
 	tl = Toplist(size)
+	count = 0
 	iterator = bdb_iteritems(db)
 	if show_progress:
 		iterator =  progress_iter(iterator, len(db), prefix="TLIST ")
 	for v, freq in iterator:
 		v = unpack("L", v)[0]
 		tl.add((freq, v))
-	return tl
+		count += long(freq)
+	return tl, count
 
 def tlist_repr(tl):
-	return [(hex(long(i[1])), i[0]) if i is not None else None for i in tl]
+	return [(long(i[1]), i[0]) if i is not None else (long(0),0) for i in tl]
+
+def tlist_dbfile(dbfile, topsize=10):
+	db = hfreq_bdb_init(dbfile, cache_size/2)
+	tl, count = hfreq_bdb_tlist(db, size=topsize)
+	count = float(count)
+	print "db: %s" % dbfile
+	print "%24s %7s %7s %14s " % ("value", "freq", "perc", "total_perc")
+	pt = 0.0
+	for v, v_freq in tlist_repr(tl):
+		if v_freq == 0:
+			break
+		p = (v_freq/count)*100.0
+		pt += p
+		print "%#024x %7d    %4.1f       %4.1f" % (v, v_freq, p, pt)
 
 def vals_freq_bdb(mmf_file, po, pi, mmf_bdb=hfreq_mmf_bdb, fprefix=''):
 		mmf = MMF(mmf_file)
