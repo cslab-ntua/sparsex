@@ -2,6 +2,7 @@
 from popen2 import popen2
 from struct import pack, unpack
 from itertools import imap
+from math import log
 import string
 import sys
 import os
@@ -140,8 +141,9 @@ def hfreq_bdb_tlist(db, size=10):
 def tlist_repr(tl):
 	return [(long(i[1]), i[0]) if i is not None else (long(0),0) for i in tl]
 
-def tlist_dbfile(dbfile, topsize=10):
-	db = hfreq_bdb_init(dbfile, cache_size/2)
+def tlist_dbfile(dbfile, db=None, topsize=10):
+	if db is None:
+		db = hfreq_bdb_init(dbfile, cache_size/2)
 	tl, count = hfreq_bdb_tlist(db, size=topsize)
 	count = float(count)
 	print "db: %s" % dbfile
@@ -153,6 +155,32 @@ def tlist_dbfile(dbfile, topsize=10):
 		p = (v_freq/count)*100.0
 		pt += p
 		print "%#024x %7d    %4.1f       %4.1f" % (v, v_freq, p, pt)
+
+def hfreq_bdb_elems(db):
+	""" return the total number of elements in the set """
+	iterator = bdb_iteritems(db)
+	if show_progress:
+		iterator = progress_iter(iterator, len(db), prefix="COUNT ")
+	return reduce(lambda x,y: x+y, imap(lambda x: x[1], iterator))
+
+def _entropy_term(freq_iter, nr_elems, base=2):
+	return imap(
+		lambda p : p*log(p,base),
+		imap(lambda x : float(x)/float(nr_elems), freq_iter)
+	)
+
+def entropy_dbfile(dbfile, db=None, nr_elems=None):
+	""" information entropy for a frequency list stored in bdb
+		nr_elems: total number of elements (default: number of values in db)
+	"""
+	if db is None:
+		db = hfreq_bdb_init(dbfile, cache_size)
+	if nr_elems is None:
+		nr_elems = hfreq_bdb_elems(db)
+	iterator = imap(lambda x: x[1], bdb_iteritems(db))
+	if show_progress:
+		iterator = progress_iter(iterator, len(db), prefix="ENTROPY ")
+	return -reduce(lambda x,y: x+y, _entropy_term(iterator, nr_elems))
 
 def vals_freq_bdb(mmf_file, po, pi, mmf_bdb=hfreq_mmf_bdb, fprefix=''):
 		mmf = MMF(mmf_file)
@@ -202,6 +230,7 @@ if __name__ == '__main__':
 	po, pi = popen2("d2ul")
 	#set_nonblock(po)
 	for f in argv[1:]:
+		pass
 		#vals_freq_bdb(f, po, pi)
-		vals_freq_bdb(f, po, pi, hfreq_mmf_xor_bdb, fprefix="xor-")
+		#vals_freq_bdb(f, po, pi, hfreq_mmf_xor_bdb, fprefix="xor-")
 		#vals_freq(f, po, pi)
