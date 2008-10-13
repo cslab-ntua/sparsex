@@ -4,6 +4,9 @@ all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_che
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
+dynarray_dir = $(shell rsrc resource 'dynarray')
+dynarray_dep = $(dynarray_dir)/dynarray.o
+
 CACHE_BYTES ?= $(shell $(shell rsrc resource cache_bytes.sh))
 CPU         ?= $(shell $(shell rsrc resource cpu_info.sh))
 MHZ         ?= $(shell $(shell rsrc resource cpu_mhz.sh))
@@ -16,11 +19,12 @@ DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
 DEFS        += -DCPU_$(CPU) -DCPU_MHZ=$(MHZ)
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 LIBS         = -lm -lpthread
-INC          = -I$(shell rsrc resource 'prfcnt')
+INC          = -I$(shell rsrc resource 'prfcnt') -I$(dynarray_dir)
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 COMPILE_UR   = $(COMPILE) -funroll-loops
 PYLIBS       = $(shell python2.5-config --ldflags)
 PYCFLAGS     = $(shell python2.5-config --cflags)
+
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
 libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o  spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o
@@ -115,9 +119,6 @@ spm_delta_cv.o: spm_delta_cv_mul.c spm_delta_cv.h spm_delta.h vector.h
 libspmv.o: $(libspmv_deps)
 	$(LD) -i $(libspmv_deps) -o libspmv.o
 
-dynarray.o: dynarray.c dynarray.h
-	$(COMPILE) -c $< -o $@
-
 mt_lib.o: mt_lib.c mt_lib.h
 	$(COMPILE) -c $< -o $@
 
@@ -127,35 +128,35 @@ phash.o: phash.c phash.h
 ext_prog.o: ext_prog.c ext_prog.h
 	$(COMPILE) -c $< -o $@
 
-spmv_crsvi: libspmv.o dynarray.o spmv_crsvi.o
-	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crsvi.o -o $@
+spmv_crsvi: libspmv.o $(dynarray_dep) spmv_crsvi.o
+	$(COMPILE) $(LIBS) libspmv.o $(dynarray_dep) spmv_crsvi.o -o $@
 
-spmv_crsvi_mt: libspmv.o dynarray.o spmv_crsvi_mt.o
-	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crsvi_mt.o -o $@
+spmv_crsvi_mt: libspmv.o $(dynarray_dep) spmv_crsvi_mt.o
+	$(COMPILE) $(LIBS) libspmv.o $(dynarray_dep) spmv_crsvi_mt.o -o $@
 
-spmv_crsvi_check: libspmv.o dynarray.o spmv_crsvi_check.o
-	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crsvi_check.o -o $@
+spmv_crsvi_check: libspmv.o $(dynarray_dep) spmv_crsvi_check.o
+	$(COMPILE) $(LIBS) libspmv.o $(dynarray_dep) spmv_crsvi_check.o -o $@
 
-spmv_crs: libspmv.o dynarray.o spmv_crs.o
-	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs.o -o $@
+spmv_crs: libspmv.o $(dynarray_dep) spmv_crs.o
+	$(COMPILE) $(LIBS) libspmv.o $(dynarray_dep) spmv_crs.o -o $@
 
-spmv_crs_mt: libspmv.o dynarray.o spmv_crs_mt.o
-	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs_mt.o -o $@
+spmv_crs_mt: libspmv.o $(dynarray_dep) spmv_crs_mt.o
+	$(COMPILE) $(LIBS) libspmv.o $(dynarray_dep) spmv_crs_mt.o -o $@
 
-spmv_crs_mt_check: libspmv.o dynarray.o spmv_crs_mt_check.o
-	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs_mt_check.o -o $@
+spmv_crs_mt_check: libspmv.o $(dynarray_dep) spmv_crs_mt_check.o
+	$(COMPILE) $(LIBS) libspmv.o $(dynarray_dep) spmv_crs_mt_check.o -o $@
 
-spmv_crs64: libspmv.o dynarray.o spmv_crs64.o
-	$(COMPILE) $(LIBS) libspmv.o dynarray.o spmv_crs64.o -o $@
+spmv_crs64: libspmv.o $(dynarray_dep) spmv_crs64.o
+	$(COMPILE) $(LIBS) libspmv.o $(dynarray_dep) spmv_crs64.o -o $@
 
-cv_simple: cv_simple.o libspmv.o dynarray.o
-	$(COMPILE_UR)  cv_simple.o libspmv.o dynarray.o -o $@
+cv_simple: cv_simple.o libspmv.o $(dynarray_dep)
+	$(COMPILE_UR)  cv_simple.o libspmv.o $(dynarray_dep) -o $@
 
-cv1: cv1.o libspmv.o dynarray.o
-	$(COMPILE_UR)  cv1.o libspmv.o dynarray.o -o $@
+cv1: cv1.o libspmv.o $(dynarray_dep)
+	$(COMPILE_UR)  cv1.o libspmv.o $(dynarray_dep) -o $@
 
-cv1_d: cv1_d.o libspmv.o dynarray.o
-	$(COMPILE_UR)  cv1_d.o libspmv.o dynarray.o -o $@
+cv1_d: cv1_d.o libspmv.o $(dynarray_dep)
+	$(COMPILE_UR)  cv1_d.o libspmv.o $(dynarray_dep) -o $@
 
 vals_idx: vals_idx.c
 	$(COMPILE) $(PYCFLAGS) $(PYLIBS) $< -o $@
