@@ -6,6 +6,8 @@ all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_che
 
 dynarray_dir = $(shell rsrc resource 'dynarray')
 dynarray_dep = $(dynarray_dir)/dynarray.o
+phash_dir    = $(shell rsrc resource 'phash')
+phash_dep    = $(phash_dir)/phash.o
 
 CACHE_BYTES ?= $(shell $(shell rsrc resource cache_bytes.sh))
 CPU         ?= $(shell $(shell rsrc resource cpu_info.sh))
@@ -19,7 +21,7 @@ DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
 DEFS        += -DCPU_$(CPU) -DCPU_MHZ=$(MHZ)
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 LIBS         = -lm -lpthread
-INC          = -I$(shell rsrc resource 'prfcnt') -I$(dynarray_dir)
+INC          = -I$(shell rsrc resource 'prfcnt') -I$(dynarray_dir) -I$(phash_dir)
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 COMPILE_UR   = $(COMPILE) -funroll-loops
 PYLIBS       = $(shell python2.5-config --ldflags)
@@ -27,7 +29,7 @@ PYCFLAGS     = $(shell python2.5-config --cflags)
 
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o phash.o  spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_delta.o spm_delta_cv.o $(phash_dep)  spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -120,9 +122,6 @@ libspmv.o: $(libspmv_deps)
 	$(LD) -i $(libspmv_deps) -o libspmv.o
 
 mt_lib.o: mt_lib.c mt_lib.h
-	$(COMPILE) -c $< -o $@
-
-phash.o: phash.c phash.h
 	$(COMPILE) -c $< -o $@
 
 ext_prog.o: ext_prog.c ext_prog.h

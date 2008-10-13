@@ -82,7 +82,7 @@ static void crsvi_initialize(crs_vi_state_t **crs_vi_state_ptr,
 	
 	/* if this fails we need to make phash code more generic */
 	assert(sizeof(double) == sizeof(unsigned long));
-	crsvi_st->vhash = phash_new(12, 0);
+	crsvi_st->vhash = phash_new(12);
 
 	*crs_vi_state_ptr = crsvi_st;
 }
