@@ -32,53 +32,20 @@
 	CON5(spm_crs, SPM_CRSVH_CI_BITS, _vh_, ELEM_TYPE, name)
 #define SPM_CRSVH_TYPE SPM_CRS_VH_NAME(_t)
 
-struct crs_vh_state_s {
-	SPM_CRSVH_TYPE *crs_vh;
-	dynarray_t     *sp_colind, *sp_rowptr, *sp_values;
-};
-typedef struct crs_vh_state_s crs_vh_state_t;
-
-static void crsvh_initialize(crs_vh_state_t **crs_vh_state_ptr,
-                             unsigned long rows_nr, unsigned long cols_nr,
-                             unsigned long nz_nr)
-{
-	SPM_CRSVH_TYPE *crsvh;
-	crs_vh_state_t *crsvh_st;
-
-	crsvh = malloc(sizeof(SPM_CRSVH_TYPE));
-	crsvh_st = malloc(sizeof(crs_vh_state_t));
-	if ( !crsvh || !crsvh_st ){
-		perror("spm_crs_vh_init: malloc");
-		exit(1);
-	}
-
-	crsvh->ncols = cols_nr;
-	crsvh->nrows = rows_nr;
-	crsvh->nz = 0;
-
-	crsvh_st->crs_vh = crsvh;
-
-	crsvh_st->sp_values = dynarray_create(sizeof(ELEM_TYPE), 4096);
-	crsvh_st->sp_colind = dynarray_create(sizeof(SPM_CRSVH_CI_TYPE), nz_nr);
-	crsvh_st->sp_rowptr = dynarray_create(sizeof(SPM_CRSVH_CI_TYPE), rows_nr);
-
-	/* if this fails we need to make phash code more generic */
-	assert(sizeof(double) == sizeof(unsigned long));
-	*crs_vh_state_ptr = crsvh_st;
-}
+#define SPM_CRS_BITS SPM_CRSVH_CI_BITS
+#define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
+#define SPM_CRS_TYPE SPM_CRS_NAME(_t)
 
 #define CRSVH_ENV_LIMIT "CRSVH_LIMIT"
 #define CRSVH_ENV_BITS "CRSVH_BITS"
 
-static void crsvh_compress(crs_vh_state_t *crsvh_st)
+static void crsvh_compress_vals(SPM_CRSVH_TYPE *crs_vh, SPM_CRS_TYPE *crs)
 {
-	SPM_CRSVH_TYPE *crs_vh = crsvh_st->crs_vh;
-	unsigned long vals_s = crs_vh->nz*sizeof(ELEM_TYPE);
-	void *vals = dynarray_destroy(crsvh_st->sp_values);
 	phash_t *syms;
 	int limit=0, b=64, bits=0;
-	void *s;
+	unsigned long vals_s = crs->nz*sizeof(ELEM_TYPE);
 
+	void *s;
 	if ( (s = getenv(CRSVH_ENV_LIMIT)) ){
 		limit = atol(s);
 	}
@@ -87,100 +54,41 @@ static void crsvh_compress(crs_vh_state_t *crsvh_st)
 		assert((b==8) || (b==16) || (b==32) || (b==64));
 	}
 
-	huff_mksymcodes_split(vals, vals_s, limit, b, &syms, &crs_vh->htree, &bits);
+	huff_mksymcodes_split((void *)crs->values, vals_s, limit, b, &syms, &crs_vh->htree, &bits);
 	printf("crsvh: encoding: limit:%d bits:%d rbits:%d\n", limit, b, bits);
-	do_huff_encode(vals, vals_s,
+	do_huff_encode(crs->values, vals_s,
 	               &crs_vh->hvals, &crs_vh->hvals_bits,
 		       syms, bits);
+
 	phash_free(syms);
-	free(vals);
+	free(crs->values);
+	free(crs);
 }
 
-static void *crsvh_finalize(crs_vh_state_t *crsvh_st)
-{
-	SPM_CRSVH_TYPE *crs_vh = crsvh_st->crs_vh;
-	SPM_CRSVH_CI_TYPE *rowptr = dynarray_alloc(crsvh_st->sp_rowptr);
-
-	assert(crs_vh->nz == dynarray_size(crsvh_st->sp_values));
-	*rowptr = crs_vh->nz;
-
-	crsvh_compress(crsvh_st);
-	crs_vh->col_ind = dynarray_destroy(crsvh_st->sp_colind);
-	crs_vh->row_ptr = dynarray_destroy(crsvh_st->sp_rowptr);
-
-	free(crsvh_st);
-
-	return crs_vh;
-}
 
 SPM_CRSVH_TYPE *SPM_CRS_VH_NAME(_init_mmf) (char *mmf_file,
                                        unsigned long *rows_nr, unsigned long *cols_nr,
                                        unsigned long *nz_nr)
 {
-	crs_vh_state_t *crsvh_st;
-	FILE *f;
-	double val;
-	unsigned long row, col, prev_row=0, i;
-	time_t t0, tn;
-	char *report;
-	unsigned long report_rows;
+	SPM_CRSVH_TYPE *crs_vh;
+	SPM_CRS_TYPE *crs;
 
-	f = mmf_init(mmf_file, rows_nr, cols_nr, nz_nr);
-
-	crsvh_initialize(&crsvh_st, *rows_nr, *cols_nr, *nz_nr);
-	SPM_CRSVH_TYPE *crsvh = crsvh_st->crs_vh;
-
-	SPM_CRSVH_CI_TYPE *rowptr = dynarray_alloc(crsvh_st->sp_rowptr);
-	*rowptr = 0;
-	prev_row = 0;
-
-	report = getenv("SPM_CRSVH_REPORT");
-	if (report != NULL){
-		report_rows = atol(report);
-		if (!report_rows)
-			report_rows = 1024;
-	} else {
-		report_rows = 0;
+	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr);
+	crs_vh = malloc(sizeof(SPM_CRSVH_TYPE));
+	if (!crs_vh){
+		perror("malloc");
+		exit(1);
 	}
 
-	unsigned long empty_rows;
-	t0 = time(NULL);
-	while (mmf_get_next(f, &row, &col, &val)){
-		crsvh->nz++;
+	crs_vh->col_ind = crs->col_ind;
+	crs_vh->row_ptr = crs->row_ptr;
+	crs_vh->nz = crs->nz;
+	crs_vh->nrows = crs->nrows;
+	crs_vh->ncols = crs->ncols;
 
-		/* row indices */
-		if (prev_row < row){
-			#if 1
-			if (report_rows && row % report_rows == 0){
-				tn = time(NULL);
-				double ratio = (double)row/(tn - t0);
-				unsigned long remaining = *rows_nr - row;
-				printf("%s [ %lf m] remaining: %lu rows/sec:%lf ETA:%lf m\n",
-				        mmf_file, (double)(tn-t0)/60.0, remaining, ratio, (double)remaining/(ratio*60.0));
-			}
-			#endif
-			empty_rows = row -prev_row -1;
-			rowptr = dynarray_alloc_nr(crsvh_st->sp_rowptr,1+empty_rows);
-			for (i=0; i<empty_rows; i++){
-				*(rowptr+i) = *(rowptr+i-1);
-			}
-			*(rowptr+i) = crsvh->nz - 1;
-			prev_row = row;
-		}
+	crsvh_compress_vals(crs_vh, crs);
 
-		/* column indices */
-		SPM_CRSVH_CI_TYPE *colind = dynarray_alloc(crsvh_st->sp_colind);
-		*colind = col;
-
-		/* values */
-		ELEM_TYPE *v = dynarray_alloc(crsvh_st->sp_values);
-		*v = (ELEM_TYPE)val;
-	}
-
-	crsvh_finalize(crsvh_st);
-	fclose(f);
-
-	return crsvh;
+	return crs_vh;
 }
 
 void SPM_CRS_VH_NAME(_destroy)(SPM_CRSVH_TYPE *crs_vh)
