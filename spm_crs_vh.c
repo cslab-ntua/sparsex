@@ -1,13 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
-
-#if 0
 #include <inttypes.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#endif
 
 #ifndef SPM_CRSVH_CI_BITS
 #define SPM_CRSVH_CI_BITS 32
@@ -21,19 +15,15 @@
 #error "SPM_CRSHVH_CI_BITS not 32 or 64"
 #endif
 
-#if 0
+#include "phash.h"
 #include "vector.h"
-#include "ext_prog.h"
-#include "spmv_method.h"
-#include "phash.h"
-#endif
-
-#include "phash.h"
 #include "huffman.h"
 #include "bitutils.h"
 #include "dynarray.h"
 #include "mmf.h"
+#include "spmv_method.h"
 
+#include "spm_crs.h"
 #include "spm_crs_vh.h"
 
 #define _CON5(a,b,c,d,e) a ## b ## c ## d ## e
