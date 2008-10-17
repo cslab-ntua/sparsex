@@ -23,8 +23,6 @@ int main(int argc, char **argv)
 
 	snprintf(method_str, 1024, "spm_crs%d_vh_%s_multiply", ci, type);
 	method_t *m = method_get(method_str);
-	printf("%s\n", method_str);
-	method_print("--\n", " ", "\n", "--\n");
 	spmv_method_t *spmv_m = m->data;
 	spmv_load_fn_t *mmf_init = spmv_m->mmf_init;
 	void *crs;
