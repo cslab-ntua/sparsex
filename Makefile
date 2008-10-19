@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt spmv_crsvh spmv_crsvh_check
+all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt spmv_crsvh spmv_crsvh_check spmv_crsvh_mt
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
@@ -37,7 +37,7 @@ PYCFLAGS     = $(shell python2.5-config --cflags)
 
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spm_crsvh.o spmv_loops.o spm_delta.o spm_delta_cv.o spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o $(deps)
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spm_crsvh.o spmv_loops.o spm_delta.o spm_delta_cv.o spm_crs_mt.o spm_crsvh_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -111,6 +111,21 @@ spm_crsvi_mt.o:  spm_crs_vi_mt.c spm_crs_vi_mt.h
 	done
 	$(LD) -i spm_crs{64,32}_vi{32,16,8}_mt_{double,float}.o -o spm_crsvi_mt.o
 
+spm_crsvh_mt.o:  spm_crs_vh_mt.c spm_crs_vh_mt.h
+	for t in double float; do                 \
+	   for ci in 32 64; do                    \
+	       $(COMPILE)                         \
+	        -DELEM_TYPE=$$t                   \
+	        -DSPM_CRSVH_CI_BITS=$$ci          \
+	        -o spm_crs$${ci}_vh_mt_$${t}.o    \
+	        -c $<;                            \
+		if [[ $$? != 0 ]]; then           \
+			exit;                     \
+		fi                                \
+	   done                                   \
+	done
+	$(LD) -i spm_crs{64,32}_vh_mt_{double,float}.o -o spm_crsvh_mt.o
+
 spmv_loops.o: spmv_loops.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_float.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_double.o
@@ -139,7 +154,7 @@ spm_delta_cv.o: spm_delta_cv_mul.c spm_delta_cv.h spm_delta.h vector.h
 	$(LD) -i spm_delta_cv_mul_{float,double}.o -o spm_delta_cv.o
 
 libspmv.o: $(libspmv_deps)
-	$(LD) -i --allow-multiple-definition $(libspmv_deps) -o libspmv.o
+	$(LD) -i --allow-multiple-definition $(libspmv_deps) $(deps) -o libspmv.o
 
 mt_lib.o: mt_lib.c mt_lib.h
 	$(COMPILE) -c $< -o $@
@@ -161,6 +176,9 @@ spmv_crsvh_check: libspmv.o spmv_crsvh_check.o
 
 spmv_crsvh: libspmv.o spmv_crsvh.o
 	$(COMPILE) -Xlinker --allow-multiple-definition $(LIBS) spmv_crsvh.o $^  -o $@
+
+spmv_crsvh_mt: libspmv.o spmv_crsvh_mt.o
+	$(COMPILE) -Xlinker --allow-multiple-definition $(LIBS) $^  -o $@
 
 spmv_crs: libspmv.o spmv_crs.o
 	$(COMPILE) $(LIBS) libspmv.o spmv_crs.o -o $@
