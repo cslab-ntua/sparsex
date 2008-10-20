@@ -139,7 +139,7 @@ unsigned long SPM_CRSVI_MT_NAME(_size)(spm_mt_t *spm_mt)
 
 	ret = crsvi->nv*sizeof(ELEM_TYPE);
 	ret += crsvi->nz*(sizeof(SPM_CRSVI_VI_TYPE) + sizeof(SPM_CRSVI_CI_TYPE));
-	ret += crsvi->ncols*sizeof(SPM_CRSVI_CI_TYPE);
+	ret += crsvi->nrows*sizeof(SPM_CRSVI_CI_TYPE);
 
 	return ret;
 }
@@ -148,6 +148,6 @@ unsigned long SPM_CRSVI_MT_NAME(_size)(spm_mt_t *spm_mt)
 XSPMV_METH_INIT(
 	SPM_CRSVI_MT_NAME(_multiply),
 	SPM_CRSVI_MT_NAME(_init_mmf),
-	SPM_CRS_VI_NAME(_size),
+	SPM_CRSVI_MT_NAME(_size),
 	sizeof(ELEM_TYPE)
 )
