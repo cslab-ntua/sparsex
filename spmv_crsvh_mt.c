@@ -37,7 +37,12 @@ int main(int argc, char **argv)
 
 	loops = LOOPS;
 
+	#if 0
 	void *crs = spm_crs32_double_init_mmf(argv[1], &rows_nr, &cols_nr, &nz_nr);
+	spmv_double_check_mt_loop(crs, spm_mt,
+	                          spm_crs32_double_multiply, m->fn,
+				  1, cols_nr);
+	#endif
 
 	spm_mt = mmf_init(argv[1], &rows_nr, &cols_nr, &nz_nr);
 	if ( spmv_m->elem_size != sizeof(double) ){
@@ -45,13 +50,9 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	//double time = spmv_double_bench_mt_loop(m->fn, spm_mt, loops, cols_nr);
-	//double flops = (double)(loops*nz_nr*2)/(1000*1000*time);
-	//printf("%s %s %lu %lf %lf\n", basename(argv[1]), method_str, spm_size(spm_mt), time, flops);
-
-	spmv_double_check_mt_loop(crs, spm_mt,
-	                          spm_crs32_double_multiply, m->fn,
-				  1, cols_nr);
+	double time = spmv_double_bench_mt_loop(m->fn, spm_mt, loops, cols_nr);
+	double flops = (double)(loops*nz_nr*2)/(1000*1000*time);
+	printf("%s %s %lu %lf %lf\n", basename(argv[1]), method_str, spm_size(spm_mt), time, flops);
 
 
 	return 0;
