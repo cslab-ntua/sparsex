@@ -153,7 +153,6 @@ void SPM_CRS_VH_MT_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out
 	register ELEM_TYPE val;
 
 	register unsigned long i, j=0;
-	exit(1);
 	for(i=rs; i<re; i++) {
 		yr = (ELEM_TYPE)0;
 		__asm__ __volatile__ ("# loop start\n\t");
