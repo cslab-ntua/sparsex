@@ -8,6 +8,7 @@
 #endif
 
 #define SPM_CRSVH_CI_TYPE UINT_TYPE(SPM_CRSVH_CI_BITS)
+#define SPM_CRS_BITS SPM_CRSVH_CI_BITS
 
 #include "phash.h"
 #include "vector.h"
@@ -25,14 +26,6 @@
 #define SPM_CRS_VH_MT_NAME(name) \
 	CON6(spm_crs, SPM_CRSVH_CI_BITS, _vh_, ELEM_TYPE, _mt, name)
 #define SPM_CRS_VH_MT_TYPE SPM_CRS_VH_MT_NAME(_t)
-
-#define SPM_CRS_MT_NAME(name) \
-	CON6(spm_crs, SPM_CRSVH_CI_BITS, _,ELEM_TYPE,_mt,name)
-#define SPM_CRS_MT_TYPE SPM_CRS_MT_NAME(_t)
-
-#define SPM_CRS_NAME(name) \
-	CON5(spm_crs, SPM_CRSVH_CI_BITS, _, ELEM_TYPE, name)
-#define SPM_CRS_TYPE SPM_CRS_NAME(_t)
 
 #define CRSVH_ENV_LIMIT "CRSVH_LIMIT"
 #define CRSVH_ENV_BITS "CRSVH_BITS"

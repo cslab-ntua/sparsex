@@ -8,13 +8,6 @@
 #include "spm_crs.h"
 #include "spm_crs_mt.h"
 
-#define SPM_CRS_IDX_TYPE UINT_TYPE(SPM_CRS_BITS)
-
-#define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
-#define SPM_CRS_MT_NAME(name) CON6(spm_crs, SPM_CRS_BITS, _,ELEM_TYPE,_mt,name)
-#define SPM_CRS_TYPE SPM_CRS_NAME(_t)
-#define SPM_CRS_MT_TYPE SPM_CRS_MT_NAME(_t)
-
 spm_mt_t *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
                                      unsigned long *rows_nr, unsigned long *cols_nr,
                                      unsigned long *nz_nr)

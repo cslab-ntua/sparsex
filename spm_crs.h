@@ -67,4 +67,9 @@ void spm_crs64_double_multiply(spm_crs64_double_t *crs, vector_double_t *x, vect
 void spm_crs64_float_multiply(spm_crs64_float_t *crs, vector_float_t *x, vector_float_t *y);
 #endif
 
+#include "macros.h"
+#define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
+#define SPM_CRS_TYPE SPM_CRS_NAME(_t)
+#define SPM_CRS_IDX_TYPE UINT_TYPE(SPM_CRS_BITS)
+
 #endif

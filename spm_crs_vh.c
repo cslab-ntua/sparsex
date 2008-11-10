@@ -19,16 +19,10 @@
 #include "mmf.h"
 #include "spmv_method.h"
 
+#define SPM_CRS_BITS SPM_CRSVH_CI_BITS
+
 #include "spm_crs.h"
 #include "spm_crs_vh.h"
-
-#define SPM_CRS_VH_NAME(name) \
-	CON5(spm_crs, SPM_CRSVH_CI_BITS, _vh_, ELEM_TYPE, name)
-#define SPM_CRSVH_TYPE SPM_CRS_VH_NAME(_t)
-
-#define SPM_CRS_BITS SPM_CRSVH_CI_BITS
-#define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
-#define SPM_CRS_TYPE SPM_CRS_NAME(_t)
 
 #define CRSVH_ENV_LIMIT "CRSVH_LIMIT"
 #define CRSVH_ENV_BITS "CRSVH_BITS"

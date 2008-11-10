@@ -9,17 +9,12 @@
 #define SPM_CRS_BITS 64
 #endif
 
-#define SPM_CRS_IDX_TYPE UINT_TYPE(SPM_CRS_BITS)
-
 #include "vector.h"
 #include "spm_crs.h"
 #include "dynarray.h"
 #include "mmf.h"
 #include "method.h"
 #include "spm_parse.h"
-
-#define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
-#define SPM_CRS_TYPE SPM_CRS_NAME(_t)
 
 typedef SPM_CRS_IDX_TYPE spm_crs_idx_t;
 typedef SPM_CRS_TYPE spm_crs_t;

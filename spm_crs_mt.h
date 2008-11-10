@@ -30,5 +30,8 @@ SPM_CRS_MT_DECLARE(64, double)
 SPM_CRS_MT_DECLARE(32, float)
 SPM_CRS_MT_DECLARE(64, float)
 
+#include "macros.h"
+#define SPM_CRS_MT_NAME(name) CON6(spm_crs, SPM_CRS_BITS, _,ELEM_TYPE,_mt,name)
+#define SPM_CRS_MT_TYPE SPM_CRS_MT_NAME(_t)
 
 #endif
