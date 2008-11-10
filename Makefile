@@ -212,4 +212,4 @@ vals_idx: vals_idx.c
 	$(COMPILE) -E $< | indent -kr > $@
 
 clean:
-	rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check}
+	rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt
