@@ -1,26 +1,14 @@
 #include <stdlib.h>
 #include <inttypes.h>
+#include <pthread.h>
 
+#include "macros.h"
 #include "mt_lib.h"
 #include "spm_mt.h"
 #include "spm_crs.h"
 #include "spm_crs_mt.h"
 
-#include "pthread.h"
-
-#if SPM_CRS_BITS == 32
-#define  SPM_CRS_IDX_TYPE uint32_t
-#elif SPM_CRS_BITS == 64
-#define SPM_CRS_IDX_TYPE uint64_t
-#else
-#error "SPM_CRS_BITS not 32 or 64"
-#endif
-
-
-#define _CON5(a,b,c,d,e) a ## b ## c ## d ## e
-#define CON5(a,b,c,d,e) _CON5(a,b,c,d,e)
-#define _CON6(a,b,c,d,e,f) a ## b ## c ## d ## e ## f
-#define CON6(a,b,c,d,e,f) _CON6(a,b,c,d,e,f)
+#define SPM_CRS_IDX_TYPE UINT_TYPE(SPM_CRS_BITS)
 
 #define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
 #define SPM_CRS_MT_NAME(name) CON6(spm_crs, SPM_CRS_BITS, _,ELEM_TYPE,_mt,name)

@@ -8,32 +8,13 @@
 
 #include "pthread.h"
 
-#if SPM_CRSVI_CI_BITS == 32
-#define  SPM_CRSVI_CI_TYPE uint32_t
-#elif SPM_CRSVI_CI_BITS == 64
-#define SPM_CRSVI_CI_TYPE uint64_t
-#else
-#error "SPM_CRSVI_CI_BITS not 32 or 64"
-#endif
+#define SPM_CRSVI_CI_TYPE UINT_TYPE(SPM_CRSVI_CI_BITS)
+#define SPM_CRSVI_VI_TYPE UINT_TYPE(SPM_CRSVI_VI_BITS)
 
-#if SPM_CRSVI_VI_BITS == 32
-#define  SPM_CRSVI_VI_TYPE uint32_t
-#elif SPM_CRSVI_VI_BITS == 16
-#define SPM_CRSVI_VI_TYPE uint16_t
-#elif SPM_CRSVI_VI_BITS == 8
-#define SPM_CRSVI_VI_TYPE uint8_t
-#else
-#error "SPM_CRSVI_VI_BITS not 8 or 16 or 32"
-#endif
-
-#define _CON7(a,b,c,d,e,f,g) a ## b ## c ## d ## e ## f ## g
-#define CON7(a,b,c,d,e,f,g) _CON7(a,b,c,d,e,f,g)
 #define SPM_CRS_VI_NAME(name) \
         CON7(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, name)
 #define SPM_CRSVI_TYPE SPM_CRS_VI_NAME(_t)
 
-#define _CON8(a,b,c,d,e,f,g,h) a ## b ## c ## d ## e ## f ## g ## h
-#define CON8(a,b,c,d,e,f,g,h) _CON8(a,b,c,d,e,f,g,h)
 #define SPM_CRSVI_MT_NAME(name) \
         CON8(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, _mt, name)
 #define SPM_CRSVI_MT_TYPE SPM_CRSVI_MT_NAME(_t)

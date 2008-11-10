@@ -3,10 +3,10 @@
 
 #include <inttypes.h>
 #include "spmv_method.h"
+#include "macros.h"
 
 //#define SPM_CRS_VI_VIDX_TYPE uint8_t
 
-#define UINT_TYPE(bits) uint ## bits ## _t
 #define _NAME(val_type, ci_bits, vi_bits, name) \
 	spm_crs ## ci_bits ## _vi ## vi_bits ## _ ## val_type ## name
 
@@ -56,7 +56,6 @@ DECLARE_CRS_VI(float, 64, 8)
 DECLARE_CRS_VI(float, 64, 16)
 DECLARE_CRS_VI(float, 64, 32)
 
-#undef UNIT_TYPE
 #undef _NAME
 #undef DECLARE_CRS_VI
 

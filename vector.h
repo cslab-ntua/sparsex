@@ -1,14 +1,14 @@
 #ifndef __VECTOR_H__
 #define __VECTOR_H__
 
+#include "macros.h"
+
 /* helpers for cpp abuse */
 #ifndef ELEM_TYPE
 #define ELEM_TYPE double
 #endif
 
-#define VECTOR_CON3_(a,b,c) a ## b ## c
-#define VECTOR_CON3(a,b,c) VECTOR_CON3_(a,b,c)
-#define VECTOR_NAME(name) VECTOR_CON3(vector_, ELEM_TYPE, name)
+#define VECTOR_NAME(name) CON3(vector_, ELEM_TYPE, name)
 #define VECTOR_TYPE VECTOR_NAME(_t)
 
 typedef struct {

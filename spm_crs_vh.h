@@ -2,12 +2,12 @@
 #define __SPM_CRS_VHUFF_H__
 
 #include <inttypes.h>
+#include "macros.h"
 #include "huffman.h"
 #include "spmv_method.h"
 
 //#define SPM_CRS_VI_VIDX_TYPE uint8_t
 
-#define UINT_TYPE(bits) uint ## bits ## _t
 #define _NAME(val_type, ci_bits, name) \
 	spm_crs ## ci_bits ## _vh_ ## val_type ## name
 
@@ -43,7 +43,6 @@ DECLARE_CRS_VH(float,  32)
 DECLARE_CRS_VH(double, 64)
 DECLARE_CRS_VH(float,  64)
 
-#undef UNIT_TYPE
 #undef _NAME
 #undef DECLARE_CRS_VI
 

@@ -2,18 +2,14 @@
 #include <emmintrin.h>
 #include <inttypes.h>
 #include <assert.h>
+
+#include "macros.h"
 	
 #ifndef SPM_CRS_BITS
 #define SPM_CRS_BITS 64
 #endif
 
-#if SPM_CRS_BITS == 32
-#define  SPM_CRS_IDX_TYPE uint32_t
-#elif SPM_CRS_BITS == 64
-#define SPM_CRS_IDX_TYPE uint64_t
-#else
-#error "SPM_CRS_BITS not 32 or 64"
-#endif
+#define SPM_CRS_IDX_TYPE UINT_TYPE(SPM_CRS_BITS)
 
 #include "vector.h"
 #include "spm_crs.h"
@@ -22,8 +18,6 @@
 #include "method.h"
 #include "spm_parse.h"
 
-#define _CON5(a,b,c,d,e) a ## b ## c ## d ## e
-#define CON5(a,b,c,d,e) _CON5(a,b,c,d,e)
 #define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
 #define SPM_CRS_TYPE SPM_CRS_NAME(_t)
 

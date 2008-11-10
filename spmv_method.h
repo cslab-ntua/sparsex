@@ -1,10 +1,11 @@
 #ifndef __SPMV_METHOD_H__
 #define __SPMV_METHOD_H__
 
+#include "macros.h"
 #include "method.h"
 #include "vector.h"
 
-#define SPMV_NAME(name) VECTOR_CON3(spmv_, ELEM_TYPE, name)
+#define SPMV_NAME(name) CON3(spmv_, ELEM_TYPE, name)
 
 typedef struct {
 	void *mmf_init;

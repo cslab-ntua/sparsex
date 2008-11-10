@@ -7,13 +7,7 @@
 #define SPM_CRSVH_CI_BITS 32
 #endif
 
-#if SPM_CRSVH_CI_BITS == 32
-#define  SPM_CRSVH_CI_TYPE uint32_t
-#elif SPM_CRSVH_CI_BITS == 64
-#define SPM_CRSVH_CI_TYPE uint64_t
-#else
-#error "SPM_CRSHVH_CI_BITS not 32 or 64"
-#endif
+#define SPM_CRSVH_CI_TYPE UINT_TYPE(SPM_CRSVH_CI_BITS)
 
 #include "phash.h"
 #include "vector.h"
@@ -27,12 +21,6 @@
 #include "spm_crs.h"
 #include "spm_crs_mt.h"
 #include "spm_crs_vh_mt.h"
-
-#define _CON5(a,b,c,d,e) a ## b ## c ## d ## e
-#define CON5(a,b,c,d,e) _CON5(a,b,c,d,e)
-
-#define _CON6(a,b,c,d,e,f) a ## b ## c ## d ## e ## f
-#define CON6(a,b,c,d,e,f) _CON6(a,b,c,d,e,f)
 
 #define SPM_CRS_VH_MT_NAME(name) \
 	CON6(spm_crs, SPM_CRSVH_CI_BITS, _vh_, ELEM_TYPE, _mt, name)

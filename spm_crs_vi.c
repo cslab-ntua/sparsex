@@ -5,33 +5,16 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
-	
+
 #ifndef SPM_CRSVI_CI_BITS
 #define SPM_CRSVI_CI_BITS 32
-#endif
-
-#if SPM_CRSVI_CI_BITS == 32
-#define  SPM_CRSVI_CI_TYPE uint32_t
-#elif SPM_CRSVI_CI_BITS == 64
-#define SPM_CRSVI_CI_TYPE uint64_t
-#else
-#error "SPM_CRSVI_CI_BITS not 32 or 64"
 #endif
 
 #ifndef SPM_CRSVI_VI_BITS
 #define SPM_CRSVI_VI_BITS 8
 #endif
 
-#if SPM_CRSVI_VI_BITS == 32
-#define  SPM_CRSVI_VI_TYPE uint32_t
-#elif SPM_CRSVI_VI_BITS == 16
-#define SPM_CRSVI_VI_TYPE uint16_t
-#elif SPM_CRSVI_VI_BITS == 8
-#define SPM_CRSVI_VI_TYPE uint8_t
-#else
-#error "SPM_CRSVI_VI_BITS not 8 or 16 or 32"
-#endif
-
+#include "macros.h"
 #include "vector.h"
 #include "mmf.h"
 #include "dynarray.h"
@@ -40,8 +23,9 @@
 #include "spmv_method.h"
 #include "phash.h"
 
-#define _CON7(a,b,c,d,e,f,g) a ## b ## c ## d ## e ## f ## g
-#define CON7(a,b,c,d,e,f,g) _CON7(a,b,c,d,e,f,g)
+#define SPM_CRSVI_CI_TYPE UINT_TYPE(SPM_CRSVI_CI_BITS)
+#define SPM_CRSVI_VI_TYPE UINT_TYPE(SPM_CRSVI_VI_BITS)
+
 #define SPM_CRS_VI_NAME(name) \
 	CON7(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, name)
 #define SPM_CRSVI_TYPE SPM_CRS_VI_NAME(_t)

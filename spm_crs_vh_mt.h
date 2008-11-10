@@ -2,6 +2,7 @@
 #define __SPM_CRS_VH_MT_H__
 
 #include <inttypes.h>
+#include "macros.h"
 #include "spmv_method.h"
 #include "spm_mt.h"
 
@@ -9,7 +10,6 @@
 
 //#define SPM_CRS_VI_VIDX_TYPE uint8_t
 
-#define UINT_TYPE(bits) uint ## bits ## _t
 #define _NAME(val_type, ci_bits, name) \
 	spm_crs ## ci_bits ## _vh_ ## val_type ## _mt ## name
 
@@ -46,7 +46,6 @@ DECLARE_CRS_VH_MT(float,  32)
 DECLARE_CRS_VH_MT(double, 64)
 DECLARE_CRS_VH_MT(float,  64)
 
-#undef UNIT_TYPE
 #undef _NAME
 #undef DECLARE_CRS_VI
 
