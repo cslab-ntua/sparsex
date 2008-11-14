@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 	loops = LOOPS;
 
 	crs = spm_crs32_double_init_mmf(argv[1], &rows_nr, &cols_nr, &nz_nr);
-	time = spmv_double_bench_loop(spm_crs32_double_multiply, crs,loops, cols_nr);
+	time = spmv_double_bench_loop(spm_crs32_double_multiply, crs,loops, rows_nr, cols_nr);
 	flops = (double)(loops*nz_nr*2)/(1000*1000*time);
 	size = nz_nr*(8 + 4) + cols_nr*4;
 

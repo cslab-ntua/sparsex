@@ -11,14 +11,15 @@
 //#define SPMV_PRFCNT
 
 float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
-                             unsigned long loops, unsigned long cols_nr)
+                             unsigned long loops,
+			     unsigned long rows_nr, unsigned long cols_nr)
 {
 
 	VECTOR_TYPE *x,*y;
 	unsigned long i;
 	tsc_t tsc;
 
-	x = VECTOR_NAME(_create)(cols_nr);
+	x = VECTOR_NAME(_create)(rows_nr);
 	y = VECTOR_NAME(_create)(cols_nr);
 
 	tsc_init(&tsc);
@@ -63,14 +64,15 @@ float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
 void SPMV_NAME(_check_loop) (void *m1, void *m2,
                              SPMV_NAME(_fn_t) *fn1, SPMV_NAME(_fn_t) *fn2,
                              unsigned long loops,
-                             unsigned long cols_nr, unsigned long nz_nr)
+                             unsigned long rows_nr, unsigned long cols_nr,
+			     unsigned long nz_nr)
 {
 	unsigned long i;
 	VECTOR_TYPE *x,*y1,*y2;
 
 	x = VECTOR_NAME(_create)(cols_nr);
-	y1 = VECTOR_NAME(_create)(cols_nr);
-	y2 = VECTOR_NAME(_create)(cols_nr);
+	y1 = VECTOR_NAME(_create)(rows_nr);
+	y2 = VECTOR_NAME(_create)(rows_nr);
 
 	for (i=0; i<loops ;  i++){
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);

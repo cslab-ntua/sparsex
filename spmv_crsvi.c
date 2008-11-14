@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "sanity check failed (?)\n");
 		exit(1);
 	}
-	time = spmv_double_bench_loop(m->fn, crsvi,loops, cols_nr);
+	time = spmv_double_bench_loop(m->fn, crsvi,loops, rows_nr, cols_nr);
 	flops = (double)(loops*nz_nr*2)/(1000*1000*time);
 
 	printf("%s %s %lu %lf %lf\n", basename(argv[1]), method_str, spm_size(crsvi), time, flops);

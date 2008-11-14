@@ -567,7 +567,7 @@ pyspm_delta_check(pyspm_delta_t *self, PyObject *args)
 		spmv_float_check_loop(
 			crs, &self->delta,
 			spm_crs64_float_multiply, spm_delta_float_multiply,
-			loops, cols_nr, nz_nr);
+			loops, rows_nr, cols_nr, nz_nr);
 		spm_crs64_float_destroy(crs);
 	} else {
 		spm_crs64_double_t *crs;
@@ -575,7 +575,7 @@ pyspm_delta_check(pyspm_delta_t *self, PyObject *args)
 		spmv_double_check_loop(
 			crs, &self->delta,
 			spm_crs64_double_multiply, spm_delta_double_multiply,
-			loops, cols_nr, nz_nr);
+			loops, rows_nr, cols_nr, nz_nr);
 		spm_crs64_double_destroy(crs);
 	}
 
@@ -601,7 +601,7 @@ pyspm_delta_jmp_check(pyspm_delta_t *self, PyObject *args)
 		spmv_float_check_loop(
 			crs, &self->delta,
 			spm_crs64_float_multiply, spm_delta_float_jmp_multiply,
-			loops, cols_nr, nz_nr);
+			loops, rows_nr, cols_nr, nz_nr);
 		spm_crs64_float_destroy(crs);
 	} else {
 		spm_crs64_double_t *crs;
@@ -609,7 +609,7 @@ pyspm_delta_jmp_check(pyspm_delta_t *self, PyObject *args)
 		spmv_double_check_loop(
 			crs, &self->delta,
 			spm_crs64_double_multiply, spm_delta_double_jmp_multiply,
-			loops, cols_nr, nz_nr);
+			loops, rows_nr, cols_nr, nz_nr);
 		spm_crs64_double_destroy(crs);
 	}
 
@@ -628,10 +628,10 @@ pyspm_delta_bench(pyspm_delta_t *self, PyObject *args)
 
 	if ( self->el_type == PYSPM_TYPE_FLOAT){
 		ret = spmv_float_bench_loop(spm_delta_float_multiply,
-		                            &self->delta, loops, self->delta.ncols);
+		                            &self->delta, loops, self->delta.nrows, self->delta.ncols);
 	} else {
 		ret = spmv_double_bench_loop(spm_delta_double_multiply,
-		                             &self->delta, loops, self->delta.ncols);
+		                             &self->delta, loops, self->delta.nrows, self->delta.ncols);
 	}
 
 	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
@@ -649,10 +649,10 @@ pyspm_delta_jmp_bench(pyspm_delta_t *self, PyObject *args)
 
 	if ( self->el_type == PYSPM_TYPE_FLOAT){
 		ret = spmv_float_bench_loop(spm_delta_float_jmp_multiply,
-		                            &self->delta, loops, self->delta.ncols);
+		                            &self->delta, loops, self->delta.nrows, self->delta.ncols);
 	} else {
 		ret = spmv_double_bench_loop(spm_delta_double_jmp_multiply,
-		                             &self->delta, loops, self->delta.ncols);
+		                             &self->delta, loops, self->delta.nrows,self->delta.ncols);
 	}
 
 	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
@@ -1147,7 +1147,7 @@ pyspm_delta_cv_check(pyspm_delta_cv_t *self, PyObject *args)
 		spmv_float_check_loop(
 			crs, &self->delta_cv,
 			spm_crs64_float_multiply, spm_delta_cv_float_jmp_multiply,
-			loops, cols_nr, nz_nr);
+			loops, rows_nr, cols_nr, nz_nr);
 		spm_crs64_float_destroy(crs);
 	} else {
 		spm_crs64_double_t *crs;
@@ -1155,7 +1155,7 @@ pyspm_delta_cv_check(pyspm_delta_cv_t *self, PyObject *args)
 		spmv_double_check_loop(
 			crs, &self->delta_cv,
 			spm_crs64_double_multiply, spm_delta_cv_double_jmp_multiply,
-			loops, cols_nr, nz_nr);
+			loops, rows_nr, cols_nr, nz_nr);
 		spm_crs64_double_destroy(crs);
 	}
 
@@ -1174,10 +1174,10 @@ pyspm_delta_cv_bench(pyspm_delta_cv_t *self, PyObject *args)
 
 	if ( self->el_type == PYSPM_TYPE_FLOAT){
 		ret = spmv_float_bench_loop(spm_delta_cv_float_jmp_multiply,
-		                            &self->delta_cv, loops, self->delta_cv.ncols);
+		                            &self->delta_cv, loops, self->delta_cv.nrows, self->delta_cv.ncols);
 	} else {
 		ret = spmv_double_bench_loop(spm_delta_cv_double_jmp_multiply,
-		                             &self->delta_cv, loops, self->delta_cv.ncols);
+		                             &self->delta_cv, loops, self->delta_cv.nrows, self->delta_cv.ncols);
 	}
 
 	ret = (double)(loops*self->delta_cv.nnz*2)/(1000*1000*ret);
@@ -1285,22 +1285,22 @@ pyspm_crs_bench(PyObject *self, PyObject *args)
 	if (type == PYSPM_TYPE_FLOAT && crs == PYSPM_CRS_32) {
 		spm_crs32_float_t *crs;
 		crs = spm_crs32_float_init_mmf(f, &rows_nr, &cols_nr, &nz_nr);
-		ret = spmv_float_bench_loop(spm_crs32_float_multiply, crs, loops, cols_nr);
+		ret = spmv_float_bench_loop(spm_crs32_float_multiply, crs, loops, rows_nr, cols_nr);
 		spm_crs32_float_destroy(crs);
 	} else if (type == PYSPM_TYPE_FLOAT && crs == PYSPM_CRS_64) {
 		spm_crs64_float_t *crs;
 		crs = spm_crs64_float_init_mmf(f, &rows_nr, &cols_nr, &nz_nr);
-		ret = spmv_float_bench_loop(spm_crs64_float_multiply, crs, loops, cols_nr);
+		ret = spmv_float_bench_loop(spm_crs64_float_multiply, crs, loops, rows_nr, cols_nr);
 		spm_crs64_float_destroy(crs);
 	} else if (type == PYSPM_TYPE_DOUBLE && crs == PYSPM_CRS_32) {
 		spm_crs32_double_t *crs;
 		crs = spm_crs32_double_init_mmf(f, &rows_nr, &cols_nr, &nz_nr);
-		ret = spmv_double_bench_loop(spm_crs32_double_multiply, crs, loops, cols_nr);
+		ret = spmv_double_bench_loop(spm_crs32_double_multiply, crs, loops, rows_nr, cols_nr);
 		spm_crs32_double_destroy(crs);
 	} else if (type == PYSPM_TYPE_DOUBLE && crs == PYSPM_CRS_64) {
 		spm_crs64_double_t *crs;
 		crs = spm_crs64_double_init_mmf(f, &rows_nr, &cols_nr, &nz_nr);
-		ret = spmv_double_bench_loop(spm_crs64_double_multiply, crs, loops, cols_nr);
+		ret = spmv_double_bench_loop(spm_crs64_double_multiply, crs, loops, rows_nr, cols_nr);
 		spm_crs64_double_destroy(crs);
 	} else {
 		value_error_on(1, NULL);

@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 	}
 
 	crs = spm_crs32_double_init_mmf(argv[1], &rows_nr, &cols_nr, &nz_nr);
-	spmv_double_check_loop(crs, crsvi, spm_crs32_double_multiply, m->fn, 1, cols_nr, nz_nr);
+	spmv_double_check_loop(crs, crsvi, spm_crs32_double_multiply, m->fn, 1, rows_nr, cols_nr, nz_nr);
 	//time = spmv_double_bench_loop(m->fn, crsvi,loops, cols_nr);
 	//flops = (double)(loops*nz_nr*2)/(1000*1000*time);
 
