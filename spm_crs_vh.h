@@ -18,6 +18,7 @@
 		unsigned char       *hvals;               \
 		unsigned long       hvals_bits;           \
 		huff_node_t         *htree;               \
+		unsigned long       hsym_bits;            \
 	} _NAME(val_type, ci_bits, _t);          \
 	                                                  \
 	_NAME(val_type, ci_bits, _t) *           \

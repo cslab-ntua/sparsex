@@ -44,10 +44,10 @@ static void crsvh_compress_vals(SPM_CRSVH_TYPE *crs_vh, SPM_CRS_TYPE *crs)
 
 	huff_mksymcodes_split((void *)crs->values, vals_s, limit, b, &syms, &crs_vh->htree, &bits);
 	printf("crsvh: encoding: limit:%d bits:%d rbits:%d\n", limit, b, bits);
+	crs_vh->hsym_bits = bits;
 	do_huff_encode(crs->values, vals_s,
 	               &crs_vh->hvals, &crs_vh->hvals_bits,
 		       syms, bits);
-
 	phash_free(syms);
 	free(crs->values);
 	free(crs);
