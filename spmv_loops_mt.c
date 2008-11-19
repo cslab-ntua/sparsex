@@ -6,6 +6,7 @@
 #include "spm_mt.h"
 #include "mt_lib.h"
 
+#include "spmv_loops_mt.h"
 #include "tsc.h"
 
 static VECTOR_TYPE *x=NULL, *y=NULL;
