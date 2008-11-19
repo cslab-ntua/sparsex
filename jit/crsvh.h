@@ -10,6 +10,7 @@ typedef struct {
 	uint32_t *col_ind, *row_ptr;
 	uint64_t nz, nrows, ncols, row_start, row_end;
 	unsigned char *hvals;
+	unsigned long hvals_bits;
 } spm_crs32_vhjit_t;
 
 method_t *spm_crs32_vhjit_double_init_method(char *mmf_file, unsigned long *rows_nr,
@@ -19,4 +20,5 @@ method_t *spm_crs32_vhjit_double_init_method(char *mmf_file, unsigned long *rows
 spm_mt_t *spm_crs32_vhjit_mt_double_init_method(char *mmf_file, unsigned long *rows_nr,
                                                 unsigned long *cols_nr, unsigned long *nz_nr);
 
+unsigned long spm_crs32_vhjit_mt_double_size(spm_mt_t *spm_mt);
 #endif /* SPM_CRS_VHJIT__ */

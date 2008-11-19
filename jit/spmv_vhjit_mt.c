@@ -25,7 +25,8 @@ int main(int argc, char **argv)
 	spm_mt = spm_crs32_vhjit_mt_double_init_method(argv[1], &rows_nr, &cols_nr, &nz_nr);
 	double time = spmv_double_bench_mt_loop(spm_mt, loops, rows_nr, cols_nr, NULL);
 	double flops = (double)(loops*nz_nr*2)/(1000*1000*time);
-	printf("%s %s %lu %lf %lf\n", basename(argv[1]), "spmv_vhjit_mt", 0L, time, flops);
+	unsigned long size = spm_crs32_vhjit_mt_double_size(spm_mt);
+	printf("%s %s %lu %lf %lf\n", basename(argv[1]), "spmv_vhjit_mt", size, time, flops);
 
 	return 0;
 }

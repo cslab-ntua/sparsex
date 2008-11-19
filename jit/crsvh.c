@@ -91,6 +91,7 @@ spm_mt_t *_NAME_MT(_init_method)(char *mmf_file,
 		vhjit_mt[i].row_start = crsvh_mt->row_start;
 		vhjit_mt[i].row_end = crsvh_mt->row_end;
 		vhjit_mt[i].hvals = crsvh_mt->hvals;
+		vhjit_mt[i].hvals_bits = crsvh_mt->hvals_bits;
 
 		hj[i] = vhjit_init(crsvh_mt->htree, crsvh_mt->hsym_bits, OUT_SYMBOL);
 
@@ -103,4 +104,20 @@ spm_mt_t *_NAME_MT(_init_method)(char *mmf_file,
 	}
 
 	return spm_mt;
+}
+
+
+unsigned long _NAME_MT(_size)(spm_mt_t *spm_mt)
+{
+	unsigned long ret=0, nz=0, nrows = 0;
+	int i;
+	for (i=0; i < spm_mt->nr_threads; i++){
+		VHJIT_TYPE *vhjit = spm_mt->spm_threads[i].spm;
+		ret += vhjit->hvals_bits/8 + (vhjit->hvals_bits % 8);
+		nz += vhjit->nz;
+		nrows = vhjit->nrows;
+	}
+	ret += nz*(CI_BITS/8);
+	ret += nrows*(CI_BITS/8);
+	return ret;
 }
