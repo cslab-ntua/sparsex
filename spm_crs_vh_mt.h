@@ -21,6 +21,7 @@
 		unsigned long       row_start, row_end;   \
 		unsigned long       hvals_bits;           \
 		huff_node_t         *htree;               \
+		unsigned long       hsym_bits;            \
 	} _NAME(val_type, ci_bits, _t);          \
 	                                                  \
 	spm_mt_t *           \

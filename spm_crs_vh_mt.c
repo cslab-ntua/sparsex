@@ -45,6 +45,7 @@ static void crsvh_mt_compress_vals(spm_mt_thread_t *spm_thread, SPM_CRS_VH_MT_TY
 	do_huff_encode(vals, vals_s, &crsvh->hvals, &crsvh->hvals_bits, syms, bits);
 	phash_free(syms);
 
+	crsvh->hsym_bits = bits;
 	crsvh->nz = vals_s/sizeof(ELEM_TYPE);
 	crsvh->row_start = crs_mt->row_start;
 	crsvh->row_end = crs_mt->row_end;
