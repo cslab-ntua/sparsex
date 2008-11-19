@@ -37,31 +37,56 @@ static inline const char *type_name(hj_out_t t)
 
 void *vhjit_init(huff_node_t *tree, unsigned long bits, hj_out_t type)
 {
-	char spmv_module[] = "crsvh_spmv_template.llvm.bc";
-
 	HuffmanJit *hj = new HuffmanJit(tree, bits, type, HUFF_LLVM_TEMPLATE);
 	hj->CreateSymDecoder();
 	hj->CreateOutDecoder();
-	LinkFileToModule(hj->M, spmv_module);
-	//hj->M->dump();
-	doOptimize(hj->M);
 
+	// link template only once
+	static int vjinits = 0;
+	if (vjinits++ == 0){
+		const char spmv_module[] = "crsvh_spmv_template.llvm.bc";
+		LinkFileToModule(hj->M, spmv_module);
+	}
+
+	//hj->M->dump();
 	return (void *)hj;
 }
 
+#define TNAME "spm_crs%d_vhjit_%s_mul_template"
+#define FNAME "spm_crs%d_vhjit_%s_mul_%d"
+#define HNAME "__huff_decode_hook"
 void *vhjit_get_spmvfn(void *hj_wrap, int ci_bits)
 {
 	HuffmanJit *hj = (HuffmanJit *)hj_wrap;
+	const char *otype = type_name(hj->getOutType());
 
-	char fnname[BUFF_SIZE];
-	snprintf(fnname, BUFF_SIZE,
-	         "spm_crs%d_vhjit_%s_mul_template",
-	         ci_bits, type_name(hj->getOutType()) );
+	// spmv template name
+	char tname[BUFF_SIZE];
+	snprintf(tname, BUFF_SIZE, TNAME, ci_bits, otype);
 
-	Function *SpmvFn = hj->M->getFunction(fnname);
+	// spmv function name
+	char fname[BUFF_SIZE];
+	static int cnt=0;
+	snprintf(fname, BUFF_SIZE, FNAME, ci_bits, otype, cnt++);
+
+	Module *M = hj->M;
+	Function *SpmvTe = M->getFunction(tname); // template function
+	Function *DecOut = hj->getOutDecodeFn();
+	Function *DecSym = hj->getSymDecodeFn();
+	Function *SpmvFn = CloneAndReplaceHook(M, SpmvTe, DecOut, HNAME, fname);
+
+	// force inline
+	InlineFntoFn(DecSym, DecOut);
+	InlineFntoFn(DecOut, SpmvFn);
+	doOptimize(M);
+
+	M->dump();
 	assert(SpmvFn);
 	return (void *)hj->JIT->getPointerToFunction(SpmvFn);
 }
+#undef TNAME
+#undef FNAME
+#undef HNAME
 
 void vhjit_shut(void *hj_wrap)
 {

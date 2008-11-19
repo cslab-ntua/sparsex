@@ -11,7 +11,7 @@
 #define _NAME(name) CON5(spm_crs, CI_BITS, _vhjit_, ELEM_TYPE, name)
 #define VHJIT_TYPE CON3(spm_crs, CI_BITS, _vhjit_t)
 
-ELEM_TYPE huff_decode_out(unsigned char *hvals, unsigned long *bitcnt);
+ELEM_TYPE __huff_decode_hook(unsigned char *hvals, unsigned long *bitcnt);
 
 void _NAME(_mul_template)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
@@ -29,7 +29,7 @@ void _NAME(_mul_template)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	for (i=0; i<nrows; i++){
 		register ELEM_TYPE yr = (ELEM_TYPE)0;
 		for (j=row_ptr[i]; j<row_ptr[i+1]; j++) {
-			ELEM_TYPE val = huff_decode_out(hvals, &bitcnt);
+			ELEM_TYPE val = __huff_decode_hook(hvals, &bitcnt);
 			yr += (val * x[col_ind[j]]);
 		}
 		y[i] = yr;
