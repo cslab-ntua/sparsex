@@ -49,4 +49,8 @@ DECLARE_CRS_VH_MT(float,  64)
 #undef _NAME
 #undef DECLARE_CRS_VI
 
+#define SPM_CRS_VH_MT_NAME(name) \
+	CON6(spm_crs, SPM_CRSVH_CI_BITS, _vh_, ELEM_TYPE, _mt, name)
+#define SPM_CRS_VH_MT_TYPE SPM_CRS_VH_MT_NAME(_t)
+
 #endif
