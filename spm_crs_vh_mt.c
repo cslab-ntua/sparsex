@@ -41,7 +41,7 @@ static void crsvh_mt_compress_vals(spm_mt_thread_t *spm_thread, SPM_CRS_VH_MT_TY
 	phash_t *syms;
 	int bits=0;
 	huff_mksymcodes_split(vals, vals_s, limit, b, &syms, &crsvh->htree, &bits);
-	//printf("crsvh_mt: encoding: limit:%d bits:%d rbits:%d\n", limit, b, bits);
+	printf("crsvh_mt: encoding: limit:%d bits:%d rbits:%d\n", limit, b, bits);
 	do_huff_encode(vals, vals_s, &crsvh->hvals, &crsvh->hvals_bits, syms, bits);
 	phash_free(syms);
 
