@@ -3,6 +3,7 @@
 
 struct spm_mt_thread {
 	void              *spm;
+	void              *spmv_fn;
 	unsigned int      cpu;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;

@@ -19,12 +19,10 @@ int main(int argc, char **argv)
 	spm_crs32_double_mt_t *crs_mt;
 	crs_mt = (spm_crs32_double_mt_t *)spm_mt->spm_threads->spm;
 
-	spmv_double_check_mt_loop(crs_mt->crs,
-	                          spm_mt, 
-	                          spm_crs32_double_multiply, 
-				  spm_crs32_double_mt_multiply,
-				  1,
-				  cols_nr);
+	spmv_double_check_mt_loop(crs_mt->crs, spm_mt, 
+	                          spm_crs32_double_multiply, 1,
+				  rows_nr, cols_nr,
+				  spm_crs32_double_mt_multiply);
 
 	return 0;
 }

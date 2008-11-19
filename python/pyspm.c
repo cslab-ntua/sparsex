@@ -674,15 +674,13 @@ pyspm_delta_jmp_mt_bench(pyspm_delta_t *self, PyObject *args)
 	                                          &self->delta);
 
 	if ( self->el_type == PYSPM_TYPE_FLOAT){
-		ret = spmv_float_bench_mt_loop(spm_delta_mt_float_jmp_multiply,
-		                             spm_mt,
-		                             loops,
-					     self->delta.ncols);
+		ret = spmv_float_bench_mt_loop(spm_mt, loops,
+		                               self->delta.nrows, self->delta.ncols,
+		                               spm_delta_mt_float_jmp_multiply);
 	} else {
-		ret = spmv_double_bench_mt_loop(spm_delta_mt_double_jmp_multiply,
-		                             spm_mt,
-		                             loops,
-					     self->delta.ncols);
+		ret = spmv_double_bench_mt_loop(spm_mt, loops,
+		                                self->delta.nrows, self->delta.ncols,
+		                                spm_delta_mt_double_jmp_multiply);
 	}
 
 	return Py_BuildValue("(dd)", ret, (loops*self->delta.nnz*2)/(1000*1000*ret));
@@ -710,16 +708,16 @@ pyspm_delta_jmp_mt_check(pyspm_delta_t *self, PyObject *args)
 		spm_crs32_float_t *crs;
 		crs = spm_crs32_float_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
 		spmv_float_check_mt_loop(crs, spm_mt,
-		                         spm_crs32_float_multiply,
-		                         spm_delta_mt_float_jmp_multiply,
-		                         loops, self->delta.ncols);
+		                         spm_crs32_float_multiply, loops,
+		                         self->delta.nrows, self->delta.ncols,
+		                         spm_delta_mt_float_jmp_multiply);
 	} else {
 		spm_crs32_double_t *crs;
 		crs = spm_crs32_double_init_mmf(file, &rows_nr, &cols_nr, &nz_nr);
 		spmv_double_check_mt_loop(crs, spm_mt,
-		                          spm_crs32_double_multiply,
-		                          spm_delta_mt_double_jmp_multiply,
-		                          loops, self->delta.ncols);
+		                          spm_crs32_double_multiply, loops,
+		                          self->delta.nrows, self->delta.ncols,
+		                          spm_delta_mt_double_jmp_multiply);
 	}
 
 	Py_RETURN_NONE;
