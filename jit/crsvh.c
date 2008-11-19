@@ -5,7 +5,9 @@
 
 #define SPM_CRSVH_CI_BITS CI_BITS
 
+#include "spm_mt.h"
 #include "spm_crs_vh.h"
+#include "spm_crs_vh_mt.h"
 #include "jit/crsvh.h"
 #include "jit/vh_jit.h"
 
@@ -43,6 +45,8 @@ method_t *_NAME(_init_method)(char *mmf_file,
 	vhjit->nrows = crsvh->nrows;
 	vhjit->ncols = crsvh->ncols;
 	vhjit->hvals = crsvh->hvals;
+	vhjit->row_start = 0;
+	vhjit->row_end = crsvh->nrows;
 
 	printf("csrvh symbol bits: %lu\n", crsvh->hsym_bits);
 	void *hj = vhjit_init(crsvh->htree, crsvh->hsym_bits, OUT_SYMBOL);
@@ -56,5 +60,47 @@ method_t *_NAME(_init_method)(char *mmf_file,
 	return method;
 }
 
-#define VHJIT_MT_TYPE CON3(spm_crs, CI_BITS, _vhjit_mt_t)
 #define _NAME_MT(name) CON5(spm_crs, CI_BITS, _vhjit_mt_, ELEM_TYPE, name)
+
+spm_mt_t *_NAME_MT(_init_method)(char *mmf_file,
+                                 unsigned long *rows_nr, unsigned long *cols_nr,
+                                 unsigned long *nz_nr)
+{
+	spm_mt_t *spm_mt;
+	spm_mt = SPM_CRS_VH_MT_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr);
+
+	VHJIT_TYPE *vhjit_mt = malloc(sizeof(*vhjit_mt)*spm_mt->nr_threads);
+	if (!vhjit_mt){
+		perror("malloc");
+		exit(1);
+	}
+
+	void *hj[spm_mt->nr_threads];
+
+	int i;
+	SPM_CRS_VH_MT_TYPE *crsvh_mt = spm_mt->spm_threads[0].spm;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thr = &spm_mt->spm_threads[i];
+		SPM_CRS_VH_MT_TYPE *crsvh_mt = (SPM_CRS_VH_MT_TYPE *)spm_thr->spm;
+
+		vhjit_mt[i].row_ptr = crsvh_mt->row_ptr;
+		vhjit_mt[i].col_ind = crsvh_mt->col_ind;
+		vhjit_mt[i].nz = crsvh_mt->nz;
+		vhjit_mt[i].ncols = crsvh_mt->ncols;
+		vhjit_mt[i].nrows = crsvh_mt->nrows;
+		vhjit_mt[i].row_start = crsvh_mt->row_start;
+		vhjit_mt[i].row_end = crsvh_mt->row_end;
+		vhjit_mt[i].hvals = crsvh_mt->hvals;
+
+		hj[i] = vhjit_init(crsvh_mt->htree, crsvh_mt->hsym_bits, OUT_SYMBOL);
+
+		spm_thr->spm = &vhjit_mt[i];
+	}
+	free(crsvh_mt);
+
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt->spm_threads[i].spmv_fn = vhjit_get_spmvfn(hj[i], CI_BITS);
+	}
+
+	return spm_mt;
+}

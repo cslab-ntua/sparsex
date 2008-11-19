@@ -80,7 +80,7 @@ void *vhjit_get_spmvfn(void *hj_wrap, int ci_bits)
 	InlineFntoFn(DecOut, SpmvFn);
 	doOptimize(M);
 
-	M->dump();
+	//M->dump();
 	assert(SpmvFn);
 	return (void *)hj->JIT->getPointerToFunction(SpmvFn);
 }

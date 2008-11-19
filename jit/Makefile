@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv_vhjit_check crsvh_spmv_template.llvm.bc
+all: spmv_vhjit_check spmv_vhjit_mt spmv_vhjit_mt_check crsvh_spmv_template.llvm.bc
 
 huffman_dir  = $(shell rsrc resource 'huffman')
 phash_dir    = $(shell rsrc resource 'phash')
@@ -59,9 +59,20 @@ vh_jit.o: vh_jit.cpp
 spmv_vhjit_check.o: spmv_vhjit_check.c
 	$(GCC) $(INC) $(CFLAGS) -c $<
 
+spmv_vhjit_mt.o: spmv_vhjit_mt.c
+	$(GCC) $(INC) $(CFLAGS) -c $<
+
+spmv_vhjit_mt_check.o: spmv_vhjit_mt_check.c
+	$(GCC) $(INC) $(CFLAGS) -c $<
+
 spmv_vhjit_check: spmv_vhjit_check.o crsvh.o vh_jit.o
 	$(GXX) $^ ../libspmv.o $(huffman_dir)/libhj_llvm.o $(LLVM_LDFLAGS) -o $@
 
+spmv_vhjit_mt: spmv_vhjit_mt.o crsvh.o vh_jit.o
+	$(GXX) $^ ../libspmv.o $(huffman_dir)/libhj_llvm.o $(LLVM_LDFLAGS) -o $@
+
+spmv_vhjit_mt_check: spmv_vhjit_mt_check.o crsvh.o vh_jit.o
+	$(GXX) $^ ../libspmv.o $(huffman_dir)/libhj_llvm.o $(LLVM_LDFLAGS) -o $@
 
 %.s: %.c
 	$(COMPILE) -S -fverbose-asm $<
@@ -74,4 +85,4 @@ spmv_vhjit_check: spmv_vhjit_check.o crsvh.o vh_jit.o
 
 
 clean:
-	rm -f *.llvm.bc *.o *.i spmv_vhjit_check
+	rm -f *.llvm.bc *.o *.i spmv_vhjit_check spmv_vhjit_mt{,_check}
