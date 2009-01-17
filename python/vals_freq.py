@@ -161,7 +161,7 @@ def hfreq_bdb_elems(db):
 	iterator = bdb_iteritems(db)
 	if show_progress:
 		iterator = progress_iter(iterator, len(db), prefix="COUNT ")
-	return reduce(lambda x,y: x+y, imap(lambda x: x[1], iterator))
+	return sum(imap(lambda x: x[1], iterator))
 
 def _entropy_term(freq_iter, nr_elems, base=2):
 	return imap(
