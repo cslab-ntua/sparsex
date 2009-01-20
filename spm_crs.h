@@ -2,70 +2,32 @@
 #define __SPM_CRS_H__
 
 #include <inttypes.h>
-
-typedef struct {
-	double         *values;
-	uint64_t       *col_ind, *row_ptr; 
-	uint64_t       nz, nrows, ncols;
-} spm_crs64_double_t;
-
-typedef struct {
-	float          *values;
-	uint64_t       *col_ind, *row_ptr; 
-	uint64_t       nz, nrows, ncols;
-} spm_crs64_float_t;
-
-
-typedef struct {
-	double         *values;
-	uint32_t       *col_ind, *row_ptr; 
-	uint64_t       nz, nrows, ncols;
-} spm_crs32_double_t;
-
-typedef struct {
-	float         *values;
-	uint32_t      *col_ind, *row_ptr; 
-	uint64_t      nz, nrows, ncols;
-} spm_crs32_float_t;
-
-spm_crs32_double_t *
-spm_crs32_double_init_mmf(char *mmf_file, 
-                          unsigned long *rows_nr, unsigned long *cols_nr,
-                          unsigned long *nz_nr);
-
-spm_crs32_float_t *
-spm_crs32_float_init_mmf(char *mmf_file, 
-                         unsigned long *rows_nr, unsigned long *cols_nr,
-                         unsigned long *nz_nr);
-
-spm_crs64_double_t *
-spm_crs64_double_init_mmf(char *mmf_file, 
-                          unsigned long *rows_nr, unsigned long *cols_nr,
-			  unsigned long *nz_nr);
-
-spm_crs64_float_t *
-spm_crs64_float_init_mmf(char *mmf_file, 
-                         unsigned long *rows_nr, unsigned long *cols_nr,
-                         unsigned long *nz_nr);
-
-void spm_crs32_double_destroy(spm_crs32_double_t *crs);
-void spm_crs32_float_destroy(spm_crs32_float_t *crs);
-void spm_crs64_double_destroy(spm_crs64_double_t *crs);
-void spm_crs64_float_destroy(spm_crs64_float_t *crs);
-
-
 #include "spmv_method.h"
-spmv_double_fn_t spm_crs32_double_multiply;
-spmv_double_fn_t spm_crs64_double_multiply;
-spmv_float_fn_t spm_crs32_float_multiply;
-spmv_float_fn_t spm_crs64_float_multiply;
 
-#if 0
-void spm_crs32_double_multiply(spm_crs32_double_t *crs, vector_double_t *x, vector_double_t *y);
-void spm_crs32_float_multiply(spm_crs32_float_t *crs, vector_float_t *x, vector_float_t *y);
-void spm_crs64_double_multiply(spm_crs64_double_t *crs, vector_double_t *x, vector_double_t *y);
-void spm_crs64_float_multiply(spm_crs64_float_t *crs, vector_float_t *x, vector_float_t *y);
-#endif
+#define _NAME(val_type, ci_bits, name) spm_crs ## ci_bits ## _ ## val_type ## name
+#define _TYPE(val_type, ci_bits) _NAME(val_type, ci_bits, _t)
+
+#define SPM_DECLARE(val_type, ci_bits) \
+typedef struct { \
+	val_type            *values; \
+	UINT_TYPE(ci_bits)  *col_ind, *row_ptr; \
+	uint64_t            nz, nrows, ncols; \
+} _TYPE(val_type, ci_bits); \
+\
+_TYPE(val_type, ci_bits)  *\
+_NAME(val_type, ci_bits, _init_mf)(char *mmf_file, \
+                                    uint64_t *rows_nr, uint64_t *cols_nr, \
+				    uint64_t *nz_nr); \
+void _NAME(val_type, ci_bits, _destroy)(_TYPE(val_type, ci_bits) *crs); \
+spmv_  ## val_type ## _fn_t _NAME(val_type, ci_bits, _multiply);
+
+SPM_DECLARE(double, 32)
+SPM_DECLARE(double, 64)
+SPM_DECLARE(float, 32)
+SPM_DECLARE(float, 64)
+
+#undef _NAME
+#undef _TYPE
 
 #include "macros.h"
 #define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
