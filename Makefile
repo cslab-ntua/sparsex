@@ -1,3 +1,5 @@
+SHELL = /bin/bash
+
 .PHONY: all clean
 
 all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt spmv_crsvh spmv_crsvh_check spmv_crsvh_mt
