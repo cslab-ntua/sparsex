@@ -4,7 +4,7 @@
 #include <assert.h>
 
 #include "macros.h"
-	
+
 #ifndef SPM_CRS_BITS
 #define SPM_CRS_BITS 64
 #endif
@@ -103,7 +103,7 @@ static spm_parser_t SPM_CRS_NAME(_parser) = {
 	.finalize_row = _finalize_row
 };
 
-SPM_CRS_TYPE *SPM_CRS_NAME(_init_mmf) (char *mmf_file, 
+SPM_CRS_TYPE *SPM_CRS_NAME(_init_mmf) (char *mmf_file,
                                        unsigned long *rows_nr, unsigned long *cols_nr,
                                        unsigned long *nz_nr)
 {
@@ -140,15 +140,15 @@ void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	for(i=0; i<n; i++) {
 		yr = (ELEM_TYPE)0;
 		//printf("row_ptr_i: %lu row_ptr_i+1: %lu \n", (unsigned long)row_ptr[i], (unsigned long)row_ptr[i+1]);
-		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) { 
+		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) {
 			yr += (values[j] * x[col_ind[j]]);
 		}
 		y[i] = yr;
 		//printf("++y[%lu] = %lf\n", i, yr);
 		#if 0
 		__asm__ __volatile__ (
-			" movntq %[val], (%[mem]) \n\t" 
-			: 
+			" movntq %[val], (%[mem]) \n\t"
+			:
 			: [val] "x" (yr), [mem] "r" (y+i)
 		);
 		#endif
@@ -164,8 +164,8 @@ XMETHOD_INIT(SPM_CRS_NAME(_multiply), SPM_CRS_NAME(_init_mmf))
 #include "spmv_method.h"
 #define XSPMV_METH_INIT(x,y,z) SPMV_METH_INIT(x,y,z)
 XSPMV_METH_INIT(
-	SPM_CRS_NAME(_multiply), 
-	SPM_CRS_NAME(_init_mmf), 
+	SPM_CRS_NAME(_multiply),
+	SPM_CRS_NAME(_init_mmf),
 	SPM_CRS_NAME(_papaki)
 )
 #endif
