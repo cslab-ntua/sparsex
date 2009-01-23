@@ -7,7 +7,7 @@
 #define _NAME(val_type, ci_bits, name) spm_crs ## ci_bits ## _ ## val_type ## name
 #define _TYPE(val_type, ci_bits) _NAME(val_type, ci_bits, _t)
 
-#define SPM_DECLARE(val_type, ci_bits) \
+#define SPM_CRS_DECLARE(val_type, ci_bits) \
 typedef struct { \
 	val_type            *values; \
 	UINT_TYPE(ci_bits)  *col_ind, *row_ptr; \
@@ -21,10 +21,10 @@ _NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
 void _NAME(val_type, ci_bits, _destroy)(_TYPE(val_type, ci_bits) *crs); \
 spmv_  ## val_type ## _fn_t _NAME(val_type, ci_bits, _multiply);
 
-SPM_DECLARE(double, 32)
-SPM_DECLARE(double, 64)
-SPM_DECLARE(float, 32)
-SPM_DECLARE(float, 64)
+SPM_CRS_DECLARE(double, 32)
+SPM_CRS_DECLARE(double, 64)
+SPM_CRS_DECLARE(float, 32)
+SPM_CRS_DECLARE(float, 64)
 
 #undef _NAME
 #undef _TYPE
