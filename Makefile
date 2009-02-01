@@ -138,6 +138,17 @@ spmv_loops_mt.o: spmv_loops_mt.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_double.o
 	$(LD) -i spmv_loops_mt_{float,double}.o -o spmv_loops_mt.o
 
+spm_csrdu.o: spm_csrdu.c spm_csrdu.h
+	$(COMPILE) -DELEM_TYPE=double -c $< -o spm_csrdu_double.o
+	$(COMPILE) -DELEM_TYPE=float -c $< -o spm_csrdu_float.o
+	$(LD) -i spm_csrdu_{double,float}.o -o spm_csrdu.o
+
+spm_csrdu_test.o: spm_csrdu_test.c spm_csrdu.h
+	$(COMPILE) -c $< -o $@
+
+spm_csrdu_test: spm_csrdu.o spm_csrdu_test.o $(dynarray_dep) mmf.o
+	$(COMPILE) $^ -o $@
+
 spm_delta.o: spm_delta_mul.c spm_delta.h vector.h
 	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_mul_float.o
 	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_mul_double.o
@@ -214,4 +225,4 @@ vals_idx: vals_idx.c
 	$(COMPILE) -E $< | indent -kr > $@
 
 clean:
-	rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt
+	rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt spm_csrdu_test
