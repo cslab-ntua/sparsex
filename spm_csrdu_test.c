@@ -43,8 +43,9 @@ int main(int argc, char **argv)
 			case SPM_CSRDU_FL_UNIT_DENSE:
 			col += uc_get_ul(ctl);
 			for (i=0; i<size; i++){
-				printf(__fmt, row, col++, *vals++);
+				printf(__fmt, row, col+i, *vals++);
 			}
+			col += (size-1);
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U8:
