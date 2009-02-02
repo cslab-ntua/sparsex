@@ -1,4 +1,4 @@
-
+#include <stdlib.h>
 #include <inttypes.h>
 
 #include "dynarray.h"
@@ -60,21 +60,26 @@ struct unit_state {
 static struct csrdu_st  {
 	int sp_minlen; // min length for a SPARSE unit (0->use maximum size)
 	int de_minlen; // min length for a DENSE unit (0->no dense units)
+	int aligned; // use aligned deltas
 	struct unit_state unit;
 	dynarray_t *da_ctl;
 } state;
 
-#define DE_MINLEN 0
-#define SP_MINLEN 0
+// paramter defaults
+#define DE_MINLEN_DEF 0
+#define SP_MINLEN_DEF 0
+#define ALIGNED_DEF 1
 static void set_params()
 {
 	char *e;
 	e = getenv("CSRDU_DE_MINLEN");
-	state.de_minlen = e ? atoi(e) : DE_MINLEN;
+	state.de_minlen = e ? atoi(e) : DE_MINLEN_DEF;
 	e = getenv("CSRDU_SP_MINLEN");
-	state.sp_minlen = e ? atoi(e) : SP_MINLEN;
+	state.sp_minlen = e ? atoi(e) : SP_MINLEN_DEF;
+	e = getenv("CSRDU_ALIGNED");
+	state.aligned = e ? !!atoi(e) : ALIGNED_DEF;
 
-	printf("csrdu_params: sp_minlen:%d de_minlen:%d\n",state.sp_minlen,state.de_minlen);
+	printf("csrdu_params: sp_minlen:%d de_minlen:%d aligned:%d\n",state.sp_minlen,state.de_minlen,state.aligned);
 }
 
 static void de_add_unit()
@@ -124,9 +129,10 @@ static void sp_add_body()
 	uint64_t dsize = spm_csrdu_cisize_bytes(ci_size);
 	uint64_t usize = ust->size;
 
-	dst = dynarray_alloc_nr(state.da_ctl, usize*dsize);
+	dst = (state.aligned) ?
+	      dynarray_alloc_nr_aligned(state.da_ctl, usize*dsize,  dsize):
+	      dynarray_alloc_nr(state.da_ctl, usize*dsize);
 	src = ust->deltas + ust->start;
-
 	spm_csrdu_cisize_copy(dst, src, usize, ci_size);
 }
 
