@@ -5,8 +5,8 @@ assert +long(2**64) > None
 assert 0 > None
 
 class Toplist(object):
-	def __init__(self, size, cmp_fn=cmp):
-		self.l = [ None for i in xrange(size) ]
+	def __init__(self, size, cmp_fn=cmp, default=None):
+		self.l = [ default for i in xrange(size) ]
 		self.cmp_fn = cmp_fn
 	
 	def add(self, element):
