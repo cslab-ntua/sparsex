@@ -272,6 +272,13 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 
 }
 
+void SPM_CSRDU_NAME(_destroy)(SPM_CSRDU_TYPE *csrdu)
+{
+	free(csrdu->values);
+	free(csrdu->ctl);
+	free(csrdu);
+}
+
 SPM_CSRDU_TYPE *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
                                           uint64_t *nrows, uint64_t *ncols, uint64_t *nnz)
 {
@@ -333,6 +340,7 @@ SPM_CSRDU_TYPE *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
 		csrdu->values[val_i++] = (ELEM_TYPE)val;
 	}
 
+	fclose(mmf);
 	free(dynarray_destroy(da_cis));
 	free(dynarray_destroy(da_deltas));
 	free(dynarray_destroy(da_rles));

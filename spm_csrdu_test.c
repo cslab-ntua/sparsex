@@ -109,6 +109,7 @@ int main(int argc, char **argv)
 		if (vals == vals_end)
 			break;
 	}
+	spm_csrdu_double_destroy(csrdu);
 
 	return 0;
 }

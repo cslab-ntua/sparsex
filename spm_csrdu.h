@@ -17,7 +17,8 @@ typedef struct { \
 \
 _TYPE(val_type)  *\
 _NAME(val_type,_init_mmf)(char *mmf, \
-                          uint64_t *nrows, uint64_t *ncols, uint64_t *nnz);
+                          uint64_t *nrows, uint64_t *ncols, uint64_t *nnz); \
+void _NAME(val_type, _destroy)(_TYPE(val_type) *csrdu);
 
 SPM_CSRDU_DECLARE(float)
 SPM_CSRDU_DECLARE(double)
