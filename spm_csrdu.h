@@ -97,6 +97,7 @@ enum {
 	SPM_CSRDU_CISIZE_U16 = 1,
 	SPM_CSRDU_CISIZE_U32 = 2,
 	SPM_CSRDU_CISIZE_U64 = 3,
+	SPM_CSRDU_CISIZE_NR  = 4 // number of cis
 };
 
 #define SPM_CSRDU_FL_UNIT_DENSE 0

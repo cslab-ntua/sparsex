@@ -59,21 +59,32 @@ struct unit_state {
 	uint64_t *deltas;     // array of deltas for current row
 };
 
+static struct stats {
+	uint64_t units_de;
+	uint64_t units_sp[SPM_CSRDU_CISIZE_NR];
+} stats = {0};
+
 static struct csrdu_st  {
 	int sp_minlen;      // min length for a SPARSE unit (0->use maximum size)
 	int de_minlen;      // min length for a DENSE unit (0->no dense units)
-	uint8_t aligned;    // use aligned deltas
-	uint8_t jmp;        // use jumps
 	uint64_t row_size;  // size of current row
 	struct unit_state unit;
 	dynarray_t *da_ctl;
+
+	unsigned aligned:1;    // use aligned deltas
+	unsigned jmp:1;        // use jumps
+	unsigned verbose:1;
 } state;
 
-// paramter defaults
+// verbose message
+#define vmsg(fmt,args...) do { if (state.verbose){ printf(fmt, args); }} while(0)
+
+// parameter defaults
 #define DE_MINLEN_DEF 0
 #define SP_MINLEN_DEF 0
 #define ALIGNED_DEF 1
 #define JMP_DEF 0
+#define VERBOSE_DEF 1
 static void set_params()
 {
 	char *e;
@@ -85,8 +96,11 @@ static void set_params()
 	state.aligned = e ? !!atoi(e) : ALIGNED_DEF;
 	e = getenv("CSRDU_JMP");
 	state.jmp = e ? !!atoi(e) : JMP_DEF;
+	e = getenv("CSRDU_VERBOSE");
+	state.verbose = e ? !!atoi(e) : VERBOSE_DEF;
 
-	printf("csrdu_params: sp_minlen:%d de_minlen:%d aligned:%d jmp:%d\n",state.sp_minlen,state.de_minlen,state.aligned, state.jmp);
+	vmsg("csrdu_params: sp_minlen:%d de_minlen:%d aligned:%d jmp:%d\n",
+              state.sp_minlen, state.de_minlen, state.aligned, state.jmp);
 }
 
 static void de_add_unit()
@@ -107,6 +121,8 @@ static void de_add_unit()
 	ust->start += ust->size;
 	ust->size = 0;
 	ust->ci_size = SPM_CSRDU_CISIZE_U8;
+
+	stats.units_de++;
 }
 
 static void sp_add_header(uint64_t usize, uint8_t ci_size, char *new_row_ptr)
@@ -123,6 +139,8 @@ static void sp_add_header(uint64_t usize, uint8_t ci_size, char *new_row_ptr)
 		 spm_csrdu_fl_setnr(ctl_flags);
 		 *new_row_ptr = 0;
 	}
+
+	stats.units_sp[ci_size]++;
 }
 
 static void sp_add_body(uint64_t ustart, uint64_t usize, uint8_t ci_size, uint64_t *deltas)
@@ -345,7 +363,9 @@ SPM_CSRDU_TYPE *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
 	free(dynarray_destroy(da_deltas));
 	free(dynarray_destroy(da_rles));
 
-	//printf("ctl_size:%lu ", dynarray_size(state.da_ctl));
+	vmsg("ctl_size: %lu \n", dynarray_size(state.da_ctl));
+	vmsg("units:\n de    :%6lu\n sp(8) :%6lu\n sp(16):%6lu\n sp(32):%6lu\n sp(64):%6lu\n",
+	      stats.units_de, stats.units_sp[SPM_CSRDU_CISIZE_U8], stats.units_sp[SPM_CSRDU_CISIZE_U16], stats.units_sp[SPM_CSRDU_CISIZE_U32], stats.units_sp[SPM_CSRDU_CISIZE_U64]);
 	csrdu->ctl = dynarray_destroy(state.da_ctl);
 	return csrdu;
 }
