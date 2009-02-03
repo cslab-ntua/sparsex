@@ -127,7 +127,7 @@ static void de_add_unit()
 
 static void sp_add_header(uint64_t usize, uint8_t ci_size, char *new_row_ptr)
 {
-	//printf("add_header ctl offset: %lu\n", dynarray_size(state.da_ctl));
+	//printf("add_header usize: %lu ctl offset: %lu\n", usize, dynarray_size(state.da_ctl));
 	uint8_t *ctl_flags = dynarray_alloc_nr(state.da_ctl, 2);
 	uint8_t *ctl_size = ctl_flags + 1;
 
@@ -265,11 +265,6 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 			continue;
 		}
 
-		// check if by adding this rle the usize gets > max unit size
-		if (rle->freq + ust->size > SPM_CSRDU_SIZE_MAX){
-			sp_add();
-		}
-
 		// check if the ci_size changes with the new column index
 		uint8_t new_ci_size = spm_csrdu_cisize(rle->val);
 		if (new_ci_size > ust->ci_size) {
@@ -278,6 +273,14 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 				sp_add();
 			}
 			ust->ci_size = new_ci_size;
+		}
+
+
+		// check if by adding this rle the usize gets > max unit size
+		while (rle->freq + ust->size > SPM_CSRDU_SIZE_MAX) {
+			rle->freq -= (SPM_CSRDU_SIZE_MAX - ust->size);
+			ust->size = SPM_CSRDU_SIZE_MAX;
+			sp_add();
 		}
 
 		ust->size += rle->freq;
