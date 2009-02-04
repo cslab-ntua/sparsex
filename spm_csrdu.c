@@ -169,9 +169,14 @@ static void sp_add_body(uint64_t ustart, uint64_t usize, uint8_t ci_size, uint64
 		printf("%lu ", src[i]);
 	}
 	printf("\n");
+	printf("dsize:%lu dst: %p src: %p usize: %lu ci_size:%u\n", ++cnt, dsize, dst, src, usize, ci_size);
 	*/
 
-	spm_csrdu_cisize_copy(dst, src, usize, ci_size);
+	if (state.aligned){
+		spm_csrdu_cisize_copy(dst, src, usize, ci_size);
+	} else {
+		spm_csrdu_cisize_copy_ua(dst, src, usize, ci_size);
+	}
 }
 
 static void sp_add_unit()

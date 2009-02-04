@@ -148,6 +148,8 @@ define_copy(_u16, uint16_t)
 define_copy(_u32, uint32_t)
 define_copy(_u64, uint64_t)
 
+#undef define_copy
+
 static inline void spm_csrdu_cisize_copy(void *dst, uint64_t *src,
                                          int items, uint8_t cisize)
 {
@@ -169,6 +171,53 @@ static inline void spm_csrdu_cisize_copy(void *dst, uint64_t *src,
 			exit(1);
 	}
 }
+
+// unaligned copy
+#define UINT_UA(bits) ua_u ## bits ## _t
+#define define_ua_copy(bits)                       \
+typedef struct {  \
+	UINT_TYPE(bits) val __attribute__(( packed ));  \
+} UINT_UA(bits); \
+\
+static void _copy_ua_u##bits(void *dst,               \
+                          uint64_t *src,              \
+                          unsigned long items)        \
+{                                                     \
+	UINT_UA(bits) *_dst = dst;                    \
+	unsigned long i;                              \
+                                                      \
+	for ( i=0; i < items; i++){                   \
+		_dst->val = (UINT_TYPE(bits))src[i];  \
+		_dst++;                               \
+	}                                             \
+}
+
+define_ua_copy(16)
+define_ua_copy(32)
+define_ua_copy(64)
+
+static inline void spm_csrdu_cisize_copy_ua(void *dst, uint64_t *src,
+                                            int items, uint8_t cisize)
+{
+	switch (cisize){
+		case SPM_CSRDU_CISIZE_U8:
+			_copy_u8(dst,src,items);
+			break;
+		case SPM_CSRDU_CISIZE_U16:
+			_copy_ua_u16(dst,src,items);
+			break;
+		case SPM_CSRDU_CISIZE_U32:
+			_copy_ua_u32(dst,src,items);
+			break;
+		case SPM_CSRDU_CISIZE_U64:
+			_copy_ua_u64(dst,src,items);
+			break;
+		default:
+			fprintf(stderr, "error in cisize_copy: cisize=%u\n", cisize);
+			exit(1);
+	}
+}
+#undef define_ua_copy
 
 #define  spm_csrdu_ucmax(ci_size) (1UL<<(8<<ci_size))
 static inline uint8_t spm_csrdu_usize(uint64_t u)
