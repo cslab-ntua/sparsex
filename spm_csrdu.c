@@ -239,27 +239,28 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 		if (de_minlen && (rle->val == 1) && (rle->freq >= (de_minlen-1))){
 			// add previous sparse unit (if exists)
 			if (ust->size > 1){
+				// the next unit is dense, so there is always a jmp
 				ust->size--;
 				sp_add();
-				ust->jmp = ust->deltas[ust->start];
 				ust->size = 1;
 			}
 
 			// add dense unit
-			rle->freq++;
 			do {
-				ust->size = MIN(rle->freq, SPM_CSRDU_SIZE_MAX);
-				rle->freq -= ust->size;
+				uint64_t s = MIN(rle->freq, SPM_CSRDU_SIZE_MAX - ust->size);
+				ust->size += s;
+				rle->freq -= s;
 				de_add_unit();
 			} while (rle->freq >= de_minlen);
 
-			if (state.jmp){
-				if (rle->freq == 0){
-					rle++;
-					if (rle == rle_end){
-						break;
-					}
+			if (rle->freq == 0){
+				rle++;
+				if (rle == rle_end){
+					break;
 				}
+			}
+
+			if (state.jmp){
 				rle->freq--;
 				ust->jmp = ust->deltas[ust->start];
 				ust->size = 1;
