@@ -6,6 +6,7 @@
 #include "mmf.h"
 
 #include "spm_csrdu.h"
+#define MIN(x,y) (x < y ? x : y)
 
 typedef struct rle {
 	uint64_t val;
@@ -15,12 +16,14 @@ typedef struct rle {
 static void delta_encode(uint64_t *input, uint64_t *deltas, uint64_t size)
 {
 	uint64_t i;
-	uint64_t prev = deltas[0] = input[0];
+	uint64_t prev = input[0];
+	deltas[0] = prev ;//+ 1; // make the 0,1,2,3 case => 1,1,1,1
 	for (i=1; i<size; i++){
 		uint64_t curr = input[i];
 		deltas[i] = curr - prev;
 		prev = curr;
 	}
+	//printf("prev=%lu input=%lu\n", deltas[0], input[0]);
 }
 
 static void rle_encode(uint64_t *in, uint64_t insize, rle_t *rles, uint64_t *rles_size)
@@ -30,6 +33,7 @@ static void rle_encode(uint64_t *in, uint64_t insize, rle_t *rles, uint64_t *rle
 	rle_t *rle;
 	uint64_t i;
 	uint64_t prev = in[0];
+	//printf("prev=%lu\n", prev);
 	for (i=1; i<insize; i++){
 		uint64_t curr = in[i];
 		if (curr == prev){
@@ -40,6 +44,7 @@ static void rle_encode(uint64_t *in, uint64_t insize, rle_t *rles, uint64_t *rle
 		rle = rles + rle_i++;
 		rle->val = prev;
 		rle->freq = rle_freq;
+		//printf("rles[%lu] = (f:%lu v:%lu)\n", rle-rles, rle->freq, rle->val);
 		rle_freq = 1;
 		prev = curr;
 	}
@@ -47,6 +52,7 @@ static void rle_encode(uint64_t *in, uint64_t insize, rle_t *rles, uint64_t *rle
 	rle = &rles[rle_i++];
 	rle->val = in[insize-1];
 	rle->freq = rle_freq;
+	//printf("rles[%lu] = (f:%lu v:%lu)\n", rle-rles, rle->freq, rle->val);
 
 	*rles_size = rle_i;
 }
@@ -82,7 +88,7 @@ static struct csrdu_st  {
 // parameter defaults
 #define DE_MINLEN_DEF 0
 #define SP_MINLEN_DEF 0
-#define ALIGNED_DEF 1
+#define ALIGNED_DEF 0
 #define JMP_DEF 0
 #define VERBOSE_DEF 1
 static void set_params()
@@ -117,6 +123,7 @@ static void de_add_unit()
 		 ust->new_row = 0;
 	}
 
+	//printf("de_add usize: %lu ctl offset: %lu\n", ust->size, dynarray_size(state.da_ctl));
 	da_uc_put_ul(state.da_ctl, ust->deltas[ust->start]);
 	ust->start += ust->size;
 	ust->size = 0;
@@ -127,7 +134,7 @@ static void de_add_unit()
 
 static void sp_add_header(uint64_t usize, uint8_t ci_size, char *new_row_ptr)
 {
-	//printf("add_header usize: %lu ctl offset: %lu\n", usize, dynarray_size(state.da_ctl));
+	//printf("sp_add_header usize: %lu ctl offset: %lu\n", usize, dynarray_size(state.da_ctl));
 	uint8_t *ctl_flags = dynarray_alloc_nr(state.da_ctl, 2);
 	uint8_t *ctl_size = ctl_flags + 1;
 
@@ -154,6 +161,16 @@ static void sp_add_body(uint64_t ustart, uint64_t usize, uint8_t ci_size, uint64
 	      dynarray_alloc_nr_aligned(state.da_ctl, usize*dsize,  dsize):
 	      dynarray_alloc_nr(state.da_ctl, usize*dsize);
 	src = deltas + ustart;
+
+	/*
+	printf("sp_add_body: adding deltas: ");
+	int i;
+	for (i=0; i<usize; i++){
+		printf("%lu ", src[i]);
+	}
+	printf("\n");
+	*/
+
 	spm_csrdu_cisize_copy(dst, src, usize, ci_size);
 }
 
@@ -170,60 +187,25 @@ static void sp_add_unit()
 static void sp_jmp_add_unit()
 {
 	struct unit_state *ust = &state.unit;
-	//printf("sp_jmp_add: ust->start: %lu ust->size: %lu state.row_size:%lu new_r:%d\n", ust->start, ust->size, state.row_size, ust->new_row);
+	//printf("sp_jmp_add: ust->start: %lu ust->size: %lu state.row_size:%lu new_r:%d ctl_off:%lu\n", ust->start, ust->size, state.row_size, ust->new_row, dynarray_size(state.da_ctl));
 	assert(ust->start + ust->size <= state.row_size);
 
 	assert(ust->size > 0);
 	uint64_t ustart = ust->start;
 	uint64_t usize = ust->size;
 	uint64_t ci_size = ust->ci_size;
-	if (ustart + usize < state.row_size){
-		// more elements, need to set jmp, use last element of unit
-		usize--;
-		if (usize > 0){
-			sp_add_header(usize, ci_size, &ust->new_row);
-			da_uc_put_ul(state.da_ctl, ust->jmp);
-			sp_add_body(ustart + 1, usize, ci_size, ust->deltas);
-		}
-		ust->start += usize;
-		ust->jmp = ust->deltas[ust->start];
-		ust->size = 1;
-		ust->ci_size = SPM_CSRDU_CISIZE_U8;
-	} else {
-		// no more elements => just add the unit
-		sp_add_header(usize, ci_size, &ust->new_row);
-		da_uc_put_ul(state.da_ctl, ust->jmp);
-		if (usize > 1)
-			sp_add_body(ustart+1, usize-1, ci_size, ust->deltas);
-		ust->start += ust->size;
-		ust->size = 0;
-	}
-}
-
-static void de_jmp_add_unit()
-{
-	struct unit_state *ust = &state.unit;
-	printf("de_jmp_add: ust->start: %lu ust->size: %lu state.row_size:%lu\n", ust->start, ust->size, state.row_size);
-
-	assert(ust->size > 0);
-	ust->size--; // remove the jmp element from the size
-
-	de_add_unit();
+	sp_add_header(usize, ci_size, &ust->new_row);
 	da_uc_put_ul(state.da_ctl, ust->jmp);
-	// if there are more elements, use the next as the jmp
-	if (ust->start + ust->size < state.row_size){
-		ust->jmp = ust->deltas[ust->start];
-		ust->size = 1;
-	} else {
-		ust->jmp = 0;
-	}
+	if (usize > 1)
+		sp_add_body(ustart +1, usize -1, ci_size, ust->deltas);
+	ust->start += ust->size;
+	ust->size = 0;
+	ust->ci_size = SPM_CSRDU_CISIZE_U8;
 }
-
 typedef void void_fn_t(void);
 static void handle_row(uint64_t *deltas, uint64_t deltas_size,
                        rle_t *rles, uint64_t rles_size)
 {
-	uint64_t i=0;
 	struct unit_state *ust = &state.unit;
 	ust->start = 0;
 	ust->size = 0;
@@ -235,34 +217,57 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 	int de_minlen = state.de_minlen;
 
 	void_fn_t *sp_add = state.jmp ? sp_jmp_add_unit : sp_add_unit;
-	void_fn_t *de_add = state.jmp ? de_jmp_add_unit : de_add_unit;
 
 	// when state.jmp is true, then we have the following semantics
-	uint64_t i_start = 0;
+	rle_t *rle = rles;
+	rle_t *rle_end = rles + rles_size;
 	if (state.jmp){
 		// first element is a jmp
 		ust->jmp = ust->deltas[0];
-		if (rles->freq > 1){
-			rles->freq--;
+		assert(rle->freq >= 1);
+		if (rle->freq == 1){
+			rle++;
 		} else {
-			i_start++;
+			rle->freq--;
 		}
 		ust->size = 1;
 	}
 
-	for (i=i_start; i < rles_size; i++){
-		rle_t *rle = rles + i;
-
+	while (rle < rle_end) {
+		//printf("rle->freq %lu rle->val %lu ust->size %lu\n", rle->freq, rle->val, ust->size);
 		// check if this is a large enough dense unit
-		if (de_minlen && (rle->val == 1) && (rle->freq >= de_minlen)){
+		if (de_minlen && (rle->val == 1) && (rle->freq >= (de_minlen-1))){
 			// add previous sparse unit (if exists)
-			if (ust->size){
+			if (ust->size > 1){
+				ust->size--;
 				sp_add();
+				ust->jmp = ust->deltas[ust->start];
+				ust->size = 1;
 			}
+
 			// add dense unit
-			ust->size = rle->freq;
-			de_add();
-			continue;
+			rle->freq++;
+			do {
+				ust->size = MIN(rle->freq, SPM_CSRDU_SIZE_MAX);
+				rle->freq -= ust->size;
+				de_add_unit();
+			} while (rle->freq >= de_minlen);
+
+			if (state.jmp){
+				if (rle->freq == 0){
+					rle++;
+					if (rle == rle_end){
+						break;
+					}
+				}
+				rle->freq--;
+				ust->jmp = ust->deltas[ust->start];
+				ust->size = 1;
+				if (rle == rle_end){
+					break;
+				}
+				continue;
+			}
 		}
 
 		// check if the ci_size changes with the new column index
@@ -271,6 +276,7 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 			// check the unit is large enough to be commited
 			if (sp_minlen && (ust->size >= sp_minlen)){
 				sp_add();
+				assert(0);
 			}
 			ust->ci_size = new_ci_size;
 		}
@@ -281,16 +287,21 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 			rle->freq -= (SPM_CSRDU_SIZE_MAX - ust->size);
 			ust->size = SPM_CSRDU_SIZE_MAX;
 			sp_add();
+			if (state.jmp){
+				ust->jmp = ust->deltas[ust->start];
+				ust->size = 1;
+				rle->freq--;
+			}
 		}
 
 		ust->size += rle->freq;
+		rle++;
 	}
 
 	// add remaining unit
-	if (ust->size || (state.jmp && ust->jmp)){
+	if (ust->size){
 		sp_add();
 	}
-
 }
 
 void SPM_CSRDU_NAME(_destroy)(SPM_CSRDU_TYPE *csrdu)
@@ -365,6 +376,7 @@ SPM_CSRDU_TYPE *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
 	free(dynarray_destroy(da_cis));
 	free(dynarray_destroy(da_deltas));
 	free(dynarray_destroy(da_rles));
+	assert(val_i == csrdu->nnz);
 
 	vmsg("ctl_size: %lu \n", dynarray_size(state.da_ctl));
 	vmsg("units:\n de    :%6lu\n sp(8) :%6lu\n sp(16):%6lu\n sp(32):%6lu\n sp(64):%6lu\n",

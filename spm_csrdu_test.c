@@ -18,13 +18,7 @@ int main(int argc, char **argv)
 	spm_csrdu_double_t *csrdu;
 	csrdu = spm_csrdu_double_init_mmf(argv[1], &nrows0, &ncols0, &nnz0);
 
-	#if 0
-	uint64_t nrows1, ncols1, nnz1;
-	spm_crs32_double_t *crs;
-	crs = spm_crs_double_init_mmf(argv[1], &nrows1, &ncols1, &nnz1);
-	#endif
-
-	int align = 1;
+	int align = 0;
 	int jmp = 0;
 	char *e;
 	if ( (e = getenv("CSRDU_ALIGNED")) ){
@@ -33,6 +27,7 @@ int main(int argc, char **argv)
 	if ( (e = getenv("CSRDU_JMP")) ){
 		jmp = !!atoi(e);
 	}
+	//printf("params: align:%d jmp:%d\n", align, jmp);
 
 	uint8_t *ctl = csrdu->ctl;
 	uint64_t row=0, col=1;
@@ -44,6 +39,7 @@ int main(int argc, char **argv)
 		//printf("new unit (%lu)\n", ctl - csrdu->ctl);
 		uint8_t flags = u8_get(ctl);
 		uint8_t size = u8_get(ctl);
+		//printf("flags=%u size=%u\n", flags, size);
 
 		if (spm_csrdu_fl_isnr(flags)){
 			row++;
@@ -59,7 +55,7 @@ int main(int argc, char **argv)
 			for (i=0; i<size; i++){
 				printf(__fmt, row, col+i, *vals++);
 			}
-			col += (size-1);
+			col += (size -1);
 			break;
 
 			#define PRINT_CSRDU_SP(bits)                       \
