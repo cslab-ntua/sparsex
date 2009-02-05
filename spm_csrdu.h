@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
+#include "spm_mt.h"
+
 #define _NAME(val_type, name) spm_csrdu_ ## val_type ## name
 #define _TYPE(val_type) _NAME(val_type, _t)
 
@@ -18,6 +20,9 @@ typedef struct { \
 _TYPE(val_type)  *\
 _NAME(val_type,_init_mmf)(char *mmf, \
                           uint64_t *nrows, uint64_t *ncols, uint64_t *nnz); \
+spm_mt_t * \
+_NAME(val_type,_mt_init_mmf)(char *mmf, \
+                             uint64_t *nrows, uint64_t *ncols, uint64_t *nnz); \
 void _NAME(val_type, _destroy)(_TYPE(val_type) *csrdu);
 
 SPM_CSRDU_DECLARE(float)
@@ -289,6 +294,8 @@ static inline uint8_t spm_csrdu_cisize(unsigned long delta)
 	_val;                                                \
 })                                                           \
 
+#define u8_get_ul(ptr) uc_get_ul(ptr)
+
 #include "dynarray.h"
 #define LONGUC_SHIFT (7)
 static inline void da_uc_put_ul(dynarray_t *da, unsigned long val)
@@ -306,5 +313,13 @@ static inline void da_uc_put_ul(dynarray_t *da, unsigned long val)
 		val >>= shift;
 	}
 }
+
+/*
+ * Multithreading Support
+ */
+typedef struct {
+	void *csrdu;
+	uint64_t nnz, ctl_start, row_start, val_start;
+} spm_csrdu_mt_t;
 
 #endif /* SPM_CSRDU_H__ */

@@ -4,8 +4,11 @@
 
 #include "dynarray.h"
 #include "mmf.h"
+#include "mt_lib.h"
 
 #include "spm_csrdu.h"
+#include "spm_mt.h"
+
 #define MIN(x,y) (x < y ? x : y)
 
 typedef struct rle {
@@ -389,4 +392,149 @@ SPM_CSRDU_TYPE *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
 	      stats.units_de, stats.units_sp[SPM_CSRDU_CISIZE_U8], stats.units_sp[SPM_CSRDU_CISIZE_U16], stats.units_sp[SPM_CSRDU_CISIZE_U32], stats.units_sp[SPM_CSRDU_CISIZE_U64]);
 	csrdu->ctl = dynarray_destroy(state.da_ctl);
 	return csrdu;
+}
+
+static spm_mt_t *partition_ctl(uint8_t *ctl, uint64_t  nnz, void *csrdu)
+{
+	uint8_t *uc = ctl;
+	unsigned int nr_cpus, *cpus_affinity;
+	spm_mt_t *spm_mt;
+	spm_csrdu_mt_t *csrdu_mt_start;
+
+	mt_get_options(&nr_cpus, &cpus_affinity);
+
+	spm_mt = malloc(sizeof(spm_mt_t));
+	if (!spm_mt){
+		perror("malloc");
+		exit(1);
+	}
+
+	spm_mt->nr_threads = nr_cpus;
+	spm_mt->spm_threads = malloc(sizeof(spm_mt_thread_t)*nr_cpus);
+	if (!spm_mt->spm_threads){
+		perror("malloc");
+		exit(1);
+	}
+
+	csrdu_mt_start = malloc(sizeof(spm_csrdu_mt_t)*nr_cpus);
+	if (!csrdu_mt_start){
+		perror("malloc");
+		exit(1);
+	}
+
+	uint64_t elements_total=0, elements=0;
+	uint64_t elements_limit = nnz / nr_cpus;
+	uint64_t ctl_last_off=0;
+	int csrdu_mt_idx=0, nr=0;
+	uint64_t y_indx = 0;
+	uint64_t y_last = 0;
+	uint64_t values_nr=0;
+	uint64_t last_nnz=0;
+
+	for (;;) {
+		uint8_t *uc_start = uc;
+		uint8_t flags = u8_get(uc);
+		uint8_t size = u8_get(uc);
+
+		if (spm_csrdu_fl_isnr(flags)){
+			y_indx++;
+		}
+
+		//printf("elements:%lu elements_total:%lu nnz:%lu\n", elements, elements_total, nnz);
+		values_nr += size;
+		if ( (nr && (elements >= elements_limit)) || (values_nr == nnz) ) {
+			spm_mt_thread_t *spm_mt_thread = spm_mt->spm_threads + csrdu_mt_idx;
+			spm_csrdu_mt_t *csrdu_mt = csrdu_mt_start + csrdu_mt_idx;
+
+			spm_mt_thread->cpu = cpus_affinity[csrdu_mt_idx];
+			spm_mt_thread->spm = csrdu_mt;
+
+			csrdu_mt->csrdu = csrdu;
+			csrdu_mt->val_start = last_nnz;
+			if (values_nr != nnz){
+				assert(nr);
+				csrdu_mt->nnz = elements;
+			} else {
+				csrdu_mt->nnz = nnz - last_nnz;
+			}
+			last_nnz += csrdu_mt->nnz;
+			csrdu_mt->ctl_start = ctl_last_off;
+			csrdu_mt->row_start = y_last;
+			spm_csrdu_fl_clearnr(ctl + ctl_last_off);
+
+			//printf("row_start:%lu ctl_start:%lu nnz:%lu val_start:%lu\n", csrdu_mt->row_start, csrdu_mt->ctl_start, csrdu_mt->nnz, csrdu_mt->val_start);
+			if ( ++csrdu_mt_idx == nr_cpus){
+				break;
+			}
+
+			//ctl_last_off = csrdu_mt->ctl_end = (uc_start - ctl);
+			y_last = y_indx;
+			ctl_last_off = (uc_start - ctl);
+			elements_total += elements;
+			elements_limit = (nnz - elements_total) / (nr_cpus - csrdu_mt_idx);
+			elements = 0;
+		}
+		assert(values_nr < nnz);
+		elements += size;
+
+		uint8_t unit = flags & SPM_CSRDU_FL_UNIT_MASK;
+		if (unit == SPM_CSRDU_FL_UNIT_DENSE){
+			uc_get_ul(uc);
+			continue;
+		}
+
+		if (state.jmp){
+			u8_get_ul(uc);
+			size--;
+		}
+
+		#define ALIGN(buf,a) (void *) (((unsigned long) (buf) + (a-1)) & ~(a-1))
+		#define ALIGN_UC(align) do { uc = ALIGN(uc, align); } while(0)
+
+		switch (unit){
+
+			case SPM_CSRDU_FL_UNIT_SP_U8:
+			uc += sizeof(uint8_t)*(size);
+			break;
+
+			case SPM_CSRDU_FL_UNIT_SP_U16:
+			if (state.aligned)
+				ALIGN_UC(2);
+			uc += sizeof(uint16_t)*(size);
+			break;
+
+			case SPM_CSRDU_FL_UNIT_SP_U32:
+			if (state.aligned)
+				ALIGN_UC(4);
+			uc += sizeof(uint32_t)*(size);
+			break;
+
+			case SPM_CSRDU_FL_UNIT_SP_U64:
+			if (state.aligned)
+				ALIGN_UC(8);
+			uc += sizeof(uint64_t)*(size);
+			break;
+
+			default:
+			printf("Uknown flags: %u unit=%u\n", flags, flags & SPM_CSRDU_FL_UNIT_MASK);
+			assert(0);
+		}
+
+		assert(elements_total < nnz);
+	}
+
+	free(cpus_affinity);
+	return spm_mt;
+}
+
+spm_mt_t *SPM_CSRDU_NAME(_mt_init_mmf)(char *mmf_file,
+                                       uint64_t *nrows, uint64_t *ncols, uint64_t *nnz)
+{
+	spm_mt_t *ret;
+
+	SPM_CSRDU_TYPE *csrdu;
+	csrdu = SPM_CSRDU_NAME(_init_mmf)(mmf_file, nrows, ncols, nnz);
+
+	ret = partition_ctl(csrdu->ctl, csrdu->nnz, csrdu);
+	return ret;
 }
