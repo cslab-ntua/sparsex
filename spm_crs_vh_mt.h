@@ -24,7 +24,7 @@
 		unsigned long       hsym_bits;            \
 	} _NAME(val_type, ci_bits, _t);          \
 	                                                  \
-	spm_mt_t *           \
+	void *           \
 	_NAME(val_type, ci_bits, _init_mmf)(     \
 		char *mmf_file,                           \
 		unsigned long *rows_nr,                   \
@@ -33,13 +33,13 @@
 	);                                                \
 	                                                  \
 	void                                              \
-	_NAME(val_type, ci_bits, _destroy)(      \
-		_NAME(val_type, ci_bits, _t) *m  \
+	_NAME(val_type, ci_bits, _destroy)(               \
+		void *m                                   \
 	);                                                \
 	                                                  \
-	unsigned long                                     \
-	_NAME(val_type, ci_bits, _size)(         \
-		spm_mt_t *                       \
+	uint64_t                                          \
+	_NAME(val_type, ci_bits, _size)(                  \
+		void *m                                   \
 	);                                                \
 
 DECLARE_CRS_VH_MT(double, 32)

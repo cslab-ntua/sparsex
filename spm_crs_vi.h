@@ -18,7 +18,7 @@
 		uint64_t            nz, nrows, ncols, nv; \
 	} _NAME(val_type, ci_bits, vi_bits, _t);          \
 	                                                  \
-	_NAME(val_type, ci_bits, vi_bits, _t) *           \
+	void *                                            \
 	_NAME(val_type, ci_bits, vi_bits, _init_mmf)(     \
 		char *mmf_file,                           \
 		unsigned long *rows_nr,                   \
@@ -28,12 +28,12 @@
 	                                                  \
 	void                                              \
 	_NAME(val_type, ci_bits, vi_bits, _destroy)(      \
-		_NAME(val_type, ci_bits, vi_bits, _t) *m  \
+		void *m                                   \
 	);                                                \
 	                                                  \
-	unsigned long                                     \
+	uint64_t                                          \
 	_NAME(val_type, ci_bits, vi_bits, _size)(         \
-		_NAME(val_type, ci_bits, vi_bits, _t) *m  \
+		void *m                                   \
 	);                                                \
 	                                                  \
 	spmv_ ## val_type ## _fn_t                        \

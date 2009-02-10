@@ -11,14 +11,12 @@
 
 #include "vector.h"
 #include "spm_crs.h"
-#include "dynarray.h"
 #include "mmf.h"
-#include "method.h"
 #include "spm_parse.h"
+#include "spmv_method.h"
 
-SPM_CRS_TYPE *SPM_CRS_NAME(_init_mmf)(char *mmf_file,
-                                      unsigned long *nrows, unsigned long *ncols,
-                                      unsigned long *nnz)
+void *SPM_CRS_NAME(_init_mmf)(char *mmf_file,
+                              uint64_t *nrows, uint64_t *ncols, uint64_t *nnz)
 {
 
 	SPM_CRS_TYPE *crs;
@@ -80,12 +78,19 @@ SPM_CRS_TYPE *SPM_CRS_NAME(_init_mmf)(char *mmf_file,
 	return crs;
 }
 
-void SPM_CRS_NAME(_destroy)(SPM_CRS_TYPE *crs)
+void SPM_CRS_NAME(_destroy)(void *spm)
 {
+	SPM_CRS_TYPE *crs = (SPM_CRS_TYPE *)spm;
 	free(crs->values);
 	free(crs->col_ind);
 	free(crs->row_ptr);
 	free(crs);
+}
+
+uint64_t SPM_CRS_NAME(_size)(void *spm)
+{
+	//SPM_CRS_TYPE *crs = (SPM_CRS_TYPE *)crs_void;
+	return 0;
 }
 
 void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
@@ -119,17 +124,10 @@ void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	}
 }
 
-/*
-#define XMETHOD_INIT(x,y) METHOD_INIT(x,y)
-XMETHOD_INIT(SPM_CRS_NAME(_multiply), SPM_CRS_NAME(_init_mmf))
-*/
-
-#if 0
-#include "spmv_method.h"
-#define XSPMV_METH_INIT(x,y,z) SPMV_METH_INIT(x,y,z)
 XSPMV_METH_INIT(
-	SPM_CRS_NAME(_multiply),
-	SPM_CRS_NAME(_init_mmf),
-	SPM_CRS_NAME(_papaki)
+ SPM_CRS_NAME(_multiply),
+ SPM_CRS_NAME(_init_mmf),
+ SPM_CRS_NAME(_size),
+ SPM_CRS_NAME(_destroy),
+ sizeof(ELEM_TYPE)
 )
-#endif

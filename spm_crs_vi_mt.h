@@ -12,7 +12,7 @@
 		uint64_t row_start, row_end, nnz;                   \
 	} _NAME(val_type, ci_bits, vi_bits, _mt_t);                 \
 	                                                            \
-	spm_mt_t * _NAME(val_type, ci_bits, vi_bits, _mt_init_mmf)( \
+	void * _NAME(val_type, ci_bits, vi_bits, _mt_init_mmf)( \
 		char *mmf_file,                                     \
 		unsigned long *rows_nr, unsigned long *cols_nr,     \
 		unsigned long *nz_nr);                              \

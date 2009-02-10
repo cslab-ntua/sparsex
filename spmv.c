@@ -1,341 +1,128 @@
-#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <unistd.h>
+#include <inttypes.h>
 #include <libgen.h>
-#include <time.h>
-#include <math.h>
 
-#include "tsc.h"
-#include "prfcnt.h"
-#include "matrix.h"
 #include "method.h"
-#include "spm_crs.h"
-//#include "prefetch.h"
+#include "spmv_method.h"
+#include "spmv_loops.h"
 
-#ifndef LOOPS
-#define LOOPS 128
-#endif
-static unsigned long ncols;
+static char *progname = NULL;
+extern int optind;
 
-static void do_setaffinity(cpu_set_t *mask)
+static void help()
 {
-	int err;
-
-	err = sched_setaffinity(0, sizeof(cpu_set_t), mask);
-	if (err){
-		perror("sched_setaffinity");
-		exit(1);
-	}
-}
-
-
-static inline int elems_neq(elem_t a, elem_t b)
-{
-	if ( fabs((double)(a-b)/(double)a)  > 0.0000001 ){
-		return 1;
-	}
-	return 0;
-}
-
-typedef void spmv_fn_t(void *matrix, vector_t *in, vector_t *out);
-typedef void *spmv_load_fn_t(char *mmf_file, 
-                             unsigned long *nrows, unsigned long *ncols, 
-			     unsigned long *nnz);
-
-int check_spm_crs(char *mmf_file, vector_t *x, vector_t *y)
-{
-	vector_t *y_correct;
-	unsigned long i;
-	method_t  *m;
-	spmv_fn_t *spmv_fn;
-	spmv_load_fn_t *load_fn;
-	unsigned long rows_nr, cols_nr, nz_nr;
-	spm_crs64_t *matrix;
-
-	printf("checking ...\n");
-	m = method_get("spm_crs64_multiply");
-	spmv_fn = m->fn;
-	load_fn = m->data;
-	matrix = load_fn(mmf_file, &rows_nr, &cols_nr, &nz_nr);
-	y_correct = vector_create(cols_nr);
-	vector_init(y_correct, (elem_t)0);
-	spmv_fn(matrix, x, y_correct);
-
-	if ( y_correct->size != y->size ){
-		fprintf(stderr, "check_spm_crs: sizes differ\n");
-		exit(1);
-	}
-
-	for (i=0; i < y_correct->size; i++){
-		if ( elems_neq(y_correct->elements[i], y->elements[i]) ){
-			fprintf(stderr, "element %ld differs: %10.20lf != %10.20lf\n", 
-			                 i,  y_correct->elements[i], y->elements[i]);
-			exit(1);
-		}
-	}
-
-	return 0;
+	fprintf(stderr, "Usage: %s [-c -b -l [nr_loops]] mmf_file [method]\n", progname);
+	method_fprint(stderr, "available methods:\n", "\t", "\n", "");
 }
 
 int main(int argc, char **argv)
 {
-	int fd, i, ret;
-	int cpu=0;
-	vector_t *x,*y;
-	spmv_fn_t *fn;
-	spmv_load_fn_t *load_fn;
-	method_t *m;
-	char *method;
-	char *ncols_str;
-	unsigned long rows_nr, cols_nr, nz_nr;
-	tsc_t tsc;
-	prfcnt_t prfcnt;
-	cpu_set_t cpu_mask;
-	void *matrix;
 
-	ncols_str = getenv("SPMV_NCOLS"); 
-	if ( ncols_str ){
-		ncols = atol(ncols_str);
-	} else {
-		ncols = ~0; // kill dah bitch
+	progname = argv[0];
+
+	// parse options
+	int opt_check = 0;
+	int opt_bench = 0;
+	int loops_nr = 128;
+	int c;
+	while ((c = getopt(argc, argv, "cbl:")) != -1){
+		switch (c) {
+			case 'c':
+			opt_check = 1;
+			break;
+
+			case 'b':
+			opt_bench = 1;
+			break;
+
+			default:
+			fprintf(stderr, "Error parsing arguments: -%c-\n", c);
+			help();
+			exit(1);
+		}
 	}
 
-	if (argc < 2){
-		fprintf(stderr, "Usage: %s mmarket_file [method]\n", argv[0]);
+	if (!opt_check && !opt_bench){
+		opt_bench = 1;
+	}
+
+	int remargs=argc - optind; // remaining arguments
+	if (remargs < 1){
+		help();
+		exit(1);
+	}
+	argv = &argv[optind-1];
+
+	char *mmf_file = argv[1];
+	char *method = (remargs > 1) ? argv[2] : "spm_crs32_double_multiply";
+	method_t *meth = method_get(method);
+	if (!meth) {
+		fprintf(stderr, "No such method: %s\n", method);
 		method_fprint(stderr, "available methods:\n", "\t", "\n", "");
 		exit(1);
 	}
 
-	method = (argc > 2) ? argv[2] : "spm_crs_multiply_safe";
-	m = method_get(method);
-	if ( !m ) {
-		fprintf(stderr, "No such function: %s\n", argv[2]);
-		method_fprint(stderr, "available methods:\n", "\t", "\n", "");
-		exit(1);
-	}
-	fn = m->fn;
-	load_fn = m->data;
+	spmv_method_t *spmv_meth = meth->data;
+	//spm_size_fn_t *size_fn = spmv_meth->size_fn;
 
-	CPU_ZERO(&cpu_mask);
-	CPU_SET(cpu, &cpu_mask);
-	do_setaffinity(&cpu_mask);
+	uint64_t nrows, ncols, nnz;
+	void *m = spmv_meth->mmf_init_fn(mmf_file, &nrows, &ncols, &nnz);
 
-	matrix = load_fn(argv[1], &rows_nr, &cols_nr, &nz_nr);
-	x = vector_create(cols_nr);
-	y = vector_create(cols_nr);
-	
-	srand(time(NULL));
-	tsc_init(&tsc);
-	prfcnt_init(&prfcnt,cpu,PRFCNT_FL_T0|PRFCNT_FL_T1);
-	for (i=0; i<LOOPS ;  i++){
-		vector_init_rand_range(x, (elem_t)-1000, (elem_t)1000);
-		//vector_init(x, (elem_t)3);
-		vector_init(y, (elem_t)0);
-		//prfcnt_start(&prfcnt);
-		tsc_start(&tsc);
-		fn(matrix, x, y);
-		tsc_pause(&tsc);
-		//prfcnt_pause(&prfcnt);
-		#ifdef SPMV_CHECK
-		//vector_print(x);
-		check_spm_crs(argv[1], x, y);
-		#endif
+	if (opt_check){
+		switch (spmv_meth->elem_size) {
+			method_t *meth1;
+			spmv_method_t *spmv_meth1;
+			uint64_t nrows1, ncols1, nnz1;
+			void *m1;
+
+			case 8:
+			meth1 = method_get("spm_crs32_double_multiply");
+			spmv_meth1 = (spmv_method_t *)meth1->data;
+			m1 = spmv_meth1->mmf_init_fn(mmf_file, &nrows1, &ncols1, &nnz1);
+			if (nrows != nrows1 || ncols != ncols1 || nnz != nnz1){
+				fprintf(stderr, "sizes do not match (f:%s) (m:%s)\n", mmf_file, method);
+				exit(1);
+			}
+			spmv_double_check_loop(m1, m, meth1->fn, meth->fn, 1, nrows, ncols, nnz);
+			break;
+
+			case 4:
+			meth1 = method_get("spm_crs32_float_multiply");
+			spmv_meth1 = (spmv_method_t *)meth1->data;
+			m1 = spmv_meth1->mmf_init_fn(mmf_file, &nrows1, &ncols1, &nnz1);
+			if (nrows != nrows1 || ncols != ncols1 || nnz != nnz1){
+				fprintf(stderr, "sizes do not match (f:%s) (m:%s)\n", mmf_file, method);
+				exit(1);
+			}
+			spmv_float_check_loop(m1, m, meth1->fn, meth->fn, 1, nrows, ncols, nnz);
+			break;
+
+			default:
+			fprintf(stderr, "bogus elem_size (%d)\n", spmv_meth->elem_size);
+			exit(1);
+		}
+		printf("check for %s in %s verified\n", method, basename(mmf_file));
 	}
-	//tsc_report(&tsc);
-	tsc_shut(&tsc);
-	const float secs = tsc_getsecs(&tsc);
-	const float mf = (((float)(nz_nr*2*LOOPS))/secs)/(1000*1000);
-	const float mb = (((float)(nz_nr*2+rows_nr*2+ cols_nr)*8*LOOPS)/secs)/(1024.0*1024.0);
-	printf("%s %s %f %f %f\n", basename(argv[1]), method, mf, mb, secs);
-	//prfcnt_report(&prfcnt);
+
+	if (opt_bench){
+		double t;
+		switch (spmv_meth->elem_size){
+			case 8:
+			t = spmv_double_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
+			break;
+
+			case 4:
+			t = spmv_float_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
+			break;
+
+			default:
+			fprintf(stderr, "bogus elem_size (%d)\n", spmv_meth->elem_size);
+			exit(1);
+		}
+		printf("%s %s %lf\n", method, basename(mmf_file), t);
+	}
 
 	return 0;
 }
-
-void do_check_loop(char *file, char *method, void *matrix,
-                   unsigned long loops, unsigned long cols_nr)
-{
-	unsigned long i;
-	method_t *m;
-	vector_t *x,*y;
-	spmv_fn_t *fn;
-
-	x = vector_create(cols_nr);
-	y = vector_create(cols_nr);
-
-	m = method_get(method);
-	if ( !m ) {
-		fprintf(stderr, "No such function: %s\n", method);
-		method_fprint(stderr, "available methods:\n", "\t", "\n", "");
-		exit(1);
-	}
-	fn = m->fn;
-	for (i=0; i<loops ;  i++){
-		vector_init_rand_range(x, (elem_t)-1000, (elem_t)1000);
-		//vector_init(x, (elem_t)3);
-		vector_init(y, (elem_t)0);
-		fn(matrix, x, y);
-		//vector_print(x);
-		check_spm_crs(file, x, y);
-	}
-
-	vector_destroy(x);
-	vector_destroy(y);
-}
-
-void do_bench_loop(char *file, char *method, void *matrix,
-		  unsigned long loops,
-                  unsigned long cols_nr, unsigned long nz_nr)
-{
-	unsigned long i;
-	method_t *m;
-	vector_t *x,*y;
-	spmv_fn_t *fn;
-	tsc_t tsc;
-
-	x = vector_create(cols_nr);
-	y = vector_create(cols_nr);
-
-	m = method_get(method);
-	if ( !m ) {
-		fprintf(stderr, "No such function: %s\n", method);
-		method_fprint(stderr, "available methods:\n", "\t", "\n", "");
-		exit(1);
-	}
-	fn = m->fn;
-
-	tsc_init(&tsc);
-	for (i=0; i<loops; i++){
-		vector_init_rand_range(x, (elem_t)-1000, (elem_t)1000);
-		vector_init(y, (elem_t)0);
-		tsc_start(&tsc);
-		fn(matrix, x, y);
-		tsc_pause(&tsc);
-	}
-	tsc_shut(&tsc);
-	const float secs = tsc_getsecs(&tsc);
-	const float mf = (((float)(nz_nr*2*LOOPS))/secs)/(1000*1000);
-	//const float mb = (((float)(nz_nr*2+rows_nr*2+cols_nr)*8*LOOPS)/secs)/(1024.0*1024.0);
-	printf("%s %s %f %f\n", basename(file), method, mf, secs);
-}
-
-#if 0
-void spm_crs_multiply_safe(spm_t *matrix, vector_t *in, vector_t *out)
-{
-	elem_t *y = out->elements;
-	elem_t *x = in->elements;
-	elem_t *values = matrix->crs.values;
-	index_t *row_ptr = matrix->crs.row_ptr;
-	index_t *col_ind = matrix->crs.col_ind;
-	unsigned long n = matrix->crs.nrows;
-
-	unsigned long i, j;
-	for(i=0; i<n; i++) {
-		//printf("row: %lu (%lu,%lu)\n", i, row_ptr[i], row_ptr[i+1]);
-		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) { 
-			y[i] += (values[j] * x[col_ind[j]]);
-		}
-	}
-}
-METHOD_INIT(spm_crs_multiply_safe, spm_crs_load)
-
-void spm_crs_multiply_nocomp(spm_t *matrix, vector_t *in, vector_t *out)
-{
-	elem_t *y = out->elements;
-	elem_t *x = in->elements;
-	elem_t *values = matrix->crs.values;
-	index_t *row_ptr = matrix->crs.row_ptr;
-	index_t *col_ind = matrix->crs.col_ind;
-	unsigned long n = matrix->crs.nrows;
-
-	unsigned long i, j;
-	for(i=0; i<n; i++) {
-		//__preloadq(&y[i]);
-		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) { 
-			//__preloadq(&values[j]);
-			//__preloadq(&x[col_ind[j]]);
-		}
-	}
-}
-METHOD_INIT(spm_crs_multiply_nocomp, spm_crs_load)
-
-void spm_crs_multiply_nocomp_v(spm_t *matrix, vector_t *in, vector_t *out)
-{
-	elem_t *y = out->elements;
-	elem_t *x = in->elements;
-	elem_t *values = matrix->crs.values;
-	index_t *row_ptr = matrix->crs.row_ptr;
-	index_t *col_ind = matrix->crs.col_ind;
-	unsigned long n = matrix->crs.nrows;
-
-	unsigned long i, j;
-	for(i=0; i<n; i++) {
-		//__preloadq(&y[i]);
-		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) { 
-			//__preloadq(&values[j]);
-		}
-	}
-}
-METHOD_INIT(spm_crs_multiply_nocomp_v, spm_crs_load)
-
-void spm_crs_multiply_nocomp_x(spm_t *matrix, vector_t *in, vector_t *out)
-{
-	elem_t *y = out->elements;
-	elem_t *x = in->elements;
-	elem_t *values = matrix->crs.values;
-	index_t *row_ptr = matrix->crs.row_ptr;
-	index_t *col_ind = matrix->crs.col_ind;
-	unsigned long n = matrix->crs.nrows;
-
-	unsigned long i, j;
-	for(i=0; i<n; i++) {
-		//__preloadq(&y[i]);
-		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) { 
-			//__preloadq(&x[col_ind[j]]);
-		}
-	}
-}
-METHOD_INIT(spm_crs_multiply_nocomp_x, spm_crs_load)
-
-static void spm_crs_multiply_no_indrct1(spm_t *matrix, vector_t *in, vector_t *out)
-{
-	elem_t *y = out->elements;
-	elem_t *x = in->elements;
-	elem_t *values = matrix->crs.values;
-	index_t *row_ptr = matrix->crs.row_ptr;
-	index_t *col_ind = matrix->crs.col_ind;
-	unsigned long n = matrix->crs.nrows;
-
-	unsigned long i, j, j_max = 0, j_prev=0;
-	printf("ncols=%lu\n", ncols);
-
-	for(i=0; i<n; i++) {
-		for(j=ncols*i; j < ncols*(i+1); j++) { 
-			y[i] += (values[j] * x[col_ind[j]]);
-		}
-	}
-}
-METHOD_INIT(spm_crs_multiply_no_indrct1, spm_crs_load)
-
-static void spm_crs_multiply_no_indrct2(spm_t *matrix, vector_t *in, vector_t *out)
-{
-	elem_t *y = out->elements;
-	elem_t *x = in->elements;
-	elem_t *values = matrix->crs.values;
-	index_t *row_ptr = matrix->crs.row_ptr;
-	index_t *col_ind = matrix->crs.col_ind;
-	unsigned long n = matrix->crs.nrows;
-	unsigned long ncols = matrix->crs.ncols;
-
-	unsigned long i, j, k, j_max = 0, j_prev=0;
-	//ncols = 1;
-
-	for(i=0; i<n; i++) {
-		for(j=row_ptr[i], k=0; j < row_ptr[i+1]; j++, k++) { 
-			y[i] += (values[j] * x[k]);
-		}
-	}
-}
-METHOD_INIT(spm_crs_multiply_no_indrct2, spm_crs_load)
-#endif

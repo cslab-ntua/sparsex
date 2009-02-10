@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 	snprintf(method_str, 1024, "spm_crs%d_vh_%s_multiply", ci, type);
 	method_t *m = method_get(method_str);
 	spmv_method_t *spmv_m = m->data;
-	spmv_load_fn_t *mmf_init = spmv_m->mmf_init;
+	spm_load_fn_t *mmf_init = spmv_m->mmf_init_fn;
 	void *crs;
 	unsigned long rows_nr, cols_nr, nz_nr, loops;
 

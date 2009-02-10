@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 	snprintf(method_str, 1024, "spm_crs%d_vi%d_%s_multiply", ci, vi, type);
 	method_t *m = method_get(method_str);
 	spmv_method_t *spmv_m = m->data;
-	spmv_load_fn_t *mmf_init = spmv_m->mmf_init;
+	spm_load_fn_t *mmf_init = spmv_m->mmf_init_fn;
 	//spmv_size_fn_t *spm_size = spmv_m->size;
 	void *crsvi;
 	void *crs;

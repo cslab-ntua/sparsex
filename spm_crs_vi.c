@@ -113,9 +113,9 @@ static void add_val(crs_vi_state_t *crsvi_st, double val)
 	*val_idx = (SPM_CRSVI_CI_TYPE)idx;
 }
 
-SPM_CRSVI_TYPE *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file, 
-                                       unsigned long *rows_nr, unsigned long *cols_nr,
-                                       unsigned long *nz_nr)
+void *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file, 
+                                  unsigned long *rows_nr, unsigned long *cols_nr,
+                                  unsigned long *nz_nr)
 {
 	crs_vi_state_t *crsvi_st;
 	FILE *f;
@@ -182,17 +182,19 @@ SPM_CRSVI_TYPE *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file,
 	return crsvi;
 }
 
-void SPM_CRS_VI_NAME(_destroy)(SPM_CRSVI_TYPE *crs_vi)
+void SPM_CRS_VI_NAME(_destroy)(void *spm)
 {
-	free(crs_vi->values);
-	free(crs_vi->val_ind);
-	free(crs_vi->col_ind);
-	free(crs_vi->row_ptr);
-	free(crs_vi);
+	SPM_CRSVI_TYPE *crsvi = (SPM_CRSVI_TYPE *)spm;
+	free(crsvi->values);
+	free(crsvi->val_ind);
+	free(crsvi->col_ind);
+	free(crsvi->row_ptr);
+	free(crsvi);
 }
 
-unsigned long SPM_CRS_VI_NAME(_size)(SPM_CRSVI_TYPE *crsvi)
+uint64_t SPM_CRS_VI_NAME(_size)(void *spm)
 {
+	SPM_CRSVI_TYPE *crsvi = (SPM_CRSVI_TYPE *)spm;
 	unsigned long ret;
 	ret  = crsvi->nv*sizeof(ELEM_TYPE);
 	ret += crsvi->nz*(sizeof(SPM_CRSVI_VI_TYPE) + sizeof(SPM_CRSVI_CI_TYPE));
@@ -226,10 +228,10 @@ void SPM_CRS_VI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	}
 }
 
-#define XSPMV_METH_INIT(x,y,z,w) SPMV_METH_INIT(x,y,z,w)
 XSPMV_METH_INIT(
 	SPM_CRS_VI_NAME(_multiply),
 	SPM_CRS_VI_NAME(_init_mmf),
 	SPM_CRS_VI_NAME(_size),
+	SPM_CRS_VI_NAME(_destroy),
 	sizeof(ELEM_TYPE)
 )

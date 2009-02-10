@@ -21,22 +21,22 @@
 		unsigned long       hsym_bits;            \
 	} _NAME(val_type, ci_bits, _t);          \
 	                                                  \
-	_NAME(val_type, ci_bits, _t) *           \
+	void *                                            \
 	_NAME(val_type, ci_bits, _init_mmf)(     \
 		char *mmf_file,                           \
-		unsigned long *rows_nr,                   \
-		unsigned long *cols_nr,                   \
-		unsigned long *nz_nr                      \
+		uint64_t *rows_nr,                        \
+		uint64_t *cols_nr,                        \
+		uint64_t *nz_nr                           \
 	);                                                \
 	                                                  \
 	void                                              \
 	_NAME(val_type, ci_bits, _destroy)(      \
-		_NAME(val_type, ci_bits, _t) *m  \
+		void *m                                   \
 	);                                                \
 	                                                  \
-	unsigned long                                     \
+	uint64_t                                          \
 	_NAME(val_type, ci_bits, _size)(         \
-		_NAME(val_type, ci_bits, _t) *m  \
+		void *m                                   \
 	);                                                \
 
 DECLARE_CRS_VH(double, 32)

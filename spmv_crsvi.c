@@ -41,10 +41,10 @@ int main(int argc, char **argv)
 	snprintf(method_str, 1024, "spm_crs%d_vi%d_%s_multiply", ci, vi, type);
 	method_t *m = method_get(method_str);
 	spmv_method_t *spmv_m = m->data;
-	spmv_load_fn_t *mmf_init = spmv_m->mmf_init;
-	spmv_size_fn_t *spm_size = spmv_m->size;
+	spm_load_fn_t *mmf_init = spmv_m->mmf_init_fn;
+	spm_size_fn_t *spm_size = spmv_m->size_fn;
 	void *crsvi;
-	unsigned long rows_nr, cols_nr, nz_nr, loops;
+	uint64_t rows_nr, cols_nr, nz_nr, loops;
 	double time=0, flops;
 
 	loops = LOOPS;

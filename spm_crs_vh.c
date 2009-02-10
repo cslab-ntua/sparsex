@@ -54,9 +54,9 @@ static void crsvh_compress_vals(SPM_CRSVH_TYPE *crs_vh, SPM_CRS_TYPE *crs)
 }
 
 
-SPM_CRSVH_TYPE *SPM_CRS_VH_NAME(_init_mmf) (char *mmf_file,
-                                       unsigned long *rows_nr, unsigned long *cols_nr,
-                                       unsigned long *nz_nr)
+void *SPM_CRS_VH_NAME(_init_mmf) (char *mmf_file,
+                                  uint64_t *rows_nr, uint64_t *cols_nr,
+                                  uint64_t *nz_nr)
 {
 	SPM_CRSVH_TYPE *crs_vh;
 	SPM_CRS_TYPE *crs;
@@ -79,16 +79,18 @@ SPM_CRSVH_TYPE *SPM_CRS_VH_NAME(_init_mmf) (char *mmf_file,
 	return crs_vh;
 }
 
-void SPM_CRS_VH_NAME(_destroy)(SPM_CRSVH_TYPE *crs_vh)
+void SPM_CRS_VH_NAME(_destroy)(void *spm)
 {
-	free(crs_vh->hvals);
-	free(crs_vh->col_ind);
-	free(crs_vh->row_ptr);
-	free(crs_vh);
+	SPM_CRSVH_TYPE *crsvh = (SPM_CRSVH_TYPE *)spm;
+	free(crsvh->hvals);
+	free(crsvh->col_ind);
+	free(crsvh->row_ptr);
+	free(crsvh);
 }
 
-unsigned long SPM_CRS_VH_NAME(_size)(SPM_CRSVH_TYPE *crsvh)
+uint64_t SPM_CRS_VH_NAME(_size)(void *spm)
 {
+	SPM_CRSVH_TYPE *crsvh = (SPM_CRSVH_TYPE *)spm;
 	unsigned long ret;
 	ret  = crsvh->hvals_bits/8 + 1*(crsvh->hvals_bits % 8);
 	ret += crsvh->nz*(sizeof(SPM_CRSVH_CI_TYPE));
@@ -139,10 +141,10 @@ void SPM_CRS_VH_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	#endif
 }
 
-#define XSPMV_METH_INIT(x,y,z,w) SPMV_METH_INIT(x,y,z,w)
 XSPMV_METH_INIT(
 	SPM_CRS_VH_NAME(_multiply),
 	SPM_CRS_VH_NAME(_init_mmf),
 	SPM_CRS_VH_NAME(_size),
+	SPM_CRS_VH_NAME(_destroy),
 	sizeof(ELEM_TYPE)
 )

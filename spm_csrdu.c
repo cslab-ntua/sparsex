@@ -20,7 +20,7 @@ static void delta_encode(uint64_t *input, uint64_t *deltas, uint64_t size)
 {
 	uint64_t i;
 	uint64_t prev = input[0];
-	deltas[0] = prev ;//+ 1; // make the 0,1,2,3 case => 1,1,1,1
+	deltas[0] = prev ;
 	for (i=1; i<size; i++){
 		uint64_t curr = input[i];
 		deltas[i] = curr - prev;
@@ -314,15 +314,22 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 	ust->new_row = 1;
 }
 
-void SPM_CSRDU_NAME(_destroy)(SPM_CSRDU_TYPE *csrdu)
+void SPM_CSRDU_NAME(_destroy)(void *m)
 {
+	SPM_CSRDU_TYPE *csrdu = m;
 	free(csrdu->values);
 	free(csrdu->ctl);
 	free(csrdu);
 }
 
-SPM_CSRDU_TYPE *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
-                                          uint64_t *nrows, uint64_t *ncols, uint64_t *nnz)
+uint64_t SPM_CSRDU_NAME(_size)(void *m)
+{
+	//SPM_CSRDU_TYPE *csrdu = m;
+	return 0;
+}
+
+void *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
+                                uint64_t *nrows, uint64_t *ncols, uint64_t *nnz)
 {
 	SPM_CSRDU_TYPE *csrdu;
 	csrdu = malloc(sizeof(SPM_CSRDU_TYPE));

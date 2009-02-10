@@ -19,9 +19,9 @@
         CON8(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, _mt, name)
 #define SPM_CRSVI_MT_TYPE SPM_CRSVI_MT_NAME(_t)
 
-spm_mt_t *SPM_CRSVI_MT_NAME(_init_mmf)(char *mmf_file,
-                                       unsigned long *rows_nr, unsigned long *cols_nr,
-                                       unsigned long *nz_nr)
+void *SPM_CRSVI_MT_NAME(_init_mmf)(char *mmf_file,
+                                   unsigned long *rows_nr, unsigned long *cols_nr,
+                                   unsigned long *nz_nr)
 {
 	unsigned int nr_cpus, *cpus_affinity;
 	SPM_CRSVI_TYPE *crsvi;
@@ -112,9 +112,10 @@ void SPM_CRSVI_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	}
 }
 
-unsigned long SPM_CRSVI_MT_NAME(_size)(spm_mt_t *spm_mt)
+uint64_t SPM_CRSVI_MT_NAME(_size)(void *spm)
 {
 	unsigned long ret;
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
 	SPM_CRSVI_MT_TYPE *crsvi_mt = (SPM_CRSVI_MT_TYPE *)spm_mt->spm_threads->spm;
 	SPM_CRSVI_TYPE *crsvi = crsvi_mt->crsvi;
 
@@ -125,10 +126,10 @@ unsigned long SPM_CRSVI_MT_NAME(_size)(spm_mt_t *spm_mt)
 	return ret;
 }
 
-#define XSPMV_METH_INIT(x,y,z,w) SPMV_METH_INIT(x,y,z,w)
 XSPMV_METH_INIT(
 	SPM_CRSVI_MT_NAME(_multiply),
 	SPM_CRSVI_MT_NAME(_init_mmf),
 	SPM_CRSVI_MT_NAME(_size),
+	NULL,
 	sizeof(ELEM_TYPE)
 )

@@ -17,13 +17,14 @@ typedef struct { \
 	val_type	*values; \
 } _TYPE(val_type); \
 \
-_TYPE(val_type)  *\
+void *\
 _NAME(val_type,_init_mmf)(char *mmf, \
                           uint64_t *nrows, uint64_t *ncols, uint64_t *nnz); \
 spm_mt_t * \
 _NAME(val_type,_mt_init_mmf)(char *mmf, \
                              uint64_t *nrows, uint64_t *ncols, uint64_t *nnz); \
-void _NAME(val_type, _destroy)(_TYPE(val_type) *csrdu);
+uint64_t _NAME(val_type, _size)(void *csrdu); \
+void _NAME(val_type, _destroy)(void *csrdu);
 
 SPM_CSRDU_DECLARE(float)
 SPM_CSRDU_DECLARE(double)

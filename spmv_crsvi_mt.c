@@ -43,8 +43,8 @@ int main(int argc, char **argv)
 	method_t *m = method_get(method_str);
 
 	spmv_method_t *spmv_m = m->data;
-	spmv_load_fn_t *mmf_init = spmv_m->mmf_init;
-	spmv_size_fn_t *spm_size = spmv_m->size;
+	spm_load_fn_t *mmf_init = spmv_m->mmf_init_fn;
+	spm_size_fn_t *spm_size = spmv_m->size_fn;
 	spm_mt_t *spm_mt;
 	unsigned long rows_nr, cols_nr, nz_nr, loops;
 	double time=0, flops;

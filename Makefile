@@ -182,6 +182,12 @@ mt_lib.o: mt_lib.c mt_lib.h
 ext_prog.o: ext_prog.c ext_prog.h
 	$(COMPILE) -c $< -o $@
 
+spmv.o: spmv.c
+	$(COMPILE) -c $< -o $@
+
+spmv: spmv.o libspmv.o
+	$(COMPILE) $(LIBS) $^ -o $@
+
 spmv_crsvi: libspmv.o spmv_crsvi.o
 	$(COMPILE) $(LIBS) libspmv.o spmv_crsvi.o -o $@
 
@@ -232,4 +238,4 @@ vals_idx: vals_idx.c
 	$(COMPILE) -E $< | indent -kr > $@
 
 clean:
-	rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt spm_csrdu_test
+	rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt spm_csrdu_test spmv

@@ -62,9 +62,9 @@ static void crsvh_mt_compress_vals(spm_mt_thread_t *spm_thread, SPM_CRS_VH_MT_TY
 	spm_thread->spm = crsvh;
 }
 
-spm_mt_t *SPM_CRS_VH_MT_NAME(_init_mmf)(char *mmf_file,
-                                        unsigned long *rows_nr, unsigned long *cols_nr,
-                                        unsigned long *nz_nr)
+void *SPM_CRS_VH_MT_NAME(_init_mmf)(char *mmf_file,
+                                    unsigned long *rows_nr, unsigned long *cols_nr,
+                                    unsigned long *nz_nr)
 {
 	spm_mt_t *spm_mt;
 
@@ -100,8 +100,9 @@ spm_mt_t *SPM_CRS_VH_MT_NAME(_init_mmf)(char *mmf_file,
 	return spm_mt;
 }
 
-unsigned long SPM_CRS_VH_MT_NAME(_size)(spm_mt_t *spm_mt)
+uint64_t SPM_CRS_VH_MT_NAME(_size)(void *spm)
 {
+	spm_mt_t *spm_mt = (spm_mt_t  *)spm;
 	unsigned long ret=0, nz=0, nrows = 0;
 	int i;
 	for (i=0; i < spm_mt->nr_threads; i++){
@@ -157,10 +158,10 @@ void SPM_CRS_VH_MT_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out
 	#endif
 }
 
-#define XSPMV_METH_INIT(x,y,z,w) SPMV_METH_INIT(x,y,z,w)
 XSPMV_METH_INIT(
 	SPM_CRS_VH_MT_NAME(_multiply),
 	SPM_CRS_VH_MT_NAME(_init_mmf),
 	SPM_CRS_VH_MT_NAME(_size),
+	NULL,
 	sizeof(ELEM_TYPE)
 )

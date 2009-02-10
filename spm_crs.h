@@ -14,11 +14,11 @@ typedef struct { \
 	uint64_t            nz, nrows, ncols; \
 } _TYPE(val_type, ci_bits); \
 \
-_TYPE(val_type, ci_bits)  *\
+void *\
 _NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
                                     uint64_t *rows_nr, uint64_t *cols_nr, \
 				    uint64_t *nz_nr); \
-void _NAME(val_type, ci_bits, _destroy)(_TYPE(val_type, ci_bits) *crs); \
+void _NAME(val_type, ci_bits, _destroy)(void *crs); \
 spmv_  ## val_type ## _fn_t _NAME(val_type, ci_bits, _multiply);
 
 SPM_CRS_DECLARE(double, 32)
