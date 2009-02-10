@@ -218,7 +218,6 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 	ust->start = 0;
 	ust->size = 0;
 	ust->ci_size = SPM_CSRDU_CISIZE_U8;
-	ust->new_row = 1;
 	ust->deltas = deltas;
 
 	int sp_minlen = state.sp_minlen;
@@ -311,6 +310,8 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 	if (ust->size){
 		sp_add();
 	}
+
+	ust->new_row = 1;
 }
 
 void SPM_CSRDU_NAME(_destroy)(SPM_CSRDU_TYPE *csrdu)
@@ -349,6 +350,7 @@ SPM_CSRDU_TYPE *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
 
 	uint64_t row, col, row_prev, val_i=0;
 	double val;
+	state.unit.new_row = 0; // first row is without flag
 	row_prev = 0;
 	for(;;){
 		int ret = mmf_get_next(mmf, &row, &col, &val);

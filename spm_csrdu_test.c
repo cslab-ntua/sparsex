@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 	//printf("params: align:%d jmp:%d\n", align, jmp);
 
 	uint8_t *ctl = csrdu->ctl;
-	uint64_t row=0, col=1;
+	uint64_t row=1, col=1;
 	double *vals = csrdu->values;
 	double *vals_end = vals + nnz0;
 	uint64_t i=0;

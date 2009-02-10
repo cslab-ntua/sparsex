@@ -39,7 +39,7 @@ PYCFLAGS     = $(shell python2.5-config --cflags)
 
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spm_crsvh.o spmv_loops.o spm_delta.o spm_delta_cv.o spm_crs_mt.o spm_crsvh_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spm_crsvh.o spmv_loops.o spm_delta.o spm_delta_cv.o spm_crs_mt.o spm_crsvh_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o spm_csrdu.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -138,15 +138,22 @@ spmv_loops_mt.o: spmv_loops_mt.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_double.o
 	$(LD) -i spmv_loops_mt_{float,double}.o -o spmv_loops_mt.o
 
-spm_csrdu.o: spm_csrdu.c spm_csrdu.h
+spm_csrdu.o: spm_csrdu.c spm_csrdu.h spm_csrdu_mul.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spm_csrdu_double.o
 	$(COMPILE) -DELEM_TYPE=float -c $< -o spm_csrdu_float.o
-	$(LD) -i spm_csrdu_{double,float}.o -o spm_csrdu.o
+	$(LD) -i spm_csrdu_{double,float}.o spm_csrdu_mul.o -o spm_csrdu.o
+
+spm_csrdu_mul.o: spm_csrdu_mul.c spm_csrdu.h
+	$(COMPILE) -DELEM_TYPE=double -c $< -o spm_csrdu_mul_double.o
+	$(COMPILE) -DELEM_TYPE=float -c $< -o spm_csrdu_mul_float.o
+	$(COMPILE) -DCSRDU_ALIGNED -DELEM_TYPE=double -c $< -o spm_csrdu_aligned_mul_double.o
+	$(COMPILE) -DCSRDU_ALIGNED -DELEM_TYPE=float -c $< -o spm_csrdu_aligned_mul_float.o
+	$(LD) -i spm_csrdu{,_aligned}_mul_{double,float}.o -o spm_csrdu_mul.o
 
 spm_csrdu_test.o: spm_csrdu_test.c spm_csrdu.h
 	$(COMPILE) -c $< -o $@
 
-spm_csrdu_test: spm_csrdu.o spm_csrdu_test.o $(dynarray_dep) mmf.o
+spm_csrdu_test: spm_csrdu.o spm_csrdu_test.o $(dynarray_dep) mmf.o method.o mt_lib.o
 	$(COMPILE) $^ -o $@
 
 spm_delta.o: spm_delta_mul.c spm_delta.h vector.h
