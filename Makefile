@@ -2,7 +2,8 @@ SHELL = /bin/bash
 
 .PHONY: all clean
 
-all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt spmv_crsvh spmv_crsvh_check spmv_crsvh_mt
+all: spmv
+#all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt spmv_crsvh spmv_crsvh_check spmv_crsvh_mt
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
@@ -38,8 +39,8 @@ PYLIBS       = $(shell python2.5-config --ldflags)
 PYCFLAGS     = $(shell python2.5-config --cflags)
 
 
-spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o spm_delta.o spm_delta_vec.o #spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spm_crsvh.o spmv_loops.o spm_delta.o spm_delta_cv.o spm_crs_mt.o spm_crsvh_mt.o spmv_loops_mt.o mt_lib.o spm_delta_mt.o spm_crsvi_mt.o spm_csrdu.o
+spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o #spm_delta.o spm_delta_vec.o spmv_ur.o spm_crsr.o matrix.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spm_crsvh.o spmv_loops.o spm_crs_mt.o spm_crsvh_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o # spm_delta.o spm_delta_cv.o spm_delta_mt.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -156,23 +157,23 @@ spm_csrdu_test.o: spm_csrdu_test.c spm_csrdu.h
 spm_csrdu_test: spm_csrdu.o spm_csrdu_test.o $(dynarray_dep) mmf.o method.o mt_lib.o
 	$(COMPILE) $^ -o $@
 
-spm_delta.o: spm_delta_mul.c spm_delta.h vector.h
-	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_mul_float.o
-	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_mul_double.o
-	$(LD) -i spm_delta_mul_{float,double}.o -o spm_delta.o
-
-spm_delta_mt.o: spm_delta_mt_part.c spm_delta_mt.h spm_delta_mt_mul.c
-	$(COMPILE_UR) -DELEM_TYPE=float  -c spm_delta_mt_mul.c -o spm_delta_mt_mul_float.o
-	$(COMPILE_UR) -DELEM_TYPE=double  -c spm_delta_mt_mul.c -o spm_delta_mt_mul_double.o
-	$(COMPILE) -c spm_delta_mt_part.c -o spm_delta_mt_part.o
-	$(LD) -i spm_delta_mt_{mul_{float,double},part}.o -o spm_delta_mt.o
-
-
-spm_delta_cv.o: spm_delta_cv_mul.c spm_delta_cv.h spm_delta.h vector.h
-	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_cv_mul_float.o
-	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_cv_mul_double.o
-	$(LD) -i spm_delta_cv_mul_{float,double}.o -o spm_delta_cv.o
-
+#spm_delta.o: spm_delta_mul.c spm_delta.h vector.h
+#	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_mul_float.o
+#	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_mul_double.o
+#	$(LD) -i spm_delta_mul_{float,double}.o -o spm_delta.o
+#
+#spm_delta_mt.o: spm_delta_mt_part.c spm_delta_mt.h spm_delta_mt_mul.c
+#	$(COMPILE_UR) -DELEM_TYPE=float  -c spm_delta_mt_mul.c -o spm_delta_mt_mul_float.o
+#	$(COMPILE_UR) -DELEM_TYPE=double  -c spm_delta_mt_mul.c -o spm_delta_mt_mul_double.o
+#	$(COMPILE) -c spm_delta_mt_part.c -o spm_delta_mt_part.o
+#	$(LD) -i spm_delta_mt_{mul_{float,double},part}.o -o spm_delta_mt.o
+#
+#
+#spm_delta_cv.o: spm_delta_cv_mul.c spm_delta_cv.h spm_delta.h vector.h
+#	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_cv_mul_float.o
+#	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_cv_mul_double.o
+#	$(LD) -i spm_delta_cv_mul_{float,double}.o -o spm_delta_cv.o
+#
 libspmv.o: $(libspmv_deps)
 	$(LD) -i --allow-multiple-definition $(libspmv_deps) $(deps) -o libspmv.o
 
@@ -237,5 +238,7 @@ vals_idx: vals_idx.c
 %.i: %.c
 	$(COMPILE) -E $< | indent -kr > $@
 
+
+#rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt spm_csrdu_test spmv
 clean:
-	rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt spm_csrdu_test spmv
+	rm -rf *.s *.o *.i spmv
