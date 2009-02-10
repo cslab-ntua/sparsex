@@ -15,7 +15,7 @@ struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt { \
 }; \
 typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt spm_crs ## __idx_bits ## _ ## __elem_type ## _mt ## _t; \
 \
-spm_mt_t * \
+void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_init_mmf( \
 	char *mmf_file, \
 	unsigned long *rows_nr, unsigned long *cols_nr, \

@@ -39,10 +39,16 @@ typedef struct {
 
 #define SPMV_METH_INIT(fn, _mmf_init, _size, _destroy, _elem_size) \
 	static spmv_method_t _spmv_meth_ ## fn = _SPMV_METH_INIT(_mmf_init, _size, _destroy, _elem_size); \
-	METHOD_INIT(fn, &_spmv_meth_ ## fn) \
+	METHOD_INIT(fn, &_spmv_meth_ ## fn)
 
 #define XSPMV_METH_INIT(fn, mmf_init, size, destroy, elem_size) \
          SPMV_METH_INIT(fn, mmf_init, size, destroy, elem_size)
 
+#define SPMV_MT_METH_INIT(fn, _mmf_init, _size, _destroy, _elem_size) \
+        static spmv_method_t _spmv_mt_meth_ ## fn = _SPMV_MT_METH_INIT(_mmf_init, _size, _destroy, _elem_size); \
+        METHOD_INIT(fn, &_spmv_mt_meth_ ## fn)
 
-#endif /* __SPMV_METHOD_H__ */
+#define XSPMV_MT_METH_INIT(fn, mmf_init, size, destroy, elem_size) \
+         SPMV_MT_METH_INIT(fn, mmf_init, size, destroy, elem_size)
+
+#endif

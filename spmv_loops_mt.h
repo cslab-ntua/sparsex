@@ -2,6 +2,7 @@
 #define __SPMV_LOOPS_MT__
 
 #include "spmv_method.h"
+#include "spm_mt.h"
 
 float spmv_double_bench_mt_loop(spm_mt_t *spm_mt, unsigned long loops,
                                 unsigned long rows_nr, unsigned long cols_nr,

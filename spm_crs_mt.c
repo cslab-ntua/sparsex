@@ -7,10 +7,11 @@
 #include "spm_mt.h"
 #include "spm_crs.h"
 #include "spm_crs_mt.h"
+#include "spmv_method.h"
 
-spm_mt_t *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
-                                     unsigned long *rows_nr, unsigned long *cols_nr,
-                                     unsigned long *nz_nr)
+void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
+                                 unsigned long *rows_nr, unsigned long *cols_nr,
+                                 unsigned long *nz_nr)
 {
 	int i;
 	unsigned int nr_cpus, *cpus;
@@ -99,3 +100,10 @@ void SPM_CRS_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		y[i] = yr;
 	}
 }
+XSPMV_MT_METH_INIT(
+ SPM_CRS_MT_NAME(_multiply),
+ SPM_CRS_MT_NAME(_init_mmf),
+ NULL,
+ NULL,
+ sizeof(ELEM_TYPE)
+)
