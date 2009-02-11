@@ -76,6 +76,9 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 
 	VECTOR_NAME(_destroy)(x);
 	VECTOR_NAME(_destroy)(y);
+	for (i=0; i<spm_mt->nr_threads; i++){
+		pthread_join(tids[i], NULL);
+	}
 	free(tids);
 
 	return secs;
@@ -129,4 +132,9 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 	VECTOR_NAME(_destroy)(x);
 	VECTOR_NAME(_destroy)(y);
 	VECTOR_NAME(_destroy)(y2);
+
+	for (i=0; i<spm_mt->nr_threads; i++){
+		pthread_join(tids[i], NULL);
+	}
+	free(tids);
 }
