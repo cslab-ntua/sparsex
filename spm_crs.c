@@ -9,6 +9,7 @@
 #define SPM_CRS_BITS 64
 #endif
 
+#include "macros.h"
 #include "vector.h"
 #include "spm_crs.h"
 #include "mmf.h"
@@ -89,8 +90,10 @@ void SPM_CRS_NAME(_destroy)(void *spm)
 
 uint64_t SPM_CRS_NAME(_size)(void *spm)
 {
-	//SPM_CRS_TYPE *crs = (SPM_CRS_TYPE *)crs_void;
-	return 0;
+	SPM_CRS_TYPE *crs = (SPM_CRS_TYPE *)spm;
+	uint64_t ret = crs->nz*(sizeof(ELEM_TYPE) + sizeof(UINT_TYPE(SPM_CRS_BITS)));
+	ret += (crs->nrows + 1)*sizeof(UINT_TYPE(SPM_CRS_BITS));
+	return ret;
 }
 
 void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)

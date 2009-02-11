@@ -115,6 +115,7 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 		printf("check for %s in %s verified\n", method, basename(mmf_file));
+		spmv_meth1->destroy_fn(m1);
 	}
 
 	if (opt_bench){
@@ -140,8 +141,9 @@ int main(int argc, char **argv)
 			fprintf(stderr, "woops!\n");
 			exit(1);
 		}
-		printf("%s %s %lf\n", method, basename(mmf_file), t);
+		printf("%s %s %lu %lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t);
 	}
+	spmv_meth->destroy_fn(m);
 
 	return 0;
 }

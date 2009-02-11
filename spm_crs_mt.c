@@ -79,6 +79,25 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 	return spm_mt;
 }
 
+void SPM_CRS_MT_NAME(_destroy)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
+	SPM_CRS_NAME(_destroy)(crs_mt->crs);
+	free(crs_mt);
+	free(spm_thread);
+	free(spm_mt);
+}
+
+uint64_t SPM_CRS_MT_NAME(_size)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
+	return SPM_CRS_NAME(_size)(crs_mt->crs);
+}
+
 void SPM_CRS_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm;
@@ -103,7 +122,7 @@ void SPM_CRS_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 XSPMV_MT_METH_INIT(
  SPM_CRS_MT_NAME(_multiply),
  SPM_CRS_MT_NAME(_init_mmf),
- NULL,
- NULL,
+ SPM_CRS_MT_NAME(_size),
+ SPM_CRS_MT_NAME(_destroy),
  sizeof(ELEM_TYPE)
 )
