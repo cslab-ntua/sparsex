@@ -445,11 +445,12 @@ static spm_mt_t *partition_ctl(uint8_t *ctl, uint64_t  nnz, void *csrdu)
 		uint8_t flags = u8_get(uc);
 		uint8_t size = u8_get(uc);
 
-		if (spm_csrdu_fl_isnr(flags)){
+		nr = spm_csrdu_fl_isnr(flags);
+		if (nr){
 			y_indx++;
 		}
 
-		//printf("elements:%lu elements_total:%lu nnz:%lu\n", elements, elements_total, nnz);
+		//printf("elements:%lu elements_limit:%lu elements_total:%lu nnz:%lu\n", elements, elements_limit, elements_total, nnz);
 		values_nr += size;
 		if ( (nr && (elements >= elements_limit)) || (values_nr == nnz) ) {
 			spm_mt_thread_t *spm_mt_thread = spm_mt->spm_threads + csrdu_mt_idx;
@@ -536,8 +537,8 @@ static spm_mt_t *partition_ctl(uint8_t *ctl, uint64_t  nnz, void *csrdu)
 	return spm_mt;
 }
 
-spm_mt_t *SPM_CSRDU_NAME(_mt_init_mmf)(char *mmf_file,
-                                       uint64_t *nrows, uint64_t *ncols, uint64_t *nnz)
+void *SPM_CSRDU_NAME(_mt_init_mmf)(char *mmf_file,
+                                   uint64_t *nrows, uint64_t *ncols, uint64_t *nnz)
 {
 	spm_mt_t *ret;
 

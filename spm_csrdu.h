@@ -20,7 +20,7 @@ typedef struct { \
 void *\
 _NAME(val_type,_init_mmf)(char *mmf, \
                           uint64_t *nrows, uint64_t *ncols, uint64_t *nnz); \
-spm_mt_t * \
+void * \
 _NAME(val_type,_mt_init_mmf)(char *mmf, \
                              uint64_t *nrows, uint64_t *ncols, uint64_t *nnz); \
 uint64_t _NAME(val_type, _size)(void *csrdu); \
