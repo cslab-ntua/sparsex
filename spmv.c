@@ -15,7 +15,7 @@ extern int optind;
 
 static void help()
 {
-	fprintf(stderr, "Usage: %s [-c -b -l [nr_loops]] mmf_file [method]\n", progname);
+	fprintf(stderr, "Usage: %s [ -h -c -b [-l nr_loops]] mmf_file [method]\n", progname);
 	method_fprint(stderr, "available methods:\n", "\t", "\n", "");
 }
 
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	int opt_bench = 0;
 	int loops_nr = 128;
 	int c;
-	while ((c = getopt(argc, argv, "cbl:")) != -1){
+	while ((c = getopt(argc, argv, "hcbl:")) != -1){
 		switch (c) {
 			case 'c':
 			opt_check = 1;
@@ -38,6 +38,11 @@ int main(int argc, char **argv)
 			case 'b':
 			opt_bench = 1;
 			break;
+
+			case 'h':
+			method_fprint(stdout, "", " ", "\n", "");
+			exit(0);
+
 
 			default:
 			fprintf(stderr, "Error parsing arguments: -%c-\n", c);
