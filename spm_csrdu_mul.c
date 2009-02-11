@@ -11,21 +11,20 @@
 #ifdef CSRDU_ALIGNED
 #define ALIGN_PTR(ptr, align) do { ptr = ALIGN(ptr, align); } while (0)
 #define _NAME(name) SPM_CSRDU_NAME(_aligned ## name)
+#define _NAME_MT(name) SPM_CSRDU_NAME(_mt_aligned ## name)
 #else
 #define ALIGN_PTR(ptr, align) do { ; } while (0)
 #define _NAME(name) SPM_CSRDU_NAME(name)
+#define _NAME_MT(name) SPM_CSRDU_NAME(_mt ## name)
 #endif
 
-void _NAME(_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void static inline do_mul(uint8_t *u8, ELEM_TYPE *values, ELEM_TYPE *x, ELEM_TYPE *y, uint64_t values_size)
 {
-	SPM_CSRDU_TYPE *csrdu = (SPM_CSRDU_TYPE *)matrix;
-	ELEM_TYPE *x = in->elements, *y = out->elements, *values = csrdu->values;
-	register uint64_t y_indx=0;
+	register uint64_t y_indx = 0;
 	register ELEM_TYPE yr = 0;
 	register ELEM_TYPE *v = values;
-	register const ELEM_TYPE *v_end = values + csrdu->nnz;
+	register const ELEM_TYPE *v_end = values + values_size;
 	register ELEM_TYPE *myx = x;
-	register uint8_t *u8 = csrdu->ctl;
 
 	for (;;) {
 		register uint8_t flags = u8_get(u8);
@@ -40,7 +39,7 @@ void _NAME(_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		}
 		//printf("y_indx: %lu x_indx: %lu\n", y_indx, (unsigned long)(myx-x));
 
-		switch ( flags & SPM_CSRDU_FL_UNIT_MASK){
+		switch (flags & SPM_CSRDU_FL_UNIT_MASK){
 			register uint64_t i;
 
 			case SPM_CSRDU_FL_UNIT_DENSE:
@@ -54,43 +53,31 @@ void _NAME(_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
 			v += size;
 			break;
 
-			case SPM_CSRDU_FL_UNIT_SP_U8:
-			for (i=0; i<size; i++){
-				//printf("\t[SP_8] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-				myx += u8_get(u8);
-				yr += (*v) * (*myx);
-				v++;
+			#define CSRDU_SP_SPMV(bits) \
+			for (i=0; i<size; i++){ \
+				/* printf("\t[SP # bits] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr); */ \
+				myx += u ## bits ## _get(u8); \
+				yr += (*v) * (*myx); \
+				v++;                 \
 			}
+
+			case SPM_CSRDU_FL_UNIT_SP_U8:
+			CSRDU_SP_SPMV(8)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U16:
 			ALIGN_PTR(u8, 2);
-			for (i=0; i<size; i++){
-				myx += u16_get(u8);
-				//printf("\t[SP_US] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-				yr += (*v) * (*myx);
-				v++;
-			}
+			CSRDU_SP_SPMV(16)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U32:
 			ALIGN_PTR(u8, 4);
-			for (i=0; i<size; i++){
-				myx += u32_get(u8);
-				//printf("\t[SP_UI] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-				yr += (*v) * (*myx);
-				v++;
-			}
+			CSRDU_SP_SPMV(32)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U64:
 			ALIGN_PTR(u8, 8);
-			for (i=0; i<size; i++){
-				myx += u64_get(u8);
-				//printf("\t[SP_UL] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-				yr += (*v) * (*myx);
-				v++;
-			}
+			CSRDU_SP_SPMV(64)
 			break;
 
 			default:
@@ -106,25 +93,14 @@ void _NAME(_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	y[y_indx] = yr;
 	return;
 }
-XSPMV_METH_INIT(
- _NAME(_multiply),
- SPM_CSRDU_NAME(_init_mmf),
- SPM_CSRDU_NAME(_size),
- NULL,
- sizeof(ELEM_TYPE)
-)
 
-void _NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void static inline do_mul_jmp(uint8_t *u8, ELEM_TYPE *values, ELEM_TYPE *x, ELEM_TYPE *y, uint64_t values_size)
 {
-	SPM_CSRDU_TYPE *csrdu = (SPM_CSRDU_TYPE *)matrix;
-	ELEM_TYPE *x = in->elements, *y = out->elements, *values = csrdu->values;
-	register uint64_t y_indx=0;
+	register uint64_t y_indx = 0;
 	register ELEM_TYPE yr = 0;
 	register ELEM_TYPE *v = values;
-	register const ELEM_TYPE *v_end = values + csrdu->nnz;
+	register const ELEM_TYPE *v_end = values + values_size;
 	register ELEM_TYPE *myx = x;
-	register uint8_t *u8 = csrdu->ctl;
-
 	for (;;) {
 		register uint8_t flags = u8_get(u8);
 		register uint8_t size = u8_get(u8);
@@ -151,47 +127,31 @@ void _NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
 			v += size;
 			break;
 
-			case SPM_CSRDU_FL_UNIT_SP_U8:
-			//printf("\t[SP_U8] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-			yr += (*v++)*(*myx);
-			for (i=1; i<size; i++){
-				myx += u8_get(u8);
-				//printf("\t[SP_U8] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-				yr += (*v++) * (*myx);
+			#define CSRDU_JMP_SP_SPMV(bits) \
+			yr += (*v++)*(*myx);            \
+			for (i=1; i<size; i++){         \
+				myx += u ## bits ## _get(u8);      \
+				/* printf("\t[SP_U # bits] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr) */ \
+				yr += (*v++) * (*myx); \
 			}
+
+			case SPM_CSRDU_FL_UNIT_SP_U8:
+			CSRDU_JMP_SP_SPMV(8)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U16:
-			//printf("\t[SP_US] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
 			ALIGN_PTR(u8, 2);
-			yr += (*v++)*(*myx);
-			for (i=1; i<size; i++){
-				myx += u16_get(u8);
-				//printf("\t[SP_US] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-				yr += (*v++) * (*myx);
-			}
+			CSRDU_JMP_SP_SPMV(16)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U32:
 			ALIGN_PTR(u8, 4);
-			//printf("\t[SP_UI] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-			yr += (*v++) * (*myx);
-			for (i=1; i<size; i++){
-				myx += u32_get(u8);
-				//printf("\t[SP_UI] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-				yr += (*v++) * (*myx);
-			}
+			CSRDU_JMP_SP_SPMV(32)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U64:
 			ALIGN_PTR(u8, 8);
-			//printf("\t[SP_UL] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-			yr += (*v++) * (*myx);
-			for (i=1; i<size; i++){
-				myx += u32_get(u8);
-				//printf("\t[SP_UL] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);
-				yr += (*v++) * (*myx);
-			}
+			CSRDU_JMP_SP_SPMV(64)
 			break;
 
 			default:
@@ -208,6 +168,27 @@ void _NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	return;
 }
 
+void _NAME(_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CSRDU_TYPE *csrdu = (SPM_CSRDU_TYPE *)matrix;
+	ELEM_TYPE *x = in->elements, *y = out->elements, *values = csrdu->values;
+	do_mul(csrdu->ctl, values, x, y, csrdu->nnz);
+}
+XSPMV_METH_INIT(
+ _NAME(_multiply),
+ SPM_CSRDU_NAME(_init_mmf),
+ SPM_CSRDU_NAME(_size),
+ NULL,
+ sizeof(ELEM_TYPE)
+)
+
+void _NAME(_jmp_multiply)(void *matrix, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CSRDU_TYPE *csrdu = (SPM_CSRDU_TYPE *)matrix;
+	ELEM_TYPE *x = in->elements, *y = out->elements, *values = csrdu->values;
+	do_mul_jmp(csrdu->ctl, values, x, y, csrdu->nnz);
+
+}
 XSPMV_METH_INIT(
  _NAME(_jmp_multiply),
  SPM_CSRDU_NAME(_init_mmf),
@@ -216,3 +197,42 @@ XSPMV_METH_INIT(
  sizeof(ELEM_TYPE)
 )
 
+void _NAME_MT(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm;
+	SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
+	ELEM_TYPE *x = in->elements, *y = out->elements, *values = csrdu->values;
+
+	do_mul(csrdu->ctl + csrdu_mt->ctl_start,
+               values + csrdu_mt->val_start,
+               x,
+               y + csrdu_mt->row_start,
+               csrdu_mt->nnz);
+}
+XSPMV_MT_METH_INIT(
+ _NAME_MT(_multiply),
+ SPM_CSRDU_NAME(_mt_init_mmf),
+ NULL,
+ NULL,
+ sizeof(ELEM_TYPE)
+)
+
+void _NAME_MT(_jmp_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm;
+	SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
+	ELEM_TYPE *x = in->elements, *y = out->elements, *values = csrdu->values;
+
+	do_mul_jmp(csrdu->ctl + csrdu_mt->ctl_start,
+                   values + csrdu_mt->val_start,
+                   x,
+                   y + csrdu_mt->row_start,
+                   csrdu_mt->nnz);
+}
+XSPMV_MT_METH_INIT(
+ _NAME_MT(_jmp_multiply),
+ SPM_CSRDU_NAME(_mt_init_mmf),
+ NULL,
+ NULL,
+ sizeof(ELEM_TYPE)
+)
