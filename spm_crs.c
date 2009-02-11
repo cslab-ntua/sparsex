@@ -75,6 +75,7 @@ void *SPM_CRS_NAME(_init_mmf)(char *mmf_file,
 	/* more sanity checks */
 	assert(row_i == crs->nrows + 1);
 	assert(val_i == crs->nz);
+	fclose(mmf);
 
 	return crs;
 }
