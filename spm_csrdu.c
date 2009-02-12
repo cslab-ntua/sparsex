@@ -316,7 +316,7 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 
 void SPM_CSRDU_NAME(_destroy)(void *m)
 {
-	SPM_CSRDU_TYPE *csrdu = m;
+	SPM_CSRDU_TYPE *csrdu = (SPM_CSRDU_TYPE *)m;
 	free(csrdu->values);
 	free(csrdu->ctl);
 	free(csrdu);
@@ -324,7 +324,9 @@ void SPM_CSRDU_NAME(_destroy)(void *m)
 
 uint64_t SPM_CSRDU_NAME(_size)(void *m)
 {
-	//SPM_CSRDU_TYPE *csrdu = m;
+	SPM_CSRDU_TYPE *csrdu = (SPM_CSRDU_TYPE *)m;
+	uint64_t ret = csrdu->ctl_size;
+	ret += csrdu->nnz*sizeof(ELEM_TYPE);
 	return 0;
 }
 
@@ -396,7 +398,8 @@ void *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
 	free(dynarray_destroy(da_rles));
 	assert(val_i == csrdu->nnz);
 
-	vmsg("ctl_size: %lu \n", dynarray_size(state.da_ctl));
+	csrdu->ctl_size = dynarray_size(state.da_ctl);
+	vmsg("ctl_size: %lu \n", csrdu->ctl_size);
 	vmsg("units:\n de    :%6lu\n sp(8) :%6lu\n sp(16):%6lu\n sp(32):%6lu\n sp(64):%6lu\n",
 	      stats.units_de, stats.units_sp[SPM_CSRDU_CISIZE_U8], stats.units_sp[SPM_CSRDU_CISIZE_U16], stats.units_sp[SPM_CSRDU_CISIZE_U32], stats.units_sp[SPM_CSRDU_CISIZE_U64]);
 	csrdu->ctl = dynarray_destroy(state.da_ctl);
@@ -547,4 +550,23 @@ void *SPM_CSRDU_NAME(_mt_init_mmf)(char *mmf_file,
 
 	ret = partition_ctl(csrdu->ctl, csrdu->nnz, csrdu);
 	return ret;
+}
+
+uint64_t SPM_CSRDU_NAME(_mt_size)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	spm_csrdu_mt_t *csrdu_mt = spm_thread->spm;
+	return SPM_CSRDU_NAME(_size)(csrdu_mt->csrdu);
+}
+
+void SPM_CSRDU_NAME(_mt_destroy)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	spm_csrdu_mt_t *csrdu_mt = spm_thread->spm;
+	SPM_CSRDU_NAME(_destroy)(csrdu_mt->csrdu);
+	free(csrdu_mt);
+	free(spm_thread);
+	free(spm_mt);
 }

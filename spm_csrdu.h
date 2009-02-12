@@ -12,7 +12,7 @@
 
 #define SPM_CSRDU_DECLARE(val_type) \
 typedef struct { \
-	uint64_t        nnz, ncols, nrows; \
+	uint64_t        nnz, ncols, nrows, ctl_size; \
 	uint8_t         *ctl; \
 	val_type	*values; \
 } _TYPE(val_type); \
@@ -24,7 +24,9 @@ void * \
 _NAME(val_type,_mt_init_mmf)(char *mmf, \
                              uint64_t *nrows, uint64_t *ncols, uint64_t *nnz); \
 uint64_t _NAME(val_type, _size)(void *csrdu); \
-void _NAME(val_type, _destroy)(void *csrdu);
+uint64_t _NAME(val_type, _mt_size)(void *csrdu); \
+void _NAME(val_type, _destroy)(void *csrdu); \
+void _NAME(val_type, _mt_destroy)(void *csrdu);
 
 SPM_CSRDU_DECLARE(float)
 SPM_CSRDU_DECLARE(double)

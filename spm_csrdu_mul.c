@@ -178,7 +178,7 @@ XSPMV_METH_INIT(
  _NAME(_multiply),
  SPM_CSRDU_NAME(_init_mmf),
  SPM_CSRDU_NAME(_size),
- NULL,
+ SPM_CSRDU_NAME(_destroy),
  sizeof(ELEM_TYPE)
 )
 
@@ -193,7 +193,7 @@ XSPMV_METH_INIT(
  _NAME(_jmp_multiply),
  SPM_CSRDU_NAME(_init_mmf),
  SPM_CSRDU_NAME(_size),
- NULL,
+ SPM_CSRDU_NAME(_destroy),
  sizeof(ELEM_TYPE)
 )
 
@@ -212,8 +212,8 @@ void _NAME_MT(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 XSPMV_MT_METH_INIT(
  _NAME_MT(_multiply),
  SPM_CSRDU_NAME(_mt_init_mmf),
- NULL,
- NULL,
+ SPM_CSRDU_NAME(_mt_size),
+ SPM_CSRDU_NAME(_mt_destroy),
  sizeof(ELEM_TYPE)
 )
 
@@ -232,7 +232,7 @@ void _NAME_MT(_jmp_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 XSPMV_MT_METH_INIT(
  _NAME_MT(_jmp_multiply),
  SPM_CSRDU_NAME(_mt_init_mmf),
- NULL,
- NULL,
+ SPM_CSRDU_NAME(_mt_size),
+ SPM_CSRDU_NAME(_mt_destroy),
  sizeof(ELEM_TYPE)
 )
