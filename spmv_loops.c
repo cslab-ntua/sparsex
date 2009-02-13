@@ -19,8 +19,8 @@ float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
 	unsigned long i;
 	tsc_t tsc;
 
-	x = VECTOR_NAME(_create)(rows_nr);
-	y = VECTOR_NAME(_create)(cols_nr);
+	x = VECTOR_NAME(_create)(cols_nr);
+	y = VECTOR_NAME(_create)(rows_nr);
 
 	tsc_init(&tsc);
 	#ifdef SPMV_PRFCNT
