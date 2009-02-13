@@ -23,13 +23,6 @@
 #include "spmv_method.h"
 #include "phash.h"
 
-#define SPM_CRSVI_CI_TYPE UINT_TYPE(SPM_CRSVI_CI_BITS)
-#define SPM_CRSVI_VI_TYPE UINT_TYPE(SPM_CRSVI_VI_BITS)
-
-#define SPM_CRS_VI_NAME(name) \
-	CON7(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, name)
-#define SPM_CRSVI_TYPE SPM_CRS_VI_NAME(_t)
-
 struct crs_vi_state_s {
 	SPM_CRSVI_TYPE *crs_vi;
 	dynarray_t   *sp_values, *sp_colind, *sp_rowptr, *sp_valind;
@@ -63,7 +56,7 @@ static void crsvi_initialize(crs_vi_state_t **crs_vi_state_ptr,
 	crsvi_st->sp_valind = dynarray_create(sizeof(SPM_CRSVI_VI_TYPE), nz_nr);
 	crsvi_st->sp_colind = dynarray_create(sizeof(SPM_CRSVI_CI_TYPE), nz_nr);
 	crsvi_st->sp_rowptr = dynarray_create(sizeof(SPM_CRSVI_CI_TYPE), rows_nr);
-	
+
 	/* if this fails we need to make phash code more generic */
 	assert(sizeof(double) == sizeof(unsigned long));
 	crsvi_st->vhash = phash_new(12);
@@ -97,13 +90,14 @@ static void add_val(crs_vi_state_t *crsvi_st, double val)
 {
 	static unsigned long key;
 	unsigned long idx;
-	
+
 	memcpy(&key, &val, sizeof(unsigned long));
 	int exists = phash_lookup(crsvi_st->vhash, key, &idx);
 	if (!exists){
 		idx = phash_elements(crsvi_st->vhash);
 		phash_insert(crsvi_st->vhash, key, idx);
 		assert(idx == dynarray_size(crsvi_st->sp_values));
+		assert(idx <= (1UL<<SPM_CRSVI_VI_BITS));
 		ELEM_TYPE *v = dynarray_alloc(crsvi_st->sp_values);
 		*v = (ELEM_TYPE)val;
 		crsvi_st->crs_vi->nv++;
@@ -113,7 +107,7 @@ static void add_val(crs_vi_state_t *crsvi_st, double val)
 	*val_idx = (SPM_CRSVI_CI_TYPE)idx;
 }
 
-void *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file, 
+void *SPM_CRSVI_NAME(_init_mmf) (char *mmf_file,
                                   unsigned long *rows_nr, unsigned long *cols_nr,
                                   unsigned long *nz_nr)
 {
@@ -137,7 +131,7 @@ void *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file,
 	report = getenv("SPM_CRSVI_REPORT");
 	if (report != NULL){
 		report_rows = atol(report);
-		if (!report_rows) 
+		if (!report_rows)
 			report_rows = 1024;
 	} else {
 		report_rows = 0;
@@ -147,7 +141,7 @@ void *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file,
 	t0 = time(NULL);
 	while (mmf_get_next(f, &row, &col, &val)){
 		crsvi->nz++;
-		
+
 		/* row indices */
 		if (prev_row < row){
 			#if 1
@@ -155,7 +149,7 @@ void *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file,
 				tn = time(NULL);
 				double ratio = (double)row/(tn - t0);
 				unsigned long remaining = *rows_nr - row;
-				printf("%s [ %lf m] remaining: %lu rows/sec:%lf ETA:%lf m\n", 
+				printf("%s [ %lf m] remaining: %lu rows/sec:%lf ETA:%lf m\n",
 				        mmf_file, (double)(tn-t0)/60.0, remaining, ratio, (double)remaining/(ratio*60.0));
 			}
 			#endif
@@ -182,7 +176,7 @@ void *SPM_CRS_VI_NAME(_init_mmf) (char *mmf_file,
 	return crsvi;
 }
 
-void SPM_CRS_VI_NAME(_destroy)(void *spm)
+void SPM_CRSVI_NAME(_destroy)(void *spm)
 {
 	SPM_CRSVI_TYPE *crsvi = (SPM_CRSVI_TYPE *)spm;
 	free(crsvi->values);
@@ -192,7 +186,7 @@ void SPM_CRS_VI_NAME(_destroy)(void *spm)
 	free(crsvi);
 }
 
-uint64_t SPM_CRS_VI_NAME(_size)(void *spm)
+uint64_t SPM_CRSVI_NAME(_size)(void *spm)
 {
 	SPM_CRSVI_TYPE *crsvi = (SPM_CRSVI_TYPE *)spm;
 	unsigned long ret;
@@ -203,7 +197,7 @@ uint64_t SPM_CRS_VI_NAME(_size)(void *spm)
 	return ret;
 }
 
-void SPM_CRS_VI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_CRSVI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	SPM_CRSVI_TYPE *crs_vi = (SPM_CRSVI_TYPE *)spm;
 	ELEM_TYPE *y = out->elements;
@@ -219,7 +213,7 @@ void SPM_CRS_VI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	for(i=0; i<n; i++) {
 		yr = (ELEM_TYPE)0;
 		__asm__ __volatile__ ("# loop start\n\t");
-		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) { 
+		for(j=row_ptr[i]; j<row_ptr[i+1]; j++) {
 			yr += (values[val_ind[j]] * x[col_ind[j]]);
 			//printf("i:%lu j:%lu val_ind:%ld col_ind:%lu v:%lf x:%lf yr:%lf\n", i, j, (long)val_ind[j], (unsigned long)col_ind[j], values[val_ind[j]], x[col_ind[j]], yr);
 		}
@@ -229,9 +223,9 @@ void SPM_CRS_VI_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 }
 
 XSPMV_METH_INIT(
-	SPM_CRS_VI_NAME(_multiply),
-	SPM_CRS_VI_NAME(_init_mmf),
-	SPM_CRS_VI_NAME(_size),
-	SPM_CRS_VI_NAME(_destroy),
+	SPM_CRSVI_NAME(_multiply),
+	SPM_CRSVI_NAME(_init_mmf),
+	SPM_CRSVI_NAME(_size),
+	SPM_CRSVI_NAME(_destroy),
 	sizeof(ELEM_TYPE)
 )

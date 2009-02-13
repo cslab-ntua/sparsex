@@ -8,13 +8,6 @@
 
 #include "pthread.h"
 
-#define SPM_CRSVI_CI_TYPE UINT_TYPE(SPM_CRSVI_CI_BITS)
-#define SPM_CRSVI_VI_TYPE UINT_TYPE(SPM_CRSVI_VI_BITS)
-
-#define SPM_CRS_VI_NAME(name) \
-        CON7(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, name)
-#define SPM_CRSVI_TYPE SPM_CRS_VI_NAME(_t)
-
 #define SPM_CRSVI_MT_NAME(name) \
         CON8(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, _mt, name)
 #define SPM_CRSVI_MT_TYPE SPM_CRSVI_MT_NAME(_t)
@@ -29,7 +22,7 @@ void *SPM_CRSVI_MT_NAME(_init_mmf)(char *mmf_file,
 	int i;
 	unsigned long cur_row, elems_limit, elems_total=0;
 
-	crsvi = SPM_CRS_VI_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr);
+	crsvi = SPM_CRSVI_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr);
 	mt_get_options(&nr_cpus, &cpus_affinity);
 
 	spm_mt_t *spm_mt;
@@ -78,7 +71,6 @@ void *SPM_CRSVI_MT_NAME(_init_mmf)(char *mmf_file,
 		crsvi_mt[i].crsvi = crsvi;
 	}
 
-
 	free(cpus_affinity);
 
 	return spm_mt;
@@ -95,9 +87,9 @@ void SPM_CRSVI_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	const register SPM_CRSVI_VI_TYPE *val_ind = crsvi_mt->crsvi->val_ind;
 	const unsigned long row_start = crsvi_mt->row_start;
 	const unsigned long row_end = crsvi_mt->row_end;
-	//printf("(%lu) row_start: %lu row_end: %lu\n", pthread_self(), row_start, row_end);
 	register ELEM_TYPE yr;
 
+	//printf("(%lu) crsvi_mt:%p row_start: %lu row_end: %lu\n", pthread_self(), crsvi_mt, row_start, row_end);
 	register unsigned long i, j=0;
 	for (i=row_start; i<row_end; i++){
 		yr = (ELEM_TYPE)0;
@@ -126,10 +118,21 @@ uint64_t SPM_CRSVI_MT_NAME(_size)(void *spm)
 	return ret;
 }
 
-XSPMV_METH_INIT(
+void SPM_CRSVI_MT_NAME(_destroy)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	SPM_CRSVI_MT_TYPE *crsvi_mt = (SPM_CRSVI_MT_TYPE *)spm_thread->spm;
+	SPM_CRSVI_NAME(_destroy)(crsvi_mt->crsvi);
+	free(crsvi_mt);
+	free(spm_thread);
+	free(spm_mt);
+}
+
+XSPMV_MT_METH_INIT(
 	SPM_CRSVI_MT_NAME(_multiply),
 	SPM_CRSVI_MT_NAME(_init_mmf),
 	SPM_CRSVI_MT_NAME(_size),
-	NULL,
+	SPM_CRSVI_MT_NAME(_destroy),
 	sizeof(ELEM_TYPE)
 )
