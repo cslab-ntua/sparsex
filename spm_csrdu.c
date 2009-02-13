@@ -400,7 +400,7 @@ void *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
 
 	csrdu->ctl_size = dynarray_size(state.da_ctl);
 	vmsg("ctl_size: %lu \n", csrdu->ctl_size);
-	vmsg("units:\n de    :%6lu\n sp(8) :%6lu\n sp(16):%6lu\n sp(32):%6lu\n sp(64):%6lu\n",
+	vmsg("units:\tde:%-6lu  sp(8):%-6lu  sp(16):%-6lu  sp(32):%-6lu  sp(64):%-6lu\n",
 	      stats.units_de, stats.units_sp[SPM_CSRDU_CISIZE_U8], stats.units_sp[SPM_CSRDU_CISIZE_U16], stats.units_sp[SPM_CSRDU_CISIZE_U32], stats.units_sp[SPM_CSRDU_CISIZE_U64]);
 	csrdu->ctl = dynarray_destroy(state.da_ctl);
 	return csrdu;
