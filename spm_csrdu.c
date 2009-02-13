@@ -327,7 +327,7 @@ uint64_t SPM_CSRDU_NAME(_size)(void *m)
 	SPM_CSRDU_TYPE *csrdu = (SPM_CSRDU_TYPE *)m;
 	uint64_t ret = csrdu->ctl_size;
 	ret += csrdu->nnz*sizeof(ELEM_TYPE);
-	return 0;
+	return ret;
 }
 
 void *SPM_CSRDU_NAME(_init_mmf)(char *mmf_file,
