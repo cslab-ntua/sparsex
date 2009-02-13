@@ -141,7 +141,8 @@ int main(int argc, char **argv)
 			fprintf(stderr, "woops!\n");
 			exit(1);
 		}
-		printf("%s %s %lu %lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t);
+		double flops = (double)(loops_nr*nnz*2)/((double)1000*1000*t);
+		printf("m:%s f:%s s:%lu t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
 	}
 	spmv_meth->destroy_fn(m);
 
