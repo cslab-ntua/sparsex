@@ -55,9 +55,9 @@ void static inline do_mul(uint8_t *u8, ELEM_TYPE *values, ELEM_TYPE *x, ELEM_TYP
 
 			#define CSRDU_SP_SPMV(bits) \
 			for (i=0; i<size; i++){ \
-				/* printf("\t[SP # bits] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr); */ \
 				myx += u ## bits ## _get(u8); \
 				yr += (*v) * (*myx); \
+				/* printf("\t[SP%d] y_indx:%lu vindx=%lu xindx=%lu (%lf %lf %lf)\n", bits, y_indx, (unsigned long)(v - values), (unsigned long)(myx - x), *v, *myx, yr);  */ \
 				v++;                 \
 			}
 
