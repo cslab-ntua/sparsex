@@ -1,5 +1,7 @@
 #include <stdlib.h>
+#if defined(__i386__) || defined(__x86_64__)
 #include <emmintrin.h>
+#endif
 #include <inttypes.h>
 #include <assert.h>
 

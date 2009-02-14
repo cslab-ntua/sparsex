@@ -38,6 +38,10 @@ COMPILE_UR   = $(COMPILE) -funroll-loops
 PYLIBS       = $(shell python2.5-config --ldflags)
 PYCFLAGS     = $(shell python2.5-config --cflags)
 
+ifeq ($(CPU),NIAGARA)
+	CFLAGS += -m64
+	LD = ld -melf64_sparc
+endif
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o #spm_delta.o spm_delta_vec.o spmv_ur.o spm_crsr.o matrix.o
 libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spm_crsvh.o spmv_loops.o spm_crs_mt.o spm_crsvh_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o # spm_delta.o spm_delta_cv.o spm_delta_mt.o
