@@ -15,7 +15,7 @@ phash_dir    = $(shell rsrc resource 'phash')
 phash_dep    = $(phash_dir)/phash.o
 huffman_dir  = $(shell rsrc resource 'huffman')
 huffman_dep  = $(huffman_dir)/libhuffman.o
-deps         = $(phash_dep) $(huffman_dep) $(bitutils_dep) $(dynarray_dep)
+deps         = $(dynarray_dep) $(phash_dep) $(huffman_dep) $(bitutils_dep)
 
 .PHONY: $(huffman_dep) $(phash_dep) $(bitutils_dep) $(dynarray_dep)
 
