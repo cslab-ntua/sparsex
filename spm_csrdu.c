@@ -160,9 +160,14 @@ static void sp_add_body(uint64_t ustart, uint64_t usize, uint8_t ci_size, uint64
 
 	uint64_t dsize = spm_csrdu_cisize_bytes(ci_size);
 
-	dst = (state.aligned) ?
-	      dynarray_alloc_nr_aligned(state.da_ctl, usize*dsize,  dsize):
-	      dynarray_alloc_nr(state.da_ctl, usize*dsize);
+	 // do the alignment, even if you don't put any indices,
+	 // since it makes the decompression simpler
+	if (state.aligned)
+		dynarray_align(state.da_ctl, dsize);
+	if (!usize)
+		return;
+
+	dst = dynarray_alloc_nr(state.da_ctl, usize*dsize);
 	src = deltas + ustart;
 
 	/*
@@ -172,9 +177,12 @@ static void sp_add_body(uint64_t ustart, uint64_t usize, uint8_t ci_size, uint64
 		printf("%lu ", src[i]);
 	}
 	printf("\n");
-	printf("dsize:%lu dst: %p src: %p usize: %lu ci_size:%u\n", ++cnt, dsize, dst, src, usize, ci_size);
+	printf("dsize:%lu dst: %p src: %p usize: %lu ci_size:%u\n", dsize, dst, src, usize, ci_size);
 	*/
 
+	if (usize <= 0){
+		return;
+	}
 	if (state.aligned){
 		spm_csrdu_cisize_copy(dst, src, usize, ci_size);
 	} else {
@@ -204,8 +212,8 @@ static void sp_jmp_add_unit()
 	uint64_t ci_size = ust->ci_size;
 	sp_add_header(usize, ci_size, &ust->new_row);
 	da_uc_put_ul(state.da_ctl, ust->jmp);
-	if (usize > 1)
-		sp_add_body(ustart +1, usize -1, ci_size, ust->deltas);
+	//printf("sp_jmp_add: [jmp] ust->start: %lu ust->size: %lu state.row_size:%lu new_r:%d ctl_off:%lu\n", ust->start, ust->size, state.row_size, ust->new_row, dynarray_size(state.da_ctl));
+	sp_add_body(ustart +1, usize -1, ci_size, ust->deltas);
 	ust->start += ust->size;
 	ust->size = 0;
 	ust->ci_size = SPM_CSRDU_CISIZE_U8;

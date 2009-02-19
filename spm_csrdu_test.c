@@ -60,12 +60,16 @@ int main(int argc, char **argv)
 
 			#define PRINT_CSRDU_SP(bits)                       \
 			if (!jmp) {                                        \
+				if (align)                                 \
+					ALIGN_CTL(bits/8);                 \
 				for (i=0; i<size; i++){                    \
 					col += u ## bits ## _get(ctl);     \
 					printf(__fmt, row, col, *vals++);  \
 				}                                          \
 			} else {                                           \
 				col += uc_get_ul(ctl);                     \
+				if (align)                                 \
+					ALIGN_CTL(bits/8);                 \
 				printf(__fmt, row, col, *vals++);          \
 				for (i=1; i<size; i++){                    \
 					col += u ## bits ## _get(ctl);     \
@@ -78,20 +82,14 @@ int main(int argc, char **argv)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U16:
-			if (align)
-				ALIGN_CTL(2);
 			PRINT_CSRDU_SP(16)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U32:
-			if (align)
-				ALIGN_CTL(4);
 			PRINT_CSRDU_SP(32)
 			break;
 
 			case SPM_CSRDU_FL_UNIT_SP_U64:
-			if (align)
-				ALIGN_CTL(8);
 			PRINT_CSRDU_SP(64)
 			break;
 
