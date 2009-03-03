@@ -45,5 +45,5 @@ if [ -z "$1" ]; then
 	exit 1
 fi
 
-echo CSRDU_VERBOSE=$verbose CSRDU_DE_MINLEN=$de_minlen CSRDU_JMP=$jmp CSRDU_ALIGNED=$aligned ./spmv -b $check_opt $1 $method
-     CSRDU_VERBOSE=$verbose CSRDU_DE_MINLEN=$de_minlen CSRDU_JMP=$jmp CSRDU_ALIGNED=$aligned ./spmv -b $check_opt $1 $method
+set -x
+CSRDU_VERBOSE=$verbose CSRDU_DE_MINLEN=$de_minlen CSRDU_JMP=$jmp CSRDU_ALIGNED=$aligned ./spmv -b $check_opt $1 $method
