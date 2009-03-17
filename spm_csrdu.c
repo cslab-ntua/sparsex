@@ -578,3 +578,116 @@ void SPM_CSRDU_NAME(_mt_destroy)(void *spm)
 	free(spm_thread);
 	free(spm_mt);
 }
+
+#ifdef SPM_NUMA
+#include "numa.h"
+
+static int numa_node_from_cpu(int cpu)
+{
+	struct bitmask *bmp;
+	int nnodes, node, ret;
+
+	bmp = numa_allocate_cpumask();
+	nnodes =  numa_num_configured_nodes();
+	for (node = 0; node < nnodes; node++){
+		numa_node_to_cpus(node, bmp);
+		if (numa_bitmask_isbitset(bmp, cpu)){
+			ret = node;
+			goto end;
+		}
+	}
+	ret = -1;
+end:
+	numa_bitmask_free(bmp);
+	return ret;
+}
+
+void *SPM_CSRDU_NAME(_mt_numa_init_mmf)(char *mmf_file,
+                                        uint64_t *nrows, uint64_t *ncols,
+                                        uint64_t *nnz)
+{
+	spm_mt_t *spm_mt;
+	int i;
+	spm_mt = SPM_CSRDU_NAME(_mt_init_mmf)(mmf_file, nrows, ncols, nnz);
+
+	if (numa_available() == -1){
+		perror("numa not available");
+		exit(1);
+	}
+
+	/* keep a reference to the original csrdu */
+	SPM_CSRDU_TYPE *csrdu = ((spm_csrdu_mt_t *)spm_mt->spm_threads[0].spm)->csrdu;
+	ELEM_TYPE *values = csrdu->values;
+	uint8_t *ctl = csrdu->ctl;
+	int nr_threads = spm_mt->nr_threads;
+	for (i=0; i<nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm_thread->spm;
+		/* get numa node from cpu */
+		int node = numa_node_from_cpu(spm_thread->cpu);
+		/* allocate new space */
+		SPM_CSRDU_TYPE *numa_csrdu = numa_alloc_onnode(sizeof(SPM_CSRDU_TYPE), node);
+		if (!numa_csrdu){
+			perror("numa_alloc_onnode");
+			exit(1);
+		}
+		uint64_t ctl_start = csrdu_mt->ctl_start;
+		uint64_t ctl_end = (i < nr_threads -1) ? (csrdu_mt+1)->ctl_start : csrdu->ctl_size;
+		uint64_t ctl_size = ctl_end - ctl_start;
+		uint64_t row_start = csrdu_mt->row_start;
+		uint64_t row_end = (i < nr_threads -1) ? (csrdu_mt+1)->row_start : csrdu->nrows;
+		uint64_t nnz = csrdu_mt->nnz;
+		numa_csrdu->values = numa_alloc_onnode(sizeof(ELEM_TYPE)*nnz, node);
+		numa_csrdu->ctl = numa_alloc_onnode(ctl_size, node);
+		if (!numa_csrdu->values || !numa_csrdu->ctl){
+			perror("numa_alloc_onnode");
+			exit(1);
+		}
+		/* copy data */
+		memcpy(numa_csrdu->values, values, sizeof(ELEM_TYPE)*nnz);
+		values += nnz;
+		memcpy(numa_csrdu->ctl, ctl + ctl_start, ctl_size);
+		/* make the swap */
+		numa_csrdu->nnz = nnz;
+		numa_csrdu->ncols = csrdu->ncols;
+		numa_csrdu->nrows = row_end - row_start;
+		numa_csrdu->ctl_size = ctl_size;
+		csrdu_mt->csrdu = numa_csrdu;
+		csrdu_mt->ctl_start = 0;
+	}
+	SPM_CSRDU_NAME(_destroy)(csrdu);
+
+	return spm_mt;
+}
+
+void SPM_CSRDU_NAME(_mt_numa_destroy)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	int i;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm_thread->spm;
+		SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
+		numa_free(csrdu->values, csrdu->nnz);
+		numa_free(csrdu->ctl, csrdu->ctl_size);
+		numa_free(csrdu, sizeof(SPM_CSRDU_TYPE));
+	}
+	free(spm_mt->spm_threads);
+	free(spm_mt);
+}
+
+uint64_t SPM_CSRDU_NAME(_mt_numa_size)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	int i;
+	uint64_t ret=0;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm_thread->spm;
+		SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
+		ret += csrdu->nnz;
+	}
+	return ret;
+}
+
+#endif /* SPM_NUMA */

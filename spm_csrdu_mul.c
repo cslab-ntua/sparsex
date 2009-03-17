@@ -236,3 +236,43 @@ XSPMV_MT_METH_INIT(
  SPM_CSRDU_NAME(_mt_destroy),
  sizeof(ELEM_TYPE)
 )
+
+#ifdef SPM_NUMA
+
+void _NAME_MT(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm;
+	SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *y = out->elements + csrdu_mt->row_start;
+
+	do_mul(csrdu->ctl, csrdu->values, x, y, csrdu_mt->nnz);
+}
+
+XSPMV_MT_METH_INIT(
+ _NAME_MT(_numa_multiply),
+ SPM_CSRDU_NAME(_mt_numa_init_mmf),
+ SPM_CSRDU_NAME(_mt_numa_size),
+ SPM_CSRDU_NAME(_mt_numa_destroy),
+ sizeof(ELEM_TYPE)
+)
+
+void _NAME_MT(_jmp_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm;
+	SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *y = out->elements + csrdu_mt->row_start;
+
+	do_mul_jmp(csrdu->ctl, csrdu->values, x, y, csrdu_mt->nnz);
+}
+
+XSPMV_MT_METH_INIT(
+ _NAME_MT(_jmp_numa_multiply),
+ SPM_CSRDU_NAME(_mt_numa_init_mmf),
+ SPM_CSRDU_NAME(_mt_numa_size),
+ SPM_CSRDU_NAME(_mt_numa_destroy),
+ sizeof(ELEM_TYPE)
+)
+
+#endif /* SPM_NUMA */

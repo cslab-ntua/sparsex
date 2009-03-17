@@ -31,6 +31,20 @@ void _NAME(val_type, _mt_destroy)(void *csrdu);
 SPM_CSRDU_DECLARE(float)
 SPM_CSRDU_DECLARE(double)
 
+
+#ifdef SPM_NUMA
+#define SPM_CSRDU_NUMA_DECLARE(val_type) \
+void *\
+_NAME(val_type,_mt_numa_init_mmf)(char *mmf, \
+                                  uint64_t *nrows, \
+				  uint64_t *ncols, uint64_t *nnz); \
+uint64_t _NAME(val_type, _mt_numa_size)(void *csrdu); \
+void _NAME(val_type, _mt_numa_destroy)(void *csrdu);
+
+SPM_CSRDU_NUMA_DECLARE(float)
+SPM_CSRDU_NUMA_DECLARE(double)
+#endif /* SPM_NUMA */
+
 #undef _NAME
 #undef _TYPE
 

@@ -9,6 +9,7 @@ usage() {
 	echo " -d ........... dense min len (0 to disable)"
 	echo " -q ........... quiet"
 	echo " -c ........... check matrix"
+	echo " -N ........... use NUMA local allocation"
 }
 
 jmp=0;
@@ -18,7 +19,7 @@ de_minlen=0
 mt=0
 check_opt=""
 
-while getopts "hjad:tqc" option
+while getopts "hjad:tqcN" option
 do
 	case $option in
 		h ) usage; exit 0 ;;
@@ -28,6 +29,7 @@ do
 		t ) mt=1 ;;
 		q ) verbose=0 ;;
 		c ) check_opt="-c" ;;
+		N ) numa=1 ;;
 		* ) echo "Unknown option"; exit 1;;
 	esac
 done
@@ -36,6 +38,7 @@ method="spm_csrdu_double"
 [ "$mt" -eq "1" ] && method="${method}_mt"
 [ "$aligned" -eq "1" ] && method="${method}_aligned"
 [ "$jmp" -eq "1" ] && method="${method}_jmp"
+[ "$numa" -eq "1" ] && method="${method}_numa"
 method="${method}_multiply"
 
 shift $(($OPTIND-1))
