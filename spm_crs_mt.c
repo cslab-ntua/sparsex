@@ -211,7 +211,6 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
 void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 {
 	spm_mt_t *spm_mt = (spm_mt_t *)spm;
-	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
 	int i;
 	for (i=0; i<spm_mt->nr_threads; i++){
 		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
@@ -224,7 +223,7 @@ void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 		numa_free(numa_crs->row_ptr, sizeof(SPM_CRS_IDX_TYPE)*nrows);
 		numa_free(numa_crs, sizeof(SPM_CRS_TYPE));
 	}
-	free(spm_thread);
+	free(spm_mt->spm_threads);
 	free(spm_mt);
 }
 
