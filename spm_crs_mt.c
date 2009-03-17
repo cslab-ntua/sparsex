@@ -126,3 +126,153 @@ XSPMV_MT_METH_INIT(
  SPM_CRS_MT_NAME(_destroy),
  sizeof(ELEM_TYPE)
 )
+
+#ifdef SPM_NUMA
+
+#include <numa.h>
+
+static int numa_node_from_cpu(int cpu)
+{
+	struct bitmask *bmp;
+	int nnodes, node, ret;
+
+	bmp = numa_allocate_cpumask();
+	nnodes =  numa_num_configured_nodes();
+	for (node = 0; node < nnodes; node++){
+		numa_node_to_cpus(node, bmp);
+		if (numa_bitmask_isbitset(bmp, cpu)){
+			ret = node;
+			goto end;
+		}
+	}
+	ret = -1;
+end:
+	numa_bitmask_free(bmp);
+	return ret;
+}
+
+void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
+                                      uint64_t *rows_nr, uint64_t *cols_nr,
+                                      uint64_t *nz_nr)
+{
+	spm_mt_t *spm_mt;
+	int i;
+	spm_mt = SPM_CRS_MT_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr);
+
+	/* sanity check */
+	if (numa_available() == -1){
+		perror("numa not available");
+		exit(1);
+	}
+
+	/* keep a reference to original crs */
+	SPM_CRS_TYPE *crs = ((SPM_CRS_MT_TYPE *)spm_mt->spm_threads->spm)->crs;
+	ELEM_TYPE *values = crs->values;
+	SPM_CRS_IDX_TYPE *colind = crs->col_ind;
+	SPM_CRS_IDX_TYPE *rowptr = crs->row_ptr;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
+		/* get numa node from cpu */
+		int node = numa_node_from_cpu(spm_thread->cpu);
+		/* allocate new space */
+		SPM_CRS_TYPE *numa_crs = numa_alloc_onnode(sizeof(SPM_CRS_TYPE), node);
+		if (!numa_crs){
+			perror("numa_alloc_onnode");
+			exit(1);
+		}
+		uint64_t nnz = crs_mt->nnz_nr;
+		uint64_t nrows = crs_mt->row_end - crs_mt->row_start;
+		numa_crs->values = numa_alloc_onnode(sizeof(ELEM_TYPE)*nnz, node);
+		numa_crs->col_ind = numa_alloc_onnode(sizeof(SPM_CRS_IDX_TYPE)*nnz, node);
+		numa_crs->row_ptr = numa_alloc_onnode(sizeof(SPM_CRS_IDX_TYPE)*(nrows+1), node);
+		if (!numa_crs->values || !numa_crs->col_ind || !numa_crs->row_ptr){
+			perror("numa_alloc_onnode");
+			exit(1);
+		}
+		/* copy data */
+		memcpy(numa_crs->values, values, sizeof(ELEM_TYPE)*nnz);
+		values += nnz;
+		memcpy(numa_crs->col_ind, colind, sizeof(SPM_CRS_IDX_TYPE)*nnz);
+		colind += nnz;
+		memcpy(numa_crs->row_ptr, rowptr, sizeof(SPM_CRS_IDX_TYPE)*(nrows+1));
+		rowptr += nrows;
+		/* make the swap */
+		numa_crs->nz = nnz;
+		numa_crs->nrows = nrows;
+		numa_crs->ncols = crs->ncols;
+		crs_mt->crs = numa_crs;
+	}
+	SPM_CRS_NAME(_destroy)(crs);
+
+	return spm_mt;
+}
+
+void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	int i;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
+		SPM_CRS_TYPE *numa_crs = crs_mt->crs;
+		uint64_t nnz = numa_crs->nz;
+		uint64_t nrows = crs_mt->row_end - crs_mt->row_start;
+		numa_free(numa_crs->values, sizeof(ELEM_TYPE)*nnz);
+		numa_free(numa_crs->col_ind, sizeof(SPM_CRS_IDX_TYPE)*nnz);
+		numa_free(numa_crs->row_ptr, sizeof(SPM_CRS_IDX_TYPE)*nrows);
+		numa_free(numa_crs, sizeof(SPM_CRS_TYPE));
+	}
+	free(spm_thread);
+	free(spm_mt);
+}
+
+uint64_t SPM_CRS_MT_NAME(_numa_size)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	int i;
+	uint64_t ret = 0;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread  = spm_mt->spm_threads + i;
+		SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
+		ret += SPM_CRS_NAME(_size)(crs_mt->crs);
+
+	}
+	return ret;
+}
+
+void SPM_CRS_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *values = crs_mt->crs->values;
+	SPM_CRS_IDX_TYPE *row_ptr = crs_mt->crs->row_ptr;
+	SPM_CRS_IDX_TYPE *col_ind = crs_mt->crs->col_ind;
+	const unsigned long row_start = crs_mt->row_start;
+	const unsigned long row_end = crs_mt->row_end;
+	const unsigned long nrows = row_end - row_start;
+	register ELEM_TYPE yr;
+	ELEM_TYPE *y = out->elements + row_start;
+
+	unsigned long i,j;
+	uint64_t j0 = row_ptr[0];
+	for (i=0; i<nrows; i++){
+		yr = (ELEM_TYPE)0;
+		for (j=row_ptr[i]-j0; j<row_ptr[i+1]-j0; j++) {
+			yr += ( *(values++) * x[col_ind[j]]);
+		}
+		y[i] = yr;
+	}
+}
+
+XSPMV_MT_METH_INIT(
+ SPM_CRS_MT_NAME(_numa_multiply),
+ SPM_CRS_MT_NAME(_numa_init_mmf),
+ SPM_CRS_MT_NAME(_numa_size),
+ SPM_CRS_MT_NAME(_numa_destroy),
+ sizeof(ELEM_TYPE)
+)
+
+#endif /* SPM_NUMA */
+
