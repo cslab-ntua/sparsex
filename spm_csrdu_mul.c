@@ -246,7 +246,7 @@ void _NAME_MT(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	ELEM_TYPE *x = in->elements;
 	ELEM_TYPE *y = out->elements + csrdu_mt->row_start;
 
-	do_mul(csrdu->ctl, csrdu->values, x, y, csrdu_mt->nnz);
+	do_mul(csrdu->ctl + csrdu_mt->ctl_start, csrdu->values, x, y, csrdu_mt->nnz);
 }
 
 XSPMV_MT_METH_INIT(
@@ -264,7 +264,7 @@ void _NAME_MT(_jmp_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	ELEM_TYPE *x = in->elements;
 	ELEM_TYPE *y = out->elements + csrdu_mt->row_start;
 
-	do_mul_jmp(csrdu->ctl, csrdu->values, x, y, csrdu_mt->nnz);
+	do_mul_jmp(csrdu->ctl + csrdu_mt->ctl_start, csrdu->values, x, y, csrdu_mt->nnz);
 }
 
 XSPMV_MT_METH_INIT(

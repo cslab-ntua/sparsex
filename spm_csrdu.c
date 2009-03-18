@@ -638,7 +638,12 @@ void *SPM_CSRDU_NAME(_mt_numa_init_mmf)(char *mmf_file,
 		uint64_t row_end = (i < nr_threads -1) ? (csrdu_mt+1)->row_start : csrdu->nrows;
 		uint64_t nnz = csrdu_mt->nnz;
 		numa_csrdu->values = numa_alloc_onnode(sizeof(ELEM_TYPE)*nnz, node);
-		numa_csrdu->ctl = numa_alloc_onnode(ctl_size, node);
+		/*
+		 * Note that the newly allocated ctl should have the same alignment with
+		 * the previous part
+		 */
+		unsigned long align = (unsigned long)(ctl + ctl_start) & (8UL-1UL);
+		numa_csrdu->ctl = numa_alloc_onnode(ctl_size + align, node);
 		if (!numa_csrdu->values || !numa_csrdu->ctl){
 			perror("numa_alloc_onnode");
 			exit(1);
@@ -646,14 +651,14 @@ void *SPM_CSRDU_NAME(_mt_numa_init_mmf)(char *mmf_file,
 		/* copy data */
 		memcpy(numa_csrdu->values, values, sizeof(ELEM_TYPE)*nnz);
 		values += nnz;
-		memcpy(numa_csrdu->ctl, ctl + ctl_start, ctl_size);
+		memcpy(numa_csrdu->ctl + align, ctl + ctl_start, ctl_size);
 		/* make the swap */
 		numa_csrdu->nnz = nnz;
 		numa_csrdu->ncols = csrdu->ncols;
 		numa_csrdu->nrows = row_end - row_start;
 		numa_csrdu->ctl_size = ctl_size;
 		csrdu_mt->csrdu = numa_csrdu;
-		csrdu_mt->ctl_start = 0;
+		csrdu_mt->ctl_start = align;
 	}
 	SPM_CSRDU_NAME(_destroy)(csrdu);
 
