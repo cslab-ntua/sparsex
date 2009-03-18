@@ -308,6 +308,10 @@ static void handle_row(uint64_t *deltas, uint64_t deltas_size,
 				ust->size = 1;
 				rle->freq--;
 			}
+			// set the new size
+			if (rle->freq){
+				ust->ci_size = spm_csrdu_cisize(rle->val);
+			}
 		}
 
 		ust->size += rle->freq;
