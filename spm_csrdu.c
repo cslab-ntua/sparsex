@@ -603,12 +603,12 @@ end:
 }
 
 void *SPM_CSRDU_NAME(_mt_numa_init_mmf)(char *mmf_file,
-                                        uint64_t *nrows, uint64_t *ncols,
-                                        uint64_t *nnz)
+                                        uint64_t *nrows_ptr, uint64_t *ncols_ptr,
+                                        uint64_t *nnz_ptr)
 {
 	spm_mt_t *spm_mt;
 	int i;
-	spm_mt = SPM_CSRDU_NAME(_mt_init_mmf)(mmf_file, nrows, ncols, nnz);
+	spm_mt = SPM_CSRDU_NAME(_mt_init_mmf)(mmf_file, nrows_ptr, ncols_ptr, nnz_ptr);
 
 	if (numa_available() == -1){
 		perror("numa not available");
