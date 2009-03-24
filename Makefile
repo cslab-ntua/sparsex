@@ -2,7 +2,7 @@ SHELL = /bin/bash
 
 .PHONY: all clean
 
-all: spmv
+all: scripts/calc_bits spmv
 #all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt spmv_crsvh spmv_crsvh_check spmv_crsvh_mt
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
@@ -240,6 +240,9 @@ cv1_d: cv1_d.o libspmv.o
 vals_idx: vals_idx.c
 	$(COMPILE) $(PYCFLAGS) $(PYLIBS) $< -o $@
 
+scripts/calc_bits: calc_bits.c
+	$(COMPILE) $< -o $@
+
 %.s: %.c
 	$(COMPILE) -S -fverbose-asm $<
 %.o: %.c
@@ -250,4 +253,4 @@ vals_idx: vals_idx.c
 
 #rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt spm_csrdu_test spmv
 clean:
-	rm -rf *.s *.o *.i spmv
+	rm -rf *.s *.o *.i spmv crsvi_method
