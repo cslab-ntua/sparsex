@@ -137,10 +137,8 @@ void *SPM_CRSVI_NAME(_init_mmf) (char *mmf_file,
 		report_rows = 0;
 	}
 
-	unsigned long empty_rows;
 	t0 = time(NULL);
 	while (mmf_get_next(f, &row, &col, &val)){
-		crsvi->nz++;
 
 		/* row indices */
 		if (prev_row < row){
@@ -153,14 +151,13 @@ void *SPM_CRSVI_NAME(_init_mmf) (char *mmf_file,
 				        mmf_file, (double)(tn-t0)/60.0, remaining, ratio, (double)remaining/(ratio*60.0));
 			}
 			#endif
-			empty_rows = row -prev_row -1;
-			rowptr = dynarray_alloc_nr(crsvi_st->sp_rowptr,1+empty_rows);
-			for (i=0; i<empty_rows; i++){
-				*(rowptr+i) = *(rowptr+i-1);
+			rowptr = dynarray_alloc_nr(crsvi_st->sp_rowptr,row - prev_row);
+			for (i=0; i<row - prev_row; i++){
+				*(rowptr+i) = crsvi->nz;
 			}
-			*(rowptr+i) = crsvi->nz - 1;
 			prev_row = row;
 		}
+		crsvi->nz++;
 
 		/* column indices */
 		SPM_CRSVI_CI_TYPE *colind = dynarray_alloc(crsvi_st->sp_colind);
