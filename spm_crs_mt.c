@@ -220,7 +220,7 @@ void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 		uint64_t nrows = crs_mt->row_end - crs_mt->row_start;
 		numa_free(numa_crs->values, sizeof(ELEM_TYPE)*nnz);
 		numa_free(numa_crs->col_ind, sizeof(SPM_CRS_IDX_TYPE)*nnz);
-		numa_free(numa_crs->row_ptr, sizeof(SPM_CRS_IDX_TYPE)*nrows);
+		numa_free(numa_crs->row_ptr, sizeof(SPM_CRS_IDX_TYPE)*(nrows+1));
 		numa_free(numa_crs, sizeof(SPM_CRS_TYPE));
 	}
 	free(spm_mt->spm_threads);
