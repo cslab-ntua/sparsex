@@ -136,3 +136,175 @@ XSPMV_MT_METH_INIT(
 	SPM_CRSVI_MT_NAME(_destroy),
 	sizeof(ELEM_TYPE)
 )
+
+#ifdef SPM_NUMA
+
+#include "numa.h"
+
+static int numa_node_from_cpu(int cpu)
+{
+	struct bitmask *bmp;
+	int nnodes, node, ret;
+
+	bmp = numa_allocate_cpumask();
+	nnodes =  numa_num_configured_nodes();
+	for (node = 0; node < nnodes; node++){
+		numa_node_to_cpus(node, bmp);
+		if (numa_bitmask_isbitset(bmp, cpu)){
+			ret = node;
+			goto end;
+		}
+	}
+	ret = -1;
+end:
+	numa_bitmask_free(bmp);
+	return ret;
+}
+
+void *SPM_CRSVI_MT_NAME(_numa_init_mmf)(char *mmf,
+                                        uint64_t *rows_nr, uint64_t *cols_nr,
+                                        uint64_t *nz_nr)
+{
+	spm_mt_t *spm_mt;
+	int i;
+
+	spm_mt = SPM_CRSVI_MT_NAME(_init_mmf)(mmf, rows_nr, cols_nr, nz_nr);
+
+	/* sanity check */
+	if (numa_available() == -1){
+		perror("numa not available");
+		exit(1);
+	}
+
+	/* keep a reference to original crs_vi */
+	SPM_CRSVI_TYPE *crsvi = ((SPM_CRSVI_MT_TYPE *)spm_mt->spm_threads->spm)->crsvi;
+	/* this will be shared */
+	ELEM_TYPE *uvals = crsvi->values;
+	SPM_CRSVI_CI_TYPE *rowptr = crsvi->row_ptr;
+	SPM_CRSVI_CI_TYPE *colind = crsvi->col_ind;
+	SPM_CRSVI_VI_TYPE *valind = crsvi->val_ind;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t  *spm_thread = spm_mt->spm_threads + i;
+		SPM_CRSVI_MT_TYPE *crsvi_mt = (SPM_CRSVI_MT_TYPE *)spm_thread->spm;
+		/* get numa node from cpu */
+		int node = numa_node_from_cpu(spm_thread->cpu);
+		/* allocate new space */
+		SPM_CRSVI_TYPE *numa_crsvi = numa_alloc_onnode(sizeof(SPM_CRSVI_TYPE), node);
+		if (!numa_crsvi){
+			perror("numa_alloc_onnode");
+			exit(1);
+		}
+		uint64_t nnz = crsvi_mt->nnz;
+		uint64_t nrows = crsvi_mt->row_end - crsvi_mt->row_start;
+
+		numa_crsvi->col_ind = numa_alloc_onnode(sizeof(SPM_CRSVI_CI_TYPE)*nnz, node);
+		numa_crsvi->row_ptr = numa_alloc_onnode(sizeof(SPM_CRSVI_CI_TYPE)*(nrows+1), node);
+		numa_crsvi->val_ind = numa_alloc_onnode(sizeof(SPM_CRSVI_VI_TYPE)*(nnz), node);
+		if (!numa_crsvi->col_ind || !numa_crsvi->row_ptr || !numa_crsvi->val_ind){
+			perror("numa_alloc_onnode");
+			exit(1);
+		}
+		/* copy data */
+		memcpy(numa_crsvi->val_ind, valind, sizeof(SPM_CRSVI_VI_TYPE)*nnz);
+		valind += nnz;
+		memcpy(numa_crsvi->col_ind, colind, sizeof(SPM_CRSVI_CI_TYPE)*nnz);
+		colind += nnz;
+		memcpy(numa_crsvi->row_ptr, rowptr, sizeof(SPM_CRSVI_CI_TYPE)*(nrows+1));
+		rowptr += nrows;
+		/* make the swap */
+		numa_crsvi->values = uvals;
+		numa_crsvi->nrows = nrows;
+		numa_crsvi->nz = nnz;
+		numa_crsvi->ncols = crsvi->ncols;
+		numa_crsvi->nv = crsvi->nv;
+		crsvi_mt->crsvi = numa_crsvi;
+	}
+
+	/* free crsvi (except values) */
+	free(crsvi->val_ind);
+	free(crsvi->col_ind);
+	free(crsvi->row_ptr);
+	free(crsvi);
+
+	return spm_mt;
+}
+
+void SPM_CRSVI_MT_NAME(_numa_destroy)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	int i;
+
+	SPM_CRSVI_MT_TYPE *crsvi_mt0 = (SPM_CRSVI_MT_TYPE *)spm_mt->spm_threads->spm;
+	ELEM_TYPE *uvals = crsvi_mt0->crsvi->values;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		SPM_CRSVI_MT_TYPE *crsvi_mt = (SPM_CRSVI_MT_TYPE *)spm_thread->spm;
+		SPM_CRSVI_TYPE *numa_crsvi = crsvi_mt->crsvi;
+		uint64_t nnz = numa_crsvi->nz;
+		uint64_t nrows = crsvi_mt->row_end - crsvi_mt->row_start;
+		numa_free(numa_crsvi->val_ind, sizeof(SPM_CRSVI_VI_TYPE)*nnz);
+		numa_free(numa_crsvi->col_ind, sizeof(SPM_CRSVI_CI_TYPE)*nnz);
+		numa_free(numa_crsvi->row_ptr, sizeof(SPM_CRSVI_CI_TYPE)*(nrows+1));
+		numa_free(numa_crsvi, sizeof(SPM_CRSVI_TYPE));
+	}
+	free(uvals);
+	free(crsvi_mt0);
+	free(spm_mt->spm_threads);
+	free(spm_mt);
+}
+
+uint64_t SPM_CRSVI_MT_NAME(_numa_size)(void *spm)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	uint64_t ret;
+	int i;
+
+	uint64_t uvals = ((SPM_CRSVI_MT_TYPE *)spm_mt->spm_threads->spm)->crsvi->nv;
+	ret = uvals*sizeof(ELEM_TYPE);
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		SPM_CRSVI_MT_TYPE *crsvi_mt = (SPM_CRSVI_MT_TYPE *)spm_thread->spm;
+		SPM_CRSVI_TYPE *numa_crsvi = crsvi_mt->crsvi;
+		ret += numa_crsvi->nz*(sizeof(SPM_CRSVI_VI_TYPE) + sizeof(SPM_CRSVI_CI_TYPE));
+		ret += numa_crsvi->nrows*(sizeof(SPM_CRSVI_CI_TYPE));
+	}
+
+	return ret;
+}
+
+
+void SPM_CRSVI_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CRSVI_MT_TYPE *crsvi_mt = (SPM_CRSVI_MT_TYPE *)spm;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *values = crsvi_mt->crsvi->values;
+
+	SPM_CRSVI_CI_TYPE *row_ptr = crsvi_mt->crsvi->row_ptr;
+	SPM_CRSVI_CI_TYPE *col_ind = crsvi_mt->crsvi->col_ind;
+	SPM_CRSVI_VI_TYPE *val_ind = crsvi_mt->crsvi->val_ind;
+	const uint64_t row_start = crsvi_mt->row_start;
+	const uint64_t row_end = crsvi_mt->row_end;
+	const uint64_t nrows = row_end - row_start;
+	register ELEM_TYPE yr;
+	ELEM_TYPE *y = out->elements + row_start;
+
+	unsigned long i,j;
+	const register uint64_t j0 = row_ptr[0];
+	for (i=0; i<nrows; i++){
+		yr = (ELEM_TYPE)0;
+		for (j=row_ptr[i]-j0; j<row_ptr[i+1]-j0; j++) {
+			yr += (values[*(val_ind++)] * x[col_ind[j]]);
+		}
+		y[i] = yr;
+	}
+}
+
+XSPMV_MT_METH_INIT(
+ SPM_CRSVI_MT_NAME(_numa_multiply),
+ SPM_CRSVI_MT_NAME(_numa_init_mmf),
+ SPM_CRSVI_MT_NAME(_numa_size),
+ SPM_CRSVI_MT_NAME(_numa_destroy),
+ sizeof(ELEM_TYPE)
+)
+
+#endif /* SPM_NUMA  */
