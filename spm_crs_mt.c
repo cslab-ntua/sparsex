@@ -212,6 +212,7 @@ void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 {
 	spm_mt_t *spm_mt = (spm_mt_t *)spm;
 	int i;
+	SPM_CRS_MT_TYPE *crs_mt0 = (SPM_CRS_MT_TYPE *)spm_mt->spm_threads->spm;
 	for (i=0; i<spm_mt->nr_threads; i++){
 		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
 		SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
@@ -224,6 +225,7 @@ void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 		numa_free(numa_crs, sizeof(SPM_CRS_TYPE));
 	}
 	free(spm_mt->spm_threads);
+	free(crs_mt0);
 	free(spm_mt);
 }
 
