@@ -9,7 +9,7 @@ usage() {
 	echo " -c ........... check matrix"
 	echo " -N ........... use NUMA local allocation"
 	echo " -l ........... ttu limit (default:$ttu_lim)"
-	echo " -u ........... unique value (defailt:calculate it)"
+	echo " -u ........... unique value (default:calculate it)"
 }
 
 while getopts "htqcNl:u:" option
@@ -21,7 +21,7 @@ do
 		c ) check_opt="-c" ;;
 		N ) numa=1 ;;
 		l ) ttu_lim="$OPTARG" ;;
-		u ) uvals="$OPTARAG" ;;
+		u ) uvals="$OPTARG" ;;
 		* ) echo "Unknown option"; exit 1;;
 	esac
 done
@@ -46,6 +46,7 @@ if [ $(( $ttu > $ttu_lim )) -eq 1 ] ; then
 	vi_bits=$(scripts/calc_bits $uvals)
 	method="spm_crs32_vi${vi_bits}_double"
 	[ "$mt" -eq "1" ] && method="${method}_mt"
+	[ "$numa" -eq "1" ] && method="${method}_numa"
 	method="${method}_multiply"
 	./spmv -b $check_opt $file $method
 fi
