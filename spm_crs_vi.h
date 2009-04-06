@@ -59,6 +59,27 @@ DECLARE_CRS_VI(float, 64, 32)
 #undef _NAME
 #undef DECLARE_CRS_VI
 
+#define _NAME(val_type, vi_bits, name) \
+	spm_crsvi ## vi_bits ## _ ## val_type ## name
+
+#define DECLARE_VI(val_type, vi_bits) \
+	void _NAME(val_type, vi_bits, _vals_to_vis)( \
+		val_type *vals, uint64_t vals_size, \
+		UINT_TYPE(vi_bits) **uvals_idx, val_type **uvals, \
+		uint64_t *uvals_size \
+	);
+
+DECLARE_VI(double, 8)
+DECLARE_VI(double, 16)
+DECLARE_VI(double, 32)
+
+DECLARE_VI(float, 8)
+DECLARE_VI(float, 16)
+DECLARE_VI(float, 32)
+
+#undef _NAME
+#undef DECLARE_VI
+
 #define SPM_CRSVI_CI_TYPE UINT_TYPE(SPM_CRSVI_CI_BITS)
 #define SPM_CRSVI_VI_TYPE UINT_TYPE(SPM_CRSVI_VI_BITS)
 
@@ -66,5 +87,7 @@ DECLARE_CRS_VI(float, 64, 32)
 	CON7(spm_crs, SPM_CRSVI_CI_BITS, _vi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, name)
 #define SPM_CRSVI_TYPE SPM_CRSVI_NAME(_t)
 
+#define SPM_VI_NAME(name) \
+	CON5(spm_crsvi, SPM_CRSVI_VI_BITS, _, ELEM_TYPE, name)
 
 #endif

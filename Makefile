@@ -49,7 +49,7 @@ ifeq ($(shell $(shell rsrc resource numa_lib.sh) FOO),FOO)
 endif
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o #spm_delta.o spm_delta_vec.o spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spm_crsvh.o spmv_loops.o spm_crs_mt.o spm_crsvh_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o # spm_delta.o spm_delta_cv.o spm_delta_mt.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o spm_crsvi_utils.o spm_csrdu_vi.o spm_csrdu_vi_mul.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -95,6 +95,49 @@ spm_crsvi.o:  spm_crs_vi.c spm_crs_vi.h
 	   done                                         \
 	done
 	$(LD) -i spm_crs{64,32}_vi{32,16,8}_{double,float}.o -o spm_crsvi.o
+
+spm_crsvi_utils.o:  spm_crsvi_utils.c
+	for t in double float; do                       \
+		for vi in 32 16 8; do                   \
+		  $(COMPILE)                            \
+		    -DELEM_TYPE=$$t                     \
+		    -DSPM_CRSVI_VI_BITS=$$vi            \
+		    -o spm_crsvi$${vi}_$${t}_utils.o    \
+		    -c $<;                              \
+		done                                    \
+	done
+	$(LD) -i spm_crsvi{32,16,8}_{double,float}_utils.o -o spm_crsvi_utils.o
+
+spm_csrdu_vi.o: spm_csrdu_vi.c
+	for t in double float; do                       \
+		for vi in 32 16 8; do                   \
+		  $(COMPILE)                            \
+		    -DELEM_TYPE=$$t                     \
+		    -DSPM_CRSVI_VI_BITS=$$vi            \
+		    -o spm_csrdu_vi$${vi}_$${t}.o       \
+		    -c $<;                              \
+		done                                    \
+	done
+	$(LD) -i spm_csrdu_vi{32,16,8}_{double,float}.o -o spm_csrdu_vi.o
+
+spm_csrdu_vi_mul.o: spm_csrdu_vi_mul.c
+	for t in double float; do                               \
+		for vi in 32 16 8; do                           \
+		  $(COMPILE)                                    \
+		    -DELEM_TYPE=$$t                             \
+		    -DSPM_CRSVI_VI_BITS=$$vi                    \
+		    -o spm_csrdu_vi$${vi}_$${t}_mul.o           \
+		    -c $<;                                      \
+		  $(COMPILE)                                    \
+		    -DCSRDU_ALIGNED                             \
+		    -DELEM_TYPE=$$t                             \
+		    -DSPM_CRSVI_VI_BITS=$$vi                    \
+		    -o spm_csrdu_aligned_vi$${vi}_$${t}_mul.o   \
+		    -c $<;                                      \
+		done                                            \
+	done
+	$(LD) -i spm_csrdu{,_aligned}_vi{32,16,8}_{double,float}_mul.o \
+	      -o spm_csrdu_vi_mul.o
 
 spm_crsvh.o:  spm_crs_vh.c spm_crs_vh.h
 	for t in double float; do                 \
