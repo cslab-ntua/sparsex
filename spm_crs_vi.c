@@ -104,7 +104,7 @@ static void add_val(crs_vi_state_t *crsvi_st, double val)
 	}
 
 	SPM_CRSVI_VI_TYPE *val_idx = dynarray_alloc(crsvi_st->sp_valind);
-	*val_idx = (SPM_CRSVI_CI_TYPE)idx;
+	*val_idx = (SPM_CRSVI_VI_TYPE)idx;
 }
 
 void *SPM_CRSVI_NAME(_init_mmf) (char *mmf_file,
