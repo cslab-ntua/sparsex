@@ -72,6 +72,32 @@ SPM_CSRDU_VI_DECLARE(double, 8)
 SPM_CSRDU_VI_DECLARE(double, 16)
 SPM_CSRDU_VI_DECLARE(double, 32)
 
+
+#ifdef SPM_NUMA
+#define SPM_CSRDU_VI_NUMA_DECLARE(val_type, vi_bits)          \
+	void *                                                \
+	_NAME(val_type, vi_bits, _mt_numa_init_mmf)(          \
+		char *mmf,                                    \
+		uint64_t *nrows,                              \
+		uint64_t *ncols,                              \
+		uint64_t *nnz);                               \
+                                                              \
+	uint64_t                                              \
+	_NAME(val_type, vi_bits, _mt_numa_size)(void *);      \
+	                                                      \
+	void                                                  \
+	_NAME(val_type, vi_bits, _mt_numa_destroy)(void *);   \
+
+SPM_CSRDU_VI_NUMA_DECLARE(float, 8)
+SPM_CSRDU_VI_NUMA_DECLARE(float, 16)
+SPM_CSRDU_VI_NUMA_DECLARE(float, 32)
+
+SPM_CSRDU_VI_NUMA_DECLARE(double, 8)
+SPM_CSRDU_VI_NUMA_DECLARE(double, 16)
+SPM_CSRDU_VI_NUMA_DECLARE(double, 32)
+
+#endif /* SPM_NUMA */
+
 #undef _TYPE
 #undef _MT_TYPE
 #undef _NAME

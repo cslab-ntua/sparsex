@@ -255,44 +255,46 @@ XSPMV_MT_METH_INIT(
  sizeof(ELEM_TYPE)
 )
 
-#if 0
 #ifdef SPM_NUMA
 
 void _NAME_MT(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
-	spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm;
-	SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
+	SPM_CSRDU_VI_MT_TYPE *csrdu_vi_mt = (SPM_CSRDU_VI_MT_TYPE *)spm;
+	SPM_CSRDU_VI_TYPE *csrdu_vi = csrdu_vi_mt->csrdu_vi;
 	ELEM_TYPE *x = in->elements;
-	ELEM_TYPE *y = out->elements + csrdu_mt->row_start;
+	ELEM_TYPE *y = out->elements + csrdu_vi_mt->row_start;
 
-	do_mul(csrdu->ctl + csrdu_mt->ctl_start, csrdu->values, x, y, csrdu_mt->nnz);
+	do_mul(csrdu_vi->ctl + csrdu_vi_mt->ctl_start,
+	       csrdu_vi->values, csrdu_vi->val_ind,
+	       x, y, csrdu_vi_mt->nnz);
 }
 
 XSPMV_MT_METH_INIT(
  _NAME_MT(_numa_multiply),
- SPM_CSRDU_NAME(_mt_numa_init_mmf),
- SPM_CSRDU_NAME(_mt_numa_size),
- SPM_CSRDU_NAME(_mt_numa_destroy),
+ SPM_CSRDU_VI_NAME(_mt_numa_init_mmf),
+ SPM_CSRDU_VI_NAME(_mt_numa_size),
+ SPM_CSRDU_VI_NAME(_mt_numa_destroy),
  sizeof(ELEM_TYPE)
 )
 
 void _NAME_MT(_jmp_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
-	spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm;
-	SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
+	SPM_CSRDU_VI_MT_TYPE *csrdu_vi_mt = (SPM_CSRDU_VI_MT_TYPE *)spm;
+	SPM_CSRDU_VI_TYPE *csrdu_vi = csrdu_vi_mt->csrdu_vi;
 	ELEM_TYPE *x = in->elements;
-	ELEM_TYPE *y = out->elements + csrdu_mt->row_start;
+	ELEM_TYPE *y = out->elements + csrdu_vi_mt->row_start;
 
-	do_mul_jmp(csrdu->ctl + csrdu_mt->ctl_start, csrdu->values, x, y, csrdu_mt->nnz);
+	do_mul_jmp(csrdu_vi->ctl + csrdu_vi_mt->ctl_start,
+	           csrdu_vi->values, csrdu_vi->val_ind,
+	           x, y, csrdu_vi_mt->nnz);
 }
 
 XSPMV_MT_METH_INIT(
  _NAME_MT(_jmp_numa_multiply),
- SPM_CSRDU_NAME(_mt_numa_init_mmf),
- SPM_CSRDU_NAME(_mt_numa_size),
- SPM_CSRDU_NAME(_mt_numa_destroy),
+ SPM_CSRDU_VI_NAME(_mt_numa_init_mmf),
+ SPM_CSRDU_VI_NAME(_mt_numa_size),
+ SPM_CSRDU_VI_NAME(_mt_numa_destroy),
  sizeof(ELEM_TYPE)
 )
 
 #endif /* SPM_NUMA */
-#endif
