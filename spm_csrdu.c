@@ -584,7 +584,7 @@ void SPM_CSRDU_NAME(_mt_destroy)(void *spm)
 }
 
 #ifdef SPM_NUMA
-#include "numa.h"
+#include <numa.h>
 
 static int numa_node_from_cpu(int cpu)
 {
