@@ -17,8 +17,8 @@ do
 	for mt_conf in "" "0,2" "0,4" "0,2,4,6" "0,1,2,3,4,5,6,7"; do
 		for seq_opts in "-d 0" "-d 4" "-d 6" "-d 8" "-d 10" "-d 12"; do
 			for opts in "-j -a" "-j" "-a" ""; do
-				echo MT_CONF="$mt_conf" scripts/csrdu_vi_run.sh -c -u $(echo $uvals $opts $seq_opts $mtx)
-				     MT_CONF="$mt_conf" scripts/csrdu_vi_run.sh -c -u $(echo $uvals $opts $seq_opts $mtx)
+				echo MT_CONF="$mt_conf" scripts/csrdu_vi_run.sh -u $uvals $(echo $opts $seq_opts $mtx)
+				     MT_CONF="$mt_conf" scripts/csrdu_vi_run.sh -u $uvals $(echo $opts $seq_opts $mtx)
 			done
 		done
 	done
