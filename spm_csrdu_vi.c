@@ -18,7 +18,7 @@ uint64_t SPM_CSRDU_VI_NAME(_size)(void *m)
 	uint64_t ret;
 	SPM_CSRDU_VI_TYPE *csrdu_vi = (SPM_CSRDU_VI_TYPE *)m;
 	ret = csrdu_vi->ctl_size;
-	ret += csrdu_vi->nnz*(sizeof(SPM_CSRDU_VI_TYPE));
+	ret += csrdu_vi->nnz*(sizeof(SPM_CRSVI_VI_TYPE));
 	ret += csrdu_vi->nv*(sizeof(ELEM_TYPE));
 
 	return ret;
