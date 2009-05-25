@@ -694,7 +694,8 @@ uint64_t SPM_CSRDU_NAME(_mt_numa_size)(void *spm)
 		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
 		spm_csrdu_mt_t *csrdu_mt = (spm_csrdu_mt_t *)spm_thread->spm;
 		SPM_CSRDU_TYPE *csrdu = csrdu_mt->csrdu;
-		ret += csrdu->nnz;
+		ret += csrdu->nnz*sizeof(ELEM_TYPE);
+		ret += csrdu->ctl_size;
 	}
 	return ret;
 }
