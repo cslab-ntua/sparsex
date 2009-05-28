@@ -271,6 +271,9 @@ spmv_crs_mt_check: libspmv.o spmv_crs_mt_check.o
 spmv_crs64: libspmv.o spmv_crs64.o
 	$(COMPILE) $(LIBS) libspmv.o spmv_crs64.o -o $@
 
+mmf_drle: mmf_drle.o mmf.o $(dynarray_dep)
+	$(COMPILE) $^ -o $@
+
 cv_simple: cv_simple.o libspmv.o
 	$(COMPILE_UR)  cv_simple.o libspmv.o -o $@
 
