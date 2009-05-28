@@ -199,8 +199,8 @@ int main(int argc, char **argv)
 {
 	unsigned long rows, cols, nnz, i;
 	FILE *mmf;
-	point_t *pts, *vpts, *dpts;
-	rle_stat_t *hstats, *vstats, *dstats;
+	point_t *pts, *vpts, *dpts, *rdpts;
+	rle_stat_t *hstats, *vstats, *dstats, *rdstats;
 
 	if (argc < 2){
 		fprintf(stderr, "Usage: %s <mmf_file>\n", argv[0]);
@@ -239,14 +239,31 @@ int main(int argc, char **argv)
 	qsort(dpts, nnz, sizeof(point_t), point_cmp_fn);
 	dstats = rle_stats(dpts, nnz);
 	free(dpts);
+	/* reverse diagonal */
+	rdpts = calloc(nnz, sizeof(point_t));
+	if (!rdpts){
+		perror("calloc");
+		exit(1);
+	}
+	for (i=0; i<nnz; i++){
+		point_t *p = pts + i;
+		uint64_t ny;
+		rdpts[i].y = ny = p->x +p->y -1;
+		rdpts[i].x = ny <= rows ? p->x : p->x +rows -ny;
+	}
+	qsort(rdpts, nnz, sizeof(point_t), point_cmp_fn);
+	rdstats = rle_stats(rdpts, nnz);
+	free(rdpts);
 
-	printf("%s\n", argv[1]);
-	printf("H: ");
+	printf("%s", argv[1]);
+	printf("\nH: ");
 	print_stats(hstats, nnz);
 	printf("\nV: ");
 	print_stats(vstats, nnz);
 	printf("\nD: ");
 	print_stats(dstats, nnz);
+	printf("\nrD: ");
+	print_stats(rdstats, nnz);
 	printf("\n");
 
 	free(hstats);
