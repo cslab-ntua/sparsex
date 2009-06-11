@@ -1,6 +1,6 @@
+#include <vector>
 #include <iterator>
 #include <algorithm>
-#include <vector>
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
@@ -40,17 +40,30 @@ typedef struct {
 	enum {DRLE_H=1, DRLE_V, DRLE_D, DRLE_RD} type;
 } drle_t;
 
-typedef struct {
-	point_t point;
-	drle_t *pattern; // if pattern is set, point is the starting point
-} spm_elem_t;
 
-static inline bool elem_cmp_larger(const spm_elem_t &e0, const spm_elem_t &e1)
+typedef class : public point_t {
+	drle_t *pattern;
+} spm_coo_elem_t;
+
+typedef struct {
+	uint64_t x;
+	drle_t *pattern;
+} spm_row_elem_t;
+
+static inline bool elem_cmp_larger(const spm_coo_elem_t &e0,
+                                   const spm_coo_elem_t &e1)
 {
-	return (point_cmp_fn(e0.point, e1.point) > 1);
+	int ret;
+	ret = point_cmp_fn(static_cast<point_t>(e0), static_cast<point_t>(e1));
+	return (ret > 1);
 }
 
-typedef std::vector<spm_elem_t> SpmIdxElems;
+typedef std::vector<point_t> SpmPoints;
+typedef std::iterator<std::forward_iterator_tag, point_t> SpmPointIter;
+typedef std::vector<spm_coo_elem_t> SpmCooElems;
+typedef std::vector<spm_row_elem_t> SpmRowElems;
+typedef std::vector<SpmRowElems> SpmRows;
+
 typedef enum {NONE=0, HORIZ, VERTICAL, DIAGONAL, REV_DIAGONAL} SpmIdxType;
 typedef boost::function<void (point_t &p)> TransformFn;
 
@@ -109,11 +122,12 @@ static inline void pnt_rmap_rD(point_t &src, point_t &dst, uint64_t nrows)
 	dst.y = src_y - dst.x + 1;
 }
 
+
 class SpmIdx {
 public:
 	uint64_t nrows, ncols, nnz;
 	SpmIdxType type;
-	SpmIdxElems elems;
+	SpmRows rows;
 
 	SpmIdx() {type = NONE;};
 	~SpmIdx() {};
@@ -126,28 +140,135 @@ public:
 	void Print(std::ostream &out=std::cout);
 	void PrintRows(std::ostream &out=std::cout);
 
+	template <typename IterT>
+	void SetRows(IterT pnts_start, IterT pnts_end);
+
 	void Transform(SpmIdxType type);
+
+	// iterators that return a point_t item
+	class PointIter;
+	PointIter points_begin();
+	PointIter points_end();
+
+	// same with PointIter, but removes elements
+	class PointPoper;
+	PointPoper points_pop_begin();
+	PointPoper points_pop_end();
+
+	#if 0
 	void DeltaRLEncode(int limit=4, SpmIdxElems dstelems=elems);
 	void Sort() {sort(elems.begin(), elems.end(), elem_cmp_larger);};
 	void genStats();
 
-	// Elements vector transformations:
 	void XFormV() {
-		FOREACH(spm_elem_t &e, this->elems){
+		FOREACH(spm_coo_elem_t &e, this->elems){
 			pnt_map_V(e.point, e.point);
 		}
 	};
 	void XFormD() {
-		FOREACH(spm_elem_t &e, this->elems){
+		FOREACH(spm_coo_elem_t &e, this->elems){
 			pnt_map_D(e.point, e.point, nrows);
 		}
 	};
 	void XFormRD() {
-		FOREACH(spm_elem_t &e, this->elems){
+		FOREACH(spm_coo_elem_t &e, this->elems){
 			pnt_map_rD(e.point, e.point, nrows);
 		}
 	};
+	#endif
 
+};
+
+
+class SpmIdx::PointIter
+: public std::iterator<std::forward_iterator_tag, point_t>
+{
+public:
+	uint64_t row_idx;
+	uint64_t elm_idx;
+	SpmIdx   *spm;
+	PointIter(): row_idx(0), elm_idx(0), spm(NULL) {;}
+	PointIter(uint64_t ridx, uint64_t eidx, SpmIdx *s)
+	: row_idx(ridx), elm_idx(eidx), spm(s) {
+		// find the first non zero row
+		while (row_idx < spm->nrows && spm->rows[row_idx].size() == 0) {
+			row_idx++;
+		}
+	}
+
+	bool operator==(const PointIter &x){
+		return (spm == x.spm)
+			   && (row_idx == x.row_idx)
+			   && (elm_idx == x.elm_idx);
+	}
+
+	bool operator!=(const PointIter &x){
+		return (spm != x.spm)
+			   || (row_idx != x.row_idx)
+			   || (elm_idx != x.elm_idx);
+	}
+
+	void operator++() {
+		uint64_t rows_nr, row_elems_nr;
+
+		rows_nr = spm->nrows;
+		row_elems_nr = spm->rows[row_idx].size();
+
+		// equality means somebody did a ++ on an ended iterator
+		assert(row_idx < rows_nr);
+
+		elm_idx++;
+		assert(elm_idx <= row_elems_nr);
+		if (elm_idx < row_elems_nr){
+			return ;
+		}
+
+		// change row
+		do {
+			elm_idx = 0;
+			row_idx++;
+		} while (row_idx < rows_nr && spm->rows[row_idx].size() == 0);
+	}
+
+	point_t operator*(){
+		point_t ret;
+		ret.y = row_idx + 1;
+		ret.x = spm->rows[row_idx][elm_idx].x;
+		return ret;
+	}
+};
+
+class SpmIdx::PointPoper : public SpmIdx::PointIter
+{
+	// overload this and remove rows
+public:
+	PointPoper() : PointIter() { ; }
+	PointPoper(uint64_t ridx, uint64_t eidx, SpmIdx *s)
+	: PointIter(ridx, eidx, s) { ; }
+
+	void operator++() {
+		uint64_t rows_nr, row_elems_nr;
+
+		rows_nr = spm->nrows;
+		row_elems_nr = spm->rows[row_idx].size();
+
+		// equality means somebody did a ++ on an ended iterator
+		assert(row_idx < rows_nr);
+
+		elm_idx++;
+		assert(elm_idx <= row_elems_nr);
+		if (elm_idx < row_elems_nr){
+			return ;
+		}
+
+		// remove all elements from previous row
+		spm->rows[row_idx].resize(0);
+		// change row
+		do {
+			elm_idx = 0;
+			row_idx++;
+		} while (row_idx < rows_nr && spm->rows[row_idx].size() == 0);
+	}
 };
 
 } // end of csx namespace
@@ -166,18 +287,69 @@ std::ostream &operator<<(std::ostream &out, point_t p)
 	return out;
 }
 
+std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
+{
+	out << "<" << std::setw(2) << pi.row_idx << "," << std::setw(2) << pi.elm_idx << ">";
+	return out;
+}
+
+SpmIdx::PointIter SpmIdx::points_begin()
+{
+	return PointIter(0, 0, this);
+}
+
+SpmIdx::PointIter SpmIdx::points_end()
+{
+	return PointIter(nrows, 0, this);
+}
+
+SpmIdx::PointPoper SpmIdx::points_pop_begin()
+{
+	return PointPoper(0, 0, this);
+}
+
+SpmIdx::PointPoper SpmIdx::points_pop_end()
+{
+	return PointPoper(nrows, 0, this);
+}
+
+template <typename IterT>
+void SpmIdx::SetRows(IterT pnts_start, IterT pnts_end)
+{
+	SpmRowElems *row_elems;
+	spm_row_elem_t elem;
+	uint64_t row_prev;
+
+	this->rows.resize(this->nrows);
+	row_elems = &this->rows.at(0);
+	row_prev = 1;
+
+	elem.pattern = NULL;
+	IterT point;
+	for (point = pnts_start; point < pnts_end; ++point){
+		uint64_t row = point->y;
+		uint64_t col = point->x;
+		if (row != row_prev){
+			row_elems = &this->rows.at(row - 1);
+			row_prev = row;
+		}
+		elem.x = col;
+		row_elems->push_back(elem);
+	}
+}
+
 void SpmIdx::loadMMF(std::istream &in)
 {
-	#define BUFFSIZE 1024
-	char buff[BUFFSIZE];
-	spm_elem_t elem;
+	char buff[1024];
 	double val;
+	uint64_t cnt;
 	int ret;
-	SpmIdxElems elems;
+	point_t *point;
+	SpmPoints points;
 
 	// header
 	do {
-		in.getline(buff, BUFFSIZE);
+		in.getline(buff, sizeof(buff));
 	} while (buff[0] == '#');
 	ret = sscanf(buff, "%lu %lu %lu", &this->nrows, &this->ncols, &this->nnz);
 	if (ret != 3){
@@ -187,47 +359,22 @@ void SpmIdx::loadMMF(std::istream &in)
 
 	// body
 	type = HORIZ;
-	this->elems.resize(0);
-	this->elems.reserve(this->nnz);
-	elem.pattern = NULL;
-	while (!in.getline(buff, BUFFSIZE).eof()){
-		ret = sscanf(buff, "%lu %lu %lf", &elem.point.y, &elem.point.x, &val);
-		if (ret != 3){
-			std::cerr << "mmf body error: sscanf" << std::endl;
-			exit(1);
-		}
-		this->elems.push_back(elem);
+	points.resize(this->nnz);
+	point = &points[0];
+	for (cnt=0; cnt<this->nnz; cnt++){
+		in.getline(buff, sizeof(buff));
+		ret = sscanf(buff, "%lu %lu %lf", &point->y, &point->x, &val);
+		assert(ret == 3);
+		point++;
 	}
-	if (this->elems.size() != this->nnz){
-		std::cerr << "mmf body error: size() != nnz" << std::endl;
-		exit(1);
-	}
-	#undef BUFFSIZE
+	assert((uint64_t)(point - &points[0]) == this->nnz);
+	assert(in.getline(buff, sizeof(buff)).eof());
+
+	SetRows(points.begin(), points.end());
+	points.clear();
 }
 
-void SpmIdx::PrintRows(std::ostream &out)
-{
-	uint64_t prev_y=1;
-	out << prev_y << ": ";
-	FOREACH(spm_elem_t &e, this->elems){
-		uint64_t y = e.point.y;
-		uint64_t x = e.point.x;
-		if (y != prev_y){
-			out << std::endl << y << ": ";
-			prev_y = y;
-		}
-		out << x << " ";
-	}
-	out << std::endl;
-}
-
-void SpmIdx::Print(std::ostream &out)
-{
-	FOREACH(spm_elem_t &e, this->elems){
-		out << e.point << std::endl;
-	}
-}
-
+#if 0
 void SpmIdx::Transform(SpmIdxType t)
 {
 	if (this->type == t)
@@ -254,6 +401,24 @@ void SpmIdx::Transform(SpmIdxType t)
 	}
 	this->type = t;
 }
+
+void SpmIdx::PrintRows(std::ostream &out)
+{
+	uint64_t prev_y=1;
+	out << prev_y << ": ";
+	FOREACH(spm_coo_elem_t &e, this->elems){
+		uint64_t y = e.y;
+		uint64_t x = e.x;
+		if (y != prev_y){
+			out << std::endl << y << ": ";
+			prev_y = y;
+		}
+		out << x << " ";
+	}
+	out << std::endl;
+}
+
+
 
 void SpmIdx::genStats()
 {
@@ -357,11 +522,35 @@ void TestXforms()
 	TestRDiagTransform(5, 10);
 	TestRDiagTransform(10, 5);
 }
+#endif
+
+void SpmIdx::Print(std::ostream &out)
+{
+	SpmIdx::PointIter p, p_start, p_end;
+	p_start = this->points_begin();
+	p_end = this->points_end();
+	for (p = p_start; p != p_end; ++p){
+		out << " " << (*p);
+	}
+	out << std::endl;
+}
 
 int main(int argc, char **argv)
 {
-	//SpmIdx obj;
-	//obj.loadMMF();
+	SpmIdx obj;
+	obj.loadMMF();
 	//obj.Transform(DIAGONAL);
+
 	//obj.Print();
+	//obj.Print();
+
+	SpmIdx::PointPoper p, p_start, p_end;
+	p_start = obj.points_pop_begin();
+	p_end = obj.points_pop_end();
+	for (p = p_start; p != p_end; ++p){
+		std::cout << " " << (*p);
+	}
+	std::cout << std::endl;
+
+	obj.Print();
 }
