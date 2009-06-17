@@ -11,11 +11,70 @@
 #include <boost/foreach.hpp>
 #include <boost/lambda/bind.hpp>
 
+#include "../../debug/debug_user.h"
+
 namespace bll = boost::lambda;
 
 #define FOREACH BOOST_FOREACH
 
 namespace csx {
+
+template <typename T>
+T DeltaEncode(T input)
+{
+	T output;
+	typename T::iterator in, out;
+	typename T::iterator::value_type prev, curr;
+
+	output.resize(input.size());
+
+	in = input.begin();
+	out = output.begin();
+	prev = *out++ = *in++;
+	//std::cout << "FOOLA " << (input.end() - in) << "\n";
+	while (in < input.end()){
+		curr = *in++;
+		*out++ = curr - prev;
+		prev = curr;
+	}
+
+	return output;
+}
+
+template <typename T>
+struct RLE {
+	long freq;
+	T val;
+};
+
+template <typename T>
+std::vector< RLE<typename T::iterator::value_type> >
+RLEncode(T input)
+{
+	typename T::iterator in;
+	typename T::iterator::value_type curr;
+	std::vector< RLE<typename T::iterator::value_type> > output;
+	RLE<typename T::iterator::value_type> rle;
+
+	 in = input.begin();
+	 rle.freq = 1;
+	 rle.val = *in++;
+
+	while (in < input.end()){
+		curr = *in;
+		if (rle.val == curr){
+			rle.freq++;
+		} else {
+			output.push_back(rle);
+			rle.freq = 1;
+			rle.val = curr;
+		}
+		in++;
+	}
+	output.push_back(rle);
+	return output;
+}
+
 
 typedef struct {
 	uint64_t x, y;
@@ -37,20 +96,58 @@ static inline int point_cmp_fn(const point_t &p0, const point_t &p1)
 	}
 }
 
-typedef struct {
+typedef enum {NONE=0, HORIZ, VERTICAL, DIAGONAL, REV_DIAGONAL} SpmIdxType;
+
+class DeltaRLE {
+public:
 	uint32_t size, drle_len;
-	enum {DRLE_H=1, DRLE_V, DRLE_D, DRLE_RD} type;
-} drle_t;
+	SpmIdxType type;
+
+	DeltaRLE(uint32_t _size, uint32_t _drle_len, SpmIdxType _type):
+	size(_size), drle_len(_drle_len), type(_type) { ; }
+
+};
 
 
 typedef struct : public point_t {
-	drle_t *pattern;
+	DeltaRLE *pattern;
 } spm_coo_elem_t;
 
-typedef struct {
+class SpmRowElem {
+public:
 	uint64_t x;
-	drle_t *pattern;
-} spm_row_elem_t;
+	DeltaRLE *pattern;
+
+	SpmRowElem(void) : x(0), pattern(NULL) {
+		;
+	}
+	SpmRowElem(uint64_t x_) : x(x_), pattern(NULL) {
+		;
+	}
+	SpmRowElem(uint64_t x_, DeltaRLE *pattern_) : x(x_), pattern(pattern_) {
+		;
+	}
+	SpmRowElem(const SpmRowElem &o){
+		DeltaRLE *p;
+		//std::cout << __PRETTY_FUNCTION__ << " " << &o << "==>" << this << "\n";
+		x = o.x;
+		if ((p = o.pattern) != NULL){
+			// make a copy, so we don't fsck up when o's destructor is called
+			pattern = new DeltaRLE(*p);
+			//std::cout << "NEW " << pattern << " @SpmRowElem(const SpmRowElem &)"  << "\n";
+			//print_trace();
+		} else {
+			pattern = NULL;
+		}
+	}
+	~SpmRowElem(){
+		if (pattern != NULL){
+			//std::cout << "DEL " << pattern << " @~SpmRowElem (" << this << ")\n";
+			delete pattern;
+		}
+	}
+	// TODO: Overload = operator, so that it makes also a copy of drle
+};
 
 static inline bool elem_cmp_less(const spm_coo_elem_t &e0,
                                    const spm_coo_elem_t &e1)
@@ -63,10 +160,9 @@ static inline bool elem_cmp_less(const spm_coo_elem_t &e0,
 typedef std::vector<point_t> SpmPoints;
 typedef std::iterator<std::forward_iterator_tag, point_t> SpmPointIter;
 typedef std::vector<spm_coo_elem_t> SpmCooElems;
-typedef std::vector<spm_row_elem_t> SpmRowElems;
+typedef std::vector<SpmRowElem> SpmRowElems;
 typedef std::vector<SpmRowElems> SpmRows;
 
-typedef enum {NONE=0, HORIZ, VERTICAL, DIAGONAL, REV_DIAGONAL} SpmIdxType;
 typedef boost::function<void (point_t &p)> TransformFn;
 
 // mappings for vertical transformation
@@ -145,11 +241,7 @@ public:
 	template <typename IterT>
 	void SetRows(IterT pnts_start, IterT pnts_end);
 
-	inline TransformFn getTransformFn(SpmIdxType type);
-	inline TransformFn getRTransformFn(SpmIdxType type);
-	void Transform(SpmIdxType type);
-
-	// iterators that return a point_t item
+	// iterators that return a spm_coo_elem_t
 	class PointIter;
 	PointIter points_begin();
 	PointIter points_end();
@@ -159,28 +251,16 @@ public:
 	PointPoper points_pop_begin();
 	PointPoper points_pop_end();
 
-	#if 0
-	void DeltaRLEncode(int limit=4, SpmIdxElems dstelems=elems);
-	void Sort() {sort(elems.begin(), elems.end(), elem_cmp_larger);};
-	void genStats();
+	// functions for data transformations into different coordinates
+	inline TransformFn getTransformFn(SpmIdxType type);
+	inline TransformFn getRTransformFn(SpmIdxType type);
+	void Transform(SpmIdxType type);
 
-	void XFormV() {
-		FOREACH(spm_coo_elem_t &e, this->elems){
-			pnt_map_V(e.point, e.point);
-		}
-	};
-	void XFormD() {
-		FOREACH(spm_coo_elem_t &e, this->elems){
-			pnt_map_D(e.point, e.point, nrows);
-		}
-	};
-	void XFormRD() {
-		FOREACH(spm_coo_elem_t &e, this->elems){
-			pnt_map_rD(e.point, e.point, nrows);
-		}
-	};
-	#endif
-
+	//
+	static const long min_limit = 4;
+	void DRLEncode();
+	void DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow);
+	void doDRLEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
 };
 
 
@@ -260,7 +340,7 @@ public:
 		elm_idx++;
 		assert(elm_idx <= row_elems_nr);
 		if (elm_idx < row_elems_nr){
-			return ;
+			return;
 		}
 
 		// remove all elements from previous row
@@ -290,6 +370,41 @@ std::ostream &operator<<(std::ostream &out, point_t p)
 	return out;
 }
 
+std::ostream &operator<<(std::ostream &out, DeltaRLE &pattern)
+{
+	out << "drle: size=" << pattern.size << " len=" << pattern.drle_len << " type=" << pattern.type;
+	return out;
+}
+
+
+std::ostream &operator<<(std::ostream  &out, SpmRowElem &elem)
+{
+	out << elem.x;
+	if (elem.pattern){
+		out << " (" << *(elem.pattern)  << " " << elem.pattern << ")";
+	}
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, SpmRowElems &elems)
+{
+	out << "row( ";
+	FOREACH(SpmRowElem &elem, elems){
+		out << elem << " [@" << &elem << "]  ";
+	}
+	out << ") @" << &elems ;
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, SpmRows &rows)
+{
+	FOREACH(SpmRowElems &row, rows){
+		out << row << std::endl;
+	}
+	return out;
+}
+
+
 std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
 {
 	out << "<" << std::setw(2) << pi.row_idx << "," << std::setw(2) << pi.elm_idx << ">";
@@ -316,19 +431,17 @@ SpmIdx::PointPoper SpmIdx::points_pop_end()
 	return PointPoper(nrows, 0, this);
 }
 
-static inline spm_row_elem_t mk_row_elem(const point_t &p)
+static inline void mk_row_elem(const point_t &p, SpmRowElem &ret)
 {
-	static spm_row_elem_t ret;
 	ret.x = p.x;
 	ret.pattern = NULL;
-	return ret;
 }
 
-static inline spm_row_elem_t mk_row_elem(const spm_coo_elem_t &p)
+static inline SpmRowElem mk_row_elem(const spm_coo_elem_t &p)
 {
-	static spm_row_elem_t ret;
+	static SpmRowElem ret;
 	ret.x = p.x;
-	ret.pattern = p.pattern;
+	ret.pattern = new DeltaRLE(*(p.pattern));
 	return ret;
 }
 
@@ -336,8 +449,8 @@ template <typename IterT>
 void SpmIdx::SetRows(IterT pnts_start, IterT pnts_end)
 {
 	SpmRowElems *row_elems;
-	spm_row_elem_t elem;
 	uint64_t row_prev;
+	//std::cout << "SetRows\n";
 
 	//this->rows.resize(this->nrows);
 	this->rows.resize(1);
@@ -348,16 +461,22 @@ void SpmIdx::SetRows(IterT pnts_start, IterT pnts_end)
 	IterT point;
 	for (point = pnts_start; point < pnts_end; ++point){
 		uint64_t row = point->y;
+		long size;
+
 		if (row != row_prev){
 			assert(row > this->rows.size());
 			this->rows.resize(row);
 			row_elems = &this->rows.at(row - 1);
+			row_elems->reserve(4);
 			row_prev = row;
 		}
-		elem = mk_row_elem(*point);
-		row_elems->push_back(elem);
+		size = row_elems->size();
+		row_elems->resize(size+1);
+		mk_row_elem(*point, (*row_elems)[size]);
 	}
+	//std::cout << "SetRows [end]\n";
 }
+
 
 void SpmIdx::loadMMF(std::istream &in)
 {
@@ -474,6 +593,82 @@ void SpmIdx::Transform(SpmIdxType t)
 	SetRows(elems.begin(), elems.end());
 	elems.clear();
 	this->type = t;
+}
+
+void SpmIdx::doDRLEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow)
+{
+	std::vector< RLE<uint64_t> > rles;
+	SpmRowElem elem;
+	//std::cout << "doDRLEncode() start\n";
+
+	rles = RLEncode(DeltaEncode(xs));
+	elem.pattern = NULL; // Default inserter (for push_back copies)
+	FOREACH(RLE<uint64_t> &rle, rles){
+		//std::cout << "newrow size " << newrow.size() << "\n";
+		if (rle.freq >= min_limit){
+			SpmRowElem *last_elem;
+
+			elem.x = col;
+			newrow.push_back(elem);
+			last_elem = &newrow.back();
+			last_elem->pattern = new DeltaRLE(rle.freq, rle.val, this->type);
+			last_elem = NULL;
+			col += (rle.val*rle.freq);
+		} else {
+			for (int i=0; i < rle.freq; i++){
+				elem.x = col;
+				newrow.push_back(elem);
+				col += rle.val;
+			}
+		}
+	}
+
+	//std::cout << "doDRLEncode() end\n";
+}
+
+void SpmIdx::DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow)
+{
+	std::vector<uint64_t> xs;
+	uint64_t col;
+
+	//std::cout << "DRLEncodeRow() start\n";
+	col = 0;
+	FOREACH(SpmRowElem &e, oldrow){
+		//std::cout << "drlencode: " << e.x << "\n";
+		if (e.pattern == NULL){
+			xs.push_back(e.x);
+			continue;
+		}
+		if (xs.size() != 0){
+			doDRLEncode(col, xs, newrow);
+			xs.clear();
+		}
+		class DeltaRLE *p = e.pattern;
+		col += (p->type == this->type) ? (p->size*p->drle_len) : 1;
+		newrow.push_back(e);
+	}
+	if (xs.size() != 0){
+		doDRLEncode(col, xs, newrow);
+		xs.clear();
+	}
+	//std::cout << "DRLEncodeRow() end\n";
+}
+
+void SpmIdx::DRLEncode()
+{
+	FOREACH(SpmRowElems &oldrow, this->rows){
+		SpmRowElems newrow;
+		long newrow_size;
+		// create new row
+		DRLEncodeRow(oldrow, newrow);
+		// copy data
+		newrow_size = newrow.size();
+		oldrow.clear();
+		oldrow.reserve(newrow_size);
+		for (long i=0; i < newrow_size; i++){
+			oldrow.push_back(newrow[i]);
+		}
+	}
 }
 
 #if 0
@@ -610,12 +805,42 @@ void SpmIdx::Print(std::ostream &out)
 	out << std::endl;
 }
 
+void test_drle()
+{
+	std::vector<int> v_in, delta;
+	std::vector< RLE<int> > drle;
+
+	v_in.resize(16);
+	for (int i=0; i<16; i++){
+		v_in[i] = i;
+	}
+	FOREACH(int &v, v_in){
+		std::cout << v << " ";
+	}
+	std::cout << std::endl;
+
+	delta = DeltaEncode(v_in);
+	FOREACH(int &v, delta){
+		std::cout << v << " ";
+	}
+	std::cout << std::endl;
+
+	drle = RLEncode(delta);
+	FOREACH(RLE<int> &v, drle){
+		std::cout << "(" << v.val << "," << v.freq << ") ";
+	}
+	std::cout << std::endl;
+}
+
 int main(int argc, char **argv)
 {
 	SpmIdx obj;
 	obj.loadMMF();
-	obj.Transform(DIAGONAL);
-
+	//obj.DRLEncode();
+	//obj.Transform(DIAGONAL);
 	//obj.Print();
+	std::cout << obj.rows;
+	//obj.DRLEncode();
+	//std::cout << obj.rows;
 	//obj.Print();
 }
