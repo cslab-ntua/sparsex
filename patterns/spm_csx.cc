@@ -465,7 +465,7 @@ static inline void mk_row_elem(const point_t &p, SpmRowElem &ret)
 static inline void mk_row_elem(const SpmCooElem &p, SpmRowElem &ret)
 {
 	ret.x = p.x;
-	ret.pattern = new DeltaRLE(*(p.pattern));
+	ret.pattern = (p.pattern == NULL) ? NULL : new DeltaRLE(*(p.pattern));
 }
 
 template <typename IterT>
