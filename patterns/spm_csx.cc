@@ -12,6 +12,9 @@
 #include <boost/lambda/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 
+#include <cairomm/context.h>
+#include <cairomm/surface.h>
+
 #include "../../debug/debug_user.h"
 
 namespace bll = boost::lambda;
@@ -275,6 +278,9 @@ public:
 	void DRLEncode();
 	void DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow);
 	void doDRLEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
+
+	//
+	void Draw(const char *filename, const int width=600, const int height=600);
 };
 
 class SpmIdx::PointIter
@@ -683,6 +689,57 @@ void SpmIdx::DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow)
 		xs.clear();
 	}
 	//std::cout << "DRLEncodeRow() end\n";
+}
+
+void SpmIdx::Draw(const char *filename, const int width, const int height)
+{
+	//Cairo::RefPtr<Cairo::PdfSurface> surface;
+	Cairo::RefPtr<Cairo::ImageSurface> surface;
+	Cairo::RefPtr<Cairo::Context> cr;
+	SpmIdx::PointIter p, p_start, p_end;
+	double max_cols, max_rows;
+
+	//surface = Cairo::PdfSurface::create(filename, width, height);
+	surface = Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, width, height);
+	cr = Cairo::Context::create(surface);
+
+	// background
+	cr->save();
+	cr->set_source_rgb(1, 1, 1);
+	cr->paint();
+	cr->restore();
+
+	#if 0
+	// Ugly!
+	max_cols = 0;
+	FOREACH(SpmRowElems &elems, this->rows){
+		double cols_nr = (double)(elems[elems.size()].x);
+		if (cols_nr > max_cols)
+			max_cols = cols_nr;
+	}
+	#endif
+	max_rows = (double)this->rows.size();
+	max_cols = this->ncols;
+
+	p_start = this->points_begin();
+	p_end = this->points_end();
+	for (p = p_start; p != p_end; ++p){
+		double x_pos;
+		double y_pos;
+		x_pos = ((*p).x - .5)*((double)width)/max_cols;
+		y_pos = ((*p).y - .5)*((double)height)/max_rows;
+		//std::cout << y_pos << " " << x_pos << "\n";
+		if ((*p).pattern == NULL){
+			cr->move_to(x_pos, y_pos);
+			cr->show_text("x");
+			//cr->restore();
+		} else {
+			;
+		}
+		cr->stroke();
+	}
+	//cr->show_page();
+	surface->write_to_png(filename);
 }
 
 void SpmIdx::DRLEncode()
