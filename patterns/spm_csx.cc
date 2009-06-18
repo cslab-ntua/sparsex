@@ -597,11 +597,16 @@ void SpmIdx::Transform(SpmIdxType t)
 		return;
 
 	// Get the transformation function
-	// (if needed transform it first to horiz)
-	xform_fn = getTransformFn(t);
 	rxform_fn = getRTransformFn(this->type);
-	if (rxform_fn != NULL){
-		xform_fn = bll::bind(xform_fn, (bll::bind(rxform_fn, bll::_1), bll::_1));
+	if (t == HORIZONTAL) {
+		// just do the reverse transformation
+		xform_fn = rxform_fn;
+	} else {
+		xform_fn = getTransformFn(t);
+		if (rxform_fn != NULL){
+			// do a double xform: this->type -> HORIZONTAL -> t
+			xform_fn = bll::bind(xform_fn, (bll::bind(rxform_fn, bll::_1), bll::_1));
+		}
 	}
 
 	p0 = points_pop_begin();
