@@ -434,7 +434,7 @@ SpmIdx::PointIter SpmIdx::points_begin()
 
 SpmIdx::PointIter SpmIdx::points_end()
 {
-	return PointIter(nrows, 0, this);
+	return PointIter(this->rows.size(), 0, this);
 }
 
 SpmIdx::PointPoper SpmIdx::points_pop_begin()
@@ -444,7 +444,7 @@ SpmIdx::PointPoper SpmIdx::points_pop_begin()
 
 SpmIdx::PointPoper SpmIdx::points_pop_end()
 {
-	return PointPoper(nrows, 0, this);
+	return PointPoper(this->rows.size(), 0, this);
 }
 
 static inline bool elem_cmp_less(const SpmCooElem &e0,
