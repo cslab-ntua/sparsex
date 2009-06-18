@@ -10,6 +10,7 @@
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lambda/bind.hpp>
+#include <boost/lambda/lambda.hpp>
 
 #include "../../debug/debug_user.h"
 
