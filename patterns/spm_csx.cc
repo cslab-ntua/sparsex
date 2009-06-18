@@ -95,7 +95,7 @@ static inline int point_cmp_fn(const point_t &p0, const point_t &p1)
 	}
 }
 
-typedef enum {NONE=0, HORIZ, VERTICAL, DIAGONAL, REV_DIAGONAL} SpmIdxType;
+typedef enum {NONE=0, HORIZONTAL, VERTICAL, DIAGONAL, REV_DIAGONAL} SpmIdxType;
 
 class DeltaRLE {
 public:
@@ -520,7 +520,7 @@ void SpmIdx::loadMMF(std::istream &in)
 	}
 
 	// body
-	type = HORIZ;
+	type = HORIZONTAL;
 	points.resize(this->nnz);
 	point = &points[0];
 	for (cnt=0; cnt<this->nnz; cnt++){
@@ -541,7 +541,7 @@ inline TransformFn SpmIdx::getRTransformFn(SpmIdxType type)
 	boost::function<void (point_t &p)> ret;
 	ret = NULL;
 	switch(type) {
-		case HORIZ:
+		case HORIZONTAL:
 		break;
 
 		case VERTICAL:
