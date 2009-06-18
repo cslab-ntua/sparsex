@@ -173,6 +173,12 @@ typedef std::vector<SpmRowElems> SpmRows;
 
 typedef boost::function<void (point_t &p)> TransformFn;
 
+std::ostream &operator<<(std::ostream &out, point_t p)
+{
+	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
+	return out;
+}
+
 // mappings for vertical transformation
 static inline void pnt_map_V(point_t &src, point_t &dst)
 {
@@ -375,12 +381,6 @@ std::istream &operator>>(std::istream &in, SpmIdx &obj)
 std::ostream &operator<<(std::ostream &out, DeltaRLE &pattern)
 {
 	out << "drle: size=" << pattern.size << " len=" << pattern.drle_len << " type=" << pattern.type;
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, point_t p)
-{
-	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
 	return out;
 }
 
