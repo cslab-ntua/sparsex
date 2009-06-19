@@ -283,6 +283,50 @@ public:
 	void Draw(const char *filename, const int width=600, const int height=600);
 };
 
+std::ostream &operator<<(std::ostream &out, DeltaRLE &pattern)
+{
+	out << "drle: size=" << pattern.size << " len=" << pattern.drle_len << " type=" << pattern.type;
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, SpmCooElem e)
+{
+	out << static_cast<point_t>(e);
+	if (e.pattern != NULL)
+			out << "->[" << *(e.pattern) << "]";
+	return out;
+}
+
+
+
+std::ostream &operator<<(std::ostream  &out, SpmRowElem &elem)
+{
+	out << elem.x;
+	if (elem.pattern){
+		out << " (" << *(elem.pattern)  << " " << elem.pattern << ")";
+	}
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, SpmRowElems &elems)
+{
+	out << "row( ";
+	FOREACH(SpmRowElem &elem, elems){
+		out << elem << " [@" << &elem << "]  ";
+	}
+	out << ") @" << &elems ;
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, SpmRows &rows)
+{
+	FOREACH(SpmRowElems &row, rows){
+		out << row << std::endl;
+	}
+	return out;
+}
+
+
 class SpmIdx::PointIter
 : public std::iterator<std::forward_iterator_tag, point_t>
 {
@@ -374,6 +418,13 @@ public:
 };
 
 
+std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
+{
+	out << "<" << std::setw(2) << pi.row_idx << "," << std::setw(2) << pi.elm_idx << ">";
+	return out;
+}
+
+
 } // end of csx namespace
 
 using namespace csx;
@@ -384,55 +435,6 @@ std::istream &operator>>(std::istream &in, SpmIdx &obj)
 	return in;
 }
 
-std::ostream &operator<<(std::ostream &out, DeltaRLE &pattern)
-{
-	out << "drle: size=" << pattern.size << " len=" << pattern.drle_len << " type=" << pattern.type;
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, SpmCooElem e)
-{
-	out << static_cast<point_t>(e);
-	if (e.pattern != NULL)
-			out << "->[" << *(e.pattern) << "]";
-	return out;
-}
-
-
-
-std::ostream &operator<<(std::ostream  &out, SpmRowElem &elem)
-{
-	out << elem.x;
-	if (elem.pattern){
-		out << " (" << *(elem.pattern)  << " " << elem.pattern << ")";
-	}
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, SpmRowElems &elems)
-{
-	out << "row( ";
-	FOREACH(SpmRowElem &elem, elems){
-		out << elem << " [@" << &elem << "]  ";
-	}
-	out << ") @" << &elems ;
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, SpmRows &rows)
-{
-	FOREACH(SpmRowElems &row, rows){
-		out << row << std::endl;
-	}
-	return out;
-}
-
-
-std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
-{
-	out << "<" << std::setw(2) << pi.row_idx << "," << std::setw(2) << pi.elm_idx << ">";
-	return out;
-}
 
 SpmIdx::PointIter SpmIdx::points_begin()
 {
