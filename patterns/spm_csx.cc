@@ -1,4 +1,5 @@
 #include "spm.h"
+#include "drle.h"
 
 #include <vector>
 #include <iterator>
@@ -79,31 +80,6 @@ RLEncode(T input)
 	output.push_back(rle);
 	return output;
 }
-
-class DeltaRLE : public Pattern {
-public:
-	uint32_t size, drle_len;
-	SpmIterOrder type;
-
-	DeltaRLE(uint32_t _size, uint32_t _drle_len, SpmIterOrder _type):
-	size(_size), drle_len(_drle_len), type(_type) { ; }
-	virtual DeltaRLE *clone() const
-	{
-		return new DeltaRLE(*this);
-	}
-	virtual long x_increase(SpmIterOrder order) const
-	{
-		long ret;
-		ret = (order == this->type) ? (this->size*this->drle_len) : 1;
-		return ret;
-	}
-
-	virtual std::ostream &print_on(std::ostream &out) const
-	{
-		out << "drle: size=" << this->size << " len=" << this->drle_len << " type=" << this->type;
-		return out;
-	}
-};
 
 typedef std::vector<CooElem> SpmPoints;
 typedef std::iterator<std::forward_iterator_tag, CooElem> SpmPointIter;
@@ -205,9 +181,10 @@ public:
 	PointPoper points_pop_begin();
 	PointPoper points_pop_end();
 
-	// functions for data transformations into different coordinates
-	inline TransformFn getTransformFn(SpmIterOrder type);
-	inline TransformFn getRTransformFn(SpmIterOrder type);
+	// Transofrmation Functions
+	TransformFn getRevXformFn(SpmIterOrder type);
+	TransformFn getXformFn(SpmIterOrder type);
+	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
 	void Transform(SpmIterOrder type);
 
 	//
@@ -228,13 +205,11 @@ std::ostream &operator<<(std::ostream &out, SpmCooElem e)
 	return out;
 }
 
-
-
 std::ostream &operator<<(std::ostream  &out, SpmRowElem &elem)
 {
 	out << elem.x;
 	if (elem.pattern){
-		out << " (" << *(elem.pattern)  << " " << elem.pattern << ")";
+		out << *(elem.pattern);
 	}
 	return out;
 }
@@ -476,10 +451,9 @@ void SpmIdx::loadMMF(std::istream &in)
 	points.clear();
 }
 
-inline TransformFn SpmIdx::getRTransformFn(SpmIterOrder type)
+inline TransformFn SpmIdx::getRevXformFn(SpmIterOrder type)
 {
 	boost::function<void (CooElem &p)> ret;
-	ret = NULL;
 	switch(type) {
 		case HORIZONTAL:
 		break;
@@ -502,10 +476,9 @@ inline TransformFn SpmIdx::getRTransformFn(SpmIterOrder type)
 	return ret;
 }
 
-inline TransformFn SpmIdx::getTransformFn(SpmIterOrder type)
+inline TransformFn SpmIdx::getXformFn(SpmIterOrder type)
 {
 	boost::function<void (CooElem &p)> ret;
-	ret = NULL;
 	switch(type) {
 		case VERTICAL:
 		ret = bll::bind(pnt_map_V, bll::_1, bll::_1);
@@ -519,34 +492,43 @@ inline TransformFn SpmIdx::getTransformFn(SpmIterOrder type)
 		ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->nrows);
 		break;
 
+		case HORIZONTAL:
+		ret = NULL;
+
 		default:
 		assert(false);
 	}
 	return ret;
 }
 
+inline TransformFn SpmIdx::getTransformFn(SpmIterOrder from_type, SpmIterOrder to_type)
+{
+	boost::function<void (CooElem &p)> xform_fn, rxform_fn;
+
+	rxform_fn = getRevXformFn(from_type);
+	xform_fn = getXformFn(to_type);
+	if (xform_fn == NULL){
+		// to_type is the default type. Just use the rxform_fn
+		return rxform_fn;
+	}
+	if (rxform_fn != NULL){
+		// do a double xform: this->type -> HORIZONTAL -> t
+		xform_fn = bll::bind(xform_fn, (bll::bind(rxform_fn, bll::_1), bll::_1));
+	}
+	return xform_fn;
+}
+
 void SpmIdx::Transform(SpmIterOrder t)
 {
 	PointPoper p0, pe, p;
 	SpmCooElems elems;
-	boost::function<void (CooElem &p)> xform_fn, rxform_fn;
+	boost::function<void (CooElem &p)> xform_fn;
 	uint64_t cnt;
 
 	if (this->type == t)
 		return;
 
-	// Get the transformation function
-	rxform_fn = getRTransformFn(this->type);
-	if (t == HORIZONTAL) {
-		// just do the reverse transformation
-		xform_fn = rxform_fn;
-	} else {
-		xform_fn = getTransformFn(t);
-		if (rxform_fn != NULL){
-			// do a double xform: this->type -> HORIZONTAL -> t
-			xform_fn = bll::bind(xform_fn, (bll::bind(rxform_fn, bll::_1), bll::_1));
-		}
-	}
+	xform_fn = this->getTransformFn(this->type, t);
 
 	p0 = points_pop_begin();
 	pe = points_pop_end();
@@ -555,8 +537,7 @@ void SpmIdx::Transform(SpmIterOrder t)
 		xform_fn(p_new);
 		elems.push_back(p_new);
 	}
-	// This isn't necessary true, since one may meet patterns
-	//assert(cnt == this->nnz);
+
 
 	sort(elems.begin(), elems.end(), elem_cmp_less);
 	SetRows(elems.begin(), elems.end());
@@ -742,11 +723,6 @@ void SpmIdx::PrintRows(std::ostream &out)
 void SpmIdx::genStats()
 {
 }
-
-void SpmIdx::DeltaRLEncode(int limit, SpmIdxElems dstelems)
-{
-}
-
 void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn, std::ostream &out)
 {
 	uint64_t i,j;
@@ -886,12 +862,14 @@ int main(int argc, char **argv)
 	SpmIdx obj;
 	obj.loadMMF();
 	obj.DRLEncode();
-	std::cout << obj.rows;
-	std::cout << "\n";
-	obj.Transform(VERTICAL);
-	std::cout << obj.rows;
+	obj.Print();
+	//std::cout << obj.rows;
+	//obj.Print();
+	//obj.Draw("1.png");
+	//std::cout << "\n";
+	//obj.Transform(VERTICAL);
+	//std::cout << obj.rows;
 	//obj.Print();
 	//obj.DRLEncode();
 	//std::cout << obj.rows;
-	//obj.Print();
 }

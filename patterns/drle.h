@@ -1,37 +1,61 @@
-#ifndef __SPM_PATTERNS
-#define __SPM_PATTERNS
+#ifndef CSX_DRLE_H__
+#define CSX_DRLE_H__
 
-#include <inttypes.h>
+#include "spm.h"
 
-typedef struct {
-	uint64_t x,y;
-} point_t;
+#include <cassert>
 
-typedef struct {
-	point_t  p0;
-	uint32_t size;
-	uint32_t drle_len;
-	enum {DRLE_H=1, DRLE_V, DRLE_D, DRLE_RD} type;
-} drle_t;
+namespace csx {
 
-typedef enum {
-	ELEM_SINGLE = 1,
-	ELEM_DRLE
-} spm_elem_type_t;
+class DeltaRLE : public Pattern {
+public:
+	uint32_t size, drle_len;
 
-typedef struct {
-	spm_elem_type_t type;
-	union {
-		point_t point;   /* ELEM_SIGNLE */
-		drle_t *pattern; /* ELEM_DRLE */
-	};
-} spm_elem_t;
+	DeltaRLE(uint32_t _size, uint32_t _drle_len, SpmIterOrder _type):
+	size(_size), drle_len(_drle_len){ ; }
+	virtual DeltaRLE *clone() const
+	{
+		return new DeltaRLE(*this);
+	}
+	virtual long x_increase(SpmIterOrder order) const
+	{
+		long ret;
+		ret = (order == this->type) ? (this->size*this->drle_len) : 1;
+		return ret;
+	}
 
-typedef struct {
-	uint64_t nrows, ncols, nnz;
-	enum {HORIZONTAL=1, VERTICAL, DIAGONAL, RDIAGONAL} type;
-	uint64_t elems_nr;
-	spm_elem_t *elems;
-} spm_t;
+	virtual std::ostream &print_on(std::ostream &out) const
+	{
+		out << "drle: size=" << this->size << " len=" << this->drle_len << " type=" << this->type;
+		return out;
+	}
 
-#endif /* __SPM_PATTERNS */
+	class Generator;
+	Generator generator(CooElem start);
+};
+
+class DeltaRLE::Generator : public Pattern::Generator
+{
+	CooElem start;
+	DeltaRLE *rle;
+	long nr;
+
+public:
+	Generator(CooElem start_, DeltaRLE *rle_)
+	: start(start_), rle(rle_), nr(0) { }
+
+	virtual bool isEmpty() const {
+		return (this->nr == this->rle->size);
+	}
+	virtual CooElem next() {
+		CooElem ret(start);
+		assert(this->nr <= this->rle->size);
+		ret.x += (this->nr)*(this->rle->drle_len);
+		this->nr += 1;
+		return ret;
+	}
+};
+
+} // end of csx namespace
+
+#endif /* CSX_DRLE_H__ */
