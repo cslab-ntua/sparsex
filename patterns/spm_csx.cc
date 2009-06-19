@@ -1,3 +1,5 @@
+#include "spm.h"
+
 #include <vector>
 #include <iterator>
 #include <algorithm>
@@ -78,124 +80,59 @@ RLEncode(T input)
 	return output;
 }
 
-
-typedef struct {
-	uint64_t x, y;
-} point_t;
-
-static inline int point_cmp_fn(const point_t &p0, const point_t &p1)
-{
-	int64_t ret;
-	ret = p0.y - p1.y;
-	if (ret == 0){
-		ret = p0.x - p1.x;
-	}
-	if (ret > 0){
-		return 1;
-	} else if (ret < 0){
-		return -1;
-	} else {
-		return 0;
-	}
-}
-
-typedef enum {NONE=0, HORIZONTAL, VERTICAL, DIAGONAL, REV_DIAGONAL} SpmIdxType;
-
-class DeltaRLE {
+class DeltaRLE : public Pattern {
 public:
 	uint32_t size, drle_len;
-	SpmIdxType type;
+	SpmIterOrder type;
 
-	DeltaRLE(uint32_t _size, uint32_t _drle_len, SpmIdxType _type):
+	DeltaRLE(uint32_t _size, uint32_t _drle_len, SpmIterOrder _type):
 	size(_size), drle_len(_drle_len), type(_type) { ; }
-
-};
-
-
-class SpmCooElem: public point_t {
-public:
-	DeltaRLE *pattern;
-	SpmCooElem(void) : pattern(NULL) { this->x = 0; this->y = 0; }
-	SpmCooElem(const SpmCooElem &o){
-		this->x = o.x;
-		this->y = o.y;
-		// make a copy, so we don't fsck up when o's destructor is called
-		DeltaRLE *p;
-		this->pattern = ((p = o.pattern) == NULL) ? NULL : new DeltaRLE(*p);
+	virtual DeltaRLE *clone() const
+	{
+		return new DeltaRLE(*this);
 	}
-	~SpmCooElem(){
-		if (pattern != NULL){
-			delete pattern;
-		}
+	virtual long x_increase(SpmIterOrder order) const
+	{
+		long ret;
+		ret = (order == this->type) ? (this->size*this->drle_len) : 1;
+		return ret;
 	}
-	// TODO: Overload = operator, so that it makes a copy of drle
-	SpmCooElem& operator=(const SpmCooElem& o){
-		if (this == &o){
-			return *this;
-		}
-		this->x = o.x;
-		this->y = o.y;
-		if (this->pattern != NULL){
-			delete this->pattern;
-		}
-		// make a copy, so we don't fsck up when o's destructor is called
-		DeltaRLE *p;
-		this->pattern = ((p = o.pattern) == NULL) ? NULL : new DeltaRLE(*p);
-		return *this;
+
+	virtual std::ostream &print_on(std::ostream &out) const
+	{
+		out << "drle: size=" << this->size << " len=" << this->drle_len << " type=" << this->type;
+		return out;
 	}
 };
 
-class SpmRowElem {
-public:
-	uint64_t x;
-	DeltaRLE *pattern;
-
-	SpmRowElem(void) : x(0), pattern(NULL) {
-		;
-	}
-	SpmRowElem(const SpmRowElem &o){
-		this->x = o.x;
-		// make a copy, so we don't fsck up when o's destructor is called
-		DeltaRLE *p;
-		this->pattern = ((p = o.pattern) == NULL) ? NULL : new DeltaRLE(*p);
-	}
-	~SpmRowElem(){
-		if (pattern != NULL){
-			//std::cout << "DEL " << pattern << " @~SpmRowElem (" << this << ")\n";
-			delete pattern;
-		}
-	}
-	// TODO: Overload = operator, so that it makes a copy of drle
-};
-
-typedef std::vector<point_t> SpmPoints;
-typedef std::iterator<std::forward_iterator_tag, point_t> SpmPointIter;
+typedef std::vector<CooElem> SpmPoints;
+typedef std::iterator<std::forward_iterator_tag, CooElem> SpmPointIter;
 typedef std::vector<SpmCooElem> SpmCooElems;
 typedef std::vector<SpmRowElem> SpmRowElems;
 typedef std::vector<SpmRowElems> SpmRows;
 
-typedef boost::function<void (point_t &p)> TransformFn;
+typedef boost::function<void (CooElem &p)> TransformFn;
 
-std::ostream &operator<<(std::ostream &out, point_t p)
+std::ostream &operator<<(std::ostream &out, CooElem p)
 {
 	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
 	return out;
 }
 
 // mappings for vertical transformation
-static inline void pnt_map_V(point_t &src, point_t &dst)
+static inline void pnt_map_V(CooElem &src, CooElem &dst)
 {
 	uint64_t src_x = src.x;
 	uint64_t src_y = src.y;
 	dst.x = src_y;
 	dst.y = src_x;
 }
-static inline void pnt_rmap_V(point_t &src, point_t &dst)
+static inline void pnt_rmap_V(CooElem &src, CooElem &dst)
 {
 	pnt_map_V(src, dst);
 }
 
-static inline void pnt_map_D(const point_t &src, point_t &dst, uint64_t nrows)
+static inline void pnt_map_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
 	uint64_t src_x = src.x;
 	uint64_t src_y = src.y;
@@ -203,7 +140,7 @@ static inline void pnt_map_D(const point_t &src, point_t &dst, uint64_t nrows)
 	dst.y = nrows + src_x - src_y;
 	dst.x = (src_x < src_y) ? src_x : src_y;
 }
-static inline void pnt_rmap_D(const point_t &src, point_t &dst, uint64_t nrows)
+static inline void pnt_rmap_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
 	uint64_t src_x = src.x;
 	uint64_t src_y = src.y;
@@ -216,7 +153,7 @@ static inline void pnt_rmap_D(const point_t &src, point_t &dst, uint64_t nrows)
 	}
 }
 
-static inline void pnt_map_rD(const point_t &src, point_t &dst, uint64_t nrows)
+static inline void pnt_map_rD(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
 	uint64_t src_x = src.x;
 	uint64_t src_y = src.y;
@@ -225,7 +162,7 @@ static inline void pnt_map_rD(const point_t &src, point_t &dst, uint64_t nrows)
 	dst.x = (dst_y <= nrows) ? src_x : src_x + nrows - dst_y;
 }
 
-static inline void pnt_rmap_rD(const point_t &src, point_t &dst, uint64_t nrows)
+static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
 	uint64_t src_x = src.x;
 	uint64_t src_y = src.y;
@@ -241,7 +178,7 @@ static inline void pnt_rmap_rD(const point_t &src, point_t &dst, uint64_t nrows)
 class SpmIdx {
 public:
 	uint64_t nrows, ncols, nnz;
-	SpmIdxType type;
+	SpmIterOrder type;
 	SpmRows rows;
 
 	SpmIdx() {type = NONE;};
@@ -269,9 +206,9 @@ public:
 	PointPoper points_pop_end();
 
 	// functions for data transformations into different coordinates
-	inline TransformFn getTransformFn(SpmIdxType type);
-	inline TransformFn getRTransformFn(SpmIdxType type);
-	void Transform(SpmIdxType type);
+	inline TransformFn getTransformFn(SpmIterOrder type);
+	inline TransformFn getRTransformFn(SpmIterOrder type);
+	void Transform(SpmIterOrder type);
 
 	//
 	static const long min_limit = 4;
@@ -283,15 +220,9 @@ public:
 	void Draw(const char *filename, const int width=600, const int height=600);
 };
 
-std::ostream &operator<<(std::ostream &out, DeltaRLE &pattern)
-{
-	out << "drle: size=" << pattern.size << " len=" << pattern.drle_len << " type=" << pattern.type;
-	return out;
-}
-
 std::ostream &operator<<(std::ostream &out, SpmCooElem e)
 {
-	out << static_cast<point_t>(e);
+	out << static_cast<CooElem>(e);
 	if (e.pattern != NULL)
 			out << "->[" << *(e.pattern) << "]";
 	return out;
@@ -328,7 +259,7 @@ std::ostream &operator<<(std::ostream &out, SpmRows &rows)
 
 
 class SpmIdx::PointIter
-: public std::iterator<std::forward_iterator_tag, point_t>
+: public std::iterator<std::forward_iterator_tag, CooElem>
 {
 public:
 	uint64_t row_idx;
@@ -379,8 +310,8 @@ public:
 		SpmCooElem ret;
 		ret.y = row_idx + 1;
 		ret.x = spm->rows[row_idx][elm_idx].x;
-		DeltaRLE *p = spm->rows[row_idx][elm_idx].pattern;
-		ret.pattern = (p == NULL) ? NULL : new DeltaRLE(*p);
+		Pattern *p = spm->rows[row_idx][elm_idx].pattern;
+		ret.pattern = (p == NULL) ? NULL : p->clone();
 		return ret;
 	}
 };
@@ -460,12 +391,12 @@ static inline bool elem_cmp_less(const SpmCooElem &e0,
                                  const SpmCooElem &e1)
 {
 	int ret;
-	ret = point_cmp_fn(static_cast<point_t>(e0), static_cast<point_t>(e1));
+	ret = CooCmp(static_cast<CooElem>(e0), static_cast<CooElem>(e1));
 	return (ret < 0);
 }
 
 
-static inline void mk_row_elem(const point_t &p, SpmRowElem &ret)
+static inline void mk_row_elem(const CooElem &p, SpmRowElem &ret)
 {
 	ret.x = p.x;
 	ret.pattern = NULL;
@@ -474,7 +405,7 @@ static inline void mk_row_elem(const point_t &p, SpmRowElem &ret)
 static inline void mk_row_elem(const SpmCooElem &p, SpmRowElem &ret)
 {
 	ret.x = p.x;
-	ret.pattern = (p.pattern == NULL) ? NULL : new DeltaRLE(*(p.pattern));
+	ret.pattern = (p.pattern == NULL) ? NULL : (p.pattern)->clone();
 }
 
 template <typename IterT>
@@ -515,7 +446,7 @@ void SpmIdx::loadMMF(std::istream &in)
 	double val;
 	uint64_t cnt;
 	int ret;
-	point_t *point;
+	CooElem *point;
 	SpmPoints points;
 
 	// header
@@ -545,9 +476,9 @@ void SpmIdx::loadMMF(std::istream &in)
 	points.clear();
 }
 
-inline TransformFn SpmIdx::getRTransformFn(SpmIdxType type)
+inline TransformFn SpmIdx::getRTransformFn(SpmIterOrder type)
 {
-	boost::function<void (point_t &p)> ret;
+	boost::function<void (CooElem &p)> ret;
 	ret = NULL;
 	switch(type) {
 		case HORIZONTAL:
@@ -571,9 +502,9 @@ inline TransformFn SpmIdx::getRTransformFn(SpmIdxType type)
 	return ret;
 }
 
-inline TransformFn SpmIdx::getTransformFn(SpmIdxType type)
+inline TransformFn SpmIdx::getTransformFn(SpmIterOrder type)
 {
-	boost::function<void (point_t &p)> ret;
+	boost::function<void (CooElem &p)> ret;
 	ret = NULL;
 	switch(type) {
 		case VERTICAL:
@@ -594,11 +525,11 @@ inline TransformFn SpmIdx::getTransformFn(SpmIdxType type)
 	return ret;
 }
 
-void SpmIdx::Transform(SpmIdxType t)
+void SpmIdx::Transform(SpmIterOrder t)
 {
 	PointPoper p0, pe, p;
 	SpmCooElems elems;
-	boost::function<void (point_t &p)> xform_fn, rxform_fn;
+	boost::function<void (CooElem &p)> xform_fn, rxform_fn;
 	uint64_t cnt;
 
 	if (this->type == t)
@@ -683,8 +614,7 @@ void SpmIdx::DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow)
 			doDRLEncode(col, xs, newrow);
 			xs.clear();
 		}
-		class DeltaRLE *p = e.pattern;
-		col += (p->type == this->type) ? (p->size*p->drle_len) : 1;
+		col += e.pattern->x_increase(this->type);
 		newrow.push_back(e);
 	}
 	if (xs.size() != 0){
@@ -735,7 +665,8 @@ void SpmIdx::Draw(const char *filename, const int width, const int height)
 			cr->show_text("x");
 			//cr->restore();
 		} else {
-			DeltaRLE *pattern = elem.pattern;
+			// FIXME
+			DeltaRLE *pattern = (DeltaRLE *)(elem.pattern);
 			cr->save();
 			switch (pattern->type){
 				double x, y;
