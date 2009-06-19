@@ -372,7 +372,7 @@ public:
 		do {
 			elm_idx = 0;
 			row_idx++;
-		} while (row_idx < rows_nr && spm->rows[row_idx].size() == 0);
+		} while (row_idx < spm->rows.size() && spm->rows[row_idx].size() == 0);
 	}
 
 	SpmCooElem operator*(){
@@ -643,20 +643,22 @@ void SpmIdx::doDRLEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &
 	elem.pattern = NULL; // Default inserter (for push_back copies)
 	FOREACH(RLE<uint64_t> &rle, rles){
 		//std::cout << "newrow size " << newrow.size() << "\n";
+		//std::cout << rle.freq << " " << rle.val << "\n";
 		if (rle.freq >= min_limit){
 			SpmRowElem *last_elem;
 
+			col += rle.val; // go to the first
 			elem.x = col;
 			newrow.push_back(elem);
 			last_elem = &newrow.back();
 			last_elem->pattern = new DeltaRLE(rle.freq, rle.val, this->type);
 			last_elem = NULL;
-			col += (rle.val*rle.freq);
+			col += rle.val*(rle.freq - 1);
 		} else {
 			for (int i=0; i < rle.freq; i++){
+				col += rle.val;
 				elem.x = col;
 				newrow.push_back(elem);
-				col += rle.val;
 			}
 		}
 	}
@@ -671,9 +673,8 @@ void SpmIdx::DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow)
 
 	//std::cout << "DRLEncodeRow() start\n";
 	// start indices at 1
-	col = 1;
+	col = 0;
 	FOREACH(SpmRowElem &e, oldrow){
-		//std::cout << "drlencode: " << e.x << "\n";
 		if (e.pattern == NULL){
 			xs.push_back(e.x);
 			continue;
@@ -699,7 +700,9 @@ void SpmIdx::Draw(const char *filename, const int width, const int height)
 	Cairo::RefPtr<Cairo::ImageSurface> surface;
 	Cairo::RefPtr<Cairo::Context> cr;
 	SpmIdx::PointIter p, p_start, p_end;
-	double max_cols, max_rows;
+	double max_cols, max_rows, x_pos, y_pos;
+	boost::function<double (double v, double max_coord, double max_v)> coord_fn;
+	boost::function<double (double a)> x_coord, y_coord;
 
 	//surface = Cairo::PdfSurface::create(filename, width, height);
 	surface = Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, width, height);
@@ -711,32 +714,57 @@ void SpmIdx::Draw(const char *filename, const int width, const int height)
 	cr->paint();
 	cr->restore();
 
-	#if 0
-	// Ugly!
-	max_cols = 0;
-	FOREACH(SpmRowElems &elems, this->rows){
-		double cols_nr = (double)(elems[elems.size()].x);
-		if (cols_nr > max_cols)
-			max_cols = cols_nr;
-	}
-	#endif
+	// TODO:
+	//  If not HORIZNTAL, transform and transofrm back after end
 	max_rows = (double)this->rows.size();
-	max_cols = this->ncols;
+	max_cols = (double)this->ncols;
+
+	// Lambdas for calculationg coordinates
+	coord_fn = (((bll::_1 - .5)*(bll::_2))/(bll::_3));
+	x_coord = bll::bind(coord_fn, bll::_1, (double)width, max_cols);
+	y_coord = bll::bind(coord_fn, bll::_1, (double)height, max_rows);
 
 	p_start = this->points_begin();
 	p_end = this->points_end();
 	for (p = p_start; p != p_end; ++p){
-		double x_pos;
-		double y_pos;
-		x_pos = ((*p).x - .5)*((double)width)/max_cols;
-		y_pos = ((*p).y - .5)*((double)height)/max_rows;
-		//std::cout << y_pos << " " << x_pos << "\n";
-		if ((*p).pattern == NULL){
+		SpmCooElem elem = *p;
+		if (elem.pattern == NULL){
+			x_pos = x_coord((*p).x);
+			y_pos = y_coord((*p).y);
 			cr->move_to(x_pos, y_pos);
 			cr->show_text("x");
 			//cr->restore();
 		} else {
-			;
+			DeltaRLE *pattern = elem.pattern;
+			cr->save();
+			switch (pattern->type){
+				double x, y;
+				case HORIZONTAL:
+				cr->set_source_rgb(0, .5, .5);
+				x = (*p).x;
+				y = (*p).y;
+				for (long i=0; i < pattern->size; i++){
+					x_pos = x_coord(x);
+					y_pos = y_coord(y);
+					cr->move_to(x_pos, y_pos);
+					cr->show_text("x");
+					x += pattern->drle_len;
+				}
+				break;
+
+				case VERTICAL:
+				break;
+
+				case DIAGONAL:
+				break;
+
+				case REV_DIAGONAL:
+				break;
+
+				case NONE:
+				assert(false);
+			}
+			cr->restore();
 		}
 		cr->stroke();
 	}
