@@ -644,37 +644,17 @@ void SpmIdx::Draw(const char *filename, const int width, const int height)
 			y_pos = y_coord((*p).y);
 			cr->move_to(x_pos, y_pos);
 			cr->show_text("x");
-			//cr->restore();
 		} else {
-			// FIXME
-			DeltaRLE *pattern = (DeltaRLE *)(elem.pattern);
+			Pattern::Generator *gen;
 			cr->save();
-			switch (pattern->type){
-				double x, y;
-				case HORIZONTAL:
-				cr->set_source_rgb(0, .5, .5);
-				x = (*p).x;
-				y = (*p).y;
-				for (long i=0; i < pattern->size; i++){
-					x_pos = x_coord(x);
-					y_pos = y_coord(y);
-					cr->move_to(x_pos, y_pos);
-					cr->show_text("x");
-					x += pattern->drle_len;
-				}
-				break;
-
-				case VERTICAL:
-				break;
-
-				case DIAGONAL:
-				break;
-
-				case REV_DIAGONAL:
-				break;
-
-				case NONE:
-				assert(false);
+			cr->set_source_rgb(0, .5, .5);
+			gen = elem.pattern->generator(static_cast<CooElem>(elem));
+			// FIXME add mapping functions (ontop of {x,y}_coord fneeded
+			assert(this->type == elem.pattern->type);
+			while ( !gen->isEmpty() ){
+				CooElem e = gen->next();
+				cr->move_to(x_coord(e.x), y_coord(e.y));
+				cr->show_text("x");
 			}
 			cr->restore();
 		}

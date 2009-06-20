@@ -45,14 +45,12 @@ public:
 	virtual long x_increase(SpmIterOrder spm_iter_order) const = 0;
 	virtual std::ostream &print_on(std::ostream &) const = 0;
 
-	class Generator;
-	//virtual Generator generator(CooElem start) = 0;
-};
-
-class Pattern::Generator {
+	class Generator {
 	public:
 		virtual bool isEmpty() const = 0;
 		virtual CooElem next() = 0;
+	};
+	virtual Generator *generator(CooElem start) = 0;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Pattern &p)

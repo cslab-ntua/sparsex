@@ -9,10 +9,10 @@ namespace csx {
 
 class DeltaRLE : public Pattern {
 public:
-	uint32_t size, drle_len;
+	uint32_t size, delta;
 
-	DeltaRLE(uint32_t _size, uint32_t _drle_len, SpmIterOrder _type):
-	size(_size), drle_len(_drle_len){ ; }
+	DeltaRLE(uint32_t _size, uint32_t _delta, SpmIterOrder _type):
+	size(_size), delta(_delta){ ; }
 	virtual DeltaRLE *clone() const
 	{
 		return new DeltaRLE(*this);
@@ -20,18 +20,18 @@ public:
 	virtual long x_increase(SpmIterOrder order) const
 	{
 		long ret;
-		ret = (order == this->type) ? (this->size*this->drle_len) : 1;
+		ret = (order == this->type) ? (this->size*this->delta) : 1;
 		return ret;
 	}
 
 	virtual std::ostream &print_on(std::ostream &out) const
 	{
-		out << "drle: size=" << this->size << " len=" << this->drle_len << " type=" << this->type;
+		out << "drle: size=" << this->size << " len=" << this->delta << " type=" << this->type;
 		return out;
 	}
 
 	class Generator;
-	Generator generator(CooElem start);
+	Pattern::Generator *generator(CooElem start);
 };
 
 class DeltaRLE::Generator : public Pattern::Generator
@@ -50,11 +50,18 @@ public:
 	virtual CooElem next() {
 		CooElem ret(start);
 		assert(this->nr <= this->rle->size);
-		ret.x += (this->nr)*(this->rle->drle_len);
+		ret.x += (this->nr)*(this->rle->delta);
 		this->nr += 1;
 		return ret;
 	}
 };
+
+Pattern::Generator *DeltaRLE::generator(CooElem start)
+{
+	DeltaRLE::Generator *g;
+	g = new DeltaRLE::Generator(start, this);
+	return g;
+}
 
 } // end of csx namespace
 
