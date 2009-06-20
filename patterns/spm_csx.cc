@@ -81,14 +81,6 @@ RLEncode(T input)
 	return output;
 }
 
-typedef std::vector<CooElem> SpmPoints;
-typedef std::iterator<std::forward_iterator_tag, CooElem> SpmPointIter;
-typedef std::vector<SpmCooElem> SpmCooElems;
-typedef std::vector<SpmRowElem> SpmRowElems;
-typedef std::vector<SpmRowElems> SpmRows;
-
-typedef boost::function<void (CooElem &p)> TransformFn;
-
 std::ostream &operator<<(std::ostream &out, CooElem p)
 {
 	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
@@ -150,52 +142,6 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t nrows)
 	dst.y = src_y - dst.x + 1;
 }
 
-
-class SpmIdx {
-public:
-	uint64_t nrows, ncols, nnz;
-	SpmIterOrder type;
-	SpmRows rows;
-
-	SpmIdx() {type = NONE;};
-	~SpmIdx() {};
-
-	// load matrix from an MMF file
-	void loadMMF(std::string mmf_file);
-	void loadMMF(std::istream &in=std::cin);
-
-	// Print Functions
-	void Print(std::ostream &out=std::cout);
-	void PrintRows(std::ostream &out=std::cout);
-
-	template <typename IterT>
-	void SetRows(IterT pnts_start, IterT pnts_end);
-
-	// iterators that return a SpmCooElem
-	class PointIter;
-	PointIter points_begin();
-	PointIter points_end();
-
-	// same with PointIter, but removes elements
-	class PointPoper;
-	PointPoper points_pop_begin();
-	PointPoper points_pop_end();
-
-	// Transofrmation Functions
-	TransformFn getRevXformFn(SpmIterOrder type);
-	TransformFn getXformFn(SpmIterOrder type);
-	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
-	void Transform(SpmIterOrder type);
-
-	//
-	static const long min_limit = 4;
-	void DRLEncode();
-	void DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow);
-	void doDRLEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
-
-	//
-	void Draw(const char *filename, const int width=600, const int height=600);
-};
 
 std::ostream &operator<<(std::ostream &out, SpmCooElem e)
 {

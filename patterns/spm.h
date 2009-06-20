@@ -1,9 +1,12 @@
 #ifndef CSX_SPM_H__
 #define CSX_SPM_H__
 
-#include <iostream>
 #include <vector>
+#include <map>
 #include <iterator>
+#include <iostream>
+
+#include <boost/function.hpp>
 
 namespace csx {
 
@@ -51,6 +54,11 @@ public:
 		virtual CooElem next() = 0;
 	};
 	virtual Generator *generator(CooElem start) = 0;
+
+	// Pattern detection and encoding
+	class PrvData { };
+	class Stats { };
+	typedef std::map<PrvData *, Stats> StatsMap;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Pattern &p)
@@ -93,6 +101,60 @@ public:
 
 class SpmCooElem: public CooElem, public SpmPattern {};
 class SpmRowElem: public RowElem, public SpmPattern {};
+
+
+typedef std::vector<CooElem> SpmPoints;
+typedef std::iterator<std::forward_iterator_tag, CooElem> SpmPointIter;
+typedef std::vector<SpmCooElem> SpmCooElems;
+typedef std::vector<SpmRowElem> SpmRowElems;
+typedef std::vector<SpmRowElems> SpmRows;
+typedef boost::function<void (CooElem &p)> TransformFn;
+
+class SpmIdx {
+public:
+	uint64_t nrows, ncols, nnz;
+	SpmIterOrder type;
+	SpmRows rows;
+
+	SpmIdx() {type = NONE;};
+	~SpmIdx() {};
+
+	// load matrix from an MMF file
+	void loadMMF(std::string mmf_file);
+	void loadMMF(std::istream &in=std::cin);
+
+	// Print Functions
+	void Print(std::ostream &out=std::cout);
+	void PrintRows(std::ostream &out=std::cout);
+
+	template <typename IterT>
+	void SetRows(IterT pnts_start, IterT pnts_end);
+
+	// iterators that return a SpmCooElem
+	class PointIter;
+	PointIter points_begin();
+	PointIter points_end();
+
+	// same with PointIter, but removes elements
+	class PointPoper;
+	PointPoper points_pop_begin();
+	PointPoper points_pop_end();
+
+	// Transofrmation Functions
+	TransformFn getRevXformFn(SpmIterOrder type);
+	TransformFn getXformFn(SpmIterOrder type);
+	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
+	void Transform(SpmIterOrder type);
+
+	//
+	static const long min_limit = 4;
+	void DRLEncode();
+	void DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow);
+	void doDRLEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
+
+	//
+	void Draw(const char *filename, const int width=600, const int height=600);
+};
 
 } // csx namespace end
 

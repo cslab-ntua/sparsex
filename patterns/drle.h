@@ -32,6 +32,9 @@ public:
 
 	class Generator;
 	Pattern::Generator *generator(CooElem start);
+
+	class PrvData;
+	//StatsMap generateStats(SpmIdx);
 };
 
 class DeltaRLE::Generator : public Pattern::Generator
@@ -55,6 +58,12 @@ public:
 		return ret;
 	}
 };
+
+class DeltaRLE::PrvData : public Pattern::PrvData
+{
+	uint32_t delta;
+};
+
 
 Pattern::Generator *DeltaRLE::generator(CooElem start)
 {
