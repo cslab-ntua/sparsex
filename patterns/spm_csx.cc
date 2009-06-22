@@ -26,61 +26,6 @@ namespace bll = boost::lambda;
 
 namespace csx {
 
-template <typename T>
-T DeltaEncode(T input)
-{
-	T output;
-	typename T::iterator in, out;
-	typename T::iterator::value_type prev, curr;
-
-	output.resize(input.size());
-
-	in = input.begin();
-	out = output.begin();
-	prev = *out++ = *in++;
-	while (in < input.end()){
-		curr = *in++;
-		*out++ = curr - prev;
-		prev = curr;
-	}
-
-	return output;
-}
-
-template <typename T>
-struct RLE {
-	long freq;
-	T val;
-};
-
-template <typename T>
-std::vector< RLE<typename T::iterator::value_type> >
-RLEncode(T input)
-{
-	typename T::iterator in;
-	typename T::iterator::value_type curr;
-	std::vector< RLE<typename T::iterator::value_type> > output;
-	RLE<typename T::iterator::value_type> rle;
-
-	 in = input.begin();
-	 rle.freq = 1;
-	 rle.val = *in++;
-
-	while (in < input.end()){
-		curr = *in;
-		if (rle.val == curr){
-			rle.freq++;
-		} else {
-			output.push_back(rle);
-			rle.freq = 1;
-			rle.val = curr;
-		}
-		in++;
-	}
-	output.push_back(rle);
-	return output;
-}
-
 std::ostream &operator<<(std::ostream &out, CooElem p)
 {
 	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
@@ -491,66 +436,6 @@ void SpmIdx::Transform(SpmIterOrder t)
 	this->type = t;
 }
 
-void SpmIdx::doDRLEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow)
-{
-	std::vector< RLE<uint64_t> > rles;
-	SpmRowElem elem;
-	//std::cout << "doDRLEncode() start\n";
-
-	rles = RLEncode(DeltaEncode(xs));
-	elem.pattern = NULL; // Default inserter (for push_back copies)
-	FOREACH(RLE<uint64_t> &rle, rles){
-		//std::cout << "newrow size " << newrow.size() << "\n";
-		//std::cout << rle.freq << " " << rle.val << "\n";
-		if (rle.freq >= min_limit){
-			SpmRowElem *last_elem;
-
-			col += rle.val; // go to the first
-			elem.x = col;
-			newrow.push_back(elem);
-			last_elem = &newrow.back();
-			last_elem->pattern = new DeltaRLE(rle.freq, rle.val, this->type);
-			last_elem = NULL;
-			col += rle.val*(rle.freq - 1);
-		} else {
-			for (int i=0; i < rle.freq; i++){
-				col += rle.val;
-				elem.x = col;
-				newrow.push_back(elem);
-			}
-		}
-	}
-
-	//std::cout << "doDRLEncode() end\n";
-}
-
-void SpmIdx::DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow)
-{
-	std::vector<uint64_t> xs;
-	uint64_t col;
-
-	//std::cout << "DRLEncodeRow() start\n";
-	// start indices at 1
-	col = 0;
-	FOREACH(SpmRowElem &e, oldrow){
-		if (e.pattern == NULL){
-			xs.push_back(e.x);
-			continue;
-		}
-		if (xs.size() != 0){
-			doDRLEncode(col, xs, newrow);
-			xs.clear();
-		}
-		col += e.pattern->x_increase(this->type);
-		newrow.push_back(e);
-	}
-	if (xs.size() != 0){
-		doDRLEncode(col, xs, newrow);
-		xs.clear();
-	}
-	//std::cout << "DRLEncodeRow() end\n";
-}
-
 void SpmIdx::Draw(const char *filename, const int width, const int height)
 {
 	//Cairo::RefPtr<Cairo::PdfSurface> surface;
@@ -608,23 +493,6 @@ void SpmIdx::Draw(const char *filename, const int width, const int height)
 	}
 	//cr->show_page();
 	surface->write_to_png(filename);
-}
-
-void SpmIdx::DRLEncode()
-{
-	FOREACH(SpmRowElems &oldrow, this->rows){
-		SpmRowElems newrow;
-		long newrow_size;
-		// create new row
-		DRLEncodeRow(oldrow, newrow);
-		// copy data
-		newrow_size = newrow.size();
-		oldrow.clear();
-		oldrow.reserve(newrow_size);
-		for (long i=0; i < newrow_size; i++){
-			oldrow.push_back(newrow[i]);
-		}
-	}
 }
 
 #if 0

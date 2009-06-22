@@ -55,10 +55,12 @@ public:
 	};
 	virtual Generator *generator(CooElem start) = 0;
 
-	// Pattern detection and encoding
-	class PrvData { };
-	class Stats { };
-	typedef std::map<PrvData *, Stats> StatsMap;
+	// stats for a specific pattern. For now it's just the number of non-zero
+	// elements that adhere to this pattern.
+	class StatsVal {
+		uint64_t nnz;
+		StatsVal() : nnz(0) { }
+	};
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Pattern &p)
@@ -145,12 +147,6 @@ public:
 	TransformFn getXformFn(SpmIterOrder type);
 	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
 	void Transform(SpmIterOrder type);
-
-	//
-	static const long min_limit = 4;
-	void DRLEncode();
-	void DRLEncodeRow(SpmRowElems &oldrow, SpmRowElems &newrow);
-	void doDRLEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
 
 	//
 	void Draw(const char *filename, const int width=600, const int height=600);

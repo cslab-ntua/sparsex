@@ -8,9 +8,10 @@
 namespace csx {
 
 class DeltaRLE : public Pattern {
-public:
 	uint32_t size, delta;
+	static const long min_limit = 4;
 
+public:
 	DeltaRLE(uint32_t _size, uint32_t _delta, SpmIterOrder _type):
 	size(_size), delta(_delta){ ; }
 	virtual DeltaRLE *clone() const
@@ -33,8 +34,8 @@ public:
 	class Generator;
 	Pattern::Generator *generator(CooElem start);
 
-	class PrvData;
-	//StatsMap generateStats(SpmIdx);
+	// key => delta value of rle
+	typedef std::map<uint64_t, StatsVal> Stats;
 };
 
 class DeltaRLE::Generator : public Pattern::Generator
@@ -57,13 +58,8 @@ public:
 		this->nr += 1;
 		return ret;
 	}
-};
 
-class DeltaRLE::PrvData : public Pattern::PrvData
-{
-	uint32_t delta;
 };
-
 
 Pattern::Generator *DeltaRLE::generator(CooElem start)
 {
