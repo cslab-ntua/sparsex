@@ -24,6 +24,13 @@ namespace bll = boost::lambda;
 
 namespace csx {
 
+std::ostream &operator<<(std::ostream &out, CooElem p)
+{
+	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
+	return out;
+}
+
+
 // mappings for vertical transformation
 static inline void pnt_map_V(CooElem &src, CooElem &dst)
 {
@@ -310,6 +317,41 @@ void SpmIdx::Transform(SpmIterOrder t)
 	SetRows(elems.begin(), elems.end());
 	elems.clear();
 	this->type = t;
+}
+
+std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
+{
+	out << static_cast<CooElem>(e);
+	if (e.pattern != NULL)
+			out << "->[" << *(e.pattern) << "]";
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
+{
+	out << elem.x;
+	if (elem.pattern){
+		out << *(elem.pattern);
+	}
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems)
+{
+	out << "row( ";
+	BOOST_FOREACH(const SpmRowElem &elem, elems){
+		out << elem << " [@" << &elem << "]  ";
+	}
+	out << ") @" << &elems ;
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const SpmRows &rows)
+{
+	BOOST_FOREACH(const SpmRowElems &row, rows){
+		out << row << std::endl;
+	}
+	return out;
 }
 
 

@@ -18,12 +18,6 @@ public:
 	uint64_t x;
 };
 
-static std::ostream &operator<<(std::ostream &out, CooElem p)
-{
-	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
-	return out;
-}
-
 
 static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 {
@@ -46,7 +40,24 @@ public:
 	uint64_t x;
 };
 
-typedef enum {NONE=0, HORIZONTAL, VERTICAL, DIAGONAL, REV_DIAGONAL} SpmIterOrder;
+typedef enum {
+	NONE=0,
+	HORIZONTAL,
+	VERTICAL,
+	DIAGONAL,
+	REV_DIAGONAL,
+	XFORM_MAX
+} SpmIterOrder;
+
+// !#@$$#!@#%!$#%$!$%!!$%$%
+const SpmIterOrder SpmTypes[] = {
+	NONE,
+	HORIZONTAL,
+	VERTICAL,
+	DIAGONAL,
+	REV_DIAGONAL,
+	XFORM_MAX
+};
 
 class Pattern {
 public:
@@ -128,40 +139,12 @@ typedef std::vector<SpmRowElem> SpmRowElems;
 typedef std::vector<SpmRowElems> SpmRows;
 typedef boost::function<void (CooElem &p)> TransformFn;
 
-static std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
-{
-	out << static_cast<CooElem>(e);
-	if (e.pattern != NULL)
-			out << "->[" << *(e.pattern) << "]";
-	return out;
-}
-
-static std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
-{
-	out << elem.x;
-	if (elem.pattern){
-		out << *(elem.pattern);
-	}
-	return out;
-}
-
-static std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems)
-{
-	out << "row( ";
-	BOOST_FOREACH(const SpmRowElem &elem, elems){
-		out << elem << " [@" << &elem << "]  ";
-	}
-	out << ") @" << &elems ;
-	return out;
-}
-
-static inline std::ostream &operator<<(std::ostream &out, const SpmRows &rows)
-{
-	BOOST_FOREACH(const SpmRowElems &row, rows){
-		out << row << std::endl;
-	}
-	return out;
-}
+#if 0
+std::ostream &operator<<(std::ostream &out, const SpmCooElem e);
+std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
+std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems);
+std::ostream &operator<<(std::ostream &out, const SpmRows &rows);
+#endif
 
 class SpmIdx {
 public:
@@ -198,6 +181,7 @@ public:
 	TransformFn getXformFn(SpmIterOrder type);
 	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
 	void Transform(SpmIterOrder type);
+	void Transform(long type);
 
 	//
 	void Draw(const char *filename, const int width=600, const int height=600);

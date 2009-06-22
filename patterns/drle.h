@@ -1,6 +1,9 @@
 #ifndef CSX_DRLE_H__
 #define CSX_DRLE_H__
 
+#include <map>
+#include <bitset>
+
 #include "spm.h"
 
 #include <cassert>
@@ -65,16 +68,30 @@ public:
 class DRLE_Manager {
 public:
 	long min_limit;
-	DRLE_Manager(long _min_limit) : min_limit(_min_limit) {}
+	const char *mmf_file;
+	SpmIdx spm;
 
-	DeltaRLE::Stats generateStats(SpmIdx &spm);
-	void Encode(SpmIdx &spm);
+	DRLE_Manager(long mlimit, const char *mmf)
+	: min_limit(mlimit), mmf_file(mmf) { }
+
+	void loadMMF()
+	{
+		this->spm.loadMMF(this->mmf_file);
+	}
+
+
+	DeltaRLE::Stats generateStats();
+
+	std::map <SpmIterOrder, DeltaRLE::Stats> stats;
+	void genAllStats();
+
+	std::bitset<XFORM_MAX> xforms;
+	void Encode();
 
 private:
-	void doEncode(const SpmIdx &spm, uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
-	void EncodeRow(const SpmIdx &spm, const SpmRowElems &oldrow, SpmRowElems &newrow);
+	void doEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
+	void EncodeRow(const SpmRowElems &oldrow, SpmRowElems &newrow);
 	void updateStats(std::vector<uint64_t> &xs, DeltaRLE::Stats &stats);
-
 };
 
 #if 0

@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: drle_stats
+all: drle_shell
 
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
@@ -20,11 +20,11 @@ draw.o: draw.cc spm.h draw.h
 drle.o: drle.cc drle.h spm.h
 	$(CXX_COMPILE) $< -c -o $@
 
-drle_stats.o: drle_stats.cc drle.h spm.h
+drle_shell.o: drle_shell.cc drle.h spm.h
 	$(CXX_COMPILE) $< -c -o $@
 
-drle_stats: spm.o drle.o drle_stats.o draw.o
+drle_shell: spm.o drle.o drle_shell.o draw.o
 	$(CXX_COMPILE) $(CAIROMM_LIBS) $^ -o $@
 
 clean:
-	rm -f *.o
+	rm -f *.o drle_shell

@@ -13,16 +13,15 @@ using namespace csx;
 
 int main(int argc, char **argv)
 {
-	SpmIdx spm;
-	DRLE_Manager DrleMg(4);
-	DeltaRLE::Stats drle_stats;
 
 	if (argc < 2){
 		std::cerr << "Usage: " << argv[0] << " <mmf_file>\n";
 		return 1;
 	}
 
-	spm.loadMMF(argv[1]);
+	DeltaRLE::Stats drle_stats;
+	DRLE_Manager DrleMg(4, argv[1]);
+	DrleMg.loadMMF();
 	std::cout << "==> Loaded Matrix" << argv[1] << std::endl;
 
 	std::string input;
@@ -41,8 +40,11 @@ int main(int argc, char **argv)
 			row_s = (tokens.size() > 1) ? atol(tokens[1].c_str()) : 0;
 			row_e = (tokens.size() > 2) ? atol(tokens[2].c_str()) : 0;
 			std::cout << "Drawing (" << row_s << "->" << row_e << ")\n";
-			Draw(spm, "test.png", row_s, row_e);
+			Draw(DrleMg.spm, "test.png", row_s, row_e);
 			system("sh -c 'eog test.png &'");
+		} else if (tokens[0] == "xform"){
+		} else if (tokens[0] == "stats"){
+			;
 		} else {
 			std::cout << "Unknown command "  << tokens[0] << "\n";
 		}
