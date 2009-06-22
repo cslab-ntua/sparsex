@@ -9,15 +9,16 @@ namespace csx {
 
 class DeltaRLE : public Pattern {
 	uint32_t size, delta;
-	static const long min_limit = 4;
 
 public:
 	DeltaRLE(uint32_t _size, uint32_t _delta, SpmIterOrder _type):
 	size(_size), delta(_delta){ ; }
+
 	virtual DeltaRLE *clone() const
 	{
 		return new DeltaRLE(*this);
 	}
+
 	virtual long x_increase(SpmIterOrder order) const
 	{
 		long ret;
@@ -35,7 +36,7 @@ public:
 	Pattern::Generator *generator(CooElem start);
 
 	// key => delta value of rle
-	typedef std::map<uint64_t, StatsVal> Stats;
+	typedef std::map<uint64_t, Pattern::StatsVal> Stats;
 };
 
 class DeltaRLE::Generator : public Pattern::Generator
@@ -61,12 +62,33 @@ public:
 
 };
 
-Pattern::Generator *DeltaRLE::generator(CooElem start)
+class DRLE_Manager {
+public:
+	long min_limit;
+	DRLE_Manager(long _min_limit) : min_limit(_min_limit) {}
+
+	DeltaRLE::Stats generateStats(SpmIdx &spm);
+	void Encode(SpmIdx &spm);
+
+private:
+	void doEncode(const SpmIdx &spm, uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
+	void EncodeRow(const SpmIdx &spm, const SpmRowElems &oldrow, SpmRowElems &newrow);
+	void updateStats(std::vector<uint64_t> &xs, DeltaRLE::Stats &stats);
+
+};
+
+#if 0
+inline std::ostream &operator<<(std::ostream &os, const DeltaRLE::Stats &stats)
 {
-	DeltaRLE::Generator *g;
-	g = new DeltaRLE::Generator(start, this);
-	return g;
+	DeltaRLE::Stats::const_iterator iter;
+	for (iter=stats.begin(); iter != stats.end(); ++iter){
+		os << iter->first << " " << iter->second << "  ";
+	}
+	return os;
 }
+#endif
+
+void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdx &spm, std::ostream &os);
 
 } // end of csx namespace
 

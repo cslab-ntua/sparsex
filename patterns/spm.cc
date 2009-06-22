@@ -1,11 +1,11 @@
 #include "spm.h"
-#include "drle.h"
+//#include "drle.h"
 
 #include <vector>
 #include <iterator>
 #include <algorithm>
 #include <iostream>
-#include <iomanip>
+#include <fstream>
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
@@ -15,8 +15,6 @@
 #include <boost/lambda/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 
-#include <cairomm/context.h>
-#include <cairomm/surface.h>
 
 #include "../../debug/debug_user.h"
 
@@ -25,12 +23,6 @@ namespace bll = boost::lambda;
 #define FOREACH BOOST_FOREACH
 
 namespace csx {
-
-std::ostream &operator<<(std::ostream &out, CooElem p)
-{
-	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
-	return out;
-}
 
 // mappings for vertical transformation
 static inline void pnt_map_V(CooElem &src, CooElem &dst)
@@ -88,133 +80,6 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t nrows)
 }
 
 
-std::ostream &operator<<(std::ostream &out, SpmCooElem e)
-{
-	out << static_cast<CooElem>(e);
-	if (e.pattern != NULL)
-			out << "->[" << *(e.pattern) << "]";
-	return out;
-}
-
-std::ostream &operator<<(std::ostream  &out, SpmRowElem &elem)
-{
-	out << elem.x;
-	if (elem.pattern){
-		out << *(elem.pattern);
-	}
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, SpmRowElems &elems)
-{
-	out << "row( ";
-	FOREACH(SpmRowElem &elem, elems){
-		out << elem << " [@" << &elem << "]  ";
-	}
-	out << ") @" << &elems ;
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, SpmRows &rows)
-{
-	FOREACH(SpmRowElems &row, rows){
-		out << row << std::endl;
-	}
-	return out;
-}
-
-
-class SpmIdx::PointIter
-: public std::iterator<std::forward_iterator_tag, CooElem>
-{
-public:
-	uint64_t row_idx;
-	uint64_t elm_idx;
-	SpmIdx   *spm;
-	PointIter(): row_idx(0), elm_idx(0), spm(NULL) {;}
-	PointIter(uint64_t ridx, uint64_t eidx, SpmIdx *s)
-	: row_idx(ridx), elm_idx(eidx), spm(s) {
-		// find the first non zero row
-		while (row_idx < spm->nrows && spm->rows[row_idx].size() == 0) {
-			row_idx++;
-		}
-	}
-
-	bool operator==(const PointIter &x){
-		return (spm == x.spm)
-			   && (row_idx == x.row_idx)
-			   && (elm_idx == x.elm_idx);
-	}
-
-	bool operator!=(const PointIter &x){
-		return !(*this == x);
-	}
-
-	void operator++() {
-		uint64_t rows_nr, row_elems_nr;
-
-		rows_nr = spm->rows.size();
-		row_elems_nr = spm->rows[row_idx].size();
-
-		// equality means somebody did a ++ on an ended iterator
-		assert(row_idx < rows_nr);
-
-		elm_idx++;
-		assert(elm_idx <= row_elems_nr);
-		if (elm_idx < row_elems_nr){
-			return ;
-		}
-
-		// change row
-		do {
-			elm_idx = 0;
-			row_idx++;
-		} while (row_idx < spm->rows.size() && spm->rows[row_idx].size() == 0);
-	}
-
-	SpmCooElem operator*(){
-		SpmCooElem ret;
-		ret.y = row_idx + 1;
-		ret.x = spm->rows[row_idx][elm_idx].x;
-		Pattern *p = spm->rows[row_idx][elm_idx].pattern;
-		ret.pattern = (p == NULL) ? NULL : p->clone();
-		return ret;
-	}
-};
-
-class SpmIdx::PointPoper : public SpmIdx::PointIter
-{
-public:
-	PointPoper() : PointIter() { ; }
-	PointPoper(uint64_t ridx, uint64_t eidx, SpmIdx *s)
-	: PointIter(ridx, eidx, s) { ; }
-
-	void operator++() {
-		uint64_t rows_nr, row_elems_nr;
-
-		rows_nr = spm->rows.size();
-		row_elems_nr = spm->rows[row_idx].size();
-
-		// equality means somebody did a ++ on an ended iterator
-		assert(row_idx < rows_nr);
-
-		elm_idx++;
-		assert(elm_idx <= row_elems_nr);
-		if (elm_idx < row_elems_nr){
-			return;
-		}
-
-		// remove all elements from previous row
-		spm->rows[row_idx].resize(0);
-		// change row
-		do {
-			elm_idx = 0;
-			row_idx++;
-		} while (row_idx < rows_nr && spm->rows[row_idx].size() == 0);
-	}
-};
-
-
 std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
 {
 	out << "<" << std::setw(2) << pi.row_idx << "," << std::setw(2) << pi.elm_idx << ">";
@@ -233,14 +98,17 @@ std::istream &operator>>(std::istream &in, SpmIdx &obj)
 }
 
 
-SpmIdx::PointIter SpmIdx::points_begin()
+SpmIdx::PointIter SpmIdx::points_begin(uint64_t ridx, uint64_t eidx)
 {
-	return PointIter(0, 0, this);
+	return PointIter(ridx, eidx, this);
 }
 
-SpmIdx::PointIter SpmIdx::points_end()
+SpmIdx::PointIter SpmIdx::points_end(uint64_t ridx, uint64_t eidx)
 {
-	return PointIter(this->rows.size(), 0, this);
+	if (ridx == 0){
+		ridx = this->rows.size();
+	}
+	return PointIter(ridx, eidx, this);
 }
 
 SpmIdx::PointPoper SpmIdx::points_pop_begin()
@@ -305,7 +173,6 @@ void SpmIdx::SetRows(IterT pnts_start, IterT pnts_end)
 	//std::cout << "SetRows [end]\n";
 }
 
-
 void SpmIdx::loadMMF(std::istream &in)
 {
 	char buff[1024];
@@ -340,6 +207,15 @@ void SpmIdx::loadMMF(std::istream &in)
 
 	SetRows(points.begin(), points.end());
 	points.clear();
+}
+
+void SpmIdx::loadMMF(const char *mmf_file)
+{
+	std::ifstream mmf;
+	mmf.open(mmf_file);
+	this->loadMMF(mmf);
+	mmf.close();
+
 }
 
 inline TransformFn SpmIdx::getRevXformFn(SpmIterOrder type)
@@ -436,64 +312,6 @@ void SpmIdx::Transform(SpmIterOrder t)
 	this->type = t;
 }
 
-void SpmIdx::Draw(const char *filename, const int width, const int height)
-{
-	//Cairo::RefPtr<Cairo::PdfSurface> surface;
-	Cairo::RefPtr<Cairo::ImageSurface> surface;
-	Cairo::RefPtr<Cairo::Context> cr;
-	SpmIdx::PointIter p, p_start, p_end;
-	double max_cols, max_rows, x_pos, y_pos;
-	boost::function<double (double v, double max_coord, double max_v)> coord_fn;
-	boost::function<double (double a)> x_coord, y_coord;
-
-	//surface = Cairo::PdfSurface::create(filename, width, height);
-	surface = Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, width, height);
-	cr = Cairo::Context::create(surface);
-
-	// background
-	cr->save();
-	cr->set_source_rgb(1, 1, 1);
-	cr->paint();
-	cr->restore();
-
-	// TODO:
-	//  If not HORIZNTAL, transform and transofrm back after end
-	max_rows = (double)this->rows.size();
-	max_cols = (double)this->ncols;
-
-	// Lambdas for calculationg coordinates
-	coord_fn = (((bll::_1 - .5)*(bll::_2))/(bll::_3));
-	x_coord = bll::bind(coord_fn, bll::_1, (double)width, max_cols);
-	y_coord = bll::bind(coord_fn, bll::_1, (double)height, max_rows);
-
-	p_start = this->points_begin();
-	p_end = this->points_end();
-	for (p = p_start; p != p_end; ++p){
-		SpmCooElem elem = *p;
-		if (elem.pattern == NULL){
-			x_pos = x_coord((*p).x);
-			y_pos = y_coord((*p).y);
-			cr->move_to(x_pos, y_pos);
-			cr->show_text("x");
-		} else {
-			Pattern::Generator *gen;
-			cr->save();
-			cr->set_source_rgb(0, .5, .5);
-			gen = elem.pattern->generator(static_cast<CooElem>(elem));
-			// FIXME add mapping functions (ontop of {x,y}_coord fneeded
-			assert(this->type == elem.pattern->type);
-			while ( !gen->isEmpty() ){
-				CooElem e = gen->next();
-				cr->move_to(x_coord(e.x), y_coord(e.y));
-				cr->show_text("x");
-			}
-			cr->restore();
-		}
-		cr->stroke();
-	}
-	//cr->show_page();
-	surface->write_to_png(filename);
-}
 
 #if 0
 void SpmIdx::PrintRows(std::ostream &out)
@@ -624,6 +442,7 @@ void SpmIdx::Print(std::ostream &out)
 	out << std::endl;
 }
 
+#if 0
 void test_drle()
 {
 	std::vector<int> v_in, delta;
@@ -650,13 +469,15 @@ void test_drle()
 	}
 	std::cout << std::endl;
 }
+#endif
 
+#if 0
 int main(int argc, char **argv)
 {
 	SpmIdx obj;
 	obj.loadMMF();
-	obj.DRLEncode();
-	obj.Print();
+	//obj.DRLEncode();
+	//obj.Print();
 	//std::cout << obj.rows;
 	//obj.Print();
 	//obj.Draw("1.png");
@@ -667,3 +488,4 @@ int main(int argc, char **argv)
 	//obj.DRLEncode();
 	//std::cout << obj.rows;
 }
+#endif

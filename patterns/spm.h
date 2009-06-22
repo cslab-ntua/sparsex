@@ -5,8 +5,10 @@
 #include <map>
 #include <iterator>
 #include <iostream>
+#include <iomanip>
 
 #include <boost/function.hpp>
+#include <boost/foreach.hpp>
 
 namespace csx {
 
@@ -15,6 +17,13 @@ public:
 	uint64_t y;
 	uint64_t x;
 };
+
+static std::ostream &operator<<(std::ostream &out, CooElem p)
+{
+	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
+	return out;
+}
+
 
 static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 {
@@ -58,12 +67,20 @@ public:
 	// stats for a specific pattern. For now it's just the number of non-zero
 	// elements that adhere to this pattern.
 	class StatsVal {
+	public:
 		uint64_t nnz;
-		StatsVal() : nnz(0) { }
+		long npatterns;
+		//StatsVal() : nnz(0) { }
 	};
 };
 
-inline std::ostream &operator<<(std::ostream &os, const Pattern &p)
+static inline std::ostream &operator<<(std::ostream &os, const Pattern::StatsVal &stats)
+{
+	os << "nnz: " << stats.nnz;
+	return os;
+}
+
+static inline std::ostream &operator<<(std::ostream &os, const Pattern &p)
 {
 	os << " (";
 	p.print_on(os);
@@ -104,13 +121,47 @@ public:
 class SpmCooElem: public CooElem, public SpmPattern {};
 class SpmRowElem: public RowElem, public SpmPattern {};
 
-
 typedef std::vector<CooElem> SpmPoints;
 typedef std::iterator<std::forward_iterator_tag, CooElem> SpmPointIter;
 typedef std::vector<SpmCooElem> SpmCooElems;
 typedef std::vector<SpmRowElem> SpmRowElems;
 typedef std::vector<SpmRowElems> SpmRows;
 typedef boost::function<void (CooElem &p)> TransformFn;
+
+static std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
+{
+	out << static_cast<CooElem>(e);
+	if (e.pattern != NULL)
+			out << "->[" << *(e.pattern) << "]";
+	return out;
+}
+
+static std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
+{
+	out << elem.x;
+	if (elem.pattern){
+		out << *(elem.pattern);
+	}
+	return out;
+}
+
+static std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems)
+{
+	out << "row( ";
+	BOOST_FOREACH(const SpmRowElem &elem, elems){
+		out << elem << " [@" << &elem << "]  ";
+	}
+	out << ") @" << &elems ;
+	return out;
+}
+
+static inline std::ostream &operator<<(std::ostream &out, const SpmRows &rows)
+{
+	BOOST_FOREACH(const SpmRowElems &row, rows){
+		out << row << std::endl;
+	}
+	return out;
+}
 
 class SpmIdx {
 public:
@@ -122,7 +173,7 @@ public:
 	~SpmIdx() {};
 
 	// load matrix from an MMF file
-	void loadMMF(std::string mmf_file);
+	void loadMMF(const char *filename);
 	void loadMMF(std::istream &in=std::cin);
 
 	// Print Functions
@@ -134,8 +185,8 @@ public:
 
 	// iterators that return a SpmCooElem
 	class PointIter;
-	PointIter points_begin();
-	PointIter points_end();
+	PointIter points_begin(uint64_t ridx=0, uint64_t eidx=0);
+	PointIter points_end(uint64_t ridx=0, uint64_t eidx=0);
 
 	// same with PointIter, but removes elements
 	class PointPoper;
@@ -151,6 +202,98 @@ public:
 	//
 	void Draw(const char *filename, const int width=600, const int height=600);
 };
+
+class SpmIdx::PointIter
+: public std::iterator<std::forward_iterator_tag, CooElem>
+{
+public:
+	uint64_t row_idx;
+	uint64_t elm_idx;
+	SpmIdx   *spm;
+	PointIter(): row_idx(0), elm_idx(0), spm(NULL) {;}
+	PointIter(uint64_t ridx, uint64_t eidx, SpmIdx *s)
+	: row_idx(ridx), elm_idx(eidx), spm(s) {
+		// find the first non zero row
+		while (row_idx < spm->nrows && spm->rows[row_idx].size() == 0) {
+			row_idx++;
+		}
+	}
+
+	bool operator==(const PointIter &x){
+		return (spm == x.spm)
+			   && (row_idx == x.row_idx)
+			   && (elm_idx == x.elm_idx);
+	}
+
+	bool operator!=(const PointIter &x){
+		return !(*this == x);
+	}
+
+	void operator++() {
+		uint64_t rows_nr, row_elems_nr;
+
+		rows_nr = spm->rows.size();
+		row_elems_nr = spm->rows[row_idx].size();
+
+		// equality means somebody did a ++ on an ended iterator
+		assert(row_idx < rows_nr);
+
+		elm_idx++;
+		assert(elm_idx <= row_elems_nr);
+		if (elm_idx < row_elems_nr){
+			return ;
+		}
+
+		// change row
+		do {
+			elm_idx = 0;
+			row_idx++;
+		} while (row_idx < spm->rows.size() && spm->rows[row_idx].size() == 0);
+	}
+
+	SpmCooElem operator*(){
+		SpmCooElem ret;
+		ret.y = row_idx + 1;
+		ret.x = spm->rows[row_idx][elm_idx].x;
+		Pattern *p = spm->rows[row_idx][elm_idx].pattern;
+		ret.pattern = (p == NULL) ? NULL : p->clone();
+		return ret;
+	}
+};
+
+
+class SpmIdx::PointPoper : public SpmIdx::PointIter
+{
+public:
+	PointPoper() : PointIter() { ; }
+	PointPoper(uint64_t ridx, uint64_t eidx, SpmIdx *s)
+	: PointIter(ridx, eidx, s) { ; }
+
+	void operator++() {
+		uint64_t rows_nr, row_elems_nr;
+
+		rows_nr = spm->rows.size();
+		row_elems_nr = spm->rows[row_idx].size();
+
+		// equality means somebody did a ++ on an ended iterator
+		assert(row_idx < rows_nr);
+
+		elm_idx++;
+		assert(elm_idx <= row_elems_nr);
+		if (elm_idx < row_elems_nr){
+			return;
+		}
+
+		// remove all elements from previous row
+		spm->rows[row_idx].resize(0);
+		// change row
+		do {
+			elm_idx = 0;
+			row_idx++;
+		} while (row_idx < rows_nr && spm->rows[row_idx].size() == 0);
+	}
+};
+
 
 } // csx namespace end
 

@@ -62,7 +62,8 @@ RLEncode(T input)
 	return output;
 }
 
-void DeltaRLE::updateStats(std::vector<uint64_t> &xs, DeltaRLE::Stats &stats)
+void DRLE_Manager::updateStats(std::vector<uint64_t> &xs,
+                               DeltaRLE::Stats &stats)
 {
 	std::vector< RLE<uint64_t> > rles;
 
@@ -72,31 +73,36 @@ void DeltaRLE::updateStats(std::vector<uint64_t> &xs, DeltaRLE::Stats &stats)
 	rles = RLEncode(DeltaEncode(xs));
 	FOREACH(RLE<uint64_t> &rle, rles){
 		if (rle.freq >= this->min_limit){
-			stats[rle.delta].nnz += rle.freq;
+			stats[rle.val].nnz += rle.freq;
+			stats[rle.val].npatterns++;
 		}
 	}
 	xs.clear();
 }
 
-DeltaRLE::Stats &DeltaRLE::generateStats(SpmIdx spm)
+DeltaRLE::Stats DRLE_Manager::generateStats(SpmIdx &spm)
 {
 	std::vector<uint64_t> xs;
-	DeltaRLE::StatsMap stats;
+	DeltaRLE::Stats stats;
 
-	FOREACH(const SpmRowElems &row, spm->rows){
-		FOREACH(SpmRowElem &elem, row){
-			if (e.pattern == NULL){
-				xs.push_back(e.x);
+	FOREACH(const SpmRowElems &row, spm.rows){
+		FOREACH(const SpmRowElem &elem, row){
+			if (elem.pattern == NULL){
+				xs.push_back(elem.x);
 				continue;
 			}
 			this->updateStats(xs, stats);
 		}
+		this->updateStats(xs, stats);
 	}
 
 	return stats;
 }
 
-void DeltaRLE::doEncode(const SpmIdx &spm, uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow)
+void DRLE_Manager::doEncode(const SpmIdx &spm,
+                            uint64_t &col,
+                            std::vector<uint64_t> &xs,
+                            SpmRowElems &newrow)
 {
 	std::vector< RLE<uint64_t> > rles;
 	SpmRowElem elem;
@@ -111,7 +117,7 @@ void DeltaRLE::doEncode(const SpmIdx &spm, uint64_t &col, std::vector<uint64_t> 
 			elem.x = col;
 			newrow.push_back(elem);
 			last_elem = &newrow.back();
-			last_elem->pattern = new DeltaRLE(rle.freq, rle.val, spm->type);
+			last_elem->pattern = new DeltaRLE(rle.freq, rle.val, spm.type);
 			last_elem = NULL;
 			col += rle.val*(rle.freq - 1);
 		} else {
@@ -124,37 +130,39 @@ void DeltaRLE::doEncode(const SpmIdx &spm, uint64_t &col, std::vector<uint64_t> 
 	}
 }
 
-void DeltaRLE::EncodeRow(const SpmIdx &spm, const SpmRowElems &oldrow, SpmRowElems &newrow)
+void DRLE_Manager::EncodeRow(const SpmIdx &spm,
+                             const SpmRowElems &oldrow,
+                             SpmRowElems &newrow)
 {
 	std::vector<uint64_t> xs;
 	uint64_t col;
 
 	col = 0;
-	FOREACH(SpmRowElem &e, oldrow){
+	FOREACH(const SpmRowElem &e, oldrow){
 		if (e.pattern == NULL){
 			xs.push_back(e.x);
 			continue;
 		}
 		if (xs.size() != 0){
-			doEncode(col, xs, newrow);
+			doEncode(spm, col, xs, newrow);
 			xs.clear();
 		}
-		col += e.pattern->x_increase(spm->type);
+		col += e.pattern->x_increase(spm.type);
 		newrow.push_back(e);
 	}
 	if (xs.size() != 0){
-		doDRLEncode(col, xs, newrow);
+		doEncode(spm, col, xs, newrow);
 		xs.clear();
 	}
 }
 
-void DeltaRLE::Encode(SpmIdx spm)
+void DRLE_Manager::Encode(SpmIdx &spm)
 {
-	FOREACH(SpmRowElems &oldrow, spm->rows){
+	FOREACH(SpmRowElems &oldrow, spm.rows){
 		SpmRowElems newrow;
 		long newrow_size;
 		// create new row
-		DRLEncodeRow(oldrow, newrow);
+		EncodeRow(spm, oldrow, newrow);
 		// copy data
 		newrow_size = newrow.size();
 		oldrow.clear();
@@ -164,3 +172,22 @@ void DeltaRLE::Encode(SpmIdx spm)
 		}
 	}
 }
+
+Pattern::Generator *DeltaRLE::generator(CooElem start)
+{
+	DeltaRLE::Generator *g;
+	g = new DeltaRLE::Generator(start, this);
+	return g;
+}
+
+namespace csx {
+void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdx &spm, std::ostream &os)
+{
+	DeltaRLE::Stats::iterator iter;
+	for (iter=stats.begin(); iter != stats.end(); ++iter){
+		os << "    " << iter->first << "-> "
+		   << "np:" << iter->second.npatterns
+		   << " nnz: " <<  100*((double)iter->second.nnz/(double)spm.nnz) << "%";
+	}
+}
+} // end csx namespace
