@@ -14,19 +14,26 @@ using namespace csx;
 int main(int argc, char **argv)
 {
 
+	SpmIdx *spm;
+	SpmIdxPart *spm_p;
+	DRLE_Manager *drle_mg;
+	DeltaRLE::Stats drle_stats;
+
 	if (argc < 2){
 		std::cerr << "Usage: " << argv[0] << " <mmf_file>\n";
 		return 1;
 	}
 
-	DeltaRLE::Stats drle_stats;
-	DRLE_Manager drle_mg(argv[1]);
-	drle_mg.loadMMF();
-	std::cout << "==> Loaded Matrix" << argv[1] << std::endl;
-	drle_mg.genAllStats();
-	drle_mg.outStats();
-	return 0;
+	spm = new SpmIdx();
+	spm->loadMMF(argv[1]);
+	spm_p = new SpmIdxPart(spm, spm->nrows, spm->ncols, spm->nnz, 0, spm->nrows);
+	drle_mg = new DRLE_Manager(spm_p);
 
+	std::cout << "==> Loaded Matrix" << argv[1] << std::endl;
+	drle_mg->genAllStats();
+	drle_mg->outStats();
+
+	#if 0
 	std::string input;
 	std::vector <std::string> tokens;
 
@@ -55,5 +62,9 @@ int main(int argc, char **argv)
 	//drle_stats = drle_mg.generateStats(spm);
 	//DRLE_OutStats(drle_stats, spm, std::cout);
 	//std::cout << std::endl;
+	#endif
+	delete spm;
+	delete spm_p;
+	delete drle_mg;
 	return 0;
 }

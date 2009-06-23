@@ -91,13 +91,8 @@ DeltaRLE::Stats DRLE_Manager::generateStats()
 	DeltaRLE::Stats stats;
 	SpmIdx::RowIter ri;
 
-	for (ri = this->spm.rows_begin(); ri != this->spm.rows_end(); ++ri){
-		FOREACH(const SpmRowElem &e, *ri){
-		}
-	}
-
-	FOREACH(const SpmRowElems &row, this->spm.rows){
-		FOREACH(const SpmRowElem &elem, row){
+	for (ri = this->spm->rbegin(); ri != this->spm->rend(); ++ri){
+		FOREACH(const SpmRowElem &elem, *ri){
 			if (elem.pattern == NULL){
 				xs.push_back(elem.x);
 				continue;
@@ -106,7 +101,6 @@ DeltaRLE::Stats DRLE_Manager::generateStats()
 		}
 		this->updateStats(xs, stats);
 	}
-
 	return stats;
 }
 
@@ -127,7 +121,7 @@ void DRLE_Manager::doEncode(uint64_t &col,
 			elem.x = col;
 			newrow.push_back(elem);
 			last_elem = &newrow.back();
-			last_elem->pattern = new DeltaRLE(rle.freq, rle.val, this->spm.type);
+			last_elem->pattern = new DeltaRLE(rle.freq, rle.val, this->spm->type);
 			last_elem = NULL;
 			col += rle.val*(rle.freq - 1);
 		} else {
@@ -156,7 +150,7 @@ void DRLE_Manager::EncodeRow(const SpmRowElems &oldrow,
 			doEncode(col, xs, newrow);
 			xs.clear();
 		}
-		col += e.pattern->x_increase(this->spm.type);
+		col += e.pattern->x_increase(this->spm->type);
 		newrow.push_back(e);
 	}
 	if (xs.size() != 0){
@@ -167,17 +161,19 @@ void DRLE_Manager::EncodeRow(const SpmRowElems &oldrow,
 
 void DRLE_Manager::Encode()
 {
-	FOREACH(SpmRowElems &oldrow, this->spm.rows){
-		SpmRowElems newrow;
-		long newrow_size;
+	SpmIdx::RowIter ro; // old row
+
+	for (ro = this->spm->rbegin(); ro != this->spm->rend(); ++ro){
+		SpmRowElems nr;
+		long nr_size;
 		// create new row
-		EncodeRow(oldrow, newrow);
+		EncodeRow(*ro, nr);
 		// copy data
-		newrow_size = newrow.size();
-		oldrow.clear();
-		oldrow.reserve(newrow_size);
-		for (long i=0; i < newrow_size; i++){
-			oldrow.push_back(newrow[i]);
+		nr_size = nr.size();
+		ro->clear();
+		ro->reserve(nr_size);
+		for (long i=0; i < nr_size; i++){
+			ro->push_back(nr[i]);
 		}
 	}
 }
@@ -190,7 +186,7 @@ Pattern::Generator *DeltaRLE::generator(CooElem start)
 }
 
 namespace csx {
-void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdx &spm, std::ostream &os)
+void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdxPart &spm, std::ostream &os)
 {
 	DeltaRLE::Stats::iterator iter;
 	for (iter=stats.begin(); iter != stats.end(); ++iter){
@@ -213,9 +209,9 @@ void DRLE_Manager::genAllStats()
 			continue;
 
 		SpmIterOrder type = SpmTypes[t];
-		this->spm.Transform(type);
+		this->spm->Transform(type);
 		this->stats[type] = this->generateStats();
-		this->spm.Transform(HORIZONTAL);
+		this->spm->Transform(HORIZONTAL);
 
 		// ** Filter stats
 		// From http://www.sgi.com/tech/stl/Map.html:
@@ -227,7 +223,7 @@ void DRLE_Manager::genAllStats()
 		sp = &this->stats[type];
 		for (iter = sp->begin(); iter != sp->end(); ){
 			tmp = iter++;
-			double p = (double)tmp->second.nnz/(double)spm.nnz;
+			double p = (double)tmp->second.nnz/(double)spm->nnz;
 			if (p < this->min_perc){
 				sp->erase(tmp);
 			}
@@ -283,7 +279,7 @@ void DRLE_Manager::outStats(std::ostream &os)
 	DRLE_Manager::StatsMap::iterator iter;
 	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
 		os << SpmTypesNames[iter->first] << "\t";
-		DRLE_OutStats(iter->second, this->spm, os);
+		DRLE_OutStats(iter->second, *(this->spm), os);
 		os << std::endl;
 	}
 }

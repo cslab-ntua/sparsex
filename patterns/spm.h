@@ -185,8 +185,8 @@ public:
 		std::advance(ret, r);
 		return ret;
 	}
-	RowIter rows_begin() { return  rows.begin(); }
-	RowIter rows_end() { return rows.end(); }
+	RowIter rbegin() { return  rows.begin(); }
+	RowIter rend() { return rows.end(); }
 
 	// Transofrmation Functions
 	TransformFn getRevXformFn(SpmIterOrder type);
@@ -324,14 +324,19 @@ public:
 	}
 
 	// Row Iterators
-	SpmIdx::RowIter rows_begin()
+	SpmIdx::RowIter rbegin()
 	{
 		return this->spm->rows_iter(this->row_start);
 	}
 
-	SpmIdx::RowIter rows_end()
+	SpmIdx::RowIter rend()
 	{
 		return this->spm->rows_iter(this->row_end);
+	}
+
+	void Transform(SpmIterOrder type)
+	{
+		this->spm->Transform(type, this->row_start, this->row_end);
 	}
 };
 
