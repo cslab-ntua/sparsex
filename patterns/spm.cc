@@ -147,21 +147,26 @@ static inline void mk_row_elem(const SpmCooElem &p, SpmRowElem &ret)
 }
 
 template <typename IterT>
-void SpmIdx::SetRows(IterT pnts_start, IterT pnts_end)
+uint64_t SpmIdx::SetRows(IterT &pi, const IterT &pnts_end, const unsigned long limit)
 {
 	SpmRowElems *row_elems;
 	uint64_t row_prev;
+	uint64_t cnt;
 
 	this->rows.resize(1);
 	row_elems = &this->rows.at(0);
 	row_prev = 1;
 
-	for (IterT pi = pnts_start; pi != pnts_end; ++pi){
+	cnt = 0;
+	for (; pi != pnts_end; ++pi){
 		uint64_t row = (*pi).y;
 		long size;
 
 		if (row != row_prev){
 			assert(row > this->rows.size());
+			cnt += row_elems->size();
+			if (limit && cnt > limit)
+				break;
 			this->rows.resize(row);
 			row_elems = &this->rows.at(row - 1);
 			row_prev = row;
@@ -170,12 +175,49 @@ void SpmIdx::SetRows(IterT pnts_start, IterT pnts_end)
 		row_elems->resize(size+1);
 		mk_row_elem(*pi, (*row_elems)[size]);
 	}
+
+	return cnt;
 }
 
 void SpmIdx::loadMMF(std::istream &in)
 {
 	MMF mmf(in);
-	SetRows(mmf.begin(), mmf.end());
+	MMF::iterator i0 = mmf.begin();
+	MMF::iterator ie = mmf.end();
+	uint64_t ret;
+
+	ret = SetRows(i0, ie);
+	this->nrows = mmf.nrows;
+	this->ncols = mmf.ncols;
+	assert(mmf.nnz = ret);
+	this->nnz = mmf.nnz;
+}
+
+// load MMF multiple/multithreaded
+SpmIdx *loadMMF_mt(std::istream &in, const long nr)
+{
+	SpmIdx *ret, *spm;
+	MMF mmf(in);
+	MMF::iterator iter = mmf.begin();
+	MMF::iterator iter_end = mmf.end();
+	long limit, cnt;
+
+	ret = new SpmIdx[nr];
+
+	iter = mmf.begin();
+	iter_end = mmf.end();
+	limit = cnt = 0;
+	for (long i=0; i<nr; i++){
+		spm = ret + i;
+		limit = (mmf.nnz - cnt) / (nr - i);
+		spm->nnz = spm->SetRows(iter, iter_end, limit);
+		spm->nrows = spm->rows.size();
+		spm->ncols = mmf.ncols;
+		cnt += spm->nnz;
+	}
+	assert((uint64_t)cnt == mmf.nnz);
+
+	return ret;
 }
 
 void SpmIdx::loadMMF(const char *mmf_file)
@@ -275,7 +317,9 @@ void SpmIdx::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 	}
 
 	sort(elems.begin(), elems.end(), elem_cmp_less);
-	SetRows(elems.begin(), elems.end());
+	SpmCooElems::iterator e0 = elems.begin();
+	SpmCooElems::iterator ee = elems.end();
+	SetRows(e0, ee);
 	elems.clear();
 	this->type = t;
 }

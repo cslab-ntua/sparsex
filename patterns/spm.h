@@ -166,7 +166,7 @@ public:
 	void PrintRows(std::ostream &out=std::cout);
 
 	template <typename IterT>
-	void SetRows(IterT pnts_start, IterT pnts_end);
+	uint64_t SetRows(IterT &pnts_start, const IterT &pnts_end, const unsigned long limit=0);
 
 	// iterators that return a SpmCooElem
 	class PointIter;
