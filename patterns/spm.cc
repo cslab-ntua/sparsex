@@ -118,14 +118,17 @@ SpmIdx::PointIter SpmIdx::points_end(uint64_t ridx, uint64_t eidx)
 	return PointIter(ridx, eidx, this);
 }
 
-SpmIdx::PointPoper SpmIdx::points_pop_begin()
+SpmIdx::PointPoper SpmIdx::points_pop_begin(uint64_t ridx, uint64_t eidx)
 {
-	return PointPoper(0, 0, this);
+	return PointPoper(ridx, eidx, this);
 }
 
-SpmIdx::PointPoper SpmIdx::points_pop_end()
+SpmIdx::PointPoper SpmIdx::points_pop_end(uint64_t ridx, uint64_t eidx)
 {
-	return PointPoper(this->rows.size(), 0, this);
+	if (ridx == 0){
+		ridx = this->rows.size();
+	}
+	return PointPoper(ridx, eidx, this);
 }
 
 static inline bool elem_cmp_less(const SpmCooElem &e0,
@@ -268,6 +271,7 @@ inline TransformFn SpmIdx::getXformFn(SpmIterOrder type)
 
 		case HORIZONTAL:
 		ret = NULL;
+		break;
 
 		default:
 		assert(false);
@@ -292,26 +296,24 @@ inline TransformFn SpmIdx::getTransformFn(SpmIterOrder from_type, SpmIterOrder t
 	return xform_fn;
 }
 
-void SpmIdx::Transform(SpmIterOrder t)
+void SpmIdx::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 {
 	PointPoper p0, pe, p;
 	SpmCooElems elems;
 	boost::function<void (CooElem &p)> xform_fn;
-	uint64_t cnt;
 
 	if (this->type == t)
 		return;
 
 	xform_fn = this->getTransformFn(this->type, t);
 
-	p0 = points_pop_begin();
-	pe = points_pop_end();
-	for(p=p0, cnt=0; p != pe; ++p){
+	p0 = points_pop_begin(rs);
+	pe = points_pop_end(re);
+	for(p=p0; p != pe; ++p){
 		SpmCooElem p_new = SpmCooElem(*p);
 		xform_fn(p_new);
 		elems.push_back(p_new);
 	}
-
 
 	sort(elems.begin(), elems.end(), elem_cmp_less);
 	SetRows(elems.begin(), elems.end());

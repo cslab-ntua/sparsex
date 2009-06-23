@@ -24,7 +24,7 @@ drle_shell.o: drle_shell.cc drle.h spm.h
 	$(CXX_COMPILE) $< -c -o $@
 
 drle_shell: spm.o drle.o drle_shell.o draw.o
-	$(CXX_COMPILE) $(CAIROMM_LIBS) $^ -o $@
+	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_LIBS) $^ -o $@
 
 clean:
 	rm -f *.o drle_shell

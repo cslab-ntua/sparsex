@@ -20,9 +20,12 @@ int main(int argc, char **argv)
 	}
 
 	DeltaRLE::Stats drle_stats;
-	DRLE_Manager DrleMg(4, argv[1]);
-	DrleMg.loadMMF();
+	DRLE_Manager drle_mg(argv[1]);
+	drle_mg.loadMMF();
 	std::cout << "==> Loaded Matrix" << argv[1] << std::endl;
+	drle_mg.genAllStats();
+	drle_mg.outStats();
+	return 0;
 
 	std::string input;
 	std::vector <std::string> tokens;
@@ -40,7 +43,7 @@ int main(int argc, char **argv)
 			row_s = (tokens.size() > 1) ? atol(tokens[1].c_str()) : 0;
 			row_e = (tokens.size() > 2) ? atol(tokens[2].c_str()) : 0;
 			std::cout << "Drawing (" << row_s << "->" << row_e << ")\n";
-			Draw(DrleMg.spm, "test.png", row_s, row_e);
+			Draw(drle_mg.spm, "test.png", row_s, row_e);
 			system("sh -c 'eog test.png &'");
 		} else if (tokens[0] == "xform"){
 		} else if (tokens[0] == "stats"){
@@ -49,7 +52,7 @@ int main(int argc, char **argv)
 			std::cout << "Unknown command "  << tokens[0] << "\n";
 		}
 	}
-	//drle_stats = DrleMg.generateStats(spm);
+	//drle_stats = drle_mg.generateStats(spm);
 	//DRLE_OutStats(drle_stats, spm, std::cout);
 	//std::cout << std::endl;
 	return 0;

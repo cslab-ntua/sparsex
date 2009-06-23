@@ -1,9 +1,14 @@
+#include <algorithm>
+
+#include <boost/foreach.hpp>
+#include <boost/lambda/lambda.hpp>
+#include <boost/function.hpp>
+#define FOREACH BOOST_FOREACH
 
 #include "spm.h"
 #include "drle.h"
 
-#include <boost/foreach.hpp>
-#define FOREACH BOOST_FOREACH
+namespace bll = boost::lambda;
 
 using namespace csx;
 
@@ -84,6 +89,12 @@ DeltaRLE::Stats DRLE_Manager::generateStats()
 {
 	std::vector<uint64_t> xs;
 	DeltaRLE::Stats stats;
+	SpmIdx::RowIter ri;
+
+	for (ri = this->spm.rows_begin(); ri != this->spm.rows_end(); ++ri){
+		FOREACH(const SpmRowElem &e, *ri){
+		}
+	}
 
 	FOREACH(const SpmRowElems &row, this->spm.rows){
 		FOREACH(const SpmRowElem &elem, row){
@@ -185,13 +196,17 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdx &spm, std::ostream &os)
 	for (iter=stats.begin(); iter != stats.end(); ++iter){
 		os << "    " << iter->first << "-> "
 		   << "np:" << iter->second.npatterns
-		   << " nnz: " <<  100*((double)iter->second.nnz/(double)spm.nnz) << "%";
+		   << " nnz: " <<  100*((double)iter->second.nnz/(double)spm.nnz) << "%"
+		   << " (" << iter->second.nnz << ")";
 	}
 }
 } // end csx namespace
 
 void DRLE_Manager::genAllStats()
 {
+	DeltaRLE::Stats::iterator iter, tmp;
+	DeltaRLE::Stats *sp;
+
 	this->stats.clear();
 	for (int t=HORIZONTAL; t != XFORM_MAX; t++){
 		if (this->xforms[t])
@@ -201,5 +216,74 @@ void DRLE_Manager::genAllStats()
 		this->spm.Transform(type);
 		this->stats[type] = this->generateStats();
 		this->spm.Transform(HORIZONTAL);
+
+		// ** Filter stats
+		// From http://www.sgi.com/tech/stl/Map.html:
+		// Map has the important property that inserting a new element into a
+		// map does not invalidate iterators that point to existing elements.
+		// Erasing an element from a map also does not invalidate any
+		// iterators, except, of course, for iterators that actually point to
+		// the element that is being erased.
+		sp = &this->stats[type];
+		for (iter = sp->begin(); iter != sp->end(); ){
+			tmp = iter++;
+			double p = (double)tmp->second.nnz/(double)spm.nnz;
+			if (p < this->min_perc){
+				sp->erase(tmp);
+			}
+		}
+		if (sp->empty()){
+			this->stats.erase(type);
+		}
+	}
+}
+
+// get the number of non-zero elements that can be encoded
+// using drle for a specific iteration order (matrix type)
+uint64_t DRLE_Manager::getTypeNNZ(SpmIterOrder type)
+{
+	DeltaRLE::Stats *sp;
+	DeltaRLE::Stats::iterator iter;
+	uint64_t ret;
+
+	ret = 0;
+	if (this->stats.find(type) == this->stats.end())
+		return ret;
+
+	sp = &this->stats[type];
+	for (iter=sp->begin(); iter != sp->end(); ++iter){
+		ret += iter->second.nnz;
+	}
+	return ret;
+}
+
+// choose a type to encode the matrix, based on the stats
+// (whichever maximizes getTypeNNZ())
+SpmIterOrder DRLE_Manager::chooseType()
+{
+	SpmIterOrder ret;
+	uint64_t max_out;
+	DRLE_Manager::StatsMap::iterator iter;
+
+	ret = NONE;
+	max_out = 0;
+	for (iter=this->stats.begin(); iter != this->stats.end(); ++iter){
+		uint64_t out = this->getTypeNNZ(iter->first);
+		if (out > max_out){
+			max_out = out;
+			ret = iter->first;
+		}
+	}
+
+	return ret;
+}
+
+void DRLE_Manager::outStats(std::ostream &os)
+{
+	DRLE_Manager::StatsMap::iterator iter;
+	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
+		os << SpmTypesNames[iter->first] << "\t";
+		DRLE_OutStats(iter->second, this->spm, os);
+		os << std::endl;
 	}
 }

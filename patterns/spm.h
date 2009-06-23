@@ -59,6 +59,15 @@ const SpmIterOrder SpmTypes[] = {
 	XFORM_MAX
 };
 
+const char *SpmTypesNames[] = {
+	"__NONE__",
+	"HORIZONTAL",
+	"VERTICAL",
+	"DIAGONAL",
+	"REV_DIAGONAL",
+	"__XFORM_MAX__"
+};
+
 class Pattern {
 public:
 	SpmIterOrder type;
@@ -139,13 +148,6 @@ typedef std::vector<SpmRowElem> SpmRowElems;
 typedef std::vector<SpmRowElems> SpmRows;
 typedef boost::function<void (CooElem &p)> TransformFn;
 
-#if 0
-std::ostream &operator<<(std::ostream &out, const SpmCooElem e);
-std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
-std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems);
-std::ostream &operator<<(std::ostream &out, const SpmRows &rows);
-#endif
-
 class SpmIdx {
 public:
 	uint64_t nrows, ncols, nnz;
@@ -173,18 +175,24 @@ public:
 
 	// same with PointIter, but removes elements
 	class PointPoper;
-	PointPoper points_pop_begin();
-	PointPoper points_pop_end();
+	PointPoper points_pop_begin(uint64_t ridx=0, uint64_t eidx=0);
+	PointPoper points_pop_end(uint64_t ridx=0, uint64_t eidx=0);
+
+	typedef SpmRows::iterator RowIter;
+	RowIter rows_iter(uint64_t r){
+		RowIter ret;
+		ret = this->rows.begin();
+		std::advance(ret, r);
+		return ret;
+	}
+	RowIter rows_begin() { return  rows.begin(); }
+	RowIter rows_end() { return rows.end(); }
 
 	// Transofrmation Functions
 	TransformFn getRevXformFn(SpmIterOrder type);
 	TransformFn getXformFn(SpmIterOrder type);
 	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
-	void Transform(SpmIterOrder type);
-	void Transform(long type);
-
-	//
-	void Draw(const char *filename, const int width=600, const int height=600);
+	void Transform(SpmIterOrder type, uint64_t rs=0, uint64_t re=0);
 };
 
 class SpmIdx::PointIter
@@ -278,6 +286,54 @@ public:
 	}
 };
 
+
+class SpmIdxPart {
+private:
+	SpmIdx *spm;
+public:
+	uint64_t nrows, ncols, nnz;
+	uint64_t row_start, row_end; // [row_start, row_end)
+	SpmIterOrder type;
+
+	SpmIdxPart(SpmIdx *spm_,
+	           uint64_t nrows_, uint64_t ncols_, uint64_t nnz_,
+	           uint64_t row_start_, uint64_t row_end_)
+	: spm(spm_), nrows(nrows_), ncols(ncols_), nnz(nnz_),
+	row_start(row_start_), row_end(row_end_)
+	{
+		this->type = spm_->type;
+	}
+
+	// Point iterators
+	SpmIdx::PointIter points_begin(uint64_t rs=0)
+	{
+		rs += this->row_start;
+		assert(rs < this->row_end);
+		return this->spm->points_begin(rs);
+	}
+
+	SpmIdx::PointIter points_end(uint64_t re=0)
+	{
+		if (re == 0){
+			re = this->row_end;
+		} else {
+			re += this->row_start;
+			assert(re <= this->row_end);
+		}
+		return this->spm->points_end(re);
+	}
+
+	// Row Iterators
+	SpmIdx::RowIter rows_begin()
+	{
+		return this->spm->rows_iter(this->row_start);
+	}
+
+	SpmIdx::RowIter rows_end()
+	{
+		return this->spm->rows_iter(this->row_end);
+	}
+};
 
 } // csx namespace end
 

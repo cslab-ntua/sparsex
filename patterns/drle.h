@@ -67,12 +67,13 @@ public:
 
 class DRLE_Manager {
 public:
-	long min_limit;
-	const char *mmf_file;
+	const char *mmf_file; // MMF filename
+	long min_limit; // minimum length for RLEs
+	double min_perc; // min nnz percentage for considering an RLE
 	SpmIdx spm;
 
-	DRLE_Manager(long mlimit, const char *mmf)
-	: min_limit(mlimit), mmf_file(mmf) { }
+	DRLE_Manager(const char *mmf_, long min_limit_=4, double min_perc_=.1)
+	: mmf_file(mmf_), min_limit(min_limit_), min_perc(min_perc_) { }
 
 	void loadMMF()
 	{
@@ -82,11 +83,16 @@ public:
 
 	DeltaRLE::Stats generateStats();
 
-	std::map <SpmIterOrder, DeltaRLE::Stats> stats;
+	typedef std::map <SpmIterOrder, DeltaRLE::Stats> StatsMap;
+	StatsMap stats;
 	void genAllStats();
+	void outStats(std::ostream &os=std::cout);
 
 	std::bitset<XFORM_MAX> xforms;
 	void Encode();
+
+	SpmIterOrder chooseType();
+	uint64_t getTypeNNZ(SpmIterOrder type);
 
 private:
 	void doEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
