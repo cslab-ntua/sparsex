@@ -186,7 +186,7 @@ Pattern::Generator *DeltaRLE::generator(CooElem start)
 }
 
 namespace csx {
-void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdxPart &spm, std::ostream &os)
+void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdx &spm, std::ostream &os)
 {
 	DeltaRLE::Stats::iterator iter;
 	for (iter=stats.begin(); iter != stats.end(); ++iter){

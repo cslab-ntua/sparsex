@@ -1,4 +1,5 @@
 #include "spm.h"
+#include "mmf.h"
 //#include "drle.h"
 
 #include <vector>
@@ -98,13 +99,6 @@ std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
 
 using namespace csx;
 
-std::istream &operator>>(std::istream &in, SpmIdx &obj)
-{
-	obj.loadMMF(in);
-	return in;
-}
-
-
 SpmIdx::PointIter SpmIdx::points_begin(uint64_t ridx, uint64_t eidx)
 {
 	return PointIter(ridx, eidx, this);
@@ -157,17 +151,13 @@ void SpmIdx::SetRows(IterT pnts_start, IterT pnts_end)
 {
 	SpmRowElems *row_elems;
 	uint64_t row_prev;
-	//std::cout << "SetRows\n";
 
-	//this->rows.resize(this->nrows);
 	this->rows.resize(1);
 	row_elems = &this->rows.at(0);
 	row_prev = 1;
 
-	// XXX
-	IterT point;
-	for (point = pnts_start; point < pnts_end; ++point){
-		uint64_t row = point->y;
+	for (IterT pi = pnts_start; pi != pnts_end; ++pi){
+		uint64_t row = (*pi).y;
 		long size;
 
 		if (row != row_prev){
@@ -178,45 +168,14 @@ void SpmIdx::SetRows(IterT pnts_start, IterT pnts_end)
 		}
 		size = row_elems->size();
 		row_elems->resize(size+1);
-		mk_row_elem(*point, (*row_elems)[size]);
+		mk_row_elem(*pi, (*row_elems)[size]);
 	}
-	//std::cout << "SetRows [end]\n";
 }
 
 void SpmIdx::loadMMF(std::istream &in)
 {
-	char buff[1024];
-	double val;
-	uint64_t cnt;
-	int ret;
-	CooElem *point;
-	SpmPoints points;
-
-	// header
-	do {
-		in.getline(buff, sizeof(buff));
-	} while (buff[0] == '#');
-	ret = sscanf(buff, "%lu %lu %lu", &this->nrows, &this->ncols, &this->nnz);
-	if (ret != 3){
-		std::cerr << "mmf header error: sscanf" << std::endl;
-		exit(1);
-	}
-
-	// body
-	type = HORIZONTAL;
-	points.resize(this->nnz);
-	point = &points[0];
-	for (cnt=0; cnt<this->nnz; cnt++){
-		in.getline(buff, sizeof(buff));
-		ret = sscanf(buff, "%lu %lu %lf", &point->y, &point->x, &val);
-		assert(ret == 3);
-		point++;
-	}
-	assert((uint64_t)(point - &points[0]) == this->nnz);
-	assert(in.getline(buff, sizeof(buff)).eof());
-
-	SetRows(points.begin(), points.end());
-	points.clear();
+	MMF mmf(in);
+	SetRows(mmf.begin(), mmf.end());
 }
 
 void SpmIdx::loadMMF(const char *mmf_file)
@@ -533,21 +492,3 @@ int main(int argc, char **argv)
 	//std::cout << obj.rows;
 }
 #endif
-
-SpmIdxPart *SpmPartition(SpmIdx *spm, const long nr_parts)
-{
-	SpmIdxPart *ret;
-	SpmIdx::RowIter ri;
-	long pi; // part index
-	uint64_t elems_current;
-
-	ret = new SpmIdxPart[nr_parts];
-	#if 0
-	elems_current = 0;
-	for (pi=0; pi < nr_parts; pi++){
-		uint64_t elems_limit = (spm->nnz - elems_current) / (nr_parts - pi);
-	}
-	#endif
-
-	return ret;
-}

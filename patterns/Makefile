@@ -11,6 +11,9 @@ CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
 CAIROMM_LIBS   =  $(shell pkg-config cairomm-1.0 --libs)
 
+mmf.o: mmf.cc spm.h mmf.h
+	$(CXX_COMPILE) $< -c -o $@
+
 spm.o: spm.cc spm.h
 	$(CXX_COMPILE) $< -c -o $@
 

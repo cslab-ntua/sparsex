@@ -287,62 +287,6 @@ public:
 };
 
 
-class SpmIdxPart {
-private:
-	SpmIdx *spm;
-public:
-	uint64_t nrows, ncols, nnz;
-	uint64_t row_start, row_end; // [row_start, row_end)
-	SpmIterOrder type;
-
-	SpmIdxPart() { };
-	SpmIdxPart(SpmIdx *spm_,
-	           uint64_t nrows_, uint64_t ncols_, uint64_t nnz_,
-	           uint64_t row_start_, uint64_t row_end_)
-	: spm(spm_), nrows(nrows_), ncols(ncols_), nnz(nnz_),
-	row_start(row_start_), row_end(row_end_)
-	{
-		this->type = spm_->type;
-	}
-
-	// Point iterators
-	SpmIdx::PointIter points_begin(uint64_t rs=0)
-	{
-		rs += this->row_start;
-		assert(rs < this->row_end);
-		return this->spm->points_begin(rs);
-	}
-
-	SpmIdx::PointIter points_end(uint64_t re=0)
-	{
-		if (re == 0){
-			re = this->row_end;
-		} else {
-			re += this->row_start;
-			assert(re <= this->row_end);
-		}
-		return this->spm->points_end(re);
-	}
-
-	// Row Iterators
-	SpmIdx::RowIter rbegin()
-	{
-		return this->spm->rows_iter(this->row_start);
-	}
-
-	SpmIdx::RowIter rend()
-	{
-		return this->spm->rows_iter(this->row_end);
-	}
-
-	void Transform(SpmIterOrder type)
-	{
-		this->spm->Transform(type, this->row_start, this->row_end);
-	}
-};
-
-SpmIdxPart *SpmPartition(SpmIdx *spm, const long nr_parts);
-
 } // csx namespace end
 
 #endif /* CSX_SPM_H__ */

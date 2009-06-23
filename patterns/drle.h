@@ -67,11 +67,11 @@ public:
 
 class DRLE_Manager {
 public:
-	SpmIdxPart *spm;
+	SpmIdx *spm;
 	long min_limit; // minimum length for RLEs
 	double min_perc; // min nnz percentage for considering an RLE
 
-	DRLE_Manager(SpmIdxPart *_spm, long min_limit_=4, double min_perc_=.1)
+	DRLE_Manager(SpmIdx *_spm, long min_limit_=4, double min_perc_=.1)
 	: spm(_spm), min_limit(min_limit_), min_perc(min_perc_) { }
 
 	DeltaRLE::Stats generateStats();
@@ -104,7 +104,7 @@ inline std::ostream &operator<<(std::ostream &os, const DeltaRLE::Stats &stats)
 }
 #endif
 
-void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdxPart &spm, std::ostream &os);
+void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdx &spm, std::ostream &os);
 
 } // end of csx namespace
 
