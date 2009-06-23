@@ -533,3 +533,21 @@ int main(int argc, char **argv)
 	//std::cout << obj.rows;
 }
 #endif
+
+SpmIdxPart *SpmPartition(SpmIdx *spm, const long nr_parts)
+{
+	SpmIdxPart *ret;
+	SpmIdx::RowIter ri;
+	long pi; // part index
+	uint64_t elems_current;
+
+	ret = new SpmIdxPart[nr_parts];
+	#if 0
+	elems_current = 0;
+	for (pi=0; pi < nr_parts; pi++){
+		uint64_t elems_limit = (spm->nnz - elems_current) / (nr_parts - pi);
+	}
+	#endif
+
+	return ret;
+}

@@ -295,6 +295,7 @@ public:
 	uint64_t row_start, row_end; // [row_start, row_end)
 	SpmIterOrder type;
 
+	SpmIdxPart() { };
 	SpmIdxPart(SpmIdx *spm_,
 	           uint64_t nrows_, uint64_t ncols_, uint64_t nnz_,
 	           uint64_t row_start_, uint64_t row_end_)
@@ -339,6 +340,8 @@ public:
 		this->spm->Transform(type, this->row_start, this->row_end);
 	}
 };
+
+SpmIdxPart *SpmPartition(SpmIdx *spm, const long nr_parts);
 
 } // csx namespace end
 
