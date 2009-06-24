@@ -16,12 +16,12 @@
 #include <boost/lambda/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 
-
 #include "../../debug/debug_user.h"
 
 namespace bll = boost::lambda;
 
 #define FOREACH BOOST_FOREACH
+
 
 namespace csx {
 
@@ -164,8 +164,7 @@ uint64_t SpmIdx::SetRows(IterT &pi, const IterT &pnts_end, const unsigned long l
 
 		if (row != row_prev){
 			assert(row > this->rows.size());
-			cnt += row_elems->size();
-			if (limit && cnt > limit)
+			if (limit && cnt >= limit)
 				break;
 			this->rows.resize(row);
 			row_elems = &this->rows.at(row - 1);
@@ -174,6 +173,7 @@ uint64_t SpmIdx::SetRows(IterT &pi, const IterT &pnts_end, const unsigned long l
 		size = row_elems->size();
 		row_elems->resize(size+1);
 		mk_row_elem(*pi, (*row_elems)[size]);
+		cnt++;
 	}
 
 	return cnt;
@@ -191,33 +191,8 @@ void SpmIdx::loadMMF(std::istream &in)
 	this->ncols = mmf.ncols;
 	assert(mmf.nnz = ret);
 	this->nnz = mmf.nnz;
-}
-
-// load MMF multiple/multithreaded
-SpmIdx *loadMMF_mt(std::istream &in, const long nr)
-{
-	SpmIdx *ret, *spm;
-	MMF mmf(in);
-	MMF::iterator iter = mmf.begin();
-	MMF::iterator iter_end = mmf.end();
-	long limit, cnt;
-
-	ret = new SpmIdx[nr];
-
-	iter = mmf.begin();
-	iter_end = mmf.end();
-	limit = cnt = 0;
-	for (long i=0; i<nr; i++){
-		spm = ret + i;
-		limit = (mmf.nnz - cnt) / (nr - i);
-		spm->nnz = spm->SetRows(iter, iter_end, limit);
-		spm->nrows = spm->rows.size();
-		spm->ncols = mmf.ncols;
-		cnt += spm->nnz;
-	}
-	assert((uint64_t)cnt == mmf.nnz);
-
-	return ret;
+	this->row_start = 0;
+	this->type = HORIZONTAL;
 }
 
 void SpmIdx::loadMMF(const char *mmf_file)
@@ -228,6 +203,49 @@ void SpmIdx::loadMMF(const char *mmf_file)
 	mmf.close();
 
 }
+
+// load MMF multiple/multithreaded
+namespace csx {
+SpmIdx *loadMMF_mt(std::istream &in, const long nr)
+{
+	SpmIdx *ret, *spm;
+	MMF mmf(in);
+	MMF::iterator iter = mmf.begin();
+	MMF::iterator iter_end = mmf.end();
+	long limit, cnt;
+
+	ret = new SpmIdx[nr];
+
+	limit = cnt = 0;
+	for (long i=0; i<nr; i++){
+		spm = ret + i;
+		limit = (mmf.nnz - cnt) / (nr - i);
+		spm->nnz = spm->SetRows(iter, iter_end, limit);
+		spm->nrows = spm->rows.size();
+		spm->ncols = mmf.ncols;
+		spm->row_start = cnt;
+		spm->type = HORIZONTAL;
+		cnt += spm->nnz;
+	}
+	assert((uint64_t)cnt == mmf.nnz);
+
+	return ret;
+}
+
+SpmIdx *loadMMF_mt(const char *mmf_file, const long nr)
+{
+	SpmIdx *ret;
+	std::ifstream mmf;
+
+	mmf.open(mmf_file);
+	ret = loadMMF_mt(mmf, nr);
+	mmf.close();
+
+	return ret;
+
+}
+
+} // end of csx namespace
 
 inline TransformFn SpmIdx::getRevXformFn(SpmIterOrder type)
 {
@@ -249,6 +267,7 @@ inline TransformFn SpmIdx::getRevXformFn(SpmIterOrder type)
 		break;
 
 		default:
+		std::cerr << "Unknown type: " << type << std::endl;
 		assert(false);
 	}
 	return ret;

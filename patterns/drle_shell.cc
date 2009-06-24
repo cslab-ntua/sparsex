@@ -15,7 +15,6 @@ int main(int argc, char **argv)
 {
 
 	SpmIdx *spm;
-	SpmIdxPart *spm_p;
 	DRLE_Manager *drle_mg;
 	DeltaRLE::Stats drle_stats;
 
@@ -24,12 +23,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	spm = new SpmIdx();
-	spm->loadMMF(argv[1]);
-	spm_p = new SpmIdxPart(spm, spm->nrows, spm->ncols, spm->nnz, 0, spm->nrows);
-	drle_mg = new DRLE_Manager(spm_p);
-
+	spm = loadMMF_mt(argv[1], 1);
 	std::cout << "==> Loaded Matrix" << argv[1] << std::endl;
+	drle_mg = new DRLE_Manager(spm);
+
 	drle_mg->genAllStats();
 	drle_mg->outStats();
 
@@ -63,8 +60,6 @@ int main(int argc, char **argv)
 	//DRLE_OutStats(drle_stats, spm, std::cout);
 	//std::cout << std::endl;
 	#endif
-	delete spm;
-	delete spm_p;
-	delete drle_mg;
+	delete[] spm;
 	return 0;
 }

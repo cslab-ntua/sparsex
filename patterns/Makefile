@@ -14,7 +14,7 @@ CAIROMM_LIBS   =  $(shell pkg-config cairomm-1.0 --libs)
 mmf.o: mmf.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
 
-spm.o: spm.cc spm.h
+spm.o: spm.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
 
 draw.o: draw.cc spm.h draw.h
@@ -26,7 +26,7 @@ drle.o: drle.cc drle.h spm.h
 drle_shell.o: drle_shell.cc drle.h spm.h
 	$(CXX_COMPILE) $< -c -o $@
 
-drle_shell: spm.o drle.o drle_shell.o draw.o
+drle_shell: mmf.o spm.o drle.o drle_shell.o draw.o
 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_LIBS) $^ -o $@
 
 clean:

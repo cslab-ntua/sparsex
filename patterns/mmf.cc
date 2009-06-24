@@ -12,7 +12,7 @@ MMF::MMF(std::istream &_in) : in(_in)
 	// Read Header
 	do {
 		this->in.getline(buff, sizeof(buff));
-	} while (buff[0] != '#');
+	} while (buff[0] == '#');
 	ret = sscanf(buff, "%lu %lu %lu", &this->nrows, &this->ncols, &this->nnz);
 	if (ret != 3){
 		std::cerr << "mmf header error: sscanf" << std::endl;

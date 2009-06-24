@@ -5,6 +5,7 @@
 #include <map>
 #include <iterator>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 
 #include <boost/function.hpp>
@@ -154,6 +155,10 @@ public:
 	SpmIterOrder type;
 	SpmRows rows;
 
+	// Since this can be a partition of the original matrix,
+	// this designates the first row of this partition
+	uint64_t row_start;
+
 	SpmIdx() {type = NONE;};
 	~SpmIdx() {};
 
@@ -194,6 +199,9 @@ public:
 	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
 	void Transform(SpmIterOrder type, uint64_t rs=0, uint64_t re=0);
 };
+
+SpmIdx *loadMMF_mt(const char *mmf_file, const long nr);
+SpmIdx *loadMMF_mt(std::istream &in, const long nr);
 
 class SpmIdx::PointIter
 : public std::iterator<std::forward_iterator_tag, CooElem>

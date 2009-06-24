@@ -34,31 +34,45 @@ public std::iterator<std::forward_iterator_tag, CooElem>
 	MMF *mmf;
 	uint64_t cnt;
 	SpmCooElem elem;
+	bool valid;
 
 public:
-	iterator(MMF *mmf_, uint64_t cnt_): mmf(mmf_), cnt(cnt_) {}
-
-	bool operator==(const iterator &i)
+	void _set(){
+		double v;
+		this->valid = this->mmf->next(this->elem.y, this->elem.x, v);
+	}
+	iterator() { assert(false); }
+	iterator(MMF *mmf_, uint64_t cnt_): mmf(mmf_), cnt(cnt_)
 	{
+		// this is the initializer
+		if (this->cnt == 0){
+			this->_set();
+		}
+	}
+
+
+	bool operator==(const iterator &i){
+		//std::cout << "me: " << this->mmf << " " << this->cnt
+		//          << " i: " << i.mmf << " " << i.cnt << "\n";
 		return (this->mmf == i.mmf) && (this->cnt == i.cnt);
 	}
 
-	bool operator!=(const iterator &i)
-	{
+	bool operator!=(const iterator &i){
 		return !(*this == i);
 	}
 
-	void operator++()
-	{
-		bool ret;
-		double v;
-		ret = this->mmf->next(this->elem.y, this->elem.x, v);
-		assert(ret);
+	void operator++(){
 		this->cnt++;
+		this->_set();
 	}
 
-	SpmCooElem operator*()
-	{
+	SpmCooElem operator*(){
+		if (!this->valid){
+			std::cout << "Requesting dereference, but mmf ended\n"
+			          << "cnt: " << this->cnt << std::endl;
+			assert(false);
+		}
+		assert(valid);
 		return this->elem;
 	}
 };
