@@ -214,7 +214,7 @@ public:
 	PointIter(uint64_t ridx, uint64_t eidx, SpmIdx *s)
 	: row_idx(ridx), elm_idx(eidx), spm(s) {
 		// find the first non zero row
-		while (row_idx < spm->nrows && spm->rows[row_idx].size() == 0) {
+		while (row_idx < spm->rows.size() && spm->rows[row_idx].size() == 0) {
 			row_idx++;
 		}
 	}

@@ -33,7 +33,7 @@ public std::iterator<std::forward_iterator_tag, CooElem>
 {
 	MMF *mmf;
 	uint64_t cnt;
-	SpmCooElem elem;
+	CooElem elem;
 	bool valid;
 
 public:
@@ -66,7 +66,7 @@ public:
 		this->_set();
 	}
 
-	SpmCooElem operator*(){
+	CooElem operator*(){
 		if (!this->valid){
 			std::cout << "Requesting dereference, but mmf ended\n"
 			          << "cnt: " << this->cnt << std::endl;
