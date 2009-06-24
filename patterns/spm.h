@@ -202,6 +202,7 @@ public:
 
 SpmIdx *loadMMF_mt(const char *mmf_file, const long nr);
 SpmIdx *loadMMF_mt(std::istream &in, const long nr);
+void  TestMMF(SpmIdx *spm, const char *mmf_file);
 
 class SpmIdx::PointIter
 : public std::iterator<std::forward_iterator_tag, CooElem>

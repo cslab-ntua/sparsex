@@ -1,6 +1,5 @@
 #include "spm.h"
 #include "mmf.h"
-//#include "drle.h"
 
 #include <vector>
 #include <iterator>
@@ -175,7 +174,6 @@ uint64_t SpmIdx::SetRows(IterT &pi, const IterT &pnts_end, const unsigned long l
 		mk_row_elem(*pi, (*row_elems)[size]);
 		cnt++;
 	}
-
 	return cnt;
 }
 

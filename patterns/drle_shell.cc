@@ -26,7 +26,6 @@ int main(int argc, char **argv)
 	spm = loadMMF_mt(argv[1], 1);
 	std::cout << "==> Loaded Matrix" << argv[1] << std::endl;
 	drle_mg = new DRLE_Manager(spm);
-
 	drle_mg->genAllStats();
 	drle_mg->outStats();
 
