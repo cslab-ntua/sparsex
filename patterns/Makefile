@@ -11,6 +11,9 @@ CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
 CAIROMM_LIBS   =  $(shell pkg-config cairomm-1.0 --libs)
 
+dynarray_dir = $(shell rsrc resource 'dynarray')
+dynarray_dep = $(dynarray_dir)/dynarray.o
+
 mmf.o: mmf.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
 
@@ -19,6 +22,9 @@ spm.o: spm.cc spm.h mmf.h
 
 draw.o: draw.cc spm.h draw.h
 	$(CXX_COMPILE) $(CAIROMM_FLAGS) $< -c -o $@
+
+ctl.o: ctl.cc ctl.h spm.h delta.h
+	$(CXX_COMPILE) -I$(dynarray_dir) $< -c -o $@
 
 drle.o: drle.cc drle.h spm.h
 	$(CXX_COMPILE) $< -c -o $@

@@ -87,6 +87,10 @@ public:
 	SpmIterOrder chooseType();
 	uint64_t getTypeNNZ(SpmIterOrder type);
 
+	// create the ctl array
+	// (this will destroy the spm)
+	unsigned char *mkCtl();
+
 private:
 	void doEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
 	void EncodeRow(const SpmRowElems &oldrow, SpmRowElems &newrow);

@@ -23,6 +23,13 @@ namespace csx {
 #define CTL_NR_BIT 7
 #define CTL_RJMP_BIT 6
 
+static inline void set_bit(uint8_t *byte, int bit)
+{
+	assert(bit >= 0);
+	assert(bit < 8);
+	*byte |= (1<<bit);
+}
+
 // size is 8 bits: 0..255
 #define CTL_SIZE_MAX ((1<<8) - 1)
 
@@ -31,27 +38,30 @@ namespace csx {
 class CtlManager
 {
 public:
-	typedef class {
+	class PatInfo {
 	public:
 		uint8_t flag; // flags allocated for this pattern
 		uint64_t nr;  // number of non-zero elemenets
 		PatInfo(uint8_t flag_, uint64_t nr_): flag(flag_), nr(nr_) {}
-	} PatInfo;
-	typedef map<long,PatInfo> PatMap;
+		PatInfo(): flag(0), nr(0) {}
+	};
+	typedef std::map<long,PatInfo> PatMap;
 
 	PatMap patterns;
 	uint8_t flag_avail; // current available flag
 	dynarray_t *ctl_da;
+	bool new_row;
+	uint64_t last_col;
 	SpmIdx *spm;
 
 
-	CtlManager(SpmIdx *spm_) :flag_avail(0), ctl_da(NULL), spm(spm_)
-	{
-		this->ctl_da = dynarray_create(sizeof(uint8_t), 512)
-	}
+	CtlManager(SpmIdx *spm_) :flag_avail(0), ctl_da(NULL), spm(spm_) {}
 
-	getFlag(long pattern_id);
+	uint8_t getFlag(long pattern_id, uint64_t nnz);
 	uint8_t *mkCtl();
+private:
+	void doRow(const SpmRowElems &row);
+	void AddXs(std::vector<uint64_t> xs);
 };
 
 } // end csx namespace
