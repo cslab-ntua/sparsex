@@ -28,6 +28,14 @@ void DeltaEncode(IterT start, IterT end, ValT &x0)
 	}
 }
 
+template <typename T>
+void Copy(T *dst, uint64_t *src, long nr_items)
+{
+	for (long i=0; i<nr_items; i++){
+		dst[i] = static_cast<T>(src[i]);
+	}
+}
+
 
 #define LONGUC_SHIFT (7)
 static inline void da_put_ul(dynarray_t *da, unsigned long val)
@@ -68,6 +76,7 @@ static inline void da_put_ul(dynarray_t *da, unsigned long val)
 	ptr += sizeof(uint64_t);            \
 	ret;                                \
 })
+
 #define uc_get_ul(ptr)                  \
 ({                                      \
 	unsigned long _val;                 \
@@ -91,7 +100,6 @@ static inline void da_put_ul(dynarray_t *da, unsigned long val)
 	}                                   \
 	_val;                               \
 })                                      \
-
 
 uint8_t CtlManager::getFlag(long pattern_id, uint64_t nnz)
 {
@@ -141,23 +149,22 @@ uint8_t *CtlManager::mkCtl()
 
 void CtlManager::AddXs(std::vector<uint64_t> xs)
 {
-	uint64_t jmp;
-	uint8_t flags, size, *ctl_flags, *ctl_size;
-	long pat_id;
-	int delta_bytes;
-	uint64_t last_col;
-	uint64_t max;
+	uint8_t *ctl_flags, *ctl_size;
+	long pat_id, xs_size, delta_bytes;
+	uint64_t last_col, max;
 	DeltaSize delta_size;
 	std::vector<uint64_t>::iterator vi;
+	void *dst;
 
 	// do delta encoding
-	last_col = xs[xs.size() - 1];
+	xs_size = xs.size();
+	last_col = xs[xs_size - 1];
 	DeltaEncode(xs.begin(), xs.end(), this->last_col);
 	this->last_col = last_col;
 
 	// caclulate the delta's size and the pattern id
 	max = 0;
-	if (xs.size() > 1){
+	if (xs_size > 1){
 		vi = xs.begin();
 		std::advance(vi, 1); // advance over jmp
 		max = *(std::max_element(vi, xs.end()));
@@ -167,7 +174,7 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 
 	// set flags
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
-	*ctl_flags = this->getFlag(PID_DELTA_BASE + pat_id, xs.size());
+	*ctl_flags = this->getFlag(PID_DELTA_BASE + pat_id, xs_size);
 	if (this->new_row){
 		set_bit(ctl_flags, CTL_NR_BIT);
 		this->new_row = false;
@@ -175,13 +182,31 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 
 	// set size
 	ctl_size = ctl_flags + 1;
-	assert(xs.size() > 0);
-	assert(xs.size() < CTL_SIZE_MAX);
-	*ctl_size = xs.size();
+	assert(xs_size > 0);
+	assert(xs_size < CTL_SIZE_MAX);
+	*ctl_size = xs_size;
 
+	// add jmp and deltas
 	da_put_ul(this->ctl_da, xs[0]);
-	delta_bytes = DeltaSize_getBytes(delta_size);
-	//dynarray_alogn(this->ctl_da, )
+
+	//add deltas (if needed)
+	if (xs_size > 1){
+		delta_bytes = DeltaSize_getBytes(delta_size);
+		dst = dynarray_alloc_nr_aligned(this->ctl_da, delta_bytes*(xs_size-1), delta_bytes);
+		switch (delta_size){
+			case DELTA_U8:  Copy((uint8_t  *)dst, &xs[1], xs_size-1); break;
+			case DELTA_U16: Copy((uint16_t *)dst, &xs[1], xs_size-1); break;
+			case DELTA_U32: Copy((uint32_t *)dst, &xs[1], xs_size-1); break;
+			default:assert(false);
+		}
+	}
+
+	xs.clear();
+	return;
+}
+
+void CtlManager::AddPattern(Pattern *pattern, uint64_t jmp)
+{
 }
 
 void CtlManager::doRow(const SpmRowElems &row)
@@ -189,13 +214,14 @@ void CtlManager::doRow(const SpmRowElems &row)
 	std::vector<uint64_t> xs;
 	this->new_row = true;
 	this->last_col = 0;
-	FOREACH(const SpmRowElem &spm_elem, row)
-	{
+	FOREACH(const SpmRowElem &spm_elem, row){
 		// check if this element contains a pattern
 		if (spm_elem.pattern != NULL){
-			if (xs.size() != 0)
+			uint64_t jmp;
+			jmp = (xs.size() > 0) ? xs.pop_back() : 0;
+			if (xs.size() > 0)
 				this->AddXs(xs);
-			//this->AddPattern(spm_elem.pattern);
+			this->AddPattern(spm_elem.pattern, uint64_t jmp);
 			continue;
 		}
 
@@ -208,4 +234,7 @@ void CtlManager::doRow(const SpmRowElems &row)
 
 		xs.push_back(spm_elem.x);
 	}
+
+	if (xs.size() > 0)
+		this->AddXs(xs);
 }
