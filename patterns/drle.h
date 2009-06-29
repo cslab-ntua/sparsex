@@ -29,10 +29,47 @@ public:
 		return ret;
 	}
 
+	virtual uint64_t x_increase_jmp(SpmIterOrder order, uint64_t jmp) const
+	{
+		long ret;
+
+		ret = jmp;
+		if (order == this->type){
+			ret += (this->size*this->delta);
+		}
+
+		return ret;
+	}
+
 	virtual std::ostream &print_on(std::ostream &out) const
 	{
 		out << "drle: size=" << this->size << " len=" << this->delta << " type=" << this->type;
 		return out;
+	}
+
+	virtual long getPatId() const
+	{
+		//******** Static Pattern Id Mapping:
+		//  10000 + delta => HORIZONTAL drle
+		#define PID_HORIZ_BASE 10000
+		//  20000 + delta => VERTICAL drle
+		#define PID_VERT_BASE 20000
+		//  30000 + delta => DIAGONAL drle
+		#define PID_DIAG_BASE 30000
+		//  40000 + delta => REV_DIAGONAL drle
+		#define PID_rDIAG_BASE 40000
+		switch (type){
+			case HORIZONTAL: return PID_HORIZ_BASE + this->delta;
+			case VERTICAL: return PID_VERT_BASE + this->delta;
+			case DIAGONAL: return PID_DIAG_BASE + this->delta;
+			case REV_DIAGONAL: return PID_rDIAG_BASE + this->delta;
+			default: assert(false);
+		}
+	}
+
+	virtual long getSize() const
+	{
+		return this->size;
 	}
 
 	class Generator;

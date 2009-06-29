@@ -124,15 +124,6 @@ uint8_t CtlManager::getFlag(long pattern_id, uint64_t nnz)
 //  32 -> delta 32
 //  64 -> delta 64
 #define PID_DELTA_BASE 0
-//  10000 + delta => HORIZONTAL drle
-#define PID_HORIZ_BASE 10000
-//  20000 + delta => VERTICAL drle
-#define PID_VERTI_BASE 20000
-//  30000 + delta => DIAGONAL drle
-#define PID_DIAGO_BASE 30000
-//  40000 + delta => REV_DIAGONAL drle
-#define PID_rDIAGO_BASE 40000
-
 
 uint8_t *CtlManager::mkCtl()
 {
@@ -145,6 +136,14 @@ uint8_t *CtlManager::mkCtl()
 
 	ret = (uint8_t *)dynarray_destroy(this->ctl_da);
 	return ret;
+}
+
+void CtlManager::updateNewRow(uint8_t *flags)
+{
+	if (this->new_row){
+		set_bit(ctl_flags, CTL_NR_BIT);
+		this->new_row = false;
+	}
 }
 
 void CtlManager::AddXs(std::vector<uint64_t> xs)
@@ -162,7 +161,7 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 	DeltaEncode(xs.begin(), xs.end(), this->last_col);
 	this->last_col = last_col;
 
-	// caclulate the delta's size and the pattern id
+	// calculate the delta's size and the pattern id
 	max = 0;
 	if (xs_size > 1){
 		vi = xs.begin();
@@ -175,15 +174,11 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 	// set flags
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
 	*ctl_flags = this->getFlag(PID_DELTA_BASE + pat_id, xs_size);
-	if (this->new_row){
-		set_bit(ctl_flags, CTL_NR_BIT);
-		this->new_row = false;
-	}
+	this->updateNewRow(ctl_flags);
 
 	// set size
 	ctl_size = ctl_flags + 1;
-	assert(xs_size > 0);
-	assert(xs_size < CTL_SIZE_MAX);
+	assert( (xs_size > 0) && (xs_size <= CTL_SIZE_MAX));
 	*ctl_size = xs_size;
 
 	// add jmp and deltas
@@ -205,10 +200,32 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 	return;
 }
 
-void CtlManager::AddPattern(Pattern *pattern, uint64_t jmp)
+void CtlManager::AddPattern(SpmRowElem &elem, uint64_t jmp)
 {
+	uint8_t *ctl_flags, *ctl_size;
+	long pat_size, pat_id;
+	uint64_t jmp;
+
+	pat_size = elem.pattern.getSize();
+	pat_id = elem.pattern.getPatId();
+
+	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
+	*ctl_flags = this->getFlag(pat_id, pat_size);
+	this->updateNewRow(ctl_flags);
+
+	ctl_size = ctl_flags + 1;
+	assert(pat_size + 1 <= CTL_SIZE_MAX);
+	*ctl_size = pat_size + (jmp ? 1 : 0);
+
+	assert(elem.x > this->last_col);
+	jmp = elem.x - this->last_col;
+	da_put_ul(this->ctl_da, jmp);
 }
 
+// Ctl Rules
+// 1. Each unit leaves the x index at the last element it calculated on the
+// current row
+// 2. Size is the number of elements taht will be calculated
 void CtlManager::doRow(const SpmRowElems &row)
 {
 	std::vector<uint64_t> xs;
@@ -218,10 +235,10 @@ void CtlManager::doRow(const SpmRowElems &row)
 		// check if this element contains a pattern
 		if (spm_elem.pattern != NULL){
 			uint64_t jmp;
-			jmp = (xs.size() > 0) ? xs.pop_back() : 0;
+			jmp = (xs.size() > 0) ? xs.pop_last() : 0;
 			if (xs.size() > 0)
 				this->AddXs(xs);
-			this->AddPattern(spm_elem.pattern, uint64_t jmp);
+			this->AddPattern(spm_elem, jmp);
 			continue;
 		}
 

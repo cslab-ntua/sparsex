@@ -75,7 +75,10 @@ public:
 
 	virtual Pattern *clone() const = 0;
 	//virtual ~Pattern() const = 0;
+	virtual long getSize() const = 0;
+	virtual long getPatId() const = 0;
 	virtual long x_increase(SpmIterOrder spm_iter_order) const = 0;
+	virtual uint64_t x_increase_jmp(SpmIterOrder spm_iter_order, uint64_t jmp) const = 0;
 	virtual std::ostream &print_on(std::ostream &) const = 0;
 
 	class Generator {
@@ -95,19 +98,6 @@ public:
 	};
 };
 
-static inline std::ostream &operator<<(std::ostream &os, const Pattern::StatsVal &stats)
-{
-	os << "nnz: " << stats.nnz;
-	return os;
-}
-
-static inline std::ostream &operator<<(std::ostream &os, const Pattern &p)
-{
-	os << " (";
-	p.print_on(os);
-	os << " type:" << p.type << ") ";
-	return os;
-}
 
 class SpmPattern {
 public:
@@ -148,6 +138,7 @@ typedef std::vector<SpmCooElem> SpmCooElems;
 typedef std::vector<SpmRowElem> SpmRowElems;
 typedef std::vector<SpmRowElems> SpmRows;
 typedef boost::function<void (CooElem &p)> TransformFn;
+
 
 class SpmIdx {
 public:
@@ -295,6 +286,15 @@ public:
 	}
 };
 
+// Forward declarations for stream operations
+std::ostream &operator<<(std::ostream &os, const Pattern::StatsVal &stats);
+std::ostream &operator<<(std::ostream &os, const Pattern &p);
+std::ostream &operator<<(std::ostream &out, CooElem p);
+std::ostream &operator<<(std::ostream &out, const SpmCooElem e);
+std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
+std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems);
+std::ostream &operator<<(std::ostream &out, const SpmRows &rows);
+std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi);
 
 } // csx namespace end
 

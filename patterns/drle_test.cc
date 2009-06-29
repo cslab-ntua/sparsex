@@ -36,6 +36,7 @@ int main(int argc, char **argv)
 	std::cout << "Transform to " << SpmTypesNames[HORIZONTAL] << std::endl;
 	spm->Transform(HORIZONTAL);
 	TestMMF(spm, argv[1]);
+	std::cout << spm->rows << std::endl;
 
 	std::cout << "Stats (after encoding)" << std::endl;
 	drle_mg = new DRLE_Manager(spm);

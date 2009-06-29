@@ -61,7 +61,9 @@ public:
 	uint8_t *mkCtl();
 private:
 	void doRow(const SpmRowElems &row);
+	void updateNewRow(uint8_t *flags);
 	void AddXs(std::vector<uint64_t> xs);
+	void AddPattern(Pattern *pattern, uint64_t jmp);
 };
 
 } // end csx namespace

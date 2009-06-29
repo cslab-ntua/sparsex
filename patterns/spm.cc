@@ -24,12 +24,66 @@ namespace bll = boost::lambda;
 
 namespace csx {
 
+std::ostream &operator<<(std::ostream &os, const Pattern::StatsVal &stats)
+{
+	os << "nnz: " << stats.nnz;
+	return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const Pattern &p)
+{
+	os << " (";
+	p.print_on(os);
+	os << " type:" << p.type << ") ";
+	return os;
+}
+
 std::ostream &operator<<(std::ostream &out, CooElem p)
 {
 	out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
 	return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
+{
+	out << static_cast<CooElem>(e);
+	if (e.pattern != NULL)
+			out << "->[" << *(e.pattern) << "]";
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
+{
+	out << elem.x;
+	if (elem.pattern){
+		out << *(elem.pattern);
+	}
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems)
+{
+	out << "row( ";
+	BOOST_FOREACH(const SpmRowElem &elem, elems){
+		out << elem << " [@" << &elem << "]  ";
+	}
+	out << ") @" << &elems ;
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const SpmRows &rows)
+{
+	BOOST_FOREACH(const SpmRowElems &row, rows){
+		out << row << std::endl;
+	}
+	return out;
+}
+
+std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
+{
+	out << "<" << std::setw(2) << pi.row_idx << "," << std::setw(2) << pi.elm_idx << ">";
+	return out;
+}
 
 // mappings for vertical transformation
 static inline void pnt_map_V(CooElem &src, CooElem &dst)
@@ -86,12 +140,6 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t nrows)
 	dst.y = src_y - dst.x + 1;
 }
 
-
-std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
-{
-	out << "<" << std::setw(2) << pi.row_idx << "," << std::setw(2) << pi.elm_idx << ">";
-	return out;
-}
 
 
 } // end of csx namespace
@@ -341,40 +389,6 @@ void SpmIdx::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 	this->type = t;
 }
 
-std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
-{
-	out << static_cast<CooElem>(e);
-	if (e.pattern != NULL)
-			out << "->[" << *(e.pattern) << "]";
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
-{
-	out << elem.x;
-	if (elem.pattern){
-		out << *(elem.pattern);
-	}
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems)
-{
-	out << "row( ";
-	BOOST_FOREACH(const SpmRowElem &elem, elems){
-		out << elem << " [@" << &elem << "]  ";
-	}
-	out << ") @" << &elems ;
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const SpmRows &rows)
-{
-	BOOST_FOREACH(const SpmRowElems &row, rows){
-		out << row << std::endl;
-	}
-	return out;
-}
 
 
 #if 0
