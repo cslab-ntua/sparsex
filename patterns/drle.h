@@ -3,6 +3,7 @@
 
 #include <map>
 #include <bitset>
+#include <limits>
 
 #include "spm.h"
 
@@ -110,9 +111,9 @@ public:
 	double min_perc; // min nnz percentage for considering an RLE
 
 	DRLE_Manager(SpmIdx *_spm,
-	             long min_limit_=4, long max_limit_ = 255,
+	             long min_limit_=4, long max_limit_ = std::numeric_limits<long>::max(),
 	             double min_perc_=.1)
-	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_), min_perc(min_perc_) { }
+	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_), min_perc(min_perc_) {}
 
 	DeltaRLE::Stats generateStats();
 

@@ -41,7 +41,7 @@ T DeltaEncode(T input)
 
 template <typename T>
 std::vector< RLE<typename T::iterator::value_type> >
-RLEncode(T input, long max_limit)
+RLEncode(T input)
 {
 	typename T::iterator in;
 	typename T::iterator::value_type curr;
@@ -54,7 +54,7 @@ RLEncode(T input, long max_limit)
 
 	while (in < input.end()){
 		curr = *in;
-		if (rle.val != curr || (max_limit && rle.freq == max_limit)){
+		if (rle.val != curr){
 			output.push_back(rle);
 			rle.freq = 1;
 			rle.val = curr;
@@ -75,7 +75,7 @@ void DRLE_Manager::updateStats(std::vector<uint64_t> &xs,
 	if (xs.size() == 0)
 		return;
 
-	rles = RLEncode(DeltaEncode(xs), this->max_limit);
+	rles = RLEncode(DeltaEncode(xs));
 	FOREACH(RLE<uint64_t> &rle, rles){
 		if (rle.freq >= this->min_limit){
 			stats[rle.val].nnz += rle.freq;
@@ -111,25 +111,29 @@ void DRLE_Manager::doEncode(uint64_t &col,
 	std::vector< RLE<uint64_t> > rles;
 	SpmRowElem elem;
 
-	rles = RLEncode(DeltaEncode(xs), this->max_limit);
+	rles = RLEncode(DeltaEncode(xs));
 	elem.pattern = NULL; // Default inserter (for push_back copies)
-	FOREACH(RLE<uint64_t> &rle, rles){
-		if (rle.freq >= this->min_limit){
+	FOREACH(RLE<uint64_t> rle, rles){
+
+		while (rle.freq >= this->min_limit){
+			uint64_t freq;
 			SpmRowElem *last_elem;
 
+			freq = std::min(this->max_limit, rle.freq);
 			col += rle.val; // go to the first
 			elem.x = col;
 			newrow.push_back(elem);
 			last_elem = &newrow.back();
-			last_elem->pattern = new DeltaRLE(rle.freq, rle.val, this->spm->type);
+			last_elem->pattern = new DeltaRLE(freq, rle.val, this->spm->type);
 			last_elem = NULL;
-			col += rle.val*(rle.freq - 1);
-		} else {
-			for (int i=0; i < rle.freq; i++){
-				col += rle.val;
-				elem.x = col;
-				newrow.push_back(elem);
-			}
+			col += rle.val*(freq - 1);
+			rle.freq -= freq;
+		}
+
+		for (int i=0; i < rle.freq; i++){
+			col += rle.val;
+			elem.x = col;
+			newrow.push_back(elem);
 		}
 	}
 }
