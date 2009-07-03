@@ -7,37 +7,13 @@ extern "C" {
 
 namespace csx {
 
-// Ctl Array is a byte-based array storing (compressed)
-// index information for the sparse matrix
-//
-// Format:
-//   [flags][size][unit-specific ...]
-//
-//  flags bits:
-//          7  6  5  4  3  2  1  0
-//         [ ][ ][ ][ ][ ][ ][ ][ ]
-//          |  |  |______________|
-//    new row  |        |------------> arbitrary patterns
-//          row jmp
-//        (if enabled)
-#define CTL_NR_BIT 7
-#define CTL_RJMP_BIT 6
-
-static inline void set_bit(uint8_t *byte, int bit)
-{
-	assert(bit >= 0);
-	assert(bit < 8);
-	*byte |= (1<<bit);
-}
-
-// size is 8 bits: 0..255
-#define CTL_SIZE_MAX ((1<<8) - 1)
-
-#define CTL_PATTERN_MASK ~(1<<CTL_NR_BIT | 1<<CTL_RJMP_BIT)
+#include "ctl_ll.h"
 
 class CtlManager
 {
 public:
+	SpmIdx *spm;
+
 	class PatInfo {
 	public:
 		uint8_t flag; // flags allocated for this pattern
@@ -49,15 +25,16 @@ public:
 
 	PatMap patterns;
 	uint8_t flag_avail; // current available flag
+	bool row_jmps; // does ctl include row_jmps
+
+	// ctl-encoding parse information
 	dynarray_t *ctl_da;
 	uint64_t last_col;
-	SpmIdx *spm;
-
 	bool new_row; // marker of new_row
 	uint64_t empty_rows; // number of empty rows since last non-empty row
 
 	CtlManager(SpmIdx *spm_) :
-	flag_avail(0), ctl_da(NULL), spm(spm_), empty_rows(0) {}
+	spm(spm_), flag_avail(0), row_jmps(false), ctl_da(NULL), last_col(0), empty_rows(0) {}
 
 	uint8_t getFlag(long pattern_id, uint64_t nnz);
 	uint8_t *mkCtl();

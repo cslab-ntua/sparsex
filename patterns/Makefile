@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: drle_shell drle_test
+all: drle_shell drle_test jit
 
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
@@ -8,8 +8,16 @@ CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
 CXXFLAGS       += -ggdb -rdynamic
 DEFS            =
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
+
+## cairomm
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
 CAIROMM_LIBS   =  $(shell pkg-config cairomm-1.0 --libs)
+
+#llvm
+llvm_deps     = core analysis executionengine jit native bitreader ipo linker
+LLVM_CFLAGS   = $(shell llvm-config --cflags)
+LLVM_CXXFLAGS = $(shell llvm-config --cxxflags)
+LLVM_LDFLAGS  = $(shell llvm-config --ldflags --libs $(llvm_deps))
 
 dynarray_dir = $(shell rsrc resource 'dynarray')
 dynarray_dep = $(dynarray_dir)/dynarray.o
@@ -38,5 +46,14 @@ drle_shell: mmf.o spm.o drle.o draw.o drle_shell.cc
 drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ -o $@
 
+ctl_llvm_tmpl.llvm.bc: ctl_llvm_tmpl.c ctl_ll.h
+	llvm-gcc -Wall -emit-llvm -c ctl_llvm_tmpl.c -o $@
+
+llvm_jit_help.o: llvm_jit_help.cc
+	$(GXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
+
+jit: jit.cc llvm_jit_help.o
+	$(CXX_COMPILE) $^ $(LLVM_CXXFLAGS) $(LLVM_LDFLAGS) -o $@
+
 clean:
-	rm -f *.o drle_shell drle_test
+	rm -f *.o drle_shell drle_test jit

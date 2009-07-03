@@ -140,6 +140,7 @@ uint8_t *CtlManager::mkCtl()
 	}
 
 	ret = (uint8_t *)dynarray_destroy(this->ctl_da);
+	this->ctl_da = NULL;
 	return ret;
 }
 
@@ -155,6 +156,7 @@ void CtlManager::updateNewRow(uint8_t *flags)
 		set_bit(flags, CTL_RJMP_BIT);
 		da_put_ul(this->ctl_da, this->empty_rows);
 		this->empty_rows = 0;
+		this->row_jmps = true;
 	}
 }
 
