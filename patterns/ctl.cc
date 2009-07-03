@@ -1,5 +1,6 @@
 #include <map>
 #include <algorithm>
+
 #include <boost/foreach.hpp>
 
 #define FOREACH BOOST_FOREACH
@@ -130,6 +131,10 @@ uint8_t *CtlManager::mkCtl()
 	uint8_t *ret;
 	this->ctl_da = dynarray_create(sizeof(uint8_t), 512);
 	FOREACH(SpmRowElems &row, this->spm->rows){
+		if (row.empty()){
+			this->empty_rows++;
+			continue;
+		}
 		this->doRow(row);
 		row.clear();
 	}
@@ -138,11 +143,18 @@ uint8_t *CtlManager::mkCtl()
 	return ret;
 }
 
+// Note that this function may allocate space in ctl_da
 void CtlManager::updateNewRow(uint8_t *flags)
 {
-	if (this->new_row){
-		set_bit(ctl_flags, CTL_NR_BIT);
-		this->new_row = false;
+	if (!this->new_row)
+		return;
+
+	set_bit(flags, CTL_NR_BIT);
+	this->new_row = false;
+	if (this->empty_rows != 0){
+		set_bit(flags, CTL_RJMP_BIT);
+		da_put_ul(this->ctl_da, this->empty_rows);
+		this->empty_rows = 0;
 	}
 }
 
@@ -200,14 +212,14 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 	return;
 }
 
-void CtlManager::AddPattern(SpmRowElem &elem, uint64_t jmp)
+void CtlManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 {
 	uint8_t *ctl_flags, *ctl_size;
 	long pat_size, pat_id;
-	uint64_t jmp;
+	uint64_t ujmp;
 
-	pat_size = elem.pattern.getSize();
-	pat_id = elem.pattern.getPatId();
+	pat_size = elem.pattern->getSize();
+	pat_id = elem.pattern->getPatId();
 
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
 	*ctl_flags = this->getFlag(pat_id, pat_size);
@@ -215,11 +227,13 @@ void CtlManager::AddPattern(SpmRowElem &elem, uint64_t jmp)
 
 	ctl_size = ctl_flags + 1;
 	assert(pat_size + 1 <= CTL_SIZE_MAX);
+	// if there is a jmp we are implicitly including one more element
+	// see also: 1feee866421a129fae861f094f64b6d803ecb8d5
 	*ctl_size = pat_size + (jmp ? 1 : 0);
 
 	assert(elem.x > this->last_col);
-	jmp = elem.x - this->last_col;
-	da_put_ul(this->ctl_da, jmp);
+	ujmp = elem.x - this->last_col;
+	da_put_ul(this->ctl_da, ujmp);
 }
 
 // Ctl Rules
@@ -235,7 +249,12 @@ void CtlManager::doRow(const SpmRowElems &row)
 		// check if this element contains a pattern
 		if (spm_elem.pattern != NULL){
 			uint64_t jmp;
-			jmp = (xs.size() > 0) ? xs.pop_last() : 0;
+			if (xs.size() > 0){
+				jmp = xs.back();
+				xs.pop_back();
+			} else {
+				jmp = 0;
+			}
 			if (xs.size() > 0)
 				this->AddXs(xs);
 			this->AddPattern(spm_elem, jmp);

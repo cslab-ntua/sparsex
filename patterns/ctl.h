@@ -50,12 +50,14 @@ public:
 	PatMap patterns;
 	uint8_t flag_avail; // current available flag
 	dynarray_t *ctl_da;
-	bool new_row;
 	uint64_t last_col;
 	SpmIdx *spm;
 
+	bool new_row; // marker of new_row
+	uint64_t empty_rows; // number of empty rows since last non-empty row
 
-	CtlManager(SpmIdx *spm_) :flag_avail(0), ctl_da(NULL), spm(spm_) {}
+	CtlManager(SpmIdx *spm_) :
+	flag_avail(0), ctl_da(NULL), spm(spm_), empty_rows(0) {}
 
 	uint8_t getFlag(long pattern_id, uint64_t nnz);
 	uint8_t *mkCtl();
@@ -63,7 +65,7 @@ private:
 	void doRow(const SpmRowElems &row);
 	void updateNewRow(uint8_t *flags);
 	void AddXs(std::vector<uint64_t> xs);
-	void AddPattern(Pattern *pattern, uint64_t jmp);
+	void AddPattern(const SpmRowElem &elem, uint64_t jmp);
 };
 
 } // end csx namespace
