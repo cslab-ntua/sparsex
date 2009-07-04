@@ -7,20 +7,23 @@ CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
 #CXXFLAGS       += -Winline
 CXXFLAGS       += -ggdb -rdynamic
 DEFS            =
-CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
+INC             =
 
 ## cairomm
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
-CAIROMM_LIBS   =  $(shell pkg-config cairomm-1.0 --libs)
+CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 
 #llvm
-llvm_deps     = core analysis executionengine jit native bitreader ipo linker
-LLVM_CFLAGS   = $(shell llvm-config --cflags)
-LLVM_CXXFLAGS = $(shell llvm-config --cxxflags)
-LLVM_LDFLAGS  = $(shell llvm-config --ldflags --libs $(llvm_deps))
+llvm_deps       = core analysis executionengine jit native bitreader ipo linker
+LLVM_CFLAGS     = $(shell llvm-config --cflags)
+LLVM_CXXFLAGS   = $(shell llvm-config --cxxflags)
+LLVM_LDFLAGS    = $(shell llvm-config --ldflags --libs $(llvm_deps))
 
-dynarray_dir = $(shell rsrc resource 'dynarray')
-dynarray_dep = $(dynarray_dir)/dynarray.o
+dynarray_dir    = $(shell rsrc resource 'dynarray')
+dynarray_dep    = $(dynarray_dir)/dynarray.o
+INC            += -I$(dynarray_dir) 
+
+CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
 mmf.o: mmf.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
@@ -52,8 +55,8 @@ ctl_llvm_tmpl.llvm.bc: ctl_llvm_tmpl.c ctl_ll.h
 llvm_jit_help.o: llvm_jit_help.cc
 	$(GXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
 
-jit: jit.cc llvm_jit_help.o
-	$(CXX_COMPILE) $^ $(LLVM_CXXFLAGS) $(LLVM_LDFLAGS) -o $@
+jit: jit.cc llvm_jit_help.o mmf.o spm.o ctl.o $(dynarray_dep)
+	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ $(LLVM_CXXFLAGS) $(LLVM_LDFLAGS) -o $@
 
 clean:
 	rm -f *.o drle_shell drle_test jit

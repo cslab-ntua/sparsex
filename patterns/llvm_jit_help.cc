@@ -145,6 +145,10 @@ IRBuilder *llvm_hook_builder(Module *M, const char *name)
 }
 #endif
 
+// This function replaces a hook function with two basic blocks,
+// for the purpose of replacing the hook with other instructions.
+// The return basic  block is where the new instructions should be placed,
+// while BBnext, is where control flow should continue
 BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext)
 {
 	Instruction *Hook = get_hook(M,name);
@@ -163,9 +167,6 @@ BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext)
 	*BBnext = BB1;
 	return BB0;
 }
-
-
-
 
 /* XXX: Copied from JITEmitter.cpp  */
 
