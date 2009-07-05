@@ -37,7 +37,7 @@ public:
 	spm(spm_), flag_avail(0), row_jmps(false), ctl_da(NULL), last_col(0), empty_rows(0) {}
 
 	uint8_t getFlag(long pattern_id, uint64_t nnz);
-	uint8_t *mkCtl();
+	uint8_t *mkCtl(uint64_t *ctl_size);
 private:
 	void doRow(const SpmRowElems &row);
 	void updateNewRow(uint8_t *flags);

@@ -25,7 +25,17 @@ void printSymTable();
 #endif
 
 typedef StringMap<Value *> AnnotationMap;
-AnnotationMap *makeAnnotationMap(Module *M);
-void dumpAnnotationMap(AnnotationMap *map);
+
+// Class for accessing annotations (llvm.var.annotation)
+class Annotations {
+	AnnotationMap *map;
+
+public:
+	Annotations() : map(NULL) {}
+
+	void update(Module *M);
+	void dump();
+	Value *getValue(const char *annotation);
+};
 
 #endif /* LLVM_JIT_HELP_H__ */

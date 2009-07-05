@@ -357,19 +357,21 @@ bool InlineFntoFn(Function *Callee, Function *Caller)
 	return false;
 }
 
-AnnotationMap *makeAnnotationMap(Module *M)
+// update map, with annotations from Module M
+void Annotations::update(Module *M)
 {
-	AnnotationMap *ret;
 	Function *Fn;
 	Value::use_iterator ui;
 
 	Fn = M->getFunction("llvm.var.annotation");
 	if (!Fn){
 		std::cerr << "no annotations found" << std::endl;
-		return NULL;
+		return;
 	}
 
-	ret = new AnnotationMap();
+	if (this->map == NULL)
+		this->map = new AnnotationMap();
+
 	for (ui = Fn->use_begin(); ui != Fn->use_end(); ui++){
 		CallInst *CI;
 		Value *val;
@@ -380,16 +382,23 @@ AnnotationMap *makeAnnotationMap(Module *M)
 		val = CI->getOperand(1)->stripPointerCasts();
 		ptr = cast<GlobalVariable>(CI->getOperand(2)->stripPointerCasts());
 		str = cast<ConstantArray>(ptr->getInitializer())->getAsString();
-		// insert
-		(*ret)[str] = val;
+		// insert (the C string)
+		(*this->map)[str.c_str()] = val;
 	}
-
-	return ret;
 }
 
-void dumpAnnotationMap(AnnotationMap *map)
+void Annotations::dump()
 {
-	for (AnnotationMap::iterator am = map->begin(); am != map->end(); ++am){
+	AnnotationMap::iterator am = this->map->begin();
+
+	for (; am != this->map->end(); ++am){
 		std::cout << am->getKeyData() << "\n";
 	}
+}
+
+Value *Annotations::getValue(const char *annotation)
+{
+	AnnotationMap::iterator am = this->map->find(annotation);
+	assert(am != this->map->end());
+	return am->getValue();
 }

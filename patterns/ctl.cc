@@ -126,7 +126,7 @@ uint8_t CtlManager::getFlag(long pattern_id, uint64_t nnz)
 //  64 -> delta 64
 #define PID_DELTA_BASE 0
 
-uint8_t *CtlManager::mkCtl()
+uint8_t *CtlManager::mkCtl(uint64_t *ctl_size)
 {
 	uint8_t *ret;
 	this->ctl_da = dynarray_create(sizeof(uint8_t), 512);
@@ -139,6 +139,7 @@ uint8_t *CtlManager::mkCtl()
 		row.clear();
 	}
 
+	*ctl_size = dynarray_size(this->ctl_da);
 	ret = (uint8_t *)dynarray_destroy(this->ctl_da);
 	this->ctl_da = NULL;
 	return ret;
@@ -183,7 +184,7 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 		max = *(std::max_element(vi, xs.end()));
 	}
 	delta_size =  getDeltaSize(max);
-	pat_id = delta_size + PID_DELTA_BASE;
+	pat_id = (8*(1+delta_size)) + PID_DELTA_BASE;
 
 	// set flags
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
