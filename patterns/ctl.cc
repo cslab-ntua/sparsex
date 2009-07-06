@@ -130,6 +130,7 @@ uint8_t *CtlManager::mkCtl(uint64_t *ctl_size)
 {
 	uint8_t *ret;
 	this->ctl_da = dynarray_create(sizeof(uint8_t), 512);
+	this->new_row = false; // do not mark first row
 	FOREACH(SpmRowElems &row, this->spm->rows){
 		if (row.empty()){
 			this->empty_rows++;
@@ -137,6 +138,7 @@ uint8_t *CtlManager::mkCtl(uint64_t *ctl_size)
 		}
 		this->doRow(row);
 		row.clear();
+		this->new_row = true;
 	}
 
 	*ctl_size = dynarray_size(this->ctl_da);
@@ -155,14 +157,15 @@ void CtlManager::updateNewRow(uint8_t *flags)
 	this->new_row = false;
 	if (this->empty_rows != 0){
 		set_bit(flags, CTL_RJMP_BIT);
-		da_put_ul(this->ctl_da, this->empty_rows);
+		da_put_ul(this->ctl_da, this->empty_rows + 1);
 		this->empty_rows = 0;
 		this->row_jmps = true;
 	}
 }
 
-void CtlManager::AddXs(std::vector<uint64_t> xs)
+void CtlManager::AddXs(std::vector<uint64_t> &xs)
 {
+	//std::cerr << "AddXs: size:" << xs.size() << " first:" << xs[0] << "\n";
 	uint8_t *ctl_flags, *ctl_size;
 	long pat_id, xs_size, delta_bytes;
 	uint64_t last_col, max;
@@ -184,7 +187,7 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 		max = *(std::max_element(vi, xs.end()));
 	}
 	delta_size =  getDeltaSize(max);
-	pat_id = (8*(1+delta_size)) + PID_DELTA_BASE;
+	pat_id = (8<<delta_size) + PID_DELTA_BASE;
 
 	// set flags
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
@@ -197,6 +200,7 @@ void CtlManager::AddXs(std::vector<uint64_t> xs)
 	*ctl_size = xs_size;
 
 	// add jmp and deltas
+	//std::cerr << "AddXs: Delta jmp:" << xs[0] << "\n";
 	da_put_ul(this->ctl_da, xs[0]);
 
 	//add deltas (if needed)
@@ -222,6 +226,7 @@ void CtlManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 	uint64_t ujmp;
 
 	pat_size = elem.pattern->getSize();
+	//std::cerr << "AddPattern jmp: " << jmp << " pat_size: " << pat_size << "\n";
 	pat_id = elem.pattern->getPatId();
 
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
@@ -229,14 +234,37 @@ void CtlManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 	this->updateNewRow(ctl_flags);
 
 	ctl_size = ctl_flags + 1;
-	assert(pat_size + 1 <= CTL_SIZE_MAX);
+	assert(pat_size + (jmp ? 1 : 0) <= CTL_SIZE_MAX);
 	// if there is a jmp we are implicitly including one more element
 	// see also: 1feee866421a129fae861f094f64b6d803ecb8d5
 	*ctl_size = pat_size + (jmp ? 1 : 0);
 
-	assert(elem.x > this->last_col);
-	ujmp = elem.x - this->last_col;
+	//ujmp = elem.x - this->last_col;
+	ujmp = jmp ? jmp : elem.x - this->last_col;
+	//std::cerr << "AddPattern ujmp " << ujmp << "\n";
 	da_put_ul(this->ctl_da, ujmp);
+	this->last_col = elem.pattern->x_increase_jmp(this->spm->type, elem.x);
+	//std::cerr << "last_col:" << this->last_col << "\n";
+}
+
+// return ujmp
+uint64_t CtlManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem)
+{
+	uint64_t lastx;
+
+	if (xs.size() == 0)
+		return 0;
+
+	if (elem.pattern->type != this->spm->type){
+		this->AddXs(xs);
+		return 0;
+	}
+
+	lastx = xs.back();
+	xs.pop_back();
+	if (xs.size() > 0)
+		this->AddXs(xs);
+	return lastx - this->last_col;
 }
 
 // Ctl Rules
@@ -246,20 +274,14 @@ void CtlManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 void CtlManager::doRow(const SpmRowElems &row)
 {
 	std::vector<uint64_t> xs;
-	this->new_row = true;
-	this->last_col = 0;
+	uint64_t jmp;
+
+	this->last_col = 1;
 	FOREACH(const SpmRowElem &spm_elem, row){
 		// check if this element contains a pattern
 		if (spm_elem.pattern != NULL){
-			uint64_t jmp;
-			if (xs.size() > 0){
-				jmp = xs.back();
-				xs.pop_back();
-			} else {
-				jmp = 0;
-			}
-			if (xs.size() > 0)
-				this->AddXs(xs);
+			jmp = this->PreparePat(xs, spm_elem);
+			assert(xs.size() == 0);
 			this->AddPattern(spm_elem, jmp);
 			continue;
 		}
@@ -267,13 +289,15 @@ void CtlManager::doRow(const SpmRowElems &row)
 		// check if we exceeded the maximum size for a unit
 		assert(xs.size() <= CTL_SIZE_MAX);
 		if (xs.size() == CTL_SIZE_MAX){
+			//std::cerr << "AddXs: max size " << xs.size() << "\n";
 			this->AddXs(xs);
 			continue;
 		}
-
 		xs.push_back(spm_elem.x);
 	}
 
-	if (xs.size() > 0)
+	if (xs.size() > 0){
+		//std::cerr << "AddXs: last\n";
 		this->AddXs(xs);
+	}
 }

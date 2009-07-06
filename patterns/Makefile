@@ -3,7 +3,7 @@
 all: drle_shell drle_test jit
 
 GXX            ?= g++
-CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
+CXXFLAGS       ?= -Wall -O2 -Wdisabled-optimization
 #CXXFLAGS       += -Winline
 CXXFLAGS       += -ggdb -rdynamic
 DEFS            =
@@ -55,7 +55,7 @@ ctl_llvm_tmpl.llvm.bc: ctl_llvm_tmpl.c ctl_ll.h
 llvm_jit_help.o: llvm_jit_help.cc
 	$(GXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
 
-jit: jit.cc llvm_jit_help.o mmf.o spm.o ctl.o $(dynarray_dep)
+jit: jit.cc llvm_jit_help.o mmf.o spm.o ctl.o drle.o $(dynarray_dep)
 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ $(LLVM_CXXFLAGS) $(LLVM_LDFLAGS) -o $@
 
 clean:

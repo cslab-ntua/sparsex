@@ -41,8 +41,9 @@ public:
 private:
 	void doRow(const SpmRowElems &row);
 	void updateNewRow(uint8_t *flags);
-	void AddXs(std::vector<uint64_t> xs);
+	void AddXs(std::vector<uint64_t> &xs);
 	void AddPattern(const SpmRowElem &elem, uint64_t jmp);
+	uint64_t PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem);
 };
 
 } // end csx namespace

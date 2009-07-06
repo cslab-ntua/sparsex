@@ -47,7 +47,7 @@ uint64_t u64_get(uint8_t **ctl)
 	return ret;
 }
 
-unsigned long ul_get(uint8_t **ctl)
+uint64_t ul_get(uint8_t **ctl)
 {
 	unsigned long ret;
 
@@ -92,10 +92,8 @@ void do_ctl_u8(uint8_t **ctl, uint64_t *x_indx, uint8_t size)
 void do_ctl_u16(uint8_t **ctl, uint64_t *x_indx, uint8_t size)
 {
 	int i;
-	printf("x_indx:%lu\n", *x_indx);
 	for (i=1; i<size; i++){
 		*x_indx += u16_get(ctl);
-		printf("x_indx:%lu\n", *x_indx);
 	}
 }
 
@@ -119,9 +117,9 @@ void inline fail()
 	assert(0);
 }
 
-void print_yx(uint64_t *y, uint64_t *x)
+void print_yx(uint64_t y, uint64_t x)
 {
-	printf("%lu %lu\n", *y, *x);
+	printf("%lu %lu\n", y+1, x+1);
 }
 
 void ctl_decode_template(uint8_t *ctl, unsigned long ctl_size)
@@ -148,7 +146,9 @@ void ctl_decode_template(uint8_t *ctl, unsigned long ctl_size)
 			//x_indx = 0;
 		}
 
+		//printf("x_indx before jmp: %lu\n", x_indx);
 		x_indx += ul_get(&ctl);
+		//printf("x_indx after jmp: %lu\n", x_indx);
 		__body_hook();
 
 	} while (ctl < ctl_end);

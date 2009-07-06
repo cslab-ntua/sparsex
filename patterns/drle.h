@@ -16,7 +16,7 @@ class DeltaRLE : public Pattern {
 
 public:
 	DeltaRLE(uint32_t _size, uint32_t _delta, SpmIterOrder _type):
-	size(_size), delta(_delta){ ; }
+	size(_size), delta(_delta){ this->type = _type; }
 
 	virtual DeltaRLE *clone() const
 	{
@@ -36,7 +36,7 @@ public:
 
 		ret = jmp;
 		if (order == this->type){
-			ret += (this->size*this->delta);
+			ret += ((this->size-1)*this->delta);
 		}
 
 		return ret;
