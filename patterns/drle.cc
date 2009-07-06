@@ -109,25 +109,29 @@ void DRLE_Manager::doEncode(uint64_t &col,
                             SpmRowElems &newrow)
 {
 	std::vector< RLE<uint64_t> > rles;
+	const std::set<uint64_t> *deltas_set;
 	SpmRowElem elem;
 
+	deltas_set = &this->DeltasToEncode[this->spm->type];
 	rles = RLEncode(DeltaEncode(xs));
 	elem.pattern = NULL; // Default inserter (for push_back copies)
 	FOREACH(RLE<uint64_t> rle, rles){
 
-		while (rle.freq >= this->min_limit){
-			uint64_t freq;
-			SpmRowElem *last_elem;
+		if ( deltas_set->find(rle.val) != deltas_set->end() ){
+			while (rle.freq >= this->min_limit){
+				uint64_t freq;
+				SpmRowElem *last_elem;
 
-			freq = std::min(this->max_limit, rle.freq);
-			col += rle.val; // go to the first
-			elem.x = col;
-			newrow.push_back(elem);
-			last_elem = &newrow.back();
-			last_elem->pattern = new DeltaRLE(freq, rle.val, this->spm->type);
-			last_elem = NULL;
-			col += rle.val*(freq - 1);
-			rle.freq -= freq;
+				freq = std::min(this->max_limit, rle.freq);
+				col += rle.val; // go to the first
+				elem.x = col;
+				newrow.push_back(elem);
+				last_elem = &newrow.back();
+				last_elem->pattern = new DeltaRLE(freq, rle.val, this->spm->type);
+				last_elem = NULL;
+				col += rle.val*(freq - 1);
+				rle.freq -= freq;
+			}
 		}
 
 		for (int i=0; i < rle.freq; i++){
@@ -230,10 +234,9 @@ void DRLE_Manager::genAllStats()
 			double p = (double)tmp->second.nnz/(double)spm->nnz;
 			if (p < this->min_perc){
 				sp->erase(tmp);
+			} else {
+				this->DeltasToEncode[type].insert(tmp->first);
 			}
-		}
-		if (sp->empty()){
-			this->stats.erase(type);
 		}
 	}
 }

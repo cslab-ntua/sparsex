@@ -2,6 +2,7 @@
 #define CSX_DRLE_H__
 
 #include <map>
+#include <set>
 #include <bitset>
 #include <limits>
 
@@ -121,6 +122,8 @@ public:
 	StatsMap stats;
 	void genAllStats();
 	void outStats(std::ostream &os=std::cout);
+
+	std::map <SpmIterOrder, std::set<uint64_t> > DeltasToEncode;
 
 	std::bitset<XFORM_MAX> xforms;
 	void Encode();
