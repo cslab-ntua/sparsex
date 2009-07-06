@@ -291,8 +291,8 @@ void CtlManager::doRow(const SpmRowElems &row)
 		if (xs.size() == CTL_SIZE_MAX){
 			//std::cerr << "AddXs: max size " << xs.size() << "\n";
 			this->AddXs(xs);
-			continue;
 		}
+
 		xs.push_back(spm_elem.x);
 	}
 
