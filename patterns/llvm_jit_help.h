@@ -12,6 +12,8 @@ IRBuilder<> *llvm_hook_builder(Module *M, const char *name);
 BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext);
 
 Module *ModuleFromFile(const char *file);
+void ModuleToFile(Module *M, const char *file);
+
 void LinkFileToModule(Module *Module, const char *file);
 void doOptimize(Module *M);
 Function *CloneAndReplaceHook(Module *M, Function *CallerFn, Function *HookReplaceFn,

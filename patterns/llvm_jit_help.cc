@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cstring>
 
 #include "llvm/Module.h"
@@ -43,6 +44,16 @@ Module *ModuleFromFile(const char *file)
 	}
 
 	return M;
+}
+
+void ModuleToFile(Module *M, const char *file)
+{
+	std::string Error;
+
+	std::ofstream out;
+	out.open(file);
+	WriteBitcodeToFile(M, out);
+	out.close();
 }
 
 void LinkFileToModule(Module *M, const char *file)
