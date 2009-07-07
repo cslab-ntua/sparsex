@@ -133,7 +133,11 @@ uint8_t *CtlManager::mkCtl(uint64_t *ctl_size)
 	this->new_row = false; // do not mark first row
 	FOREACH(SpmRowElems &row, this->spm->rows){
 		if (row.empty()){
-			this->empty_rows++;
+			if (this->new_row == false){
+				this->new_row = true; // in case the first row is empty
+			} else {
+				this->empty_rows++;
+			}
 			continue;
 		}
 		this->doRow(row);
