@@ -13,12 +13,23 @@
 
 namespace csx {
 
-class CooElem {
-public:
+struct CooElem {
 	uint64_t y;
 	uint64_t x;
+	union {
+		double val;
+		double *vals;
+	};
 };
 
+
+struct RowElem {
+	uint64_t x;
+	union {
+		double val;
+		double *vals;
+	};
+};
 
 static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 {
@@ -36,10 +47,6 @@ static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 	}
 }
 
-class RowElem {
-public:
-	uint64_t x;
-};
 
 typedef enum {
 	NONE=0,
@@ -247,6 +254,7 @@ public:
 		SpmCooElem ret;
 		ret.y = row_idx + 1;
 		ret.x = spm->rows[row_idx][elm_idx].x;
+		ret.val = spm->rows[row_idx][elm_idx].val;
 		Pattern *p = spm->rows[row_idx][elm_idx].pattern;
 		ret.pattern = (p == NULL) ? NULL : p->clone();
 		return ret;

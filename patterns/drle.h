@@ -136,7 +136,10 @@ public:
 	unsigned char *mkCtl();
 
 private:
-	void doEncode(uint64_t &col, std::vector<uint64_t> &xs, SpmRowElems &newrow);
+	void doEncode(uint64_t &col,
+	              std::vector<uint64_t> &xs,
+	              std::vector<double> &vs,
+	              SpmRowElems &newrow);
 	void EncodeRow(const SpmRowElems &oldrow, SpmRowElems &newrow);
 	void updateStats(std::vector<uint64_t> &xs, DeltaRLE::Stats &stats);
 };

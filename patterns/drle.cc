@@ -106,25 +106,31 @@ DeltaRLE::Stats DRLE_Manager::generateStats()
 
 void DRLE_Manager::doEncode(uint64_t &col,
                             std::vector<uint64_t> &xs,
+                            std::vector<double> &vs,
                             SpmRowElems &newrow)
 {
 	std::vector< RLE<uint64_t> > rles;
 	const std::set<uint64_t> *deltas_set;
+	std::vector<double>::iterator vi = vs.begin();
 	SpmRowElem elem;
 
 	deltas_set = &this->DeltasToEncode[this->spm->type];
 	rles = RLEncode(DeltaEncode(xs));
 	elem.pattern = NULL; // Default inserter (for push_back copies)
 	FOREACH(RLE<uint64_t> rle, rles){
-
+		//std::cout << "freq:" << rle.freq << " val:" << rle.val << "\n";
 		if ( deltas_set->find(rle.val) != deltas_set->end() ){
 			while (rle.freq >= this->min_limit){
 				uint64_t freq;
 				SpmRowElem *last_elem;
+				std::vector<double>::iterator ve;
 
 				freq = std::min(this->max_limit, rle.freq);
 				col += rle.val; // go to the first
 				elem.x = col;
+				elem.vals = new double[freq];
+				std::copy(vi, vi + freq, elem.vals);
+				vi += freq;
 				newrow.push_back(elem);
 				last_elem = &newrow.back();
 				last_elem->pattern = new DeltaRLE(freq, rle.val, this->spm->type);
@@ -137,33 +143,38 @@ void DRLE_Manager::doEncode(uint64_t &col,
 		for (int i=0; i < rle.freq; i++){
 			col += rle.val;
 			elem.x = col;
+			elem.val = *vi++;
 			newrow.push_back(elem);
 		}
 	}
+
+	assert(vi == vs.end());
+	xs.clear();
+	vs.clear();
 }
 
 void DRLE_Manager::EncodeRow(const SpmRowElems &oldrow,
                              SpmRowElems &newrow)
 {
 	std::vector<uint64_t> xs;
+	std::vector<double> vs;
 	uint64_t col;
 
 	col = 0;
 	FOREACH(const SpmRowElem &e, oldrow){
 		if (e.pattern == NULL){
 			xs.push_back(e.x);
+			vs.push_back(e.val);
 			continue;
 		}
 		if (xs.size() != 0){
-			doEncode(col, xs, newrow);
-			xs.clear();
+			doEncode(col, xs, vs, newrow);
 		}
 		col += e.pattern->x_increase(this->spm->type);
 		newrow.push_back(e);
 	}
 	if (xs.size() != 0){
-		doEncode(col, xs, newrow);
-		xs.clear();
+		doEncode(col, xs, vs, newrow);
 	}
 }
 

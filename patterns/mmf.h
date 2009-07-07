@@ -38,8 +38,7 @@ public std::iterator<std::forward_iterator_tag, CooElem>
 
 public:
 	void _set(){
-		double v;
-		this->valid = this->mmf->next(this->elem.y, this->elem.x, v);
+		this->valid = this->mmf->next(this->elem.y, this->elem.x, this->elem.val);
 	}
 	iterator() { assert(false); }
 	iterator(MMF *mmf_, uint64_t cnt_): mmf(mmf_), cnt(cnt_)

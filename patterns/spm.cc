@@ -47,16 +47,31 @@ std::ostream &operator<<(std::ostream &out, CooElem p)
 std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
 {
 	out << static_cast<CooElem>(e);
-	if (e.pattern != NULL)
-			out << "->[" << *(e.pattern) << "]";
+	if (e.pattern != NULL){
+		out << "->[" << *(e.pattern) << "]";
+		out << " vals:{ ";
+		for (int i=0; i<e.pattern->getSize(); i++){
+			out << e.vals[i] << " ";
+		}
+		out << "}";
+	} else {
+		out << "v: " << e.val;
+	}
 	return out;
 }
 
 std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
 {
-	out << elem.x;
+	out << "x:" << elem.x;
 	if (elem.pattern){
 		out << *(elem.pattern);
+		out << " vals:{ ";
+		for (int i=0; i<elem.pattern->getSize(); i++){
+			out << elem.vals[i] << " ";
+		}
+		out << "}";
+	} else {
+		out << " v:" << elem.val;
 	}
 	return out;
 }
@@ -184,12 +199,14 @@ static inline bool elem_cmp_less(const SpmCooElem &e0,
 static inline void mk_row_elem(const CooElem &p, SpmRowElem &ret)
 {
 	ret.x = p.x;
+	ret.val = p.val;
 	ret.pattern = NULL;
 }
 
 static inline void mk_row_elem(const SpmCooElem &p, SpmRowElem &ret)
 {
 	ret.x = p.x;
+	ret.val = p.val;
 	ret.pattern = (p.pattern == NULL) ? NULL : (p.pattern)->clone();
 }
 
