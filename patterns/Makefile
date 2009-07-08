@@ -14,7 +14,7 @@ CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
 CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 
 #llvm
-llvm_deps       = core analysis executionengine jit native bitreader ipo linker
+llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter
 LLVM_CFLAGS     = $(shell llvm-config --cflags)
 LLVM_CXXFLAGS   = $(shell llvm-config --cxxflags)
 LLVM_LDFLAGS    = $(shell llvm-config --ldflags --libs $(llvm_deps))
@@ -34,7 +34,7 @@ spm.o: spm.cc spm.h mmf.h
 draw.o: draw.cc spm.h draw.h
 	$(CXX_COMPILE) $(CAIROMM_FLAGS) $< -c -o $@
 
-ctl.o: ctl.cc ctl.h spm.h delta.h
+csx.o: csx.cc csx.h spm.h delta.h
 	$(CXX_COMPILE) -I$(dynarray_dir) $< -c -o $@
 
 drle.o: drle.cc drle.h spm.h
@@ -49,13 +49,13 @@ drle_shell: mmf.o spm.o drle.o draw.o drle_shell.cc
 drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ -o $@
 
-ctl_llvm_tmpl.llvm.bc: ctl_llvm_tmpl.c ctl_ll.h
-	llvm-gcc -Wall -emit-llvm -c ctl_llvm_tmpl.c -o $@
+csx_llvm_tmpl.llvm.bc: csx_llvm_tmpl.c ctl_ll.h
+	llvm-gcc -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
 
 llvm_jit_help.o: llvm_jit_help.cc
 	$(GXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
 
-jit: jit.cc llvm_jit_help.o mmf.o spm.o ctl.o drle.o $(dynarray_dep)
+jit: jit.cc llvm_jit_help.o mmf.o spm.o csx.o drle.o $(dynarray_dep)
 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ $(LLVM_CXXFLAGS) $(LLVM_LDFLAGS) -o $@
 
 clean:

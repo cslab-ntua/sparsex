@@ -1,5 +1,15 @@
-#ifndef CSX_CTL_H__
-#define CSX_CTL_H__
+#ifndef CSX_H__
+#define CSX_H__
+
+#include "ctl_ll.h"
+
+typedef struct {
+	uint64_t nnz, ncols, nrows, ctl_size;
+	double *values;
+	uint8_t *ctl;
+} csx_double_t;
+
+#ifdef __cplusplus
 
 extern "C" {
 	#include "dynarray.h"
@@ -7,9 +17,8 @@ extern "C" {
 
 namespace csx {
 
-#include "ctl_ll.h"
 
-class CtlManager
+class CsxManager
 {
 public:
 	SpmIdx *spm;
@@ -27,17 +36,21 @@ public:
 	uint8_t flag_avail; // current available flag
 	bool row_jmps; // does ctl include row_jmps
 
+	// value parse info
+	double *values;
+	uint64_t values_idx;
+
 	// ctl-encoding parse information
 	dynarray_t *ctl_da;
 	uint64_t last_col;
 	bool new_row; // marker of new_row
 	uint64_t empty_rows; // number of empty rows since last non-empty row
 
-	CtlManager(SpmIdx *spm_) :
+	CsxManager(SpmIdx *spm_) :
 	spm(spm_), flag_avail(0), row_jmps(false), ctl_da(NULL), last_col(0), empty_rows(0) {}
 
 	uint8_t getFlag(long pattern_id, uint64_t nnz);
-	uint8_t *mkCtl(uint64_t *ctl_size);
+	csx_double_t *mkCsx();
 private:
 	void doRow(const SpmRowElems &row);
 	void updateNewRow(uint8_t *flags);
@@ -48,4 +61,6 @@ private:
 
 } // end csx namespace
 
-#endif /* CSX_CTL_H__ */
+#endif /* __cplusplus */
+
+#endif /* CSX_H__ */

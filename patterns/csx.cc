@@ -11,7 +11,7 @@ extern "C" {
 
 #include "spm.h"
 #include "delta.h"
-#include "ctl.h"
+#include "csx.h"
 
 using namespace csx;
 
@@ -102,14 +102,14 @@ static inline void da_put_ul(dynarray_t *da, unsigned long val)
 	_val;                               \
 })                                      \
 
-uint8_t CtlManager::getFlag(long pattern_id, uint64_t nnz)
+uint8_t CsxManager::getFlag(long pattern_id, uint64_t nnz)
 {
-	CtlManager::PatMap::iterator pi;
+	CsxManager::PatMap::iterator pi;
 	uint8_t ret;
 	pi = this->patterns.find(pattern_id);
 	if (pi == this->patterns.end()){
 		ret = this->flag_avail++;
-		CtlManager::PatInfo patinfo(ret, nnz);
+		CsxManager::PatInfo patinfo(ret, nnz);
 		this->patterns[pattern_id] = patinfo;
 	} else {
 		ret = pi->second.flag;
@@ -126,9 +126,27 @@ uint8_t CtlManager::getFlag(long pattern_id, uint64_t nnz)
 //  64 -> delta 64
 #define PID_DELTA_BASE 0
 
-uint8_t *CtlManager::mkCtl(uint64_t *ctl_size)
+csx_double_t *CsxManager::mkCsx()
 {
-	uint8_t *ret;
+	csx_double_t *csx;
+
+	csx = (csx_double_t *)malloc(sizeof(csx_double_t));;
+	if (!csx){
+		perror("malloc");
+		exit(1);
+	}
+	csx->nnz = this->spm->nnz;
+	csx->nrows = this->spm->nrows;
+	csx->ncols = this->spm->ncols;
+
+
+	this->values = (double *)malloc(sizeof(double)*this->spm->nnz);
+	this->values_idx = 0;
+	if (!this->values){
+		perror("malloc");
+		exit(1);
+	}
+
 	this->ctl_da = dynarray_create(sizeof(uint8_t), 512);
 	this->new_row = false; // do not mark first row
 	FOREACH(SpmRowElems &row, this->spm->rows){
@@ -145,14 +163,22 @@ uint8_t *CtlManager::mkCtl(uint64_t *ctl_size)
 		this->new_row = true;
 	}
 
-	*ctl_size = dynarray_size(this->ctl_da);
-	ret = (uint8_t *)dynarray_destroy(this->ctl_da);
+	csx->ctl_size = dynarray_size(this->ctl_da);
+	//std::cerr << "csx->ctl_size=" << csx->ctl_size << "\n";
+	csx->ctl = (uint8_t *)dynarray_destroy(this->ctl_da);
+	//std::cerr << "csx->ctl=" << (unsigned long)csx->ctl << "\n";
 	this->ctl_da = NULL;
-	return ret;
+
+	assert(this->values_idx == this->spm->nnz);
+	csx->values = this->values;
+	this->values = NULL;
+	this->values_idx = 0;
+
+	return csx;
 }
 
 // Note that this function may allocate space in ctl_da
-void CtlManager::updateNewRow(uint8_t *flags)
+void CsxManager::updateNewRow(uint8_t *flags)
 {
 	if (!this->new_row)
 		return;
@@ -167,7 +193,7 @@ void CtlManager::updateNewRow(uint8_t *flags)
 	}
 }
 
-void CtlManager::AddXs(std::vector<uint64_t> &xs)
+void CsxManager::AddXs(std::vector<uint64_t> &xs)
 {
 	//std::cerr << "AddXs: size:" << xs.size() << " first:" << xs[0] << "\n";
 	uint8_t *ctl_flags, *ctl_size;
@@ -196,12 +222,14 @@ void CtlManager::AddXs(std::vector<uint64_t> &xs)
 	// set flags
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
 	*ctl_flags = this->getFlag(PID_DELTA_BASE + pat_id, xs_size);
-	this->updateNewRow(ctl_flags);
 
 	// set size
 	ctl_size = ctl_flags + 1;
 	assert( (xs_size > 0) && (xs_size <= CTL_SIZE_MAX));
 	*ctl_size = xs_size;
+
+	// ctls_size, ctl_flags are not valid after this call
+	this->updateNewRow(ctl_flags);
 
 	// add jmp and deltas
 	//std::cerr << "AddXs: Delta jmp:" << xs[0] << "\n";
@@ -223,7 +251,7 @@ void CtlManager::AddXs(std::vector<uint64_t> &xs)
 	return;
 }
 
-void CtlManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
+void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 {
 	uint8_t *ctl_flags, *ctl_size;
 	long pat_size, pat_id;
@@ -252,7 +280,7 @@ void CtlManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 }
 
 // return ujmp
-uint64_t CtlManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem)
+uint64_t CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem)
 {
 	uint64_t lastx;
 
@@ -275,7 +303,7 @@ uint64_t CtlManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &ele
 // 1. Each unit leaves the x index at the last element it calculated on the
 // current row
 // 2. Size is the number of elements taht will be calculated
-void CtlManager::doRow(const SpmRowElems &row)
+void CsxManager::doRow(const SpmRowElems &row)
 {
 	std::vector<uint64_t> xs;
 	uint64_t jmp;
@@ -287,6 +315,9 @@ void CtlManager::doRow(const SpmRowElems &row)
 			jmp = this->PreparePat(xs, spm_elem);
 			assert(xs.size() == 0);
 			this->AddPattern(spm_elem, jmp);
+			for (long i=0; i < spm_elem.pattern->getSize(); i++){
+				this->values[this->values_idx++] = spm_elem.vals[i];
+			}
 			continue;
 		}
 
@@ -298,6 +329,7 @@ void CtlManager::doRow(const SpmRowElems &row)
 		}
 
 		xs.push_back(spm_elem.x);
+		this->values[this->values_idx++] = spm_elem.val;
 	}
 
 	if (xs.size() > 0){

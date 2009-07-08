@@ -5,12 +5,15 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ModuleProvider.h"
 
-
 #include "spm.h"
-#include "ctl.h"
+#include "csx.h"
 #include "drle.h"
 
 #include "llvm_jit_help.h"
+
+extern "C" {
+#include "../spmv_method.h"
+}
 
 
 namespace csx {
@@ -20,19 +23,19 @@ namespace csx {
 using namespace csx;
 using namespace llvm;
 
-class CtlJit {
+class CsxJit {
 public:
-	CtlManager *CtlMg;
+	CsxManager *CsxMg;
 	Module *M;
 	IRBuilder<> *Bld;
 	ModuleProvider *MP;
 	ExecutionEngine *JIT;
-	Value *XindxPtr, *YindxPtr, *SizePtr, *FlagsPtr, *CtlPtr;
 
 	Function *UlGet;
 	Function *DecodeF;
+	Function *SpmvF;
 	Function *FailF;
-	Function *PrintYX;
+	Function *PrintYXV;
 	Function *AlignF;
 	Function *TestBitF;
 
@@ -42,10 +45,26 @@ public:
 	Value *One8;
 	Value *One32;
 	Value *One64;
+	Value *Three64;
+
+	Value *YrPtr;
+	Value *MyxPtr;
+	Value *Xptr;
+	Value *Yptr;
+	Value *YindxPtr;
+	Value *Vptr;
+	Value *CtlPtr;
+	Value *SizePtr;
+	Value *FlagsPtr;
 
 	Annotations annotations;
 
-	CtlJit(CtlManager *CtlMg);
+	CsxJit(CsxManager *CsxMg);
+
+	void doPrint();
+	void doIncV();
+	void doDeltaAddMyx(int delta_bytes);
+
 	void doNewRowHook();
 	void doBodyHook();
 	void doHooks();
@@ -74,25 +93,30 @@ public:
                   int delta_size);
 };
 
-CtlJit::CtlJit(CtlManager *_ctl_mg) : CtlMg(_ctl_mg)
+CsxJit::CsxJit(CsxManager *_ctl_mg) : CsxMg(_ctl_mg)
 {
-	this->M = ModuleFromFile("ctl_llvm_tmpl.llvm.bc");
+	this->M = ModuleFromFile("csx_llvm_tmpl.llvm.bc");
 	this->Bld = new IRBuilder<>();
 
 	this->annotations.update(M);
 
-	this->DecodeF = M->getFunction("ctl_decode_template");
-	this->PrintYX = M->getFunction("print_yx");
+	//this->DecodeF = M->getFunction("ctl_decode_template");
+	this->SpmvF = M->getFunction("csx_spmv_template");
+	this->PrintYXV = M->getFunction("print_yxv");
 	this->FailF = M->getFunction("fail");
 	this->AlignF = M->getFunction("align_ptr");
 	this->TestBitF = M->getFunction("test_bit");
 	this->UlGet = M->getFunction("ul_get");
 
-	this->XindxPtr = annotations.getValue("vars::x_indx");
-	this->YindxPtr = annotations.getValue("vars::y_indx");
-	this->CtlPtr = annotations.getValue("vars::ctl");
-	this->SizePtr = annotations.getValue("vars::size");
-	this->FlagsPtr = annotations.getValue("vars::flags");
+	this->YrPtr = annotations.getValue("spmv::yr");
+	this->MyxPtr = annotations.getValue("spmv::myx");
+	this->Xptr = annotations.getValue("spmv::x");
+	this->Yptr = annotations.getValue("spmv::y");
+	this->YindxPtr = annotations.getValue("spmv::y_indx");
+	this->Vptr = annotations.getValue("spmv::v");
+	this->CtlPtr = annotations.getValue("spmv::ctl");
+	this->SizePtr = annotations.getValue("spmv::size");
+	this->FlagsPtr = annotations.getValue("spmv::flags");
 
 	this->Zero8 = ConstantInt::get(Type::Int8Ty, 0);
 	this->Zero32 = ConstantInt::get(Type::Int32Ty, 0);
@@ -100,9 +124,10 @@ CtlJit::CtlJit(CtlManager *_ctl_mg) : CtlMg(_ctl_mg)
 	this->One8 = ConstantInt::get(Type::Int8Ty, 1);
 	this->One32 = ConstantInt::get(Type::Int32Ty, 1);
 	this->One64 = ConstantInt::get(Type::Int64Ty, 1);
+	this->Three64 = ConstantInt::get(Type::Int64Ty, 3);
 }
 
-void CtlJit::doNewRowHook()
+void CsxJit::doNewRowHook()
 {
 	BasicBlock *BB, *BB_next;
 	Value *v;
@@ -110,11 +135,10 @@ void CtlJit::doNewRowHook()
 	// new row
 	BB = llvm_hook_newbb(M, "__new_row_hook", &BB_next);
 	Bld->SetInsertPoint(BB);
-	if (!CtlMg->row_jmps){
+	if (!CsxMg->row_jmps){
 		v = Bld->CreateLoad(YindxPtr, "y_indx");
 		v = Bld->CreateAdd(v, One64, "y_indx_inc");
-		v = Bld->CreateStore(v, YindxPtr);
-		Bld->CreateStore(Zero64, XindxPtr);
+		Bld->CreateStore(v, YindxPtr);
 		Bld->CreateBr(BB_next);
 	} else {
 		BasicBlock *BB_rjmp, *BB_rend;
@@ -143,12 +167,12 @@ void CtlJit::doNewRowHook()
 
 		v = Bld->CreateAdd(YindxAdd, Yindx);
 		Bld->CreateStore(v, YindxPtr);
-		Bld->CreateStore(Zero64, XindxPtr);
 		Bld->CreateBr(BB_next);
 	}
 }
 
-void CtlJit::HorizCase(BasicBlock *BB,
+#if 0
+void CsxJit::HorizCase(BasicBlock *BB,
                        BasicBlock *BB_lbody, BasicBlock *BB_lexit,
                        BasicBlock *BB_exit,
                        int delta_size)
@@ -186,7 +210,7 @@ void CtlJit::HorizCase(BasicBlock *BB,
 	Bld->CreateBr(BB_exit);
 }
 
-void CtlJit::VertCase(BasicBlock *BB,
+void CsxJit::VertCase(BasicBlock *BB,
                       BasicBlock *BB_lbody,
                       BasicBlock *BB_exit,
                       int delta_size)
@@ -219,7 +243,7 @@ void CtlJit::VertCase(BasicBlock *BB,
 	Yindx->addIncoming(YindxAdd, BB_lbody);
 }
 
-void CtlJit::DiagCase(BasicBlock *BB,
+void CsxJit::DiagCase(BasicBlock *BB,
                       BasicBlock *BB_lbody,
                       BasicBlock *BB_exit,
                       int delta_size)
@@ -258,16 +282,72 @@ void CtlJit::DiagCase(BasicBlock *BB,
 	Yindx->addIncoming(Yindx0, BB);
 	Yindx->addIncoming(YindxAdd, BB_lbody);
 }
+#endif
 
-void CtlJit::DeltaCase(BasicBlock *BB,
+void CsxJit::doPrint()
+{
+	Value *X, *Myx, *Xindx;
+	Myx = Bld->CreateLoad(MyxPtr);
+	Myx = Bld->CreatePtrToInt(Myx, Type::Int64Ty, "myx_int");
+	X = Bld->CreateLoad(Xptr);
+	X = Bld->CreatePtrToInt(X, Type::Int64Ty, "x_int");
+	Xindx = Bld->CreateSub(Myx, X);
+	Xindx = Bld->CreateAShr(Xindx, Three64);
+
+	Value *Yindx;
+	Yindx = Bld->CreateLoad(YindxPtr);
+
+	Value *V;
+	V = Bld->CreateLoad(Bld->CreateLoad(Vptr));
+
+	Bld->CreateCall3(PrintYXV, Yindx, Xindx, V);
+}
+
+void CsxJit::doIncV()
+{
+	Value *V = Bld->CreateLoad(Vptr);
+	Value *newV = Bld->CreateGEP(V, One64);
+	Bld->CreateStore(newV, Vptr);
+}
+
+void CsxJit::doDeltaAddMyx(int delta_bytes)
+{
+	Function *F;
+
+	switch (delta_bytes){
+		case 1:
+		F = M->getFunction("u8_get");
+		break;
+
+		case 2:
+		F = M->getFunction("u16_get");
+		break;
+
+		case 4:
+		F = M->getFunction("u32_get");
+		break;
+
+		case 8:
+		F = M->getFunction("u64_get");
+		break;
+
+		default:
+		assert(false);
+	}
+
+	Value *Myx = Bld->CreateLoad(MyxPtr, "myx");
+	Value *MyxAdd = Bld->CreateCall(F, CtlPtr, "myx_add");
+	Value *newMyx = Bld->CreateGEP(Myx, MyxAdd, "newmyx");
+	Bld->CreateStore(newMyx, MyxPtr);
+}
+
+void CsxJit::DeltaCase(BasicBlock *BB,
                        BasicBlock *BB_entry, BasicBlock *BB_body,
                        BasicBlock *BB_exit,
                        int delta_bytes)
 {
-	Value *Align, *Size, *Xindx, *XindxAdd, *Test, *NextCnt;
+	Value *Align, *Size, *Test, *NextCnt;
 	PHINode *Cnt;
-	Function *F;
-	char buff[32];
 
 	Bld->SetInsertPoint(BB);
 	// align ctl
@@ -280,31 +360,26 @@ void CtlJit::DeltaCase(BasicBlock *BB,
 
 	// Entry
 	Bld->SetInsertPoint(BB_entry);
-	Bld->CreateCall2(PrintYX, Bld->CreateLoad(YindxPtr), Bld->CreateLoad(XindxPtr));
+	doPrint();
+	doIncV();
 	Test = Bld->CreateICmpUGT(Size, One8);
 	Bld->CreateCondBr(Test, BB_body, BB_exit);
 
 	// Body
 	Bld->SetInsertPoint(BB_body);
 	Cnt = Bld->CreatePHI(Type::Int8Ty, "cnt");
-	// add delta to xIndx
-	snprintf(buff, sizeof(buff), "u%d_get", delta_bytes*8);
-	F = M->getFunction(buff);
-	Xindx = Bld->CreateLoad(XindxPtr);
-	XindxAdd = Bld->CreateCall(F, CtlPtr);
-	XindxAdd = Bld->CreateAdd(Xindx, XindxAdd);
-	Bld->CreateStore(XindxAdd, XindxPtr);
-
+	doDeltaAddMyx(delta_bytes);
 	NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
+	doPrint();
+	doIncV();
 	Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
-	Bld->CreateCall2(PrintYX, Bld->CreateLoad(YindxPtr), Bld->CreateLoad(XindxPtr));
 	Bld->CreateCondBr(Test, BB_exit, BB_body);
 
 	Cnt->addIncoming(One8, BB_entry);
 	Cnt->addIncoming(NextCnt, BB_body);
 }
 
-void CtlJit::doBodyHook()
+void CsxJit::doBodyHook()
 {
 	BasicBlock *BB, *BB_next, *BB_default, *BB_case;
 	Value *PatternMask;
@@ -327,13 +402,13 @@ void CtlJit::doBodyHook()
 	// switch instruction
 	SwitchInst *Switch;
 	Bld->SetInsertPoint(BB);
-	std::cerr << "Constructing switch with " << CtlMg->patterns.size() << " cases\n";
-	Switch = Bld->CreateSwitch(v, BB_default, CtlMg->patterns.size());
+	std::cerr << "Constructing switch with " << CsxMg->patterns.size() << " cases\n";
+	Switch = Bld->CreateSwitch(v, BB_default, CsxMg->patterns.size());
 
 	// Fill up switch, by iterating given patterns
-	CtlManager::PatMap::iterator pat_i = CtlMg->patterns.begin();
+	CsxManager::PatMap::iterator pat_i = CsxMg->patterns.begin();
 	BasicBlock *BB_lentry, *BB_lbody, *BB_lexit;
-	for ( ; pat_i !=  CtlMg->patterns.end(); ++pat_i){
+	for ( ; pat_i !=  CsxMg->patterns.end(); ++pat_i){
 		std::cerr << "pat:" << pat_i->first << " flag:" << (int)pat_i->second.flag << "\n";
 
 		// Alocate case + loop BBs
@@ -349,6 +424,7 @@ void CtlJit::doBodyHook()
 			          pat_i->first / 8);
 			break;
 
+			#if 0
 			// Horizontal
 			case 10000 ... 19999:
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
@@ -376,6 +452,7 @@ void CtlJit::doBodyHook()
 			         BB_next,
 			         pat_i->first -30000);
 			break;
+			#endif
 
 			// rdiag
 			case 40000 ... 49999:
@@ -391,15 +468,16 @@ void CtlJit::doBodyHook()
 	}
 }
 
-void CtlJit::doHooks()
+void CsxJit::doHooks()
 {
 	doNewRowHook();
 	doBodyHook();
 }
 
-void *CtlJit::doJit()
+void *CsxJit::doJit()
 {
 	verifyModule(*M, AbortProcessAction, 0);
+	ModuleToFile(M, "M.llvm.bc");
 	//doOptimize(M);
 	//M->dump();
 	std::cerr << "Generating Function\n";
@@ -410,10 +488,9 @@ void *CtlJit::doJit()
 		std::cerr << "ExectionEngine::createJIT:" << Error << "\n";
 		exit(1);
 	}
-	return JIT->getPointerToFunction(DecodeF);
+	return JIT->getPointerToFunction(SpmvF);
 }
 
-typedef void decode_fn_t(uint8_t *ctl, unsigned long ctl_size);
 
 void doEncode(SpmIdx *Spm)
 {
@@ -439,9 +516,9 @@ void doEncode(SpmIdx *Spm)
 int main(int argc, char **argv)
 {
 	SpmIdx *Spm;
-	CtlManager *CtlMg;
-	CtlJit *Jit;
-	uint8_t *ctl;
+	CsxManager *CsxMg;
+	CsxJit *Jit;
+	csx_double_t *csx;
 	uint64_t ctl_size;
 
 	if (argc < 2){
@@ -450,19 +527,19 @@ int main(int argc, char **argv)
 	}
 
 	Spm = loadMMF_mt(argv[1], 1);
-	//Spm->Print(std::cerr);
-	doEncode(Spm);
+	Spm->Print(std::cerr);
+	//doEncode(Spm);
 
-	CtlMg = new CtlManager(Spm);
-	ctl = CtlMg->mkCtl(&ctl_size);
-	Jit = new CtlJit(CtlMg);
+	CsxMg = new CsxManager(Spm);
+	Jit = new CsxJit(CsxMg);
+	csx = CsxMg->mkCsx();
 
 	Jit->doHooks();
-	decode_fn_t *fn = (decode_fn_t *)Jit->doJit();
-	fn(ctl, ctl_size);
+	spmv_double_fn_t *fn = (spmv_double_fn_t *)Jit->doJit();
+	fn(csx, NULL, NULL);
 
 	//delete Spm;
-	delete CtlMg;
+	delete CsxMg;
 
 	return 0;
 }

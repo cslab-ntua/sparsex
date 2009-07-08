@@ -9,7 +9,7 @@ while [ -n "$1" ]; do
 	f="/tmp/jit_test-$(basename $1)"
 	./jit $1 2>/dev/null 1> $f
 
-	diff -u =(sed -e "1d; s/\([[:digit:]]\+\)[[:space:]]\+\([[:digit:]]\+\).*$/\1 \2/" < $1) =(sort -V $f)
+	mmf_eq =(sed -e "1d;" < $1) =(sort -V $f)
 
 	rm $f
 	shift
