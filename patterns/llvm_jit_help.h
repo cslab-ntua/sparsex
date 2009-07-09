@@ -26,6 +26,8 @@ unsigned long getFnSize(const char *FnName);
 void printSymTable();
 #endif
 
+void CheckPromoteAllocas(Value *V);
+
 typedef StringMap<Value *> AnnotationMap;
 
 // Class for accessing annotations (llvm.var.annotation)

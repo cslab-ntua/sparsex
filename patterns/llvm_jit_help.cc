@@ -77,6 +77,18 @@ static inline int is_type_ok(const Type *Ty)
 }
 
 
+void CheckPromoteAllocas(Value *V)
+{
+	Value::use_iterator I;
+	for (I = V->use_begin(); I != V->use_end(); ++I){
+		I->dump();
+		AllocaInst *AI = dyn_cast<AllocaInst>(I);
+		if (AI){
+			std::cout  << "Alloca instruction\n";
+		}
+	}
+}
+
 static Instruction *get_hook(Module *M, const char *name)
 {
 	Function *Fn = M->getFunction(name);
@@ -395,6 +407,12 @@ void Annotations::update(Module *M)
 		str = cast<ConstantArray>(ptr->getInitializer())->getAsString();
 		// insert (the C string)
 		(*this->map)[str.c_str()] = val;
+	}
+
+	while ( (ui = Fn->use_begin()) != Fn->use_end()){
+		CallInst *CI;
+		CI = cast<CallInst>(*ui);
+		CI->getParent()->getInstList().erase(CI);
 	}
 }
 

@@ -18,12 +18,12 @@ int main(int argc, char **argv)
 
 	spm = loadMMF_mt(argv[1], 1);
 	std::cout << "Loaded Matrix " << argv[1] << std::endl;
-	TestMMF(spm, argv[1]);
+	std::cout << spm->rows;
+	//TestMMF(spm, argv[1]);
 
 	drle_mg = new DRLE_Manager(spm);
 	drle_mg->genAllStats();
 	drle_mg->outStats();
-
 	std::cout << "Choose Type" << std::endl;
 	type = drle_mg->chooseType();
 	if (type == NONE)

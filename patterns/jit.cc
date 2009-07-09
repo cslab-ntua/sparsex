@@ -61,7 +61,7 @@ public:
 
 	CsxJit(CsxManager *CsxMg);
 
-	void doPrint();
+	void doPrint(Value *Myx=NULL, Value *Yindx=NULL);
 	void doIncV();
 	void doDeltaAddMyx(int delta_bytes);
 
@@ -171,29 +171,30 @@ void CsxJit::doNewRowHook()
 	}
 }
 
-#if 0
 void CsxJit::HorizCase(BasicBlock *BB,
                        BasicBlock *BB_lbody, BasicBlock *BB_lexit,
                        BasicBlock *BB_exit,
                        int delta_size)
 {
-	Value *Size, *Delta, *Xindx0, *XindxAdd, *Yindx, *NextCnt, *Test;
-	PHINode *Xindx, *Cnt;
+	Value *Size, *Delta, *Myx0, *newMyx, *NextCnt, *Test;
+	PHINode *Myx, *Cnt;
 
 	Delta = ConstantInt::get(Type::Int64Ty, delta_size);
 
 	Bld->SetInsertPoint(BB);
 	Size = Bld->CreateLoad(SizePtr, "size");
-	Xindx0 = Bld->CreateLoad(XindxPtr);
-	Yindx = Bld->CreateLoad(YindxPtr);
+	Myx0 = Bld->CreateLoad(MyxPtr, "myx0");
 	Bld->CreateBr(BB_lbody);
 
 	// Body
 	Bld->SetInsertPoint(BB_lbody);
 	Cnt = Bld->CreatePHI(Type::Int8Ty, "cnt");
-	Xindx = Bld->CreatePHI(Type::Int64Ty, "xindx");
-	Bld->CreateCall2(PrintYX, Yindx, Xindx);
-	XindxAdd = Bld->CreateAdd(Xindx, Delta);
+	Myx = Bld->CreatePHI(Myx0->getType(), "myx");
+	doPrint(Myx);
+	doIncV();
+
+	newMyx = Bld->CreateGEP(Myx, Delta, "new_myx");
+
 	NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
 	Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
 	Bld->CreateCondBr(Test, BB_lexit, BB_lbody);
@@ -201,12 +202,12 @@ void CsxJit::HorizCase(BasicBlock *BB,
 	Cnt->addIncoming(Zero8, BB);
 	Cnt->addIncoming(NextCnt, BB_lbody);
 
-	Xindx->addIncoming(Xindx0, BB);
-	Xindx->addIncoming(XindxAdd, BB_lbody);
+	Myx->addIncoming(Myx0, BB);
+	Myx->addIncoming(newMyx, BB_lbody);
 
 	// Exit
 	Bld->SetInsertPoint(BB_lexit);
-	Bld->CreateStore(Xindx, XindxPtr);
+	Bld->CreateStore(Myx, MyxPtr);
 	Bld->CreateBr(BB_exit);
 }
 
@@ -215,14 +216,13 @@ void CsxJit::VertCase(BasicBlock *BB,
                       BasicBlock *BB_exit,
                       int delta_size)
 {
-	Value *Size, *Delta, *Yindx0, *YindxAdd, *Xindx, *NextCnt, *Test;
+	Value *Size, *Delta, *Yindx0, *YindxAdd, *NextCnt, *Test;
 	PHINode *Yindx, *Cnt;
 
 	Delta = ConstantInt::get(Type::Int64Ty, delta_size);
 
 	Bld->SetInsertPoint(BB);
 	Size = Bld->CreateLoad(SizePtr, "size");
-	Xindx = Bld->CreateLoad(XindxPtr);
 	Yindx0 = Bld->CreateLoad(YindxPtr);
 	Bld->CreateBr(BB_lbody);
 
@@ -230,7 +230,10 @@ void CsxJit::VertCase(BasicBlock *BB,
 	Bld->SetInsertPoint(BB_lbody);
 	Cnt = Bld->CreatePHI(Type::Int8Ty, "cnt");
 	Yindx = Bld->CreatePHI(Type::Int64Ty, "yindx");
-	Bld->CreateCall2(PrintYX, Yindx, Xindx);
+
+	doPrint(NULL, Yindx);
+	doIncV();
+
 	YindxAdd = Bld->CreateAdd(Yindx, Delta);
 	NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
 	Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
@@ -249,15 +252,15 @@ void CsxJit::DiagCase(BasicBlock *BB,
                       int delta_size)
 {
 	Value *Size, *Delta, *Test;
-	PHINode *Xindx, *Yindx, *Cnt;
-	Value *Xindx0, *Yindx0;
-	Value *XindxAdd, *YindxAdd, *NextCnt;
+	PHINode *Myx, *Yindx, *Cnt;
+	Value *Myx0, *Yindx0;
+	Value *newMyx, *YindxAdd, *NextCnt;
 
 	Delta = ConstantInt::get(Type::Int64Ty, delta_size);
 
 	Bld->SetInsertPoint(BB);
 	Size = Bld->CreateLoad(SizePtr, "size");
-	Xindx0 = Bld->CreateLoad(XindxPtr);
+	Myx0 = Bld->CreateLoad(MyxPtr, "myx0");
 	Yindx0 = Bld->CreateLoad(YindxPtr);
 	Bld->CreateBr(BB_lbody);
 
@@ -265,10 +268,13 @@ void CsxJit::DiagCase(BasicBlock *BB,
 	Bld->SetInsertPoint(BB_lbody);
 	Cnt = Bld->CreatePHI(Type::Int8Ty, "cnt");
 	Yindx = Bld->CreatePHI(Type::Int64Ty, "yindx");
-	Xindx = Bld->CreatePHI(Type::Int64Ty, "xindx");
-	Bld->CreateCall2(PrintYX, Yindx, Xindx);
+	Myx = Bld->CreatePHI(Myx0->getType(), "myx");
+
+	doPrint(Myx, Yindx);
+	doIncV();
+
 	YindxAdd = Bld->CreateAdd(Yindx, Delta);
-	XindxAdd = Bld->CreateAdd(Xindx, Delta);
+	newMyx = Bld->CreateGEP(Myx, Delta);
 	NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
 	Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
 	Bld->CreateCondBr(Test, BB_exit, BB_lbody);
@@ -276,26 +282,27 @@ void CsxJit::DiagCase(BasicBlock *BB,
 	Cnt->addIncoming(Zero8, BB);
 	Cnt->addIncoming(NextCnt, BB_lbody);
 
-	Xindx->addIncoming(Xindx0, BB);
-	Xindx->addIncoming(XindxAdd, BB_lbody);
+	Myx->addIncoming(Myx0, BB);
+	Myx->addIncoming(newMyx, BB_lbody);
 
 	Yindx->addIncoming(Yindx0, BB);
 	Yindx->addIncoming(YindxAdd, BB_lbody);
 }
-#endif
 
-void CsxJit::doPrint()
+void CsxJit::doPrint(Value *Myx, Value *Yindx)
 {
-	Value *X, *Myx, *Xindx;
-	Myx = Bld->CreateLoad(MyxPtr);
+	Value *X, *Xindx;
+	if (Myx == NULL)
+		Myx = Bld->CreateLoad(MyxPtr);
+
 	Myx = Bld->CreatePtrToInt(Myx, Type::Int64Ty, "myx_int");
 	X = Bld->CreateLoad(Xptr);
 	X = Bld->CreatePtrToInt(X, Type::Int64Ty, "x_int");
 	Xindx = Bld->CreateSub(Myx, X);
 	Xindx = Bld->CreateAShr(Xindx, Three64);
 
-	Value *Yindx;
-	Yindx = Bld->CreateLoad(YindxPtr);
+	if (Yindx == NULL)
+		Yindx = Bld->CreateLoad(YindxPtr);
 
 	Value *V;
 	V = Bld->CreateLoad(Bld->CreateLoad(Vptr));
@@ -424,7 +431,6 @@ void CsxJit::doBodyHook()
 			          pat_i->first / 8);
 			break;
 
-			#if 0
 			// Horizontal
 			case 10000 ... 19999:
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
@@ -452,7 +458,6 @@ void CsxJit::doBodyHook()
 			         BB_next,
 			         pat_i->first -30000);
 			break;
-			#endif
 
 			// rdiag
 			case 40000 ... 49999:
@@ -519,7 +524,6 @@ int main(int argc, char **argv)
 	CsxManager *CsxMg;
 	CsxJit *Jit;
 	csx_double_t *csx;
-	uint64_t ctl_size;
 
 	if (argc < 2){
 		std::cerr << "Usage: " << argv[0] << " <mmf_file>\n";
@@ -528,7 +532,7 @@ int main(int argc, char **argv)
 
 	Spm = loadMMF_mt(argv[1], 1);
 	Spm->Print(std::cerr);
-	//doEncode(Spm);
+	doEncode(Spm);
 
 	CsxMg = new CsxManager(Spm);
 	Jit = new CsxJit(CsxMg);
