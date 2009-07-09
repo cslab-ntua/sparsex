@@ -55,8 +55,8 @@ csx_llvm_tmpl.llvm.bc: csx_llvm_tmpl.c ctl_ll.h
 llvm_jit_help.o: llvm_jit_help.cc
 	$(GXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
 
-jit: jit.cc llvm_jit_help.o mmf.o spm.o csx.o drle.o $(dynarray_dep)
-	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ $(LLVM_CXXFLAGS) $(LLVM_LDFLAGS) -o $@
+jit: jit.cc llvm_jit_help.o mmf.o spm.o csx.o drle.o ../libspmv.o
+	$(CXX_COMPILE) -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_CXXFLAGS) $(LLVM_LDFLAGS) -o $@
 
 clean:
 	rm -f *.o drle_shell drle_test jit

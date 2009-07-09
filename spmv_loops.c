@@ -78,8 +78,10 @@ void SPMV_NAME(_check_loop) (void *m1, void *m2,
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
 		//vector_init(x, (ELEM_TYPE)3);
 		//printf("y1=%p y2=%p\n", y1->elements, y2->elements);
-		VECTOR_NAME(_init)(y1, (ELEM_TYPE)13);
-		VECTOR_NAME(_init)(y2, (ELEM_TYPE)21);
+		// We need to zero the vectors, for spmv versions that use
+		// vertical or diagonal patterns
+		VECTOR_NAME(_init)(y1, (ELEM_TYPE)0);
+		VECTOR_NAME(_init)(y2, (ELEM_TYPE)0);
 		fn1(m1, x, y1);
 		fn2(m2, x, y2);
 		if ( VECTOR_NAME(_compare)(y1, y2) < 0){

@@ -13,6 +13,8 @@
 
 extern "C" {
 #include "../spmv_method.h"
+#include "../spm_crs.h"
+#include "../spmv_loops.h"
 }
 
 
@@ -63,12 +65,17 @@ public:
 
 	void doPrint(Value *Myx=NULL, Value *Yindx=NULL);
 	void doIncV();
-	void doDeltaAddMyx(int delta_bytes);
+	void doMul(Value *Myx=NULL, Value *Yindx=NULL);
+	void doStoreYr();
+	void doOp(Value *MyX=NULL, Value *Yindx=NULL);
+
 
 	void doNewRowHook();
 	void doBodyHook();
 	void doHooks();
 	void *doJit();
+
+	void doDeltaAddMyx(int delta_bytes);
 
 	void DeltaCase(BasicBlock *BB,        // case
 	               BasicBlock *BB_lentry, // loop entry
@@ -127,6 +134,22 @@ CsxJit::CsxJit(CsxManager *_ctl_mg) : CsxMg(_ctl_mg)
 	this->Three64 = ConstantInt::get(Type::Int64Ty, 3);
 }
 
+void CsxJit::doStoreYr()
+{
+	Value *Yr, *Yindx, *YiPtr, *Yi;
+
+	Yr = Bld->CreateLoad(YrPtr, "yr");
+
+	YiPtr = Bld->CreateLoad(Yptr, "y");
+	Yindx = Bld->CreateLoad(YindxPtr, "y_indx");
+	YiPtr = Bld->CreateGEP(YiPtr, Yindx, "yi");
+
+	Yi = Bld->CreateLoad(YiPtr, "yi");
+	Yi = Bld->CreateAdd(Yi, Yr);
+
+	Bld->CreateStore(Yi, YiPtr);
+}
+
 void CsxJit::doNewRowHook()
 {
 	BasicBlock *BB, *BB_next;
@@ -134,7 +157,10 @@ void CsxJit::doNewRowHook()
 
 	// new row
 	BB = llvm_hook_newbb(M, "__new_row_hook", &BB_next);
+
 	Bld->SetInsertPoint(BB);
+	doStoreYr();
+
 	if (!CsxMg->row_jmps){
 		v = Bld->CreateLoad(YindxPtr, "y_indx");
 		v = Bld->CreateAdd(v, One64, "y_indx_inc");
@@ -190,8 +216,7 @@ void CsxJit::HorizCase(BasicBlock *BB,
 	Bld->SetInsertPoint(BB_lbody);
 	Cnt = Bld->CreatePHI(Type::Int8Ty, "cnt");
 	Myx = Bld->CreatePHI(Myx0->getType(), "myx");
-	doPrint(Myx);
-	doIncV();
+	doOp(Myx);
 
 	newMyx = Bld->CreateGEP(Myx, Delta, "new_myx");
 
@@ -231,8 +256,7 @@ void CsxJit::VertCase(BasicBlock *BB,
 	Cnt = Bld->CreatePHI(Type::Int8Ty, "cnt");
 	Yindx = Bld->CreatePHI(Type::Int64Ty, "yindx");
 
-	doPrint(NULL, Yindx);
-	doIncV();
+	doOp(NULL, Yindx);
 
 	YindxAdd = Bld->CreateAdd(Yindx, Delta);
 	NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
@@ -270,8 +294,7 @@ void CsxJit::DiagCase(BasicBlock *BB,
 	Yindx = Bld->CreatePHI(Type::Int64Ty, "yindx");
 	Myx = Bld->CreatePHI(Myx0->getType(), "myx");
 
-	doPrint(Myx, Yindx);
-	doIncV();
+	doOp(Myx, Yindx);
 
 	YindxAdd = Bld->CreateAdd(Yindx, Delta);
 	newMyx = Bld->CreateGEP(Myx, Delta);
@@ -310,12 +333,47 @@ void CsxJit::doPrint(Value *Myx, Value *Yindx)
 	Bld->CreateCall3(PrintYXV, Yindx, Xindx, V);
 }
 
+void CsxJit::doMul(Value *Myx, Value *Yindx)
+{
+	Value *V, *X;
+
+	if (Myx == NULL)
+		Myx = Bld->CreateLoad(MyxPtr);
+
+	X = Bld->CreateLoad(Myx, "x");
+	V = Bld->CreateLoad(Bld->CreateLoad(Vptr, "v_ptr"), "val");
+	V = Bld->CreateMul(V, X, "mul");
+
+	if (Yindx == NULL){
+		Value *Yr;
+		// use Yr to store the result
+		Yr = Bld->CreateLoad(YrPtr, "yr");
+		Yr = Bld->CreateAdd(Yr, V, "yr_add");
+		Bld->CreateStore(Yr, YrPtr);
+	} else {
+		Value *Yi, *YiPtr;
+		YiPtr = Bld->CreateLoad(Yptr, "y");
+		YiPtr = Bld->CreateGEP(YiPtr, Yindx);
+		Yi = Bld->CreateLoad(YiPtr, "yi");
+		Yi = Bld->CreateAdd(Yi, V, "new_yi");
+		Bld->CreateStore(Yi, YiPtr);
+	}
+}
+
 void CsxJit::doIncV()
 {
 	Value *V = Bld->CreateLoad(Vptr);
 	Value *newV = Bld->CreateGEP(V, One64);
 	Bld->CreateStore(newV, Vptr);
 }
+
+void CsxJit::doOp(Value *Myx, Value *Yindx)
+{
+	//doPrint(Myx, Yindx);
+	doMul(Myx, Yindx);
+	doIncV();
+}
+
 
 void CsxJit::doDeltaAddMyx(int delta_bytes)
 {
@@ -367,8 +425,9 @@ void CsxJit::DeltaCase(BasicBlock *BB,
 
 	// Entry
 	Bld->SetInsertPoint(BB_entry);
-	doPrint();
-	doIncV();
+
+	doOp();
+
 	Test = Bld->CreateICmpUGT(Size, One8);
 	Bld->CreateCondBr(Test, BB_body, BB_exit);
 
@@ -377,8 +436,9 @@ void CsxJit::DeltaCase(BasicBlock *BB,
 	Cnt = Bld->CreatePHI(Type::Int8Ty, "cnt");
 	doDeltaAddMyx(delta_bytes);
 	NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
-	doPrint();
-	doIncV();
+
+	doOp();
+
 	Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
 	Bld->CreateCondBr(Test, BB_exit, BB_body);
 
@@ -409,7 +469,7 @@ void CsxJit::doBodyHook()
 	// switch instruction
 	SwitchInst *Switch;
 	Bld->SetInsertPoint(BB);
-	std::cerr << "Constructing switch with " << CsxMg->patterns.size() << " cases\n";
+	//std::cerr << "Constructing switch with " << CsxMg->patterns.size() << " cases\n";
 	Switch = Bld->CreateSwitch(v, BB_default, CsxMg->patterns.size());
 
 	// Fill up switch, by iterating given patterns
@@ -531,7 +591,7 @@ int main(int argc, char **argv)
 	}
 
 	Spm = loadMMF_mt(argv[1], 1);
-	Spm->Print(std::cerr);
+	//Spm->Print(std::cerr);
 	doEncode(Spm);
 
 	CsxMg = new CsxManager(Spm);
@@ -540,7 +600,12 @@ int main(int argc, char **argv)
 
 	Jit->doHooks();
 	spmv_double_fn_t *fn = (spmv_double_fn_t *)Jit->doJit();
-	fn(csx, NULL, NULL);
+
+	uint64_t nrows, ncols, nnz;
+	void *crs = spm_crs32_double_init_mmf(argv[1], &nrows, &ncols, &nnz);
+	spmv_double_check_loop(crs, csx,
+	                       spm_crs32_double_multiply, fn, 1,
+	                       nrows, ncols, nnz);
 
 	//delete Spm;
 	delete CsxMg;

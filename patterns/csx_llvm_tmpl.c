@@ -172,17 +172,18 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
 	double *x;
 	double *y;
 	double *v = csx->values;
-	double *v_end = v + csx->nnz;
-	double *myx = x;
+	double *myx;
 	double yr = 0;
 	uint8_t *ctl = csx->ctl;
+	uint8_t *ctl_end = ctl + csx->ctl_size;
 	uint64_t y_indx=0;
 	uint8_t size, flags;
 
 	//printf("csx->ctl: %p\n", csx->ctl);
 
-	//x = in->elements;
-	//y = out->elements;
+	x = in  ? in->elements : NULL;
+	y = out ? out->elements: NULL;
+	myx = x;
 
 	llvm_annotate(&yr, "spmv::yr");
 	llvm_annotate(&myx, "spmv::myx");
@@ -200,10 +201,10 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
 		size = *ctl++;
 		//printf("size=%d\n", size);
 		if (test_bit(&flags, CTL_NR_BIT)){
-			myx = x;
-			//y[y_indx] = yr;
-			yr = 0;
 			__new_row_hook();
+			myx = x;
+			yr = 0;
+			//y[y_indx] = yr;
 		}
 
 		//printf("x_indx before jmp: %lu\n", myx - x);
@@ -212,5 +213,6 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
 		__body_hook();
 		//printf("x_indx at end: %lu\n", myx - x);
 
-	} while (v < v_end);
+	} while (ctl < ctl_end);
+	y[y_indx] += yr;
 }
