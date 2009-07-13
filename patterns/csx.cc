@@ -129,28 +129,28 @@ uint8_t CsxManager::getFlag(long pattern_id, uint64_t nnz)
 csx_double_t *CsxManager::mkCsx()
 {
 	csx_double_t *csx;
+	SPM *Spm;
 
-	csx = (csx_double_t *)malloc(sizeof(csx_double_t));;
-	if (!csx){
+	Spm = this->spm;
+	csx = (csx_double_t *)malloc(sizeof(csx_double_t));
+	this->values = (double *)malloc(sizeof(double)*Spm->nnz);
+	if (!csx || !this->values){
 		perror("malloc");
 		exit(1);
 	}
-	csx->nnz = this->spm->nnz;
-	csx->nrows = this->spm->nrows;
-	csx->ncols = this->spm->ncols;
-
-
-	this->values = (double *)malloc(sizeof(double)*this->spm->nnz);
-	this->values_idx = 0;
-	if (!this->values){
-		perror("malloc");
-		exit(1);
-	}
-
 	this->ctl_da = dynarray_create(sizeof(uint8_t), 512);
+
+	csx->nnz = Spm->nnz;
+	csx->nrows = Spm->nrows;
+	csx->ncols = Spm->ncols;
+	this->values_idx = 0;
 	this->new_row = false; // do not mark first row
-	FOREACH(SpmRowElems &row, this->spm->rows){
-		if (row.empty()){
+	for (uint64_t i=0; i < Spm->getNrRows(); i++){
+		const SpmRowElem *rbegin, *rend;
+
+		rbegin = Spm->rbegin(i);
+		rend = Spm->rend(i);
+		if (rbegin == rend){ // check if row is empty
 			if (this->new_row == false){
 				this->new_row = true; // in case the first row is empty
 			} else {
@@ -158,8 +158,7 @@ csx_double_t *CsxManager::mkCsx()
 			}
 			continue;
 		}
-		this->doRow(row);
-		row.clear();
+		this->doRow(rbegin, rend);
 		this->new_row = true;
 	}
 
@@ -169,7 +168,7 @@ csx_double_t *CsxManager::mkCsx()
 	//std::cerr << "csx->ctl=" << (unsigned long)csx->ctl << "\n";
 	this->ctl_da = NULL;
 
-	assert(this->values_idx == this->spm->nnz);
+	assert(this->values_idx == Spm->nnz);
 	csx->values = this->values;
 	this->values = NULL;
 	this->values_idx = 0;
@@ -303,20 +302,20 @@ uint64_t CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &ele
 // 1. Each unit leaves the x index at the last element it calculated on the
 // current row
 // 2. Size is the number of elements taht will be calculated
-void CsxManager::doRow(const SpmRowElems &row)
+void CsxManager::doRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 {
 	std::vector<uint64_t> xs;
 	uint64_t jmp;
 
 	this->last_col = 1;
-	FOREACH(const SpmRowElem &spm_elem, row){
+	for (const SpmRowElem *spm_elem = rbegin; spm_elem < rend; spm_elem++){
 		// check if this element contains a pattern
-		if (spm_elem.pattern != NULL){
-			jmp = this->PreparePat(xs, spm_elem);
+		if (spm_elem->pattern != NULL){
+			jmp = this->PreparePat(xs, *spm_elem);
 			assert(xs.size() == 0);
-			this->AddPattern(spm_elem, jmp);
-			for (long i=0; i < spm_elem.pattern->getSize(); i++){
-				this->values[this->values_idx++] = spm_elem.vals[i];
+			this->AddPattern(*spm_elem, jmp);
+			for (long i=0; i < spm_elem->pattern->getSize(); i++){
+				this->values[this->values_idx++] = spm_elem->vals[i];
 			}
 			continue;
 		}
@@ -328,8 +327,8 @@ void CsxManager::doRow(const SpmRowElems &row)
 			this->AddXs(xs);
 		}
 
-		xs.push_back(spm_elem.x);
-		this->values[this->values_idx++] = spm_elem.val;
+		xs.push_back(spm_elem->x);
+		this->values[this->values_idx++] = spm_elem->val;
 	}
 
 	if (xs.size() > 0){

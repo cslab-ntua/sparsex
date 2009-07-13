@@ -12,17 +12,212 @@
 
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
+#define FOREACH BOOST_FOREACH
 #include <boost/lambda/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 
 #include "../../debug/debug_user.h"
 
+extern "C" {
+	#include "dynarray.h"
+}
+
 namespace bll = boost::lambda;
+using namespace csx;
 
-#define FOREACH BOOST_FOREACH
+//
+// SPM::Builder hide the detaisl of dynarray
+//
 
+SPM::Builder::Builder(SPM *_spm, uint64_t elems_nr, uint64_t rows_nr): spm(_spm)
+{
+	uint64_t *rowptr;
+
+	this->da_elems = dynarray_create(sizeof(SpmRowElem), elems_nr ? elems_nr : 512);
+	this->da_rowptr = dynarray_create(sizeof(uint64_t), rows_nr ? rows_nr : 512);
+
+	rowptr = (uint64_t *)dynarray_alloc(this->da_rowptr);
+	*rowptr = 0;
+}
+
+SPM::Builder::~Builder()
+{
+	// check if finalized has been called
+	assert(this->da_elems == NULL);
+	assert(this->da_rowptr == NULL);
+}
+
+SpmRowElem *SPM::Builder::AllocElem()
+{
+	return (SpmRowElem *)dynarray_alloc(this->da_elems);
+}
+
+SpmRowElem *SPM::Builder::AllocElems(uint64_t nr)
+{
+	return (SpmRowElem *)dynarray_alloc_nr(this->da_elems, nr);
+}
+
+uint64_t SPM::Builder::getElemsCnt()
+{
+	return dynarray_size(this->da_elems);
+}
+
+void SPM::Builder::newRow(uint64_t rdiff)
+{
+	uint64_t *rowptr;
+	uint64_t elems_cnt;
+
+	elems_cnt = getElemsCnt();
+	rowptr = (uint64_t *)dynarray_alloc_nr(this->da_rowptr, rdiff);
+
+	for (uint64_t i=0; i < rdiff; i++)
+		rowptr[i] = elems_cnt;
+}
+
+void SPM::Builder::Finalize()
+{
+	// Add marker for last row, if needed
+	uint64_t *last_rowptr;
+	last_rowptr = (uint64_t *)dynarray_get_last(this->da_rowptr);
+	if (*last_rowptr != dynarray_size(this->da_elems))
+		newRow();
+
+	// release old data from spm, if needed
+	if (spm->elems__)
+		free(spm->elems__);
+	if (spm->rowptr__)
+		free(spm->rowptr__);
+
+	// fill new data in spm
+	spm->elems_size__ = dynarray_size(da_elems);
+	spm->elems__ = (SpmRowElem *)dynarray_destroy(da_elems);
+	spm->rowptr_size__ = dynarray_size(da_rowptr);
+	spm->rowptr__ = (uint64_t *)dynarray_destroy(da_rowptr);
+
+	// done!
+	this->da_elems = this->da_rowptr = NULL;
+}
 
 namespace csx {
+
+//
+// Set Elems: build spm via point iterators
+//
+
+void mk_row_elem(const CooElem &p, SpmRowElem *ret)
+{
+	ret->x = p.x;
+	ret->val = p.val;
+	ret->pattern = NULL;
+}
+
+void mk_row_elem(const SpmCooElem &p, SpmRowElem *ret)
+{
+	ret->x = p.x;
+	ret->val = p.val;
+	ret->pattern = (p.pattern == NULL) ? NULL : (p.pattern)->clone();
+}
+
+void mk_row_elem(const SpmRowElem &p, SpmRowElem *ret)
+{
+	ret->x = p.x;
+	ret->val = p.val;
+	ret->pattern = (p.pattern == NULL) ? NULL : (p.pattern)->clone();
+}
+
+} // end namespace csx
+
+template <typename IterT>
+uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end,
+                       const unsigned long limit,
+                       const uint64_t elems_nr, const uint64_t rows_nr)
+{
+	SpmRowElem *elem;
+	uint64_t row_prev, row;
+	SPM::Builder *SpmBld;
+
+	SpmBld = new SPM::Builder(this, elems_nr, rows_nr);
+
+	row_prev = 1;
+	for (; pi != pnts_end; ++pi){
+		row = (*pi).y;
+		if (row != row_prev){
+			assert(row > row_prev);
+			if (limit && SpmBld->getElemsCnt() >= limit)
+				break;
+			SpmBld->newRow(row - row_prev);
+			row_prev = row;
+		}
+		// add new element
+		elem = SpmBld->AllocElem();
+		mk_row_elem(*pi, elem);
+	}
+
+	SpmBld->Finalize();
+	delete SpmBld;
+
+	return this->elems_size__;
+}
+
+SPM *SPM::loadMMF_mt(std::istream &in, const long nr)
+{
+	SPM *ret, *spm;
+	MMF mmf(in);
+	MMF::iterator iter = mmf.begin();
+	MMF::iterator iter_end = mmf.end();
+	long limit, cnt, row_start;
+
+	ret = new SPM[nr];
+
+	row_start = limit = cnt = 0;
+	for (long i=0; i<nr; i++){
+		spm = ret + i;
+		limit = (mmf.nnz - cnt) / (nr - i);
+		spm->nnz = spm->SetElems(iter, iter_end, limit);
+		spm->nrows = spm->rowptr_size__ - 1;
+		spm->ncols = mmf.ncols;
+		spm->row_start = row_start;
+		row_start += spm->nrows;
+		spm->type = HORIZONTAL;
+		cnt += spm->nnz;
+	}
+	assert((uint64_t)cnt == mmf.nnz);
+
+	return ret;
+}
+
+
+SPM *SPM::loadMMF_mt(const char *mmf_file, const long nr)
+{
+	SPM *ret;
+	std::ifstream mmf;
+
+	mmf.open(mmf_file);
+	ret = loadMMF_mt(mmf, nr);
+	mmf.close();
+
+	return ret;
+}
+
+SPM *SPM::loadMMF(std::istream &in)
+{
+	return loadMMF_mt(in, 1);
+}
+
+SPM *SPM::loadMMF(const char *mmf_file)
+{
+	SPM *ret;
+
+	std::ifstream mmf;
+	mmf.open(mmf_file);
+	ret = loadMMF(mmf);
+	mmf.close();
+
+	return ret;
+}
+
+namespace csx {
+
 
 std::ostream &operator<<(std::ostream &os, const Pattern::StatsVal &stats)
 {
@@ -76,25 +271,7 @@ std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
 	return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems)
-{
-	out << "row( ";
-	BOOST_FOREACH(const SpmRowElem &elem, elems){
-		out << elem << " [@" << &elem << "]  ";
-	}
-	out << ") @" << &elems ;
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const SpmRows &rows)
-{
-	BOOST_FOREACH(const SpmRowElems &row, rows){
-		out << row << std::endl;
-	}
-	return out;
-}
-
-std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi)
+std::ostream &operator<<(std::ostream &out, SPM::PntIter pi)
 {
 	out << "<" << std::setw(2) << pi.row_idx << "," << std::setw(2) << pi.elm_idx << ">";
 	return out;
@@ -155,36 +332,91 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t nrows)
 	dst.y = src_y - dst.x + 1;
 }
 
-
-
 } // end of csx namespace
 
-using namespace csx;
-
-SpmIdx::PointIter SpmIdx::points_begin(uint64_t ridx, uint64_t eidx)
+// Spm Row Elements iteration
+SpmRowElem *SPM::rbegin(uint64_t ridx)
 {
-	return PointIter(ridx, eidx, this);
+	assert(ridx < this->rowptr_size__ - 1);
+	return &this->elems__[this->rowptr__[ridx]];
 }
 
-SpmIdx::PointIter SpmIdx::points_end(uint64_t ridx, uint64_t eidx)
+SpmRowElem *SPM::rend(uint64_t ridx)
+{
+	assert(ridx < this->rowptr_size__ - 1);
+	return &this->elems__[this->rowptr__[ridx + 1]];
+}
+
+
+//
+// Spm Point Iteration
+//
+
+SPM::PntIter::PntIter(): spm(NULL), row_idx(0), elm_idx(0) { }
+
+SPM::PntIter::PntIter(SPM *_spm, uint64_t ridx) : spm(_spm), row_idx(ridx)
+{
+	uint64_t *rp = this->spm->rowptr__;
+	uint64_t rp_size = this->spm->rowptr_size__;
+
+	assert(ridx < rp_size);
+	while (ridx < rp_size && rp[ridx] == rp[ridx+1])
+		ridx++;
+	this->row_idx = ridx;
+	this->elm_idx = rp[ridx];
+}
+
+bool SPM::PntIter::operator==(const PntIter &pi)
+{
+	return (spm = pi.spm)
+	       && (row_idx == pi.row_idx)
+		   && (elm_idx == pi.elm_idx);
+}
+
+bool SPM::PntIter::operator!=(const PntIter &pi)
+{
+	return !(*this == pi);
+}
+
+void SPM::PntIter::operator++()
+{
+	uint64_t *rp = this->spm->rowptr__;
+	uint64_t rp_size = this->spm->rowptr_size__;
+
+	assert(this->elm_idx < this->spm->elems_size__);
+	assert(this->row_idx < rp_size);
+
+	this->elm_idx++;
+	while (this->row_idx < rp_size && rp[this->row_idx +1] == this->elm_idx)
+		this->row_idx++;
+}
+
+SpmCooElem SPM::PntIter::operator*()
+{
+	SpmCooElem ret;
+	SpmRowElem *e;
+	Pattern *p;
+
+	ret.y = this->row_idx + 1;
+	e = this->spm->elems__ + this->elm_idx;
+	ret.x = e->x;
+	ret.val = e->val;
+	p = e-> pattern;
+	ret.pattern = (p == NULL) ? NULL : p->clone();
+	return ret;
+}
+
+SPM::PntIter SPM::points_begin(uint64_t ridx)
+{
+	return PntIter(this, ridx);
+}
+
+SPM::PntIter SPM::points_end(uint64_t ridx)
 {
 	if (ridx == 0){
-		ridx = this->rows.size();
+		ridx = this->getNrRows();
 	}
-	return PointIter(ridx, eidx, this);
-}
-
-SpmIdx::PointPoper SpmIdx::points_pop_begin(uint64_t ridx, uint64_t eidx)
-{
-	return PointPoper(ridx, eidx, this);
-}
-
-SpmIdx::PointPoper SpmIdx::points_pop_end(uint64_t ridx, uint64_t eidx)
-{
-	if (ridx == 0){
-		ridx = this->rows.size();
-	}
-	return PointPoper(ridx, eidx, this);
+	return PntIter(this, ridx);
 }
 
 static inline bool elem_cmp_less(const SpmCooElem &e0,
@@ -195,122 +427,7 @@ static inline bool elem_cmp_less(const SpmCooElem &e0,
 	return (ret < 0);
 }
 
-
-static inline void mk_row_elem(const CooElem &p, SpmRowElem &ret)
-{
-	ret.x = p.x;
-	ret.val = p.val;
-	ret.pattern = NULL;
-}
-
-static inline void mk_row_elem(const SpmCooElem &p, SpmRowElem &ret)
-{
-	ret.x = p.x;
-	ret.val = p.val;
-	ret.pattern = (p.pattern == NULL) ? NULL : (p.pattern)->clone();
-}
-
-template <typename IterT>
-uint64_t SpmIdx::SetRows(IterT &pi, const IterT &pnts_end, const unsigned long limit)
-{
-	SpmRowElems *row_elems;
-	uint64_t row_prev;
-	uint64_t cnt;
-
-	this->rows.resize(1);
-	row_elems = &this->rows.at(0);
-	row_prev = 1;
-
-	cnt = 0;
-	for (; pi != pnts_end; ++pi){
-		uint64_t row = (*pi).y;
-		long size;
-
-		if (row != row_prev){
-			assert(row > this->rows.size());
-			if (limit && cnt >= limit)
-				break;
-			this->rows.resize(row);
-			row_elems = &this->rows.at(row - 1);
-			row_prev = row;
-		}
-		size = row_elems->size();
-		row_elems->resize(size+1);
-		mk_row_elem(*pi, (*row_elems)[size]);
-		cnt++;
-	}
-	return cnt;
-}
-
-void SpmIdx::loadMMF(std::istream &in)
-{
-	MMF mmf(in);
-	MMF::iterator i0 = mmf.begin();
-	MMF::iterator ie = mmf.end();
-	uint64_t ret;
-
-	ret = SetRows(i0, ie);
-	this->nrows = mmf.nrows;
-	this->ncols = mmf.ncols;
-	assert(mmf.nnz = ret);
-	this->nnz = mmf.nnz;
-	this->row_start = 0;
-	this->type = HORIZONTAL;
-}
-
-void SpmIdx::loadMMF(const char *mmf_file)
-{
-	std::ifstream mmf;
-	mmf.open(mmf_file);
-	this->loadMMF(mmf);
-	mmf.close();
-
-}
-
-// load MMF multiple/multithreaded
-namespace csx {
-SpmIdx *loadMMF_mt(std::istream &in, const long nr)
-{
-	SpmIdx *ret, *spm;
-	MMF mmf(in);
-	MMF::iterator iter = mmf.begin();
-	MMF::iterator iter_end = mmf.end();
-	long limit, cnt;
-
-	ret = new SpmIdx[nr];
-
-	limit = cnt = 0;
-	for (long i=0; i<nr; i++){
-		spm = ret + i;
-		limit = (mmf.nnz - cnt) / (nr - i);
-		spm->nnz = spm->SetRows(iter, iter_end, limit);
-		spm->nrows = spm->rows.size();
-		spm->ncols = mmf.ncols;
-		spm->row_start = cnt;
-		spm->type = HORIZONTAL;
-		cnt += spm->nnz;
-	}
-	assert((uint64_t)cnt == mmf.nnz);
-
-	return ret;
-}
-
-SpmIdx *loadMMF_mt(const char *mmf_file, const long nr)
-{
-	SpmIdx *ret;
-	std::ifstream mmf;
-
-	mmf.open(mmf_file);
-	ret = loadMMF_mt(mmf, nr);
-	mmf.close();
-
-	return ret;
-
-}
-
-} // end of csx namespace
-
-inline TransformFn SpmIdx::getRevXformFn(SpmIterOrder type)
+inline TransformFn SPM::getRevXformFn(SpmIterOrder type)
 {
 	boost::function<void (CooElem &p)> ret;
 	switch(type) {
@@ -336,7 +453,7 @@ inline TransformFn SpmIdx::getRevXformFn(SpmIterOrder type)
 	return ret;
 }
 
-inline TransformFn SpmIdx::getXformFn(SpmIterOrder type)
+inline TransformFn SPM::getXformFn(SpmIterOrder type)
 {
 	boost::function<void (CooElem &p)> ret;
 	switch(type) {
@@ -362,7 +479,7 @@ inline TransformFn SpmIdx::getXformFn(SpmIterOrder type)
 	return ret;
 }
 
-inline TransformFn SpmIdx::getTransformFn(SpmIterOrder from_type, SpmIterOrder to_type)
+inline TransformFn SPM::getTransformFn(SpmIterOrder from_type, SpmIterOrder to_type)
 {
 	boost::function<void (CooElem &p)> xform_fn, rxform_fn;
 
@@ -379,37 +496,47 @@ inline TransformFn SpmIdx::getTransformFn(SpmIterOrder from_type, SpmIterOrder t
 	return xform_fn;
 }
 
-void SpmIdx::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
+void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 {
-	PointPoper p0, pe, p;
-	SpmCooElems elems;
+	PntIter p0, pe, p;
+	std::vector<SpmCooElem> elems;
 	boost::function<void (CooElem &p)> xform_fn;
 
 	if (this->type == t)
 		return;
 
+	// Get the appropriate transformation function
 	xform_fn = this->getTransformFn(this->type, t);
 
-	p0 = points_pop_begin(rs);
-	pe = points_pop_end(re);
+	// Create a vector of points
+	//  In the first version of this we used special iterators that
+	//  removed elements, for minimal memory usage.
+	//  For now we keep it simple.
+	p0 = points_begin(rs);
+	pe = points_end(re);
+	elems.reserve(this->elems_size__);
 	for(p=p0; p != pe; ++p){
 		SpmCooElem p_new = SpmCooElem(*p);
 		xform_fn(p_new);
 		elems.push_back(p_new);
 	}
 
+	// Note that if we need minimal memory usage, this part
+	// has to change too.
 	sort(elems.begin(), elems.end(), elem_cmp_less);
-	SpmCooElems::iterator e0 = elems.begin();
-	SpmCooElems::iterator ee = elems.end();
-	SetRows(e0, ee);
+	std::vector<SpmCooElem>::iterator e0, ee;
+	e0 = elems.begin();
+	ee = elems.end();
+	SetElems(e0, ee);
 	elems.clear();
+
 	this->type = t;
 }
 
 
 
 #if 0
-void SpmIdx::PrintRows(std::ostream &out)
+void SPM::PrintRows(std::ostream &out)
 {
 	uint64_t prev_y=1;
 	out << prev_y << ": ";
@@ -427,7 +554,7 @@ void SpmIdx::PrintRows(std::ostream &out)
 
 
 
-void SpmIdx::genStats()
+void SPM::genStats()
 {
 }
 void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn, std::ostream &out)
@@ -526,9 +653,9 @@ void TestXforms()
 }
 #endif
 
-void SpmIdx::Print(std::ostream &out)
+void SPM::Print(std::ostream &out)
 {
-	SpmIdx::PointIter p, p_start, p_end;
+	SPM::PntIter p, p_start, p_end;
 	p_start = this->points_begin();
 	p_end = this->points_end();
 	for (p = p_start; p != p_end; ++p){
@@ -569,7 +696,7 @@ void test_drle()
 #if 0
 int main(int argc, char **argv)
 {
-	SpmIdx obj;
+	SPM obj;
 	obj.loadMMF();
 	//obj.DRLEncode();
 	//obj.Print();

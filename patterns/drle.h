@@ -106,12 +106,12 @@ public:
 
 class DRLE_Manager {
 public:
-	SpmIdx *spm;
+	SPM *spm;
 	long min_limit; // minimum length for RLEs
 	long max_limit; // maximum length for RLEs
 	double min_perc; // min nnz percentage for considering an RLE
 
-	DRLE_Manager(SpmIdx *_spm,
+	DRLE_Manager(SPM *_spm,
 	             long min_limit_=4, long max_limit_ = std::numeric_limits<long>::max(),
 	             double min_perc_=.1)
 	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_), min_perc(min_perc_) {}
@@ -139,9 +139,14 @@ private:
 	void doEncode(uint64_t &col,
 	              std::vector<uint64_t> &xs,
 	              std::vector<double> &vs,
-	              SpmRowElems &newrow);
-	void EncodeRow(const SpmRowElems &oldrow, SpmRowElems &newrow);
-	void updateStats(std::vector<uint64_t> &xs, DeltaRLE::Stats &stats);
+	              std::vector<SpmRowElem> &newrow);
+
+	void EncodeRow(const SpmRowElem *rstart,
+	               const SpmRowElem *rend,
+	               std::vector<SpmRowElem> &newrow);
+
+	void updateStats(std::vector<uint64_t> &xs,
+	                 DeltaRLE::Stats &stats);
 };
 
 #if 0
@@ -155,7 +160,7 @@ inline std::ostream &operator<<(std::ostream &os, const DeltaRLE::Stats &stats)
 }
 #endif
 
-void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdx &spm, std::ostream &os);
+void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os);
 
 } // end of csx namespace
 

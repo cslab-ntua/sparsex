@@ -557,7 +557,7 @@ void *CsxJit::doJit()
 }
 
 
-void doEncode(SpmIdx *Spm)
+void doEncode(SPM *Spm)
 {
 	DRLE_Manager *DrleMg;
 	SpmIterOrder type;
@@ -580,7 +580,7 @@ void doEncode(SpmIdx *Spm)
 
 int main(int argc, char **argv)
 {
-	SpmIdx *Spm;
+	SPM *Spm;
 	CsxManager *CsxMg;
 	CsxJit *Jit;
 	csx_double_t *csx;
@@ -590,7 +590,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	Spm = loadMMF_mt(argv[1], 1);
+	Spm = SPM::loadMMF_mt(argv[1], 1);
 	//Spm->Print(std::cerr);
 	doEncode(Spm);
 

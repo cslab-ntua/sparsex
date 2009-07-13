@@ -11,6 +11,8 @@ typedef struct {
 
 #ifdef __cplusplus
 
+#include "spm.h"
+
 extern "C" {
 	#include "dynarray.h"
 }
@@ -21,7 +23,7 @@ namespace csx {
 class CsxManager
 {
 public:
-	SpmIdx *spm;
+	SPM *spm;
 
 	class PatInfo {
 	public:
@@ -46,13 +48,13 @@ public:
 	bool new_row; // marker of new_row
 	uint64_t empty_rows; // number of empty rows since last non-empty row
 
-	CsxManager(SpmIdx *spm_) :
+	CsxManager(SPM *spm_) :
 	spm(spm_), flag_avail(0), row_jmps(false), ctl_da(NULL), last_col(0), empty_rows(0) {}
 
 	uint8_t getFlag(long pattern_id, uint64_t nnz);
 	csx_double_t *mkCsx();
 private:
-	void doRow(const SpmRowElems &row);
+	void doRow(const SpmRowElem *rstart, const SpmRowElem *rend);
 	void updateNewRow(uint8_t *flags);
 	void AddXs(std::vector<uint64_t> &xs);
 	void AddPattern(const SpmRowElem &elem, uint64_t jmp);

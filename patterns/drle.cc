@@ -87,27 +87,30 @@ void DRLE_Manager::updateStats(std::vector<uint64_t> &xs,
 
 DeltaRLE::Stats DRLE_Manager::generateStats()
 {
+	SPM *Spm;
 	std::vector<uint64_t> xs;
 	DeltaRLE::Stats stats;
-	SpmIdx::RowIter ri;
 
-	for (ri = this->spm->rbegin(); ri != this->spm->rend(); ++ri){
-		FOREACH(const SpmRowElem &elem, *ri){
-			if (elem.pattern == NULL){
-				xs.push_back(elem.x);
+	Spm = this->spm;
+
+	for (uint64_t i=0; i < Spm->getNrRows(); i++){
+		for (const SpmRowElem *elem = Spm->rbegin(i); elem != Spm->rend(i); elem++){
+			if (elem->pattern == NULL){
+				xs.push_back(elem->x);
 				continue;
 			}
 			this->updateStats(xs, stats);
 		}
 		this->updateStats(xs, stats);
 	}
+
 	return stats;
 }
 
 void DRLE_Manager::doEncode(uint64_t &col,
                             std::vector<uint64_t> &xs,
                             std::vector<double> &vs,
-                            SpmRowElems &newrow)
+                            std::vector<SpmRowElem> &newrow)
 {
 	std::vector< RLE<uint64_t> > rles;
 	const std::set<uint64_t> *deltas_set;
@@ -153,25 +156,25 @@ void DRLE_Manager::doEncode(uint64_t &col,
 	vs.clear();
 }
 
-void DRLE_Manager::EncodeRow(const SpmRowElems &oldrow,
-                             SpmRowElems &newrow)
+void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
+                             std::vector<SpmRowElem> &newrow)
 {
 	std::vector<uint64_t> xs;
 	std::vector<double> vs;
 	uint64_t col;
 
 	col = 0;
-	FOREACH(const SpmRowElem &e, oldrow){
-		if (e.pattern == NULL){
-			xs.push_back(e.x);
-			vs.push_back(e.val);
+	for (const SpmRowElem *e = rstart; e < rend; e++){
+		if (e->pattern == NULL){
+			xs.push_back(e->x);
+			vs.push_back(e->val);
 			continue;
 		}
 		if (xs.size() != 0){
 			doEncode(col, xs, vs, newrow);
 		}
-		col += e.pattern->x_increase(this->spm->type);
-		newrow.push_back(e);
+		col += e->pattern->x_increase(this->spm->type);
+		newrow.push_back(*e);
 	}
 	if (xs.size() != 0){
 		doEncode(col, xs, vs, newrow);
@@ -180,21 +183,32 @@ void DRLE_Manager::EncodeRow(const SpmRowElems &oldrow,
 
 void DRLE_Manager::Encode()
 {
-	SpmIdx::RowIter ro; // old row
+	SPM *Spm;
+	SPM::Builder *SpmBld;
+	std::vector<SpmRowElem> new_row;
+	uint64_t nr_size;
+	SpmRowElem *elems;
 
-	for (ro = this->spm->rbegin(); ro != this->spm->rend(); ++ro){
-		SpmRowElems nr;
-		long nr_size;
-		// create new row
-		EncodeRow(*ro, nr);
-		// copy data
-		nr_size = nr.size();
-		ro->clear();
-		ro->reserve(nr_size);
-		for (long i=0; i < nr_size; i++){
-			ro->push_back(nr[i]);
+	Spm = this->spm;
+	SpmBld = new SPM::Builder(Spm);
+
+	for (uint64_t i=0; i < Spm->getNrRows(); i++){
+
+		EncodeRow(Spm->rbegin(i), Spm->rend(i), new_row);
+
+		nr_size = new_row.size();
+		if (nr_size > 0){
+			elems = SpmBld->AllocElems(nr_size);
+			for (uint64_t i=0; i < nr_size; i++){
+				mk_row_elem(new_row[i], elems + i);
+			}
 		}
+		new_row.clear();
+		SpmBld->newRow();
 	}
+
+	SpmBld->Finalize();
+	delete SpmBld;
 }
 
 Pattern::Generator *DeltaRLE::generator(CooElem start)
@@ -205,7 +219,7 @@ Pattern::Generator *DeltaRLE::generator(CooElem start)
 }
 
 namespace csx {
-void DRLE_OutStats(DeltaRLE::Stats &stats, SpmIdx &spm, std::ostream &os)
+void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
 {
 	DeltaRLE::Stats::iterator iter;
 	for (iter=stats.begin(); iter != stats.end(); ++iter){
