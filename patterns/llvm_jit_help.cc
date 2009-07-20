@@ -69,7 +69,7 @@ void LinkFileToModule(Module *M, const char *file)
 }
 
 /* check that the function is void fn(void) */
-static inline int is_type_ok(const Type *Ty)
+static inline int is_hook_type_ok(const Type *Ty)
 {
 	const FunctionType *FnTy = cast<FunctionType>(Ty);
 	return (FnTy->getNumParams() == 0) &&
@@ -94,7 +94,7 @@ static Instruction *get_hook(Module *M, const char *name)
 	Function *Fn = M->getFunction(name);
 
 	const Type *FnTy = Fn->getFunctionType();
-	if (!is_type_ok(FnTy)){
+	if (!is_hook_type_ok(FnTy)){
 		std::cout << "Error in Function Type\n";
 		return NULL;
 	}
@@ -110,6 +110,38 @@ static Instruction *get_hook(Module *M, const char *name)
 		std::cout << "More than one uses of the hook\n";
 		return NULL;
 	}
+
+	return Hook;
+}
+
+static Instruction *get_hook(Module *M, const char *name, Function *Parent)
+{
+	Function *Fn;
+	Instruction *Hook;
+	unsigned int cnt;
+
+	Fn = M->getFunction(name);
+	assert(Fn);
+
+	const Type *FnTy = Fn->getFunctionType();
+	if (!is_hook_type_ok(FnTy)){
+		std::cout << "Error in Function Type\n";
+		return NULL;
+	}
+
+	Value::use_iterator I = Fn->use_begin();
+	Hook = NULL;
+	cnt = 0;
+	for (; I != Fn->use_end(); ++I){
+		Instruction *Ins = cast<Instruction>(*I);
+		if (Ins->getParent()->getParent() == Parent){
+			cnt++;
+			Hook = Ins;
+		}
+	}
+
+	assert(cnt > 0 && "No uses of Hook found\n");
+	assert(cnt < 2 && "More than one uses of Hook found\n");
 
 	return Hook;
 }
@@ -131,18 +163,40 @@ CallInst *getCallInFn(Function *Fn, Function *CallerFn)
 }
 
 
+Function *doCloneFunction(Module *M, Function *Fn, const char *newFnName)
+{
+	Function *newFn;
+
+	newFn = CloneFunction(Fn);
+	newFn->setName(newFnName);
+	M->getFunctionList().push_back(newFn);
+
+	return newFn;
+}
+
+Function *doCloneFunction(Module *M, const char *FnName, const char *newFnName)
+{
+	Function *Fn;
+
+	Fn = M->getFunction(FnName);
+	assert(Fn);
+	return doCloneFunction(M, Fn, newFnName);
+
+}
+
 Function *CloneAndReplaceHook(Module *M, Function *CallerFn, Function *HookReplaceFn,
                          const char *HookName, const char *newFnName)
 {
-	// get Hook Function
-	Function *HookFn = M->getFunction(HookName);
+	Function *HookFn, *newFn;
 
+	// get Hook Function
+	HookFn = M->getFunction(HookName);
 	assert(HookFn);
+
 	//printf("Uses of %s: %u\n", HookFn->getNameStart(), HookFn->getNumUses());
 	// Clone Caller Function and put it into module
-	Function *newFn = CloneFunction(CallerFn);
-	newFn->setName(newFnName);
-	M->getFunctionList().push_back(newFn);
+
+	newFn = doCloneFunction(M, CallerFn, newFnName);
 
 	// get call instruction to replace in new function
 	//printf("Uses of %s: %u\n", HookFn->getNameStart(), HookFn->getNumUses());
@@ -168,14 +222,8 @@ IRBuilder *llvm_hook_builder(Module *M, const char *name)
 }
 #endif
 
-// This function replaces a hook function with two basic blocks,
-// for the purpose of replacing the hook with other instructions.
-// The return basic  block is where the new instructions should be placed,
-// while BBnext, is where control flow should continue
-BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext)
+static BasicBlock *__llvm_hook_newbb(Module *M, Instruction *Hook, BasicBlock **BBnext)
 {
-	Instruction *Hook = get_hook(M,name);
-
 	BasicBlock *BB = Hook->getParent();
 	BasicBlock::iterator BI(Hook);
 	BI = BB->getInstList().erase(BI);
@@ -189,6 +237,29 @@ BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext)
 
 	*BBnext = BB1;
 	return BB0;
+}
+
+
+// This function replaces a hook function with two basic blocks,
+// for the purpose of replacing the hook with other instructions.
+// The return basic  block is where the new instructions should be placed,
+// while BBnext, is where control flow should continue
+BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext)
+{
+	Instruction *Hook;
+
+	Hook = get_hook(M,name);
+	return __llvm_hook_newbb(M, Hook, BBnext);
+}
+
+// same with before only hook should be insinde Parent
+BasicBlock *llvm_hook_newbb(Module *M, const char *name, Function *Parent,
+                            BasicBlock **BBnext)
+{
+	Instruction *Hook;
+
+	Hook = get_hook(M,name, Parent);
+	return __llvm_hook_newbb(M, Hook, BBnext);
 }
 
 /* XXX: Copied from JITEmitter.cpp  */
@@ -381,7 +452,8 @@ bool InlineFntoFn(Function *Callee, Function *Caller)
 }
 
 // update map, with annotations from Module M
-void Annotations::update(Module *M)
+// If F is !NULL, then consider only annotations inside F
+void Annotations::update(Module *M, Function *Parent)
 {
 	Function *Fn;
 	Value::use_iterator ui;
@@ -402,6 +474,9 @@ void Annotations::update(Module *M)
 		std::string str;
 		// jump trough the hoops
 		CI = cast<CallInst>(*ui);
+		// if a Parent is included, filter instructions
+		if (Parent && CI->getParent()->getParent() != Parent)
+			continue;
 		val = CI->getOperand(1)->stripPointerCasts();
 		ptr = cast<GlobalVariable>(CI->getOperand(2)->stripPointerCasts());
 		str = cast<ConstantArray>(ptr->getInitializer())->getAsString();
@@ -409,10 +484,20 @@ void Annotations::update(Module *M)
 		(*this->map)[str.c_str()] = val;
 	}
 
-	while ( (ui = Fn->use_begin()) != Fn->use_end()){
-		CallInst *CI;
-		CI = cast<CallInst>(*ui);
-		CI->getParent()->getInstList().erase(CI);
+	// please, pretty please fix-me
+	for (;;){
+		bool erased = false;
+		for (ui = Fn->use_begin(); ui != Fn->use_end(); ++ui){
+			CallInst *CI;
+			CI = cast<CallInst>(*ui);
+			if (Parent && CI->getParent()->getParent() != Parent)
+				continue;
+			CI->eraseFromParent();
+			erased = true;
+			break;
+		}
+		if (!erased)
+			break;
 	}
 }
 
@@ -430,4 +515,59 @@ Value *Annotations::getValue(const char *annotation)
 	AnnotationMap::iterator am = this->map->find(annotation);
 	assert(am != this->map->end());
 	return am->getValue();
+}
+
+SingleModule::ModMap SingleModule::modules;
+SingleModule::RefMap SingleModule::refs;
+SingleModule::JitMap SingleModule::jits;
+
+Module *SingleModule::getM(const char *mod_name)
+{
+	Module *ret;
+	ModMap::iterator it;
+
+	it = modules.find(mod_name);
+	if (it == modules.end()){
+		ret = ModuleFromFile(mod_name);
+		modules.insert(std::make_pair(mod_name, ret));
+		refs.insert(std::make_pair(ret, 1));
+	} else {
+		ret = it->second;
+		refs[ret] += 1;
+	}
+
+	return ret;
+}
+
+ExecutionEngine *mkJIT(Module *M)
+{
+	ModuleProvider *MP;
+	ExecutionEngine *JIT;
+	std::string Error;
+
+	MP = new ExistingModuleProvider(M);
+	JIT = ExecutionEngine::createJIT(MP, &Error);
+	if (!JIT){
+		std::cerr << "ExectionEngine::createJIT:" << Error << "\n";
+		exit(1);
+	}
+
+	return JIT;
+}
+
+
+ExecutionEngine *SingleModule::getJIT(Module *M)
+{
+	ExecutionEngine *ret;
+	JitMap::iterator it;
+
+	it = jits.find(M);
+	if (it == jits.end()){
+		ret = mkJIT(M);
+		jits.insert(std::make_pair(M, ret));
+	} else {
+		ret = it->second;
+	}
+
+	return ret;
 }
