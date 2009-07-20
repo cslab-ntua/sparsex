@@ -125,15 +125,15 @@ public:
 
 	std::map <SpmIterOrder, std::set<uint64_t> > DeltasToEncode;
 
-	std::bitset<XFORM_MAX> xforms;
-	void Encode();
+	std::bitset<XFORM_MAX> xforms_ignore;
+
+	void addIgnore(SpmIterOrder type);
 
 	SpmIterOrder chooseType();
 	uint64_t getTypeNNZ(SpmIterOrder type);
 
-	// create the ctl array
-	// (this will destroy the spm)
-	unsigned char *mkCtl();
+	void Encode(SpmIterOrder type=NONE);
+	void EncodeAll();
 
 private:
 	void doEncode(uint64_t &col,

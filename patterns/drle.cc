@@ -181,17 +181,26 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
 	}
 }
 
-void DRLE_Manager::Encode()
+void DRLE_Manager::Encode(SpmIterOrder type)
 {
 	SPM *Spm;
 	SPM::Builder *SpmBld;
+	SpmIterOrder oldtype;
 	std::vector<SpmRowElem> new_row;
 	uint64_t nr_size;
 	SpmRowElem *elems;
 
 	Spm = this->spm;
-	SpmBld = new SPM::Builder(Spm);
+	if (type == NONE && ((type = this->chooseType()) == NONE) ){
+		return;
+	}
 
+	// Transform matrix to the desired iteration order
+	oldtype = Spm->type;
+	Spm->Transform(type);
+
+	// Do the encoding
+	SpmBld = new SPM::Builder(Spm);
 	for (uint64_t i=0; i < Spm->getNrRows(); i++){
 
 		EncodeRow(Spm->rbegin(i), Spm->rend(i), new_row);
@@ -206,9 +215,28 @@ void DRLE_Manager::Encode()
 		new_row.clear();
 		SpmBld->newRow();
 	}
-
 	SpmBld->Finalize();
 	delete SpmBld;
+
+	// Transform matrix to the original iteration order
+	Spm->Transform(oldtype);
+
+	this->addIgnore(type);
+}
+
+void DRLE_Manager::EncodeAll()
+{
+	SpmIterOrder type;
+
+	for (;;){
+		this->genAllStats();
+		this->outStats(std::cerr);
+		type = this->chooseType();
+		if (type == NONE)
+			break;
+		std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
+		this->Encode(type);
+	}
 }
 
 Pattern::Generator *DeltaRLE::generator(CooElem start)
@@ -231,6 +259,11 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
 }
 } // end csx namespace
 
+void DRLE_Manager::addIgnore(SpmIterOrder type)
+{
+	this->xforms_ignore.set(type);
+}
+
 void DRLE_Manager::genAllStats()
 {
 	DeltaRLE::Stats::iterator iter, tmp;
@@ -238,7 +271,7 @@ void DRLE_Manager::genAllStats()
 
 	this->stats.clear();
 	for (int t=HORIZONTAL; t != XFORM_MAX; t++){
-		if (this->xforms[t])
+		if (this->xforms_ignore[t])
 			continue;
 
 		SpmIterOrder type = SpmTypes[t];
