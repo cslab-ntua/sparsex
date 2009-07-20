@@ -118,7 +118,7 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 
 	for (i=0; i<loops; i++){
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
-		VECTOR_NAME(_init)(y, (ELEM_TYPE)13);
+		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 		VECTOR_NAME(_init)(y2, (ELEM_TYPE)21);
 		pthread_barrier_wait(&barrier);
 		pthread_barrier_wait(&barrier);
