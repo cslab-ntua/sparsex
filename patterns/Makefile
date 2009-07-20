@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: drle_shell drle_test jit
+all: spmv
 
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O2 -Wdisabled-optimization
@@ -21,7 +21,7 @@ LLVM_LDFLAGS    = $(shell llvm-config --ldflags --libs $(llvm_deps))
 
 dynarray_dir    = $(shell rsrc resource 'dynarray')
 dynarray_dep    = $(dynarray_dir)/dynarray.o
-INC            += -I$(dynarray_dir) 
+INC            += -I$(dynarray_dir)
 
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
@@ -52,11 +52,17 @@ drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 csx_llvm_tmpl.llvm.bc: csx_llvm_tmpl.c ctl_ll.h
 	llvm-gcc -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
 
-llvm_jit_help.o: llvm_jit_help.cc
+llvm_jit_help.o: llvm_jit_help.cc llvm_jit_help.h
 	$(GXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
 
-jit: jit.cc llvm_jit_help.o mmf.o spm.o csx.o drle.o ../libspmv.o
-	$(CXX_COMPILE) -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_CXXFLAGS) $(LLVM_LDFLAGS) -o $@
+jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
+	$(CXX_COMPILE)  $(LLVM_CXXFLAGS) -c $<
+
+spmv.o: spmv.cc
+	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
+
+spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o ../libspmv.o
+	$(GXX) -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) -o $@
 
 clean:
 	rm -f *.o drle_shell drle_test jit

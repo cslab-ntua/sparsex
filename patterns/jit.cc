@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <cassert>
 
 #include "llvm/Analysis/Verifier.h"
@@ -8,107 +9,29 @@
 #include "spm.h"
 #include "csx.h"
 #include "drle.h"
+#include "jit.h"
 
 #include "llvm_jit_help.h"
 
-extern "C" {
-#include "../spmv_method.h"
-#include "../spm_crs.h"
-#include "../spmv_loops.h"
-}
-
-
-namespace csx {
-
-} // csx namespace end
-
-using namespace csx;
 using namespace llvm;
+using namespace csx;
 
-class CsxJit {
-public:
-	CsxManager *CsxMg;
-	Module *M;
-	IRBuilder<> *Bld;
-	ModuleProvider *MP;
-	ExecutionEngine *JIT;
-
-	Function *UlGet;
-	Function *DecodeF;
-	Function *SpmvF;
-	Function *FailF;
-	Function *PrintYXV;
-	Function *AlignF;
-	Function *TestBitF;
-
-	Value *Zero8;
-	Value *Zero32;
-	Value *Zero64;
-	Value *One8;
-	Value *One32;
-	Value *One64;
-	Value *Three64;
-
-	Value *YrPtr;
-	Value *MyxPtr;
-	Value *Xptr;
-	Value *Yptr;
-	Value *YindxPtr;
-	Value *Vptr;
-	Value *CtlPtr;
-	Value *SizePtr;
-	Value *FlagsPtr;
-
-	Annotations annotations;
-
-	CsxJit(CsxManager *CsxMg);
-
-	void doPrint(Value *Myx=NULL, Value *Yindx=NULL);
-	void doIncV();
-	void doMul(Value *Myx=NULL, Value *Yindx=NULL);
-	void doStoreYr();
-	void doOp(Value *MyX=NULL, Value *Yindx=NULL);
-
-
-	void doNewRowHook();
-	void doBodyHook();
-	void doHooks();
-	void *doJit();
-
-	void doDeltaAddMyx(int delta_bytes);
-
-	void DeltaCase(BasicBlock *BB,        // case
-	               BasicBlock *BB_lentry, // loop entry
-	               BasicBlock *BB_lbody,  // loop body
-	               BasicBlock *BB_exit,   // final exit
-	               int delta_bytes);
-
-	void HorizCase(BasicBlock *BB,
-	               BasicBlock *BB_lbody,
-	               BasicBlock *BB_lexit,
-                   BasicBlock *BB_exit,
-                   int delta_size);
-
-	void VertCase(BasicBlock *BB,
-                  BasicBlock *BB_lbody,
-                  BasicBlock *BB_exit,
-                  int delta_size);
-
-	void DiagCase(BasicBlock *BB,
-                  BasicBlock *BB_lbody,
-                  BasicBlock *BB_exit,
-                  int delta_size);
-};
-
-CsxJit::CsxJit(CsxManager *_ctl_mg) : CsxMg(_ctl_mg)
+CsxJit::CsxJit(CsxManager *_ctl_mg, unsigned int tid) : CsxMg(_ctl_mg)
 {
-	this->M = ModuleFromFile("csx_llvm_tmpl.llvm.bc");
+	std::ostringstream str_stream;
+
+	this->M = SingleModule::getM("csx_llvm_tmpl.llvm.bc");
 	this->Bld = new IRBuilder<>();
 
-	this->annotations.update(M);
+	str_stream << "csx_spmv_" << tid;
+	this->SpmvF = doCloneFunction(M, "csx_spmv_template", str_stream.str().c_str());
 
-	//this->DecodeF = M->getFunction("ctl_decode_template");
-	this->SpmvF = M->getFunction("csx_spmv_template");
+	this->annotations.update(M, this->SpmvF);
+	//this->annotations.dump();
+
+	//str_stream << ".llvm.bc";
+	//ModuleToFile(this->M, str_stream.str().c_str());
+
 	this->PrintYXV = M->getFunction("print_yxv");
 	this->FailF = M->getFunction("fail");
 	this->AlignF = M->getFunction("align_ptr");
@@ -156,7 +79,7 @@ void CsxJit::doNewRowHook()
 	Value *v;
 
 	// new row
-	BB = llvm_hook_newbb(M, "__new_row_hook", &BB_next);
+	BB = llvm_hook_newbb(M, "__new_row_hook", SpmvF, &BB_next);
 
 	Bld->SetInsertPoint(BB);
 	doStoreYr();
@@ -452,7 +375,7 @@ void CsxJit::doBodyHook()
 	Value *PatternMask;
 	Value *v;
 
-	BB = llvm_hook_newbb(M, "__body_hook", &BB_next);
+	BB = llvm_hook_newbb(M, "__body_hook", SpmvF, &BB_next);
 
 	// get pattern for switch instruction
 	Bld->SetInsertPoint(BB);
@@ -541,18 +464,14 @@ void CsxJit::doHooks()
 
 void *CsxJit::doJit()
 {
+	ExecutionEngine *JIT;
+
 	verifyModule(*M, AbortProcessAction, 0);
-	ModuleToFile(M, "M.llvm.bc");
+	//ModuleToFile(M, "M.llvm.bc");
 	//doOptimize(M);
 	//M->dump();
 	std::cerr << "Generating Function\n";
-	std::string Error;
-	MP = new  ExistingModuleProvider(M);
-	JIT = ExecutionEngine::createJIT(MP, &Error);
-	if (!JIT){
-		std::cerr << "ExectionEngine::createJIT:" << Error << "\n";
-		exit(1);
-	}
+	JIT = SingleModule::getJIT(M);
 	return JIT->getPointerToFunction(SpmvF);
 }
 
@@ -576,39 +495,4 @@ void doEncode(SPM *Spm)
 	DrleMg->Encode();
 	Spm->Transform(HORIZONTAL);
 	//Spm->Print(std::cerr);
-}
-
-int main(int argc, char **argv)
-{
-	SPM *Spm;
-	CsxManager *CsxMg;
-	CsxJit *Jit;
-	csx_double_t *csx;
-
-	if (argc < 2){
-		std::cerr << "Usage: " << argv[0] << " <mmf_file>\n";
-		exit(1);
-	}
-
-	Spm = SPM::loadMMF_mt(argv[1], 1);
-	//Spm->Print(std::cerr);
-	doEncode(Spm);
-
-	CsxMg = new CsxManager(Spm);
-	Jit = new CsxJit(CsxMg);
-	csx = CsxMg->mkCsx();
-
-	Jit->doHooks();
-	spmv_double_fn_t *fn = (spmv_double_fn_t *)Jit->doJit();
-
-	uint64_t nrows, ncols, nnz;
-	void *crs = spm_crs32_double_init_mmf(argv[1], &nrows, &ncols, &nnz);
-	spmv_double_check_loop(crs, csx,
-	                       spm_crs32_double_multiply, fn, 1,
-	                       nrows, ncols, nnz);
-
-	//delete Spm;
-	delete CsxMg;
-
-	return 0;
 }

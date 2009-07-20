@@ -1,6 +1,13 @@
 #ifndef CTX_CTL_LL_H__
 #define CTX_CTL_LL_H__
 
+#include <cassert>
+
+//#include <cstdint>
+extern "C" {
+	#include <inttypes.h>
+}
+
 // Ctl Array is a byte-based array storing (compressed)
 // index information for the sparse matrix
 //
