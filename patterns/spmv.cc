@@ -51,6 +51,7 @@ int main(int argc, char **argv)
 		spm_mt_thread = spm_mt.spm_threads + i;
 
 		DrleMg = new DRLE_Manager(Spm, 4, 255-1);
+		DrleMg->EncodeAll();
 		CsxMg = new CsxManager(Spm);
 		Jit = new CsxJit(CsxMg, i);
 		spm_mt_thread->spm = csx = CsxMg->mkCsx();
