@@ -57,6 +57,9 @@ int main(int argc, char **argv)
 		Jit->doHooks();
 		spm_mt_thread->spmv_fn = Jit->doJit();
 		spm_mt_thread->cpu = i;
+		delete Jit;
+		delete CsxMg;
+		delete DrleMg;
 	}
 
 	uint64_t nrows, ncols, nnz;
@@ -65,7 +68,7 @@ int main(int argc, char **argv)
 	                          spm_crs32_double_multiply, 1,
 	                          nrows, ncols,
 	                          NULL);
-
+	spm_crs32_double_destroy(crs);
 	std::cout << "Check Passed\n";
 
 	free(spm_mt.spm_threads);
