@@ -45,16 +45,14 @@ void mt_get_options(unsigned int *nr_cpus, unsigned int **cpus)
 	e = getenv(MT_CONF);
 
 	if ( !e ){
-		printf("%s empty: setting default mt options: 0,1,2,3\n", MT_CONF);
-		*nr_cpus = 4;
+		printf("%s empty: setting default mt options: 0\n", MT_CONF);
+		*nr_cpus = 1;
 		*cpus = malloc(sizeof(unsigned int)*(*nr_cpus));
-		if ( !(*cpus) ){
+		if (!*cpus){
 			perror("malloc");
 			exit(1);
 		}
-		for ( i=0; i < *nr_cpus; i++){
-			(*cpus)[i] = i;
-		}
+		*cpus[0] = 0;
 		return;
 	}
 
