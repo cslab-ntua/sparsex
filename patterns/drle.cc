@@ -107,42 +107,57 @@ DeltaRLE::Stats DRLE_Manager::generateStats()
 	return stats;
 }
 
-void DRLE_Manager::doEncode(uint64_t &col,
-                            std::vector<uint64_t> &xs,
+// Use to encode a part of a row
+//  xs: x values to encode
+//  vs: numerical values for the elements
+//  newrow: vector to append the encoded elements
+void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
                             std::vector<double> &vs,
                             std::vector<SpmRowElem> &newrow)
 {
-	std::vector< RLE<uint64_t> > rles;
-	const std::set<uint64_t> *deltas_set;
-	std::vector<double>::iterator vi = vs.begin();
-	SpmRowElem elem;
+	uint64_t col; // keep track of the current column
+	std::vector< RLE<uint64_t> > rles; // rle elements
+	std::set<uint64_t> *deltas_set; // delta values to encode for
+	std::vector<double>::iterator vi = vs.begin(); // value iterator
+	SpmRowElem elem; // temp element to perform insertions
 
-	deltas_set = &this->DeltasToEncode[this->spm->type];
+	// do a delta run-length encoding of the x values
 	rles = RLEncode(DeltaEncode(xs));
+
+	// Not all delta rles are to be encoded, only those
+	// that are in the ->DeltasToEncode set
+	deltas_set = &this->DeltasToEncode[this->spm->type];
+
+	col = 0; // initialize column
 	elem.pattern = NULL; // Default inserter (for push_back copies)
 	FOREACH(RLE<uint64_t> rle, rles){
 		//std::cout << "freq:" << rle.freq << " val:" << rle.val << "\n";
+		// create patterns
 		if ( deltas_set->find(rle.val) != deltas_set->end() ){
 			while (rle.freq >= this->min_limit){
 				uint64_t freq;
 				SpmRowElem *last_elem;
-				std::vector<double>::iterator ve;
 
 				freq = std::min(this->max_limit, rle.freq);
-				col += rle.val; // go to the first
+				col += rle.val;
 				elem.x = col;
-				elem.vals = new double[freq];
-				std::copy(vi, vi + freq, elem.vals);
-				vi += freq;
 				newrow.push_back(elem);
+
+				// get a reference to the last element (avoid unnecessary copies)
 				last_elem = &newrow.back();
+				// set pattern
 				last_elem->pattern = new DeltaRLE(freq, rle.val, this->spm->type);
-				last_elem = NULL;
+				// set values
+				last_elem->vals = new double[freq];
+				std::copy(vi, vi + freq, last_elem->vals);
+				vi += freq;
+
 				col += rle.val*(freq - 1);
 				rle.freq -= freq;
 			}
 		}
 
+		// add individual elements
 		for (int i=0; i < rle.freq; i++){
 			col += rle.val;
 			elem.x = col;
@@ -161,9 +176,9 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
 {
 	std::vector<uint64_t> xs;
 	std::vector<double> vs;
-	uint64_t col;
 
-	col = 0;
+	// gather x values into xs vector until a pattern is found
+	// and encode them using doEncode()
 	for (const SpmRowElem *e = rstart; e < rend; e++){
 		if (e->pattern == NULL){
 			xs.push_back(e->x);
@@ -171,13 +186,14 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
 			continue;
 		}
 		if (xs.size() != 0){
-			doEncode(col, xs, vs, newrow);
+			doEncode(xs, vs, newrow);
 		}
-		col += e->pattern->x_increase(this->spm->type);
 		newrow.push_back(*e);
 	}
+
+	// Encode any remaining elements
 	if (xs.size() != 0){
-		doEncode(col, xs, vs, newrow);
+		doEncode(xs, vs, newrow);
 	}
 }
 

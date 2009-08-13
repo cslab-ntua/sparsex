@@ -136,8 +136,7 @@ public:
 	void EncodeAll();
 
 private:
-	void doEncode(uint64_t &col,
-	              std::vector<uint64_t> &xs,
+	void doEncode(std::vector<uint64_t> &xs,
 	              std::vector<double> &vs,
 	              std::vector<SpmRowElem> &newrow);
 
