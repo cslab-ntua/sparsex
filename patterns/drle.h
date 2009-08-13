@@ -74,6 +74,11 @@ public:
 		return this->size;
 	}
 
+	virtual uint64_t getNextX(uint64_t x0) const
+	{
+		return (x0 + this->delta);
+	}
+
 	class Generator;
 	Pattern::Generator *generator(CooElem start);
 

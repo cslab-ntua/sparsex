@@ -301,6 +301,16 @@ uint64_t CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &ele
 	}
 
 	lastx = xs.back();
+	// normaly we wouldn't need to check for this, since
+	// it is assured by the parsing. Nevertheless, the
+	// previous element can ``disappear'' if it is included
+	// in another type of pattern.
+	// Todo: maybe it's cleaner to fix the parsing
+	if (elem.pattern->getNextX(lastx) != elem.x){
+		this->AddXs(xs);
+		return 0;
+	}
+
 	xs.pop_back();
 	if (xs.size() > 0)
 		this->AddXs(xs);

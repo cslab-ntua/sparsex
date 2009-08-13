@@ -93,6 +93,10 @@ public:
 	};
 	virtual Generator *generator(CooElem start) = 0;
 
+	// get the next x
+	// Todo: maybe use this for a common generator
+	virtual uint64_t getNextX(uint64_t x0) const = 0;
+
 	// stats for a specific pattern. For now it's just the number of non-zero
 	// elements that adhere to this pattern.
 	class StatsVal {
