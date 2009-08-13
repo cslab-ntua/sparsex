@@ -15,6 +15,8 @@ extern "C" {
 
 using namespace csx;
 
+static bool debug = false;
+
 template <typename IterT, typename ValT>
 void DeltaEncode(IterT start, IterT end, ValT &x0)
 {
@@ -158,6 +160,10 @@ csx_double_t *CsxManager::mkCsx()
 			}
 			continue;
 		}
+
+		if (debug)
+			std::cerr << "mkCsx(): row: " << i << "\n";
+
 		this->doRow(rbegin, rend);
 		this->new_row = true;
 	}
@@ -257,7 +263,8 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 	uint64_t ujmp;
 
 	pat_size = elem.pattern->getSize();
-	//std::cerr << "AddPattern jmp: " << jmp << " pat_size: " << pat_size << "\n";
+	if (debug)
+		std::cerr << "AddPattern jmp: " << jmp << " pat_size: " << pat_size << "\n";
 	pat_id = elem.pattern->getPatId();
 
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
@@ -272,10 +279,12 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 
 	//ujmp = elem.x - this->last_col;
 	ujmp = jmp ? jmp : elem.x - this->last_col;
-	//std::cerr << "AddPattern ujmp " << ujmp << "\n";
+	if (debug)
+		std::cerr << "AddPattern ujmp " << ujmp << "\n";
 	da_put_ul(this->ctl_da, ujmp);
 	this->last_col = elem.pattern->x_increase_jmp(this->spm->type, elem.x);
-	//std::cerr << "last_col:" << this->last_col << "\n";
+	if (debug)
+		std::cerr << "last_col:" << this->last_col << "\n";
 }
 
 // return ujmp
@@ -309,6 +318,8 @@ void CsxManager::doRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 
 	this->last_col = 1;
 	for (const SpmRowElem *spm_elem = rbegin; spm_elem < rend; spm_elem++){
+		if (debug)
+			std::cerr << "\t" << *spm_elem << "\n";
 		// check if this element contains a pattern
 		if (spm_elem->pattern != NULL){
 			jmp = this->PreparePat(xs, *spm_elem);
