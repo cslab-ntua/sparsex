@@ -535,9 +535,81 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 	this->type = t;
 }
 
+void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn, std::ostream &out)
+{
+	uint64_t i,j;
+	CooElem p;
+	for (i=1; i <= y; i++){
+		for (j=1; j <= x;  j++){
+			p.y = i;
+			p.x = j;
+			xform_fn(p);
+			out << p << " ";
+		}
+		out << std::endl;
+	}
+}
+
+void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
+{
+	boost::function<void (CooElem &p)> xform_fn;
+	xform_fn = bll::bind(pnt_map_D, bll::_1, bll::_1, y);
+	PrintTransform(y, x, xform_fn, out);
+}
+
+void PrintRDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
+{
+	boost::function<void (CooElem &p)> xform_fn;
+	xform_fn = bll::bind(pnt_map_rD, bll::_1, bll::_1, x);
+	PrintTransform(y, x, xform_fn, out);
+}
+
+void TestTransform(uint64_t y, uint64_t x, TransformFn xform_fn, TransformFn rxform_fn)
+{
+	uint64_t i,j;
+	CooElem p0, p1;
+	for (i=1; i <= y; i++){
+		for (j=1; j <= x;  j++){
+			p0.y = i;
+			p0.x = j;
+			xform_fn(p0);
+			p1.y = p0.y;
+			p1.x = p0.x;
+			rxform_fn(p1);
+			if ( (p1.y != i) || (p1.x != j) ){
+				std::cout << "Error for " << i << "," << j << std::endl;
+				std::cout << "Transformed: " << p0.y << "," << p0.x << std::endl;
+				std::cout << "rTransformed:" << p1.y << "," << p1.x << std::endl;
+				exit(1);
+			}
+		}
+	}
+}
+
+void TestRDiagTransform(uint64_t y, uint64_t x)
+{
+	boost::function<void (CooElem &p)> xform_fn, rxform_fn;
+	xform_fn = bll::bind(pnt_map_rD, bll::_1, bll::_1, x);
+	rxform_fn = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, x);
+	TestTransform(y, x, xform_fn, rxform_fn);
+}
 
 
 #if 0
+int main(int argc, char **argv)
+{
+	PrintRDiagTransform(5, 5, std::cout);
+	std::cout << std::endl;
+	PrintRDiagTransform(10, 5, std::cout);
+	std::cout << std::endl;
+	PrintRDiagTransform(5, 10, std::cout);
+	std::cout << std::endl;
+
+	TestRDiagTransform(5,5);
+	TestRDiagTransform(10,5);
+	TestRDiagTransform(5,10);
+}
+
 void SPM::PrintRows(std::ostream &out)
 {
 	uint64_t prev_y=1;
@@ -556,37 +628,6 @@ void SPM::PrintRows(std::ostream &out)
 
 
 
-void SPM::genStats()
-{
-}
-void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn, std::ostream &out)
-{
-	uint64_t i,j;
-	point_t p;
-	for (i=1; i <= y; i++){
-		for (j=1; j <= x;  j++){
-			p.y = i;
-			p.x = j;
-			xform_fn(p);
-			out << p << " ";
-		}
-		out << std::endl;
-	}
-}
-
-void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
-{
-	boost::function<void (point_t &p)> xform_fn;
-	xform_fn = boost::bind(pnt_map_D, _1, _1, y);
-	PrintTransform(y, x, xform_fn, out);
-}
-
-void PrintRDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
-{
-	boost::function<void (point_t &p)> xform_fn;
-	xform_fn = boost::bind(pnt_map_rD, _1, _1, y);
-	PrintTransform(y, x, xform_fn, out);
-}
 
 void printXforms()
 {
@@ -606,41 +647,11 @@ void printXforms()
 	std::cout << std::endl;
 }
 
-void TestTransform(uint64_t y, uint64_t x, TransformFn xform_fn, TransformFn rxform_fn)
-{
-	uint64_t i,j;
-	point_t p0, p1;
-	for (i=1; i <= y; i++){
-		for (j=1; j <= x;  j++){
-			p0.y = i;
-			p0.x = j;
-			xform_fn(p0);
-			p1.y = p0.y;
-			p1.x = p0.x;
-			rxform_fn(p1);
-			if ( (p1.y != i) || (p1.x != j) ){
-				std::cout << "Error for " << i << "," << j << std::endl;
-				std::cout << "Transformed: " << p0.y << "," << p0.x << std::endl;
-				std::cout << "rTransformed:" << p1.y << "," << p1.x << std::endl;
-				exit(1);
-			}
-		}
-	}
-}
-
 void TestDiagTransform(uint64_t y, uint64_t x)
 {
 	boost::function<void (point_t &p)> xform_fn, rxform_fn;
 	xform_fn = boost::bind(pnt_map_D, _1, _1, y);
 	rxform_fn = boost::bind(pnt_rmap_D, _1, _1, y);
-	TestTransform(y, x, xform_fn, rxform_fn);
-}
-
-void TestRDiagTransform(uint64_t y, uint64_t x)
-{
-	boost::function<void (point_t &p)> xform_fn, rxform_fn;
-	xform_fn = boost::bind(pnt_map_rD, _1, _1, y);
-	rxform_fn = boost::bind(pnt_rmap_rD, _1, _1, y);
 	TestTransform(y, x, xform_fn, rxform_fn);
 }
 
