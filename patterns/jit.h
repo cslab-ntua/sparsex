@@ -87,7 +87,8 @@ public:
 	void DiagCase(BasicBlock *BB,
                   BasicBlock *BB_lbody,
                   BasicBlock *BB_exit,
-                  int delta_size);
+                  int delta_size,
+                  bool reversed);
 };
 
 

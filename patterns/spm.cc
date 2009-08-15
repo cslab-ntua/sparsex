@@ -311,23 +311,25 @@ static inline void pnt_rmap_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 	}
 }
 
-static inline void pnt_map_rD(const CooElem &src, CooElem &dst, uint64_t nrows)
+static inline void pnt_map_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 {
 	uint64_t src_x = src.x;
 	uint64_t src_y = src.y;
 	uint64_t dst_y;
 	dst.y = dst_y = src_x + src_y - 1;
-	dst.x = (dst_y <= nrows) ? src_x : src_x + nrows - dst_y;
+	dst.x = (dst_y <= ncols) ? src_y : ncols + 1 - src_x;
 }
 
-static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t nrows)
+static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 {
 	uint64_t src_x = src.x;
 	uint64_t src_y = src.y;
-	if (src_y < nrows){
-		dst.x = src_x;
+	if (src_y <= ncols){
+		dst.y = src_x;
+		dst.x = src_y + 1 - src_x;
 	} else {
-		dst.x = src_x + src_y - nrows;
+		dst.y = src_x + src_y - ncols;
+		dst.x = ncols + 1 - src_x;
 	}
 	dst.y = src_y - dst.x + 1;
 }
@@ -443,7 +445,7 @@ inline TransformFn SPM::getRevXformFn(SpmIterOrder type)
 		break;
 
 		case REV_DIAGONAL:
-		ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, this->nrows);
+		ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, this->ncols);
 		break;
 
 		default:
@@ -466,7 +468,7 @@ inline TransformFn SPM::getXformFn(SpmIterOrder type)
 		break;
 
 		case REV_DIAGONAL:
-		ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->nrows);
+		ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->ncols);
 		break;
 
 		case HORIZONTAL:

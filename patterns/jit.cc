@@ -196,14 +196,16 @@ void CsxJit::VertCase(BasicBlock *BB,
 void CsxJit::DiagCase(BasicBlock *BB,
                       BasicBlock *BB_lbody,
                       BasicBlock *BB_exit,
-                      int delta_size)
+                      int delta_size,
+                      bool reversed)
 {
-	Value *Size, *Delta, *Test;
+	Value *Size, *D, *minusD, *Test;
 	PHINode *Myx, *Yindx, *Cnt;
 	Value *Myx0, *Yindx0;
 	Value *newMyx, *YindxAdd, *NextCnt;
 
-	Delta = ConstantInt::get(Type::Int64Ty, delta_size);
+	D = ConstantInt::get(Type::Int64Ty, delta_size);
+	minusD = ConstantInt::get(Type::Int64Ty, -delta_size);
 
 	Bld->SetInsertPoint(BB);
 	Size = Bld->CreateLoad(SizePtr, "size");
@@ -219,8 +221,8 @@ void CsxJit::DiagCase(BasicBlock *BB,
 
 	doOp(Myx, Yindx);
 
-	YindxAdd = Bld->CreateAdd(Yindx, Delta);
-	newMyx = Bld->CreateGEP(Myx, Delta);
+	YindxAdd = Bld->CreateAdd(Yindx, D);
+	newMyx = reversed ? Bld->CreateGEP(Myx, minusD) : Bld->CreateGEP(Myx, D);
 	NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
 	Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
 	Bld->CreateCondBr(Test, BB_exit, BB_lbody);
@@ -439,14 +441,22 @@ void CsxJit::doBodyHook()
 			DiagCase(BB_case,
 			         BB_lbody,
 			         BB_next,
-			         pat_i->first -30000);
+			         pat_i->first -30000,
+			         false);
 			break;
 
 			// rdiag
 			case 40000 ... 49999:
+			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
+			DiagCase(BB_case,
+			         BB_lbody,
+			         BB_next,
+			         pat_i->first -40000,
+			         true);
+			break;
+
 			default:
 			assert(false);
-			break;
 		}
 
 		Switch->addCase(
