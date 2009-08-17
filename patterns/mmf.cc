@@ -1,23 +1,42 @@
 #include "mmf.h"
 
+#include <fstream>
 #include <cstdlib>
 
 using namespace csx;
 
-MMF::MMF(std::istream &_in) : in(_in)
+namespace csx {
+
+void getMmfHeader(const char *mmf_file, uint64_t &nrows, uint64_t &ncols, uint64_t &nnz)
+{
+	std::ifstream in;
+
+	in.open(mmf_file);
+	getMmfHeader(in, nrows, ncols, nnz);
+	in.close();
+}
+
+void getMmfHeader(std::istream &in, uint64_t &nrows, uint64_t &ncols, uint64_t &nnz)
 {
 	char buff[512];
 	int ret;
 
-	// Read Header
 	do {
-		this->in.getline(buff, sizeof(buff));
+		in.getline(buff, sizeof(buff));
 	} while (buff[0] == '#');
-	ret = sscanf(buff, "%lu %lu %lu", &this->nrows, &this->ncols, &this->nnz);
+	ret = sscanf(buff, "%lu %lu %lu", &nrows, &ncols, &nnz);
 	if (ret != 3){
 		std::cerr << "mmf header error: sscanf" << std::endl;
 		exit(1);
 	}
+}
+
+} // end csx namespace
+
+MMF::MMF(std::istream &_in) : in(_in)
+{
+
+	getMmfHeader(this->in, this->nrows, this->ncols, this->nnz);
 }
 
 bool MMF::next(uint64_t &y, uint64_t &x, double &v)

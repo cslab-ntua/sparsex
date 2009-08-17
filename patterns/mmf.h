@@ -8,6 +8,9 @@
 
 namespace csx {
 
+void getMmfHeader(const char *mmf_file, uint64_t &nrows, uint64_t &ncols, uint64_t &nnz);
+void getMmfHeader(std::istream &in, uint64_t &nrows, uint64_t &ncols, uint64_t &nnz);
+
 class MMF
 {
 private:
