@@ -17,6 +17,8 @@ extern "C" {
 
 namespace csx {
 
+class MMF;
+
 struct RowElem {
 	uint64_t x;
 	union {
@@ -205,6 +207,7 @@ public:
 	static SPM *loadMMF(std::istream &in=std::cin);
 	static SPM *loadMMF_mt(const char *mmf_file, const long nr);
 	static SPM *loadMMF_mt(std::istream &in, const long nr);
+	static SPM *loadMMF_mt(MMF &mmf, const long nr);
 
 	// Print Functions
 	void Print(std::ostream &out=std::cout);

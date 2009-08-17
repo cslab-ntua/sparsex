@@ -159,13 +159,31 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end,
 	return this->elems_size__;
 }
 
+SPM *SPM::loadMMF_mt(const char *mmf_file, const long nr)
+{
+	SPM *ret;
+	std::ifstream mmf;
+
+	mmf.open(mmf_file);
+	ret = loadMMF_mt(mmf, nr);
+	mmf.close();
+
+	return ret;
+}
+
 SPM *SPM::loadMMF_mt(std::istream &in, const long nr)
 {
-	SPM *ret, *spm;
 	MMF mmf(in);
+
+	return loadMMF_mt(mmf, nr);
+}
+
+SPM *SPM::loadMMF_mt(MMF &mmf, const long nr)
+{
+	SPM *ret, *spm;
+	long limit, cnt, row_start;
 	MMF::iterator iter = mmf.begin();
 	MMF::iterator iter_end = mmf.end();
-	long limit, cnt, row_start;
 
 	ret = new SPM[nr];
 
@@ -182,19 +200,6 @@ SPM *SPM::loadMMF_mt(std::istream &in, const long nr)
 		cnt += spm->nnz;
 	}
 	assert((uint64_t)cnt == mmf.nnz);
-
-	return ret;
-}
-
-
-SPM *SPM::loadMMF_mt(const char *mmf_file, const long nr)
-{
-	SPM *ret;
-	std::ifstream mmf;
-
-	mmf.open(mmf_file);
-	ret = loadMMF_mt(mmf, nr);
-	mmf.close();
 
 	return ret;
 }
