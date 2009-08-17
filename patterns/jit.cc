@@ -485,7 +485,6 @@ void *CsxJit::doJit()
 	return JIT->getPointerToFunction(SpmvF);
 }
 
-
 void doEncode(SPM *Spm)
 {
 	DRLE_Manager *DrleMg;

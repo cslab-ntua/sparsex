@@ -6,6 +6,7 @@
 #include "csx.h"
 #include "drle.h"
 #include "jit.h"
+#include "llvm_jit_help.h"
 
 extern "C" {
 	#include "../mt_lib.h"
@@ -24,7 +25,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 	SPM *Spms, *Spm;
 	DRLE_Manager *DrleMg;
 	CsxManager *CsxMg;
-	CsxJit *Jit = NULL;
+	CsxJit **Jits;
 
 	mt_get_options(&threads_nr, &threads_cpus);
 	std::cout << "Using " << threads_nr << " threads\n";
@@ -43,6 +44,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 	}
 
 	Spms = SPM::loadMMF_mt(mmf_fname, threads_nr);
+	Jits = new CsxJit *[threads_nr];
 
 	for (unsigned int i=0; i < threads_nr; i++){
 		spm_mt_thread_t *spm_mt_thread;
@@ -58,17 +60,23 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		CsxMg = new CsxManager(Spm);
 		spm_mt_thread->spm = CsxMg->mkCsx();
 
-		Jit = new CsxJit(CsxMg, i);
-		Jit->doHooks();
-		spm_mt_thread->spmv_fn = Jit->doJit();
+		Jits[i] = new CsxJit(CsxMg, i);
+		Jits[i]->doHooks();
 		spm_mt_thread->cpu = threads_cpus[i];
 
-		delete Jit;
 		delete CsxMg;
 		delete DrleMg;
 	}
 
+	doOptimize(Jits[0]->M);
+
+	for (unsigned int i=0; i < threads_nr; i++){
+		spm_mt->spm_threads[i].spmv_fn = Jits[i]->doJit();
+		delete Jits[i];
+	}
+
 	free(threads_cpus);
+	delete[] Jits;
 	delete[] Spms;
 
 	return spm_mt;
