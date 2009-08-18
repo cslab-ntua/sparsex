@@ -401,13 +401,14 @@ void CsxJit::doBodyHook()
 	CsxManager::PatMap::iterator pat_i = CsxMg->patterns.begin();
 	BasicBlock *BB_lentry, *BB_lbody, *BB_lexit;
 	for ( ; pat_i !=  CsxMg->patterns.end(); ++pat_i){
-		std::cerr << "pat:" << pat_i->first << " flag:" << (int)pat_i->second.flag << "\n";
+		//std::cerr << "pat:" << pat_i->first << " flag:" << (int)pat_i->second.flag << "\n";
 
 		// Alocate case + loop BBs
 		BB_case = BasicBlock::Create("case", BB->getParent(), BB_default);
 		switch (pat_i->first){
 			// Deltas
 			case 8: case 16: case 32: case 64:
+			std::cout << "type:DELTA size:" << pat_i->first << " elements:" << pat_i->second.nr << "\n";
 			BB_lentry = BasicBlock::Create("lentry", BB->getParent(), BB_default);
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DeltaCase(BB_case,
@@ -418,6 +419,7 @@ void CsxJit::doBodyHook()
 
 			// Horizontal
 			case 10000 ... 19999:
+			std::cout << "type:DRLE order:HORIZONTAL delta:" << pat_i->first -10000 << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			BB_lexit = BasicBlock::Create("lexit", BB->getParent(), BB_default);
 			HorizCase(BB_case,
@@ -428,6 +430,7 @@ void CsxJit::doBodyHook()
 
 			// Vertical
 			case 20000 ... 29999:
+			std::cout << "type:DRLE order:VERTICAL delta:" << pat_i->first -20000 << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			VertCase(BB_case,
 			         BB_lbody,
@@ -437,6 +440,7 @@ void CsxJit::doBodyHook()
 
 			// Diagonal
 			case 30000 ... 39999:
+			std::cout << "type:DRLE order:DIAGONAL delta:" << pat_i->first -30000 << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DiagCase(BB_case,
 			         BB_lbody,
@@ -447,6 +451,7 @@ void CsxJit::doBodyHook()
 
 			// rdiag
 			case 40000 ... 49999:
+			std::cout << "type:DRLE order:REV_DIAGONAL delta:" << pat_i->first -40000 << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DiagCase(BB_case,
 			         BB_lbody,
@@ -480,7 +485,7 @@ void *CsxJit::doJit()
 	//ModuleToFile(M, "M.llvm.bc");
 	//doOptimize(M);
 	//M->dump();
-	std::cerr << "Generating Function\n";
+	//std::cerr << "Generating Function\n";
 	JIT = SingleModule::getJIT(M);
 	return JIT->getPointerToFunction(SpmvF);
 }

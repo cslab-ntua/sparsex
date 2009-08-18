@@ -246,11 +246,11 @@ void DRLE_Manager::EncodeAll()
 
 	for (;;){
 		this->genAllStats();
-		this->outStats(std::cerr);
+		//this->outStats(std::cerr);
 		type = this->chooseType();
 		if (type == NONE)
 			break;
-		std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
+		//std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
 		this->Encode(type);
 	}
 }

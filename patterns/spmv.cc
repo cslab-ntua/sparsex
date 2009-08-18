@@ -94,7 +94,7 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 	uint64_t nrows, ncols, nnz;
 
 	crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz);
-	std::cout << "Checking\n";
+	std::cout << "Checking ... ";
 	spmv_double_check_mt_loop(crs, spm_mt,
 	                          spm_crs32_double_multiply, 1,
 	                          nrows, ncols,
