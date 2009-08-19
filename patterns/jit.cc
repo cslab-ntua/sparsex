@@ -376,6 +376,7 @@ void CsxJit::doBodyHook()
 	BasicBlock *BB, *BB_next, *BB_default, *BB_case;
 	Value *PatternMask;
 	Value *v;
+	uint64_t delta;
 
 	BB = llvm_hook_newbb(M, "__body_hook", SpmvF, &BB_next);
 
@@ -419,44 +420,48 @@ void CsxJit::doBodyHook()
 
 			// Horizontal
 			case 10000 ... 19999:
-			std::cout << "type:DRLE order:HORIZONTAL delta:" << pat_i->first -10000 << " elements:" << pat_i->second.nr << "\n";
+			delta = pat_i->first - 10000;
+			std::cout << "type:DRLE order:HORIZONTAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			BB_lexit = BasicBlock::Create("lexit", BB->getParent(), BB_default);
 			HorizCase(BB_case,
 			          BB_lbody, BB_lexit,
 			          BB_next,
-			          pat_i->first -10000);
+			          delta);
 			break;
 
 			// Vertical
 			case 20000 ... 29999:
-			std::cout << "type:DRLE order:VERTICAL delta:" << pat_i->first -20000 << " elements:" << pat_i->second.nr << "\n";
+			delta = pat_i->first - 20000;
+			std::cout << "type:DRLE order:VERTICAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			VertCase(BB_case,
 			         BB_lbody,
 			         BB_next,
-			         pat_i->first -20000);
+			         delta);
 			break;
 
 			// Diagonal
 			case 30000 ... 39999:
-			std::cout << "type:DRLE order:DIAGONAL delta:" << pat_i->first -30000 << " elements:" << pat_i->second.nr << "\n";
+			delta = pat_i->first - 30000;
+			std::cout << "type:DRLE order:DIAGONAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DiagCase(BB_case,
 			         BB_lbody,
 			         BB_next,
-			         pat_i->first -30000,
+			         delta,
 			         false);
 			break;
 
 			// rdiag
 			case 40000 ... 49999:
-			std::cout << "type:DRLE order:REV_DIAGONAL delta:" << pat_i->first -40000 << " elements:" << pat_i->second.nr << "\n";
+			delta = pat_i->first - 40000;
+			std::cout << "type:DRLE order:REV_DIAGONAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DiagCase(BB_case,
 			         BB_lbody,
 			         BB_next,
-			         pat_i->first -40000,
+			         delta,
 			         true);
 			break;
 
