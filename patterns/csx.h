@@ -4,7 +4,7 @@
 #include "ctl_ll.h"
 
 typedef struct {
-	uint64_t nnz, ncols, nrows, ctl_size;
+	uint64_t nnz, ncols, nrows, ctl_size, row_start;
 	double *values;
 	uint8_t *ctl;
 } csx_double_t;

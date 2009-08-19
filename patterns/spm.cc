@@ -128,9 +128,9 @@ void mk_row_elem(const SpmRowElem &p, SpmRowElem *ret)
 } // end namespace csx
 
 template <typename IterT>
-uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end,
-                       const unsigned long limit,
-                       const uint64_t elems_nr, const uint64_t rows_nr)
+uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
+                       unsigned long limit,
+                       uint64_t elems_nr, uint64_t rows_nr)
 {
 	SpmRowElem *elem;
 	uint64_t row_prev, row;
@@ -138,7 +138,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end,
 
 	SpmBld = new SPM::Builder(this, elems_nr, rows_nr);
 
-	row_prev = 1;
+	row_prev = first_row;
 	for (; pi != pnts_end; ++pi){
 		row = (*pi).y;
 		if (row != row_prev){
@@ -191,7 +191,7 @@ SPM *SPM::loadMMF_mt(MMF &mmf, const long nr)
 	for (long i=0; i<nr; i++){
 		spm = ret + i;
 		limit = (mmf.nnz - cnt) / (nr - i);
-		spm->nnz = spm->SetElems(iter, iter_end, limit);
+		spm->nnz = spm->SetElems(iter, iter_end, row_start +1, limit);
 		spm->nrows = spm->rowptr_size__ - 1;
 		spm->ncols = mmf.ncols;
 		spm->row_start = row_start;
@@ -534,7 +534,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 	std::vector<SpmCooElem>::iterator e0, ee;
 	e0 = elems.begin();
 	ee = elems.end();
-	SetElems(e0, ee);
+	SetElems(e0, ee, 1);
 	elems.clear();
 
 	this->type = t;

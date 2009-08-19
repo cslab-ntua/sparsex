@@ -176,7 +176,7 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
 	double yr = 0;
 	uint8_t *ctl = csx->ctl;
 	uint8_t *ctl_end = ctl + csx->ctl_size;
-	uint64_t y_indx=0;
+	uint64_t y_indx=csx->row_start;
 	uint8_t size, flags;
 
 	//printf("csx->ctl: %p\n", csx->ctl);

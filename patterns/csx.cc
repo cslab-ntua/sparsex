@@ -145,6 +145,8 @@ csx_double_t *CsxManager::mkCsx()
 	csx->nnz = Spm->nnz;
 	csx->nrows = Spm->nrows;
 	csx->ncols = Spm->ncols;
+	csx->row_start = Spm->row_start;
+
 	this->values_idx = 0;
 	this->new_row = false; // do not mark first row
 	for (uint64_t i=0; i < Spm->getNrRows(); i++){

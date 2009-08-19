@@ -194,13 +194,15 @@ public:
 
 	// function for filling the matrix using point iterators
 	// pnts_start, pnts_end : point iterators start/end
+	// first_row: first row of the matrix (starting from 1)
 	// limit : limit for the number of elements. When this limit is reached the
 	//         function returns with the number of elements used.
 	// elems_nr, rows_nr : size for elems and rows (initial) allocation
 	template <typename IterT>
-	uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
-	                  const unsigned long limit=0,
-	                  const uint64_t elems_nr=0, const uint64_t rows_nr=0);
+	uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end, uint64_t first_row,
+	                  unsigned long limit=0,
+	                  uint64_t elems_nr=0,
+	                  uint64_t rows_nr=0);
 
 	// load matrix from an MMF file
 	static SPM *loadMMF(const char *filename);
