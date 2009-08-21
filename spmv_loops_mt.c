@@ -138,3 +138,47 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 	}
 	free(tids);
 }
+
+void SPMV_NAME(_check_mt_loop_serial) ( void *spm, spm_mt_t *spm_mt,
+                                        SPMV_NAME(_fn_t) *fn, unsigned long loops,
+                                        unsigned long rows_nr, unsigned long cols_nr,
+				        SPMV_NAME(_fn_t) *mt_fn)
+{
+	int i, j;
+	VECTOR_TYPE *y2;
+
+	x = VECTOR_NAME(_create)(cols_nr);
+	y = VECTOR_NAME(_create)(rows_nr);
+	y2 = VECTOR_NAME(_create)(rows_nr);
+	loops_nr = loops;
+
+	for (i=0; i<spm_mt->nr_threads; i++){
+		if (mt_fn != NULL)
+			spm_mt->spm_threads[i].spmv_fn = mt_fn;
+	}
+
+	for (i=0; i<loops; i++){
+		unsigned long  k;
+		//for (k=0; k < cols_nr; k++)
+		//	x->elements[k] = (ELEM_TYPE)(k+666.0);
+		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
+		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
+		VECTOR_NAME(_init)(y2, (ELEM_TYPE)21);
+
+		for (j=0; j<spm_mt->nr_threads; j++){
+			spm_mt_thread_t *t = spm_mt->spm_threads + j;
+			SPMV_NAME(_fn_t) *spmv_mt_fn = t->spmv_fn;
+			spmv_mt_fn(t->spm, x, y);
+		}
+
+		fn(spm, x, y2);
+
+		if ( VECTOR_NAME(_compare)(y2, y) < 0){
+			exit(1);
+		}
+	}
+
+	VECTOR_NAME(_destroy)(x);
+	VECTOR_NAME(_destroy)(y);
+	VECTOR_NAME(_destroy)(y2);
+}
