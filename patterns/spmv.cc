@@ -103,6 +103,23 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 	std::cout << "Check Passed\n";
 }
 
+static unsigned long CsxSize(spm_mt_t *spm_mt)
+{
+
+	unsigned long ret;
+
+	ret = 0;
+	for (unsigned int i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *t = spm_mt->spm_threads + i;
+		csx_double_t *csx = (csx_double_t *)t->spm;
+
+		ret += csx->nnz*sizeof(double);
+		ret += csx->ctl_size;
+	}
+
+	return ret;
+}
+
 static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
 	uint64_t nrows, ncols, nnz;
@@ -113,7 +130,7 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 	secs = spmv_double_bench_mt_loop(spm_mt, loops_nr, nrows, ncols, NULL);
 	flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
 	printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-	        "csx", basename(mmf_name), 0UL, secs, flops);
+	        "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
 }
 
 int main(int argc, char **argv)
