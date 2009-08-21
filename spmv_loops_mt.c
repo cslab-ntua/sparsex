@@ -159,9 +159,9 @@ void SPMV_NAME(_check_mt_loop_serial) ( void *spm, spm_mt_t *spm_mt,
 
 	for (i=0; i<loops; i++){
 		unsigned long  k;
-		for (k=0; k < cols_nr; k++)
-			x->elements[k] = (ELEM_TYPE)(k+666.0);
-		//VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
+		//for (k=0; k < cols_nr; k++)
+		//	x->elements[k] = (ELEM_TYPE)(k+666.0);
+		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
 		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 		VECTOR_NAME(_init)(y2, (ELEM_TYPE)21);
 
@@ -169,8 +169,6 @@ void SPMV_NAME(_check_mt_loop_serial) ( void *spm, spm_mt_t *spm_mt,
 			spm_mt_thread_t *t = spm_mt->spm_threads + j;
 			SPMV_NAME(_fn_t) *spmv_mt_fn = t->spmv_fn;
 			spmv_mt_fn(t->spm, x, y);
-
-			printf("y[%lu]=%lf\n", 1570507UL, (double)y->elements[1570507]);
 		}
 
 		fn(spm, x, y2);
