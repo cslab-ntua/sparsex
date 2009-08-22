@@ -271,13 +271,15 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
 	*ctl_flags = this->getFlag(pat_id, pat_size);
-	this->updateNewRow(ctl_flags);
 
 	ctl_size = ctl_flags + 1;
 	assert(pat_size + (jmp ? 1 : 0) <= CTL_SIZE_MAX);
 	// if there is a jmp we are implicitly including one more element
 	// see also: 1feee866421a129fae861f094f64b6d803ecb8d5
 	*ctl_size = pat_size + (jmp ? 1 : 0);
+
+	// ctl_flags and ctl_size are not valid after this call
+	this->updateNewRow(ctl_flags);
 
 	//ujmp = elem.x - this->last_col;
 	ujmp = jmp ? jmp : elem.x - this->last_col;
