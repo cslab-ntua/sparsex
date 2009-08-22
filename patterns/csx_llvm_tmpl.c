@@ -166,38 +166,6 @@ void ctl_decode_template(uint8_t *ctl, unsigned long ctl_size)
 
 #include "csx.h"
 
-// There is a very hard-to-track and weird bug that (first) appeared in
-// 18ee40a20efd31027ad99d5358629d8767b4fb79 which added some print operations
-// (and some data in the .rodata section ?)
-//
-// | clone24~/src/spmv.git/patterns> MT_CONF=0,2,4,6 ./spmv /s/matrices/sorted/045.apache2.mtx.sorted
-// | Using 4 threads
-// | ==> Thread: #0
-// | type:DELTA size:8 elements:669
-// | type:DRLE order:DIAGONAL delta:1 elements:690964
-// | ==> Thread: #1
-// | type:DELTA size:8 elements:670
-// | type:DRLE order:DIAGONAL delta:1 elements:690962
-// | ==> Thread: #2
-// | type:DELTA size:8 elements:669
-// | type:DRLE order:DIAGONAL delta:1 elements:690960
-// | ==> Thread: #3
-// | type:DELTA size:8 elements:667
-// | type:DRLE order:DIAGONAL delta:1 elements:690962
-// | element 434039 differs: -676769.44624632596969604492 != -756991.61488562542945146561
-//
-// Notes:
-//  - when using doPrint() in doOp the problem dissapears
-//  - when the last y[y_indx] += yr is removed from csx_spmv_template the
-//  problem dissapears
-//  - when commenting the BenchLoop() the bug dissapears. Note that the
-//  BenchLoop is declared static. If not the bug persists ; probably that's
-//  because the space for the function in this case is allocted even if it's
-//  not used.
-//  - the bug remains if MT_CONF=0,0,0,0
-//  - The next addition also makes the bug dissapear
-char foo[1] = "A";
-
 void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
 {
 	csx_double_t *csx = (csx_double_t *)spm;
