@@ -5,6 +5,7 @@
 #include <iterator>
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <cstdio>
 #include <cstdlib>
@@ -680,6 +681,51 @@ void SPM::Print(std::ostream &out)
 		out << " " << (*p);
 	}
 	out << std::endl;
+}
+
+
+void SPM::PrintElems(std::ostream &out)
+{
+	SPM::PntIter p, p_start, p_end;
+	uint64_t y0;
+
+	static int cnt=1;
+
+	y0 = this->row_start;
+	p_start = this->points_begin();
+	p_end = this->points_end();
+	for (p=p_start; p != p_end; ++p){
+		if ((*p).pattern == NULL){
+			out << std::setiosflags(std::ios::fixed)
+			    << row_start + (*p).y << " " << (*p).x << " " << (*p).val << " cnt:" << cnt++ << "\n";
+			continue;
+		}
+		// iterate the pattern
+		boost::function<void (CooElem &p)> xform_fn, rxform_fn;
+		Pattern *pat;
+		CooElem start;
+		double *vals;
+
+		pat = (*p).pattern;
+		start = static_cast<CooElem>(*p);
+		vals = start.vals;
+
+		xform_fn = getTransformFn(this->type, pat->type);
+		rxform_fn = getTransformFn(pat->type, this->type);
+
+		if (xform_fn)
+			xform_fn(start);
+
+		// SIGSEGV if pat->generator is used
+		Pattern::Generator *g = (*p).pattern->generator(start);
+		while ( !g->isEmpty() ){
+			CooElem e = g->next();
+			if (rxform_fn)
+				rxform_fn(e);
+			out << std::setiosflags(std::ios::fixed)
+			    << row_start + e.y << " " << e.x << " " << *vals++ << "cnt:" << cnt++ << "\n";
+		}
+	}
 }
 
 #if 0
