@@ -49,7 +49,7 @@ ifeq ($(shell $(shell rsrc resource numa_lib.sh) FOO),FOO)
 endif
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o #spm_delta.o spm_delta_vec.o spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o spm_crsvi_utils.o spm_csrdu_vi.o spm_csrdu_vi_mul.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o spm_crsvi_utils.o spm_csrdu_vi.o spm_csrdu_vi_mul.o spm_bcsr.o
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o
@@ -71,6 +71,10 @@ spm_crs.o:  spm_crs.c spm_crs.h
 	$(COMPILE) -DSPM_CRS_BITS=64 -DELEM_TYPE=double -o spm_crs64_double.o -c $<
 	$(COMPILE) -DSPM_CRS_BITS=32 -DELEM_TYPE=double -o spm_crs32_double.o -c $<
 	$(LD) -i spm_crs{64,32}_{double,float}.o -o spm_crs.o
+
+spm_bcsr.o: spm_bcsr.c
+	$(COMPILE) -DSPM_CRS_BITS=32 -DELEM_TYPE=double -o spm_bcsr32_double.o -c $<
+	$(LD) -i spm_bcsr32_double.o -o spm_bcsr.o
 
 spm_crs_mt.o:  spm_crs_mt.c spm_crs_mt.h
 	for t in double float; do                             \
