@@ -4,31 +4,28 @@
 #include <inttypes.h>
 #include "spmv_method.h"
 
-#define _NAME(val_type, ci_bits, name) spm_crs ## ci_bits ## _ ## val_type ## name
-#define _TYPE(val_type, ci_bits) _NAME(val_type, ci_bits, _t)
+#define CRS_NAME(val_type, ci_bits, name) spm_crs ## ci_bits ## _ ## val_type ## name
+#define CRS_TYPE(val_type, ci_bits) CRS_NAME(val_type, ci_bits, _t)
 
 #define SPM_CRS_DECLARE(val_type, ci_bits) \
 typedef struct { \
 	val_type            *values; \
 	UINT_TYPE(ci_bits)  *col_ind, *row_ptr; \
 	uint64_t            nz, nrows, ncols; \
-} _TYPE(val_type, ci_bits); \
+} CRS_TYPE(val_type, ci_bits); \
 \
 void *\
-_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
+CRS_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
                                     uint64_t *rows_nr, uint64_t *cols_nr, \
 				    uint64_t *nz_nr); \
-void _NAME(val_type, ci_bits, _destroy)(void *crs); \
-uint64_t _NAME(val_type, ci_bits, _size)(void *spm); \
-spmv_  ## val_type ## _fn_t _NAME(val_type, ci_bits, _multiply);
+void CRS_NAME(val_type, ci_bits, _destroy)(void *crs); \
+uint64_t CRS_NAME(val_type, ci_bits, _size)(void *spm); \
+spmv_  ## val_type ## _fn_t CRS_NAME(val_type, ci_bits, _multiply);
 
 SPM_CRS_DECLARE(double, 32)
 SPM_CRS_DECLARE(double, 64)
 SPM_CRS_DECLARE(float, 32)
 SPM_CRS_DECLARE(float, 64)
-
-#undef _NAME
-#undef _TYPE
 
 #include "macros.h"
 #define SPM_CRS_NAME(name) CON5(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, name)
