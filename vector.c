@@ -4,6 +4,10 @@
 
 #include "vector.h"
 
+#define ALIGN_BOUND (12)
+#define ALIGN(ul)  (ul + (ul % ALIGN_BOUND))
+
+
 VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 {
 	VECTOR_TYPE *v = malloc(sizeof(VECTOR_TYPE));
@@ -13,7 +17,7 @@ VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 	}
 
 	v->size = size;
-	v->elements = malloc(sizeof(ELEM_TYPE)*size);
+	v->elements = malloc(sizeof(ELEM_TYPE)*ALIGN(size));
 	if ( !v->elements ){
 		perror("malloc");
 		exit(1);
