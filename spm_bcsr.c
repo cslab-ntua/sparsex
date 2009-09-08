@@ -922,14 +922,28 @@ static void split_rows(SPM_BCSR_TYPE *mat,
                        SPM_CRS_IDX_TYPE nr_splits,
                        SPM_CRS_IDX_TYPE *splits)
 {
+
+    SPM_CRS_IDX_TYPE nr_nzeros = mat->nr_blocks * mat->br * mat->bc;
+    SPM_CRS_IDX_TYPE *brow_ptr = mat->brow_ptr;
+    SPM_CRS_IDX_TYPE min_nzeros_per_split = nr_nzeros / nr_splits;
     SPM_CRS_IDX_TYPE i;
-    SPM_CRS_IDX_TYPE nr_rows_per_split = mat->nr_rows / nr_splits;
+
+    SPM_CRS_IDX_TYPE nr_nzeros_per_split = 0;
+    SPM_CRS_IDX_TYPE split_pos = 1;
+
 
     splits[0] = 0;
-    for (i = 1; i < nr_splits; i++)
-        splits[i] = i*nr_rows_per_split;
+    /* Iterate over block rows */
+    for (i = 0; i < mat->nr_brows; i++) {
+        nr_nzeros_per_split += brow_ptr[i+1] - brow_ptr[i];
+        if (nr_nzeros_per_split > min_nzeros_per_split) {
+            /* new split point found */
+            splits[split_pos++] = (i+1)*mat->br;
+            nr_nzeros_per_split -= min_nzeros_per_split;
+        }
+    }
 
-    splits[nr_splits] = mat->nr_rows;
+    splits[nr_splits] = mat->nr_brows * mat->br;
     return;
 }
 
@@ -975,7 +989,7 @@ init_mmf_wrap(char *mmf_file,
 		bcsr_mt->row_start = splits[i];
 		bcsr_mt->row_end = splits[i+1];
 		bcsr_mt->bcsr = bcsr;
-		//printf("bcsr_mt: %p bcsr:%p\n", bcsr_mt, bcsr_mt->bcsr);
+		//printf("bcsr_mt: thread:%ld row_start:%lu row_end:%lu\n", i, bcsr_mt->row_start, bcsr_mt->row_end);
 
 		spm_thread->spm = bcsr_mt;
 		spm_thread->spmv_fn = NULL;
