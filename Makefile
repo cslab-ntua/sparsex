@@ -19,16 +19,17 @@ deps         = $(dynarray_dep) $(phash_dep) $(huffman_dep) $(bitutils_dep)
 
 .PHONY: $(huffman_dep) $(phash_dep) $(bitutils_dep) $(dynarray_dep)
 
-CACHE_BYTES ?= $(shell $(shell rsrc resource cache_bytes.sh))
-CPU         ?= $(shell $(shell rsrc resource cpu_info.sh))
-MHZ         ?= $(shell $(shell rsrc resource cpu_mhz.sh))
-CL_BYTES    ?= $(shell $(shell rsrc resource cl_bytes.sh))
+MHZ_SH      ?= $(shell rsrc resource cpu_mhz.sh)
+#CL_BYTES    ?= $(shell $(shell rsrc resource cl_bytes.sh))
+#CACHE_BYTES ?= $(shell $(shell rsrc resource cache_bytes.sh))
+#CPU         ?= $(shell $(shell rsrc resource cpu_info.sh))
 GCC         ?= gcc-4.3
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
 #CFLAGS      += -funroll-all-loops #-march=nocona
-DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
-DEFS        += -DCPU_$(CPU) -DCPU_MHZ=$(MHZ)
+#DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
+#DEFS        += -DCPU_$(CPU) -DCPU_MHZ=$(MHZ)
+DEFS         += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 LIBS         = -lm -lpthread
 INC          = -I$(shell rsrc resource 'prfcnt') -I$(dynarray_dir) -I$(phash_dir)
