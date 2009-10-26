@@ -2,6 +2,10 @@
 
 all: spmv
 
+## Configuration
+dynarray_dir = ../../dynarray
+
+
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O2 -Wdisabled-optimization
 #CXXFLAGS       += -Winline
@@ -19,7 +23,6 @@ LLVM_CFLAGS     = $(shell llvm-config --cflags)
 LLVM_CXXFLAGS   = $(shell llvm-config --cxxflags)
 LLVM_LDFLAGS    = $(shell llvm-config --ldflags --libs $(llvm_deps))
 
-dynarray_dir    = $(shell rsrc resource 'dynarray')
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 INC            += -I$(dynarray_dir)
 

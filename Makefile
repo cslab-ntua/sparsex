@@ -7,19 +7,20 @@ all: scripts/calc_bits spmv
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
-bitutils_dir  = $(shell rsrc resource 'bitutils')
-bitutils_dep  = $(bitutils_dir)/bitutils.o
-dynarray_dir = $(shell rsrc resource 'dynarray')
+## Configuration
+debug_dir    = ../debug
+cpu_dir      = ../cpu
+dynarray_dir = ../dynarray
+phash_dir    = ../phash
+prfcnt_dir   = ../prfcnt
+
 dynarray_dep = $(dynarray_dir)/dynarray.o
-phash_dir    = $(shell rsrc resource 'phash')
 phash_dep    = $(phash_dir)/phash.o
-huffman_dir  = $(shell rsrc resource 'huffman')
-huffman_dep  = $(huffman_dir)/libhuffman.o
-deps         = $(dynarray_dep) $(phash_dep) $(huffman_dep) $(bitutils_dep)
+deps         = $(dynarray_dep) $(phash_dep)
 
-.PHONY: $(huffman_dep) $(phash_dep) $(bitutils_dep) $(dynarray_dep)
+.PHONY: $(phash_dep) $(dynarray_dep)
 
-MHZ_SH      ?= $(shell rsrc resource cpu_mhz.sh)
+MHZ_SH      ?= $(cpu_dir)/cpu_mhz.sh
 #CL_BYTES    ?= $(shell $(shell rsrc resource cl_bytes.sh))
 #CACHE_BYTES ?= $(shell $(shell rsrc resource cache_bytes.sh))
 #CPU         ?= $(shell $(shell rsrc resource cpu_info.sh))
@@ -32,7 +33,7 @@ CFLAGS      += -g
 DEFS         += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 LIBS         = -lm -lpthread
-INC          = -I$(shell rsrc resource 'prfcnt') -I$(dynarray_dir) -I$(phash_dir)
+INC          = -I$(prfcnt_dir) -I$(dynarray_dir) -I$(phash_dir)
 INC         += -I$(bitutils_dir) -I$(huffman_dir)
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 COMPILE_UR   = $(COMPILE) -funroll-loops
@@ -44,7 +45,7 @@ ifeq ($(CPU),NIAGARA)
 	LD = ld -melf64_sparc
 endif
 
-ifeq ($(shell $(shell rsrc resource numa_lib.sh) FOO),FOO)
+ifeq ($(shell $(cpu_dir)/numa_lib.sh FOO),FOO)
 	DEFS += -DSPM_NUMA
 	LIBS += -lnuma
 endif
