@@ -947,10 +947,11 @@ static void split_rows(SPM_BCSR_TYPE *mat,
     return;
 }
 
+
 static void *
 init_mmf_wrap(char *mmf_file,
-                     unsigned long *rows_nr, unsigned long *cols_nr,
-                     unsigned long *nz_nr, int r, int c)
+              unsigned long *rows_nr, unsigned long *cols_nr,
+              unsigned long *nz_nr, int r, int c)
 {
 	spm_mt_t *spm_mt;
 	SPM_CRS_TYPE *crs;
@@ -988,6 +989,7 @@ init_mmf_wrap(char *mmf_file,
 
 		bcsr_mt->row_start = splits[i];
 		bcsr_mt->row_end = splits[i+1];
+		bcsr_mt->nnz_nr = bcsr->brow_ptr[bcsr_mt->row_end/r] - bcsr->brow_ptr[bcsr_mt->row_start/r];
 		bcsr_mt->bcsr = bcsr;
 		//printf("bcsr_mt: thread:%ld row_start:%lu row_end:%lu\n", i, bcsr_mt->row_start, bcsr_mt->row_end);
 
@@ -1001,15 +1003,16 @@ init_mmf_wrap(char *mmf_file,
 	return spm_mt;
 }
 
+
 static void inline bcsr_spmv_wrap(void *spm, VECTOR_TYPE * __restrict__ in, VECTOR_TYPE *__restrict__ out, int r, int c)
 {
 	SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *)spm;
 	SPM_BCSR_TYPE *bcsr = bcsr_mt->bcsr;
 	SPM_CRS_IDX_TYPE i, _i, j, _j, k, l;
 
-     ELEM_TYPE * __restrict__ bvalues = bcsr->bvalues;
-     ELEM_TYPE * __restrict__ x = in->elements;
-     ELEM_TYPE * __restrict__ y = out->elements;
+     	ELEM_TYPE * __restrict__ bvalues = bcsr->bvalues;
+     	ELEM_TYPE * __restrict__ x = in->elements;
+     	ELEM_TYPE * __restrict__ y = out->elements;
 	SPM_CRS_IDX_TYPE *brow_ptr = bcsr->brow_ptr;
 	SPM_CRS_IDX_TYPE *bcol_ind = bcsr->bcol_ind;
 	SPM_CRS_IDX_TYPE r_start = bcsr_mt->row_start;
@@ -1042,7 +1045,18 @@ static void inline bcsr_spmv_wrap(void *spm, VECTOR_TYPE * __restrict__ in, VECT
 
 static uint64_t bcsr_size(void *spm)
 {
-	return 0;
+	spm_mt_t *spm_mt;
+	SPM_BCSR_TYPE *bcsr;
+	unsigned long r, c, ret = 0;
+
+	spm_mt = spm;
+	bcsr = ((SPM_BCSR_MT_TYPE *)spm_mt->spm_threads->spm)->bcsr;
+	r = bcsr->br;
+	c = bcsr->bc;
+	ret +=  bcsr->nr_blocks*r*c*sizeof(ELEM_TYPE);
+	ret += (bcsr->nr_blocks)*sizeof(SPM_CRS_IDX_TYPE);
+	ret += (bcsr->nr_brows + 1)*sizeof(SPM_CRS_IDX_TYPE);
+	return ret;
 }
 
 static void bcsr_destroy(void *spm)
@@ -1495,5 +1509,150 @@ bcsr_mulv_4x2(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 }
 XSPMV_MT_METH_INIT(bcsr_mulv_4x2, bcsr_init_mmf_4x2, bcsr_size, bcsr_destroy, sizeof(ELEM_TYPE))
 
+#ifdef SPM_NUMA
 
+//#include <numa.h>
+
+static int numa_node_from_cpu(int cpu)
+{
+#if 0
+	struct bitmask *bmp;
+	int nnodes, node, ret;
+
+	bmp = numa_allocate_cpumask();
+	nnodes =  numa_num_configured_nodes();
+	for (node = 0; node < nnodes; node++){
+		numa_node_to_cpus(node, bmp);
+		if (numa_bitmask_isbitset(bmp, cpu)){
+			ret = node;
+			goto end;
+		}
+	}
+	ret = -1;
+end:
+	numa_bitmask_free(bmp);
+	return ret;
+#endif
+	return 0;
+}
+
+void *numa_alloc_onnode(unsigned long size, int node)
+{
+	return malloc(size);
+}
+
+static void *
+init_mmf_numa_wrap(char *mmf_file,
+              unsigned long *rows_nr, unsigned long *cols_nr,
+              unsigned long *nz_nr, int r, int c)
+{
+	spm_mt_t *spm_mt;
+	SPM_BCSR_TYPE *bcsr;
+	SPM_CRS_IDX_TYPE *brow_ptr;
+	SPM_CRS_IDX_TYPE *bcol_ind;
+	ELEM_TYPE *bvalues;
+
+	spm_mt = init_mmf_wrap(mmf_file, rows_nr, cols_nr, nz_nr, r, c);
+
+	bcsr = ((SPM_BCSR_MT_TYPE *)spm_mt->spm_threads->spm)->bcsr;
+	brow_ptr = bcsr->brow_ptr;
+	bcol_ind = bcsr->bcol_ind;
+	bvalues = bcsr->bvalues;
+
+	unsigned long i, total_nnz=0;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *)spm_thread->spm;
+		/* get numa node from cpu */
+		int node = numa_node_from_cpu(spm_thread->cpu);
+		/* allocate new space */
+		SPM_BCSR_TYPE *numa_bcsr = numa_alloc_onnode(sizeof(SPM_BCSR_TYPE), node);
+		if (!numa_bcsr){
+			perror("numa_alloc_onnode");
+			exit(1);
+		}
+		uint64_t nnz = bcsr_mt->nnz_nr;
+		uint64_t nrows = bcsr_mt->row_end - bcsr_mt->row_start;
+		numa_bcsr->bvalues = numa_alloc_onnode(sizeof(ELEM_TYPE)*nnz, node);
+		numa_bcsr->bcol_ind = numa_alloc_onnode(sizeof(SPM_CRS_IDX_TYPE)*nnz/(r*c), node);
+		numa_bcsr->brow_ptr = numa_alloc_onnode(sizeof(SPM_CRS_IDX_TYPE)*(nrows/r+1), node);
+		if (!numa_bcsr->bvalues || !numa_bcsr->bcol_ind | !numa_bcsr->brow_ptr){
+			perror("numa_alloc_onnode");
+			exit(1);
+		}
+		/* copy data */
+		memcpy(numa_bcsr->bvalues, bvalues, sizeof(ELEM_TYPE)*nnz);
+		bvalues += nnz;
+		memcpy(numa_bcsr->bcol_ind, bcol_ind, sizeof(SPM_CRS_IDX_TYPE)*nnz/(r*c));
+		//printf("nnz:%lu copy bcol_ind: %lu bcol_ind[0]=%d\n", nnz, sizeof(SPM_CRS_IDX_TYPE)*nnz/(r*c), numa_bcsr->bcol_ind[0]);
+		bcol_ind += nnz/(r*c);
+		memcpy(numa_bcsr->brow_ptr, brow_ptr, sizeof(SPM_CRS_IDX_TYPE)*(nrows/r+1));
+		brow_ptr += nrows/r;
+		//printf("thread:%lu cpu:%d bvalues:%p bcol_ind:%p brow_ptr:%p\n", i, spm_thread->cpu, numa_bcsr->bvalues, numa_bcsr->bcol_ind, numa_bcsr->brow_ptr);
+		/* fill numa_bcsr */
+		numa_bcsr->nr_rows = nrows;
+		numa_bcsr->nr_cols = bcsr_mt->bcsr->nr_cols;
+		numa_bcsr->nr_nzeros = nnz;
+		numa_bcsr->nr_blocks = nnz / (r*c);
+		numa_bcsr->nr_brows = nrows / r;
+		numa_bcsr->storage = bcsr_mt->bcsr->storage;
+		numa_bcsr->br = bcsr_mt->bcsr->br;
+		numa_bcsr->bc = bcsr_mt->bcsr->bc;
+		/* ugly hack, so that we can use the same spmv routines */
+		numa_bcsr->bvalues -= total_nnz;
+		numa_bcsr->bcol_ind -= (total_nnz/(r*c));
+		numa_bcsr->brow_ptr -= (bcsr_mt->row_start/r);
+		/* make the swap */
+		bcsr_mt->bcsr = numa_bcsr;
+		total_nnz += nnz;
+	}
+
+	return spm_mt;
+}
+
+static uint64_t bcsr_numa_size(void *spm)
+{
+	return 0;
+}
+
+#define DECLARE_BCSR_NUMA(c, r)  \
+static void *\
+bcsr_numa_init_mmf_ ## r ## x ## c(char *f,              \
+                              unsigned long *rows,       \
+                              unsigned long *cols,       \
+                              unsigned long *nnz)        \
+{                                                        \
+   return init_mmf_numa_wrap(f, rows, cols, nnz, r, c);  \
+}                                                        \
+                                                         \
+static void spmv_bcsr_numa_ ## r ## x ## c (void *spm,   \
+                                       VECTOR_TYPE *in,  \
+                                       VECTOR_TYPE *out) \
+{                                                        \
+       return bcsr_spmv_wrap(spm, in, out, r, c);        \
+}                                                        \
+XSPMV_MT_METH_INIT(spmv_bcsr_numa_ ## r ## x ## c,       \
+               bcsr_numa_init_mmf_ ## r ## x ## c,       \
+               bcsr_numa_size,                           \
+               bcsr_destroy,                             \
+               sizeof(ELEM_TYPE))                        \
+
+DECLARE_BCSR_NUMA(1,1)
+DECLARE_BCSR_NUMA(1,2)
+DECLARE_BCSR_NUMA(1,3)
+DECLARE_BCSR_NUMA(1,4)
+DECLARE_BCSR_NUMA(2,1)
+DECLARE_BCSR_NUMA(2,2)
+DECLARE_BCSR_NUMA(2,3)
+DECLARE_BCSR_NUMA(2,4)
+DECLARE_BCSR_NUMA(3,1)
+DECLARE_BCSR_NUMA(3,2)
+DECLARE_BCSR_NUMA(3,3)
+DECLARE_BCSR_NUMA(3,4)
+DECLARE_BCSR_NUMA(4,1)
+DECLARE_BCSR_NUMA(4,2)
+DECLARE_BCSR_NUMA(4,3)
+DECLARE_BCSR_NUMA(4,4)
+
+#endif /* SPM_NUMA */
 
