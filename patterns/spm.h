@@ -47,6 +47,11 @@ static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 	}
 }
 
+#define STRINGIFY__(s) #s
+#define STRINGIFY(s)  STRINGIFY__(s)
+#define BLOCK_ROW_TYPE_NAME(r)  BLOCK_R ## r
+#define BLOCK_COL_TYPE_NAME(c)  BLOCK_C ## c
+
 
 typedef enum {
 	NONE=0,
@@ -54,6 +59,25 @@ typedef enum {
 	VERTICAL,
 	DIAGONAL,
 	REV_DIAGONAL,
+    BLOCK_TYPE_START,
+    BLOCK_ROW_TYPE_NAME(1),
+    BLOCK_ROW_TYPE_NAME(2),
+    BLOCK_ROW_TYPE_NAME(3),
+    BLOCK_ROW_TYPE_NAME(4),
+    BLOCK_ROW_TYPE_NAME(5),
+    BLOCK_ROW_TYPE_NAME(6),
+    BLOCK_ROW_TYPE_NAME(7),
+    BLOCK_ROW_TYPE_NAME(8),
+    BLOCK_COL_START,
+    BLOCK_COL_TYPE_NAME(1),
+    BLOCK_COL_TYPE_NAME(2),
+    BLOCK_COL_TYPE_NAME(3),
+    BLOCK_COL_TYPE_NAME(4),
+    BLOCK_COL_TYPE_NAME(5),
+    BLOCK_COL_TYPE_NAME(6),
+    BLOCK_COL_TYPE_NAME(7),
+    BLOCK_COL_TYPE_NAME(8),
+    BLOCK_TYPE_END,
 	XFORM_MAX
 } SpmIterOrder;
 
@@ -64,6 +88,25 @@ const SpmIterOrder SpmTypes[] = {
 	VERTICAL,
 	DIAGONAL,
 	REV_DIAGONAL,
+    BLOCK_TYPE_START,
+    BLOCK_ROW_TYPE_NAME(1),
+    BLOCK_ROW_TYPE_NAME(2),
+    BLOCK_ROW_TYPE_NAME(3),
+    BLOCK_ROW_TYPE_NAME(4),
+    BLOCK_ROW_TYPE_NAME(5),
+    BLOCK_ROW_TYPE_NAME(6),
+    BLOCK_ROW_TYPE_NAME(7),
+    BLOCK_ROW_TYPE_NAME(8),
+    BLOCK_COL_START,
+    BLOCK_COL_TYPE_NAME(1),
+    BLOCK_COL_TYPE_NAME(2),
+    BLOCK_COL_TYPE_NAME(3),
+    BLOCK_COL_TYPE_NAME(4),
+    BLOCK_COL_TYPE_NAME(5),
+    BLOCK_COL_TYPE_NAME(6),
+    BLOCK_COL_TYPE_NAME(7),
+    BLOCK_COL_TYPE_NAME(8),
+    BLOCK_TYPE_END,
 	XFORM_MAX
 };
 
@@ -73,8 +116,44 @@ const char *SpmTypesNames[] = {
 	"VERTICAL",
 	"DIAGONAL",
 	"REV_DIAGONAL",
+    "__BLOCK_TYPE_START__",
+    STRINGIFY(BLOCK_ROW_TYPE_NAME(1)),
+    STRINGIFY(BLOCK_ROW_TYPE_NAME(2)),
+    STRINGIFY(BLOCK_ROW_TYPE_NAME(3)),
+    STRINGIFY(BLOCK_ROW_TYPE_NAME(4)),
+    STRINGIFY(BLOCK_ROW_TYPE_NAME(5)),
+    STRINGIFY(BLOCK_ROW_TYPE_NAME(6)),
+    STRINGIFY(BLOCK_ROW_TYPE_NAME(7)),
+    STRINGIFY(BLOCK_ROW_TYPE_NAME(8)),
+    "__BLOCK_COL_START__",
+    STRINGIFY(BLOCK_COL_TYPE_NAME(1)),
+    STRINGIFY(BLOCK_COL_TYPE_NAME(2)),
+    STRINGIFY(BLOCK_COL_TYPE_NAME(3)),
+    STRINGIFY(BLOCK_COL_TYPE_NAME(4)),
+    STRINGIFY(BLOCK_COL_TYPE_NAME(5)),
+    STRINGIFY(BLOCK_COL_TYPE_NAME(6)),
+    STRINGIFY(BLOCK_COL_TYPE_NAME(7)),
+    STRINGIFY(BLOCK_COL_TYPE_NAME(8)),
+    "__BLOCK_TYPE_END__",
 	"__XFORM_MAX__"
 };
+
+/*
+ *  Returns block alignment if `t' is a block type, otherwise returns `0'.
+ */ 
+static inline int isBlockType(SpmIterOrder t)
+{
+    /*
+     *  This function assumes specific order for block type elements in
+     *  SpmIterOrder enum (see the definition of SpmIterOrder).
+     */
+    if (t > BLOCK_TYPE_START && t < BLOCK_TYPE_END)
+        return (t - BLOCK_COL_START > 0) ? (t - BLOCK_COL_START) :
+            (t - BLOCK_TYPE_START);
+    else
+        return 0;
+        
+}
 
 class Pattern {
 public:

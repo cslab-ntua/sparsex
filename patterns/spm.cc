@@ -283,15 +283,54 @@ std::ostream &operator<<(std::ostream &out, SPM::PntIter pi)
 	return out;
 }
 
+#define BLOCK_ROW_MAP_NAME(r)   pnt_map_bR ## r
+#define BLOCK_ROW_RMAP_NAME(r)  pnt_rmap_bR ## r
+#define BLOCK_COL_MAP_NAME(c)   pnt_map_bC ## c
+#define BLOCK_COL_RMAP_NAME(c)  pnt_rmap_bC ## c
+
+#define DEFINE_BLOCK_ROW_MAP_FN(r)                                      \
+    static inline void BLOCK_ROW_MAP_NAME(r) (const CooElem &src, CooElem &dst) \
+    {                                                                   \
+        uint64_t src_x = src.x;                                         \
+        uint64_t src_y = src.y;                                         \
+                                                                        \
+        dst.y = (src_y - 1) / r + 1;                                    \
+        dst.x = (src_y - 1) % r + r*(src_x - 1) + 1;                    \
+    }
+
+#define DEFINE_BLOCK_ROW_RMAP_FN(r)                                     \
+    static inline void BLOCK_ROW_RMAP_NAME(r) (const CooElem &src, CooElem &dst) \
+    {                                                                   \
+        uint64_t src_x = src.x;                                         \
+        uint64_t src_y = src.y;                                         \
+                                                                        \
+        dst.y = r*(src_y - 1) + (src_x - 1) % r + 1;                    \
+        dst.x = (src_x - 1) / r + 1;                                    \
+    }
+
+#define DEFINE_BLOCK_COL_MAP_FN(c)                                      \
+    static inline void BLOCK_COL_MAP_NAME(c) (const CooElem &src, CooElem &dst) \
+    {                                                                   \
+        pnt_map_V(src, dst);                                            \
+        BLOCK_ROW_MAP_NAME(c)(src, dst);                                \
+    }
+
+#define DEFINE_BLOCK_COL_RMAP_FN(c)                                      \
+    static inline void BLOCK_COL_RMAP_NAME(c) (const CooElem &src, CooElem &dst) \
+    {                                                                   \
+        BLOCK_ROW_RMAP_NAME(c)(src, dst);                               \
+        pnt_rmap_V(src, dst);                                           \
+    }
+
 // mappings for vertical transformation
-static inline void pnt_map_V(CooElem &src, CooElem &dst)
+static inline void pnt_map_V(const CooElem &src, CooElem &dst)
 {
 	uint64_t src_x = src.x;
 	uint64_t src_y = src.y;
 	dst.x = src_y;
 	dst.y = src_x;
 }
-static inline void pnt_rmap_V(CooElem &src, CooElem &dst)
+static inline void pnt_rmap_V(const CooElem &src, CooElem &dst)
 {
 	pnt_map_V(src, dst);
 }
@@ -339,6 +378,38 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 	}
 	dst.y = src_y - dst.x + 1;
 }
+
+DEFINE_BLOCK_ROW_MAP_FN(2)
+DEFINE_BLOCK_ROW_MAP_FN(3)
+DEFINE_BLOCK_ROW_MAP_FN(4)
+DEFINE_BLOCK_ROW_MAP_FN(5)
+DEFINE_BLOCK_ROW_MAP_FN(6)
+DEFINE_BLOCK_ROW_MAP_FN(7)
+DEFINE_BLOCK_ROW_MAP_FN(8)
+
+DEFINE_BLOCK_ROW_RMAP_FN(2)
+DEFINE_BLOCK_ROW_RMAP_FN(3)
+DEFINE_BLOCK_ROW_RMAP_FN(4)
+DEFINE_BLOCK_ROW_RMAP_FN(5)
+DEFINE_BLOCK_ROW_RMAP_FN(6)
+DEFINE_BLOCK_ROW_RMAP_FN(7)
+DEFINE_BLOCK_ROW_RMAP_FN(8)
+
+DEFINE_BLOCK_COL_MAP_FN(2)
+DEFINE_BLOCK_COL_MAP_FN(3)
+DEFINE_BLOCK_COL_MAP_FN(4)
+DEFINE_BLOCK_COL_MAP_FN(5)
+DEFINE_BLOCK_COL_MAP_FN(6)
+DEFINE_BLOCK_COL_MAP_FN(7)
+DEFINE_BLOCK_COL_MAP_FN(8)
+
+DEFINE_BLOCK_COL_RMAP_FN(2)
+DEFINE_BLOCK_COL_RMAP_FN(3)
+DEFINE_BLOCK_COL_RMAP_FN(4)
+DEFINE_BLOCK_COL_RMAP_FN(5)
+DEFINE_BLOCK_COL_RMAP_FN(6)
+DEFINE_BLOCK_COL_RMAP_FN(7)
+DEFINE_BLOCK_COL_RMAP_FN(8)
 
 } // end of csx namespace
 
@@ -439,22 +510,78 @@ inline TransformFn SPM::getRevXformFn(SpmIterOrder type)
 {
 	boost::function<void (CooElem &p)> ret;
 	switch(type) {
-		case HORIZONTAL:
+    case HORIZONTAL:
 		break;
 
-		case VERTICAL:
+    case VERTICAL:
 		ret = bll::bind(pnt_rmap_V, bll::_1, bll::_1);
 		break;
 
-		case DIAGONAL:
+    case DIAGONAL:
 		ret = bll::bind(pnt_rmap_D, bll::_1, bll::_1, this->nrows);
 		break;
 
-		case REV_DIAGONAL:
+    case REV_DIAGONAL:
 		ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, this->ncols);
 		break;
 
-		default:
+    case BLOCK_ROW_TYPE_NAME(2):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(3):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(3), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(4):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(4), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(5):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(5), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(6):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(6), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(7):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(7), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(8):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(8), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(2):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(3):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(4):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(5):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(6):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(7):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(8):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    default:
 		std::cerr << "Unknown type: " << type << std::endl;
 		assert(false);
 	}
@@ -465,23 +592,79 @@ inline TransformFn SPM::getXformFn(SpmIterOrder type)
 {
 	boost::function<void (CooElem &p)> ret;
 	switch(type) {
-		case VERTICAL:
+    case VERTICAL:
 		ret = bll::bind(pnt_map_V, bll::_1, bll::_1);
 		break;
 
-		case DIAGONAL:
+    case DIAGONAL:
 		ret = bll::bind(pnt_map_D, bll::_1, bll::_1, this->nrows);
 		break;
 
-		case REV_DIAGONAL:
+    case REV_DIAGONAL:
 		ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->ncols);
 		break;
 
-		case HORIZONTAL:
+    case HORIZONTAL:
 		ret = NULL;
 		break;
 
-		default:
+    case BLOCK_ROW_TYPE_NAME(2):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(3):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(3), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(4):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(4), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(5):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(5), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(6):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(6), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(7):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(7), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_ROW_TYPE_NAME(8):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(8), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(2):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(3):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(4):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(5):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(6):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(7):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    case BLOCK_COL_TYPE_NAME(8):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+        
+    default:
 		assert(false);
 	}
 	return ret;
@@ -696,7 +879,7 @@ void SPM::PrintElems(std::ostream &out)
 	p_end = this->points_end();
 	for (p=p_start; p != p_end; ++p){
 		if ((*p).pattern == NULL){
-			out << std::setiosflags(std::ios::fixed)
+			out << std::setiosflags(std::ios::scientific)
 			    << row_start + (*p).y << " " << (*p).x << " " << (*p).val << " cnt:" << cnt++ << "\n";
 			continue;
 		}
@@ -710,6 +893,7 @@ void SPM::PrintElems(std::ostream &out)
 		start = static_cast<CooElem>(*p);
 		vals = start.vals;
 
+//        std::cout << SpmTypesNames[pat->type] << std::endl;
 		xform_fn = getTransformFn(this->type, pat->type);
 		rxform_fn = getTransformFn(pat->type, this->type);
 
@@ -722,9 +906,10 @@ void SPM::PrintElems(std::ostream &out)
 			CooElem e = g->next();
 			if (rxform_fn)
 				rxform_fn(e);
-			out << std::setiosflags(std::ios::fixed)
-			    << row_start + e.y << " " << e.x << " " << *vals++ << "cnt:" << cnt++ << "\n";
+			out << std::setiosflags(std::ios::scientific)
+			    << row_start + e.y << " " << e.x << " " << *vals++ << " cnt:" << cnt++ << "\n";
 		}
+//        out << "=== END OF PATTERN ===" << std::endl;
 	}
 }
 

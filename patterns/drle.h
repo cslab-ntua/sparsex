@@ -60,6 +60,10 @@ public:
 		#define PID_DIAG_BASE 30000
 		//  40000 + delta => REV_DIAGONAL drle
 		#define PID_rDIAG_BASE 40000
+		//  50000 + block_align => BLOCK_R* drle
+		#define PID_BLOCK_R_BASE 50000
+		//  60000 + block_align => BLOCK_R* drle
+		#define PID_BLOCK_C_BASE 60000
 		switch (type){
 			case HORIZONTAL: return PID_HORIZ_BASE + this->delta;
 			case VERTICAL: return PID_VERT_BASE + this->delta;
@@ -116,10 +120,17 @@ public:
 	long max_limit; // maximum length for RLEs
 	double min_perc; // min nnz percentage for considering an RLE
 
-	DRLE_Manager(SPM *_spm,
-	             long min_limit_=4, long max_limit_ = std::numeric_limits<long>::max(),
-	             double min_perc_=.1)
-	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_), min_perc(min_perc_) {}
+DRLE_Manager(SPM *_spm,
+             long min_limit_=4, long max_limit_ = std::numeric_limits<long>::max(),
+             double min_perc_=.1)
+	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_), min_perc(min_perc_) {
+        // These are delimiters, ignore them by default.
+        addIgnore(BLOCK_TYPE_START);
+        addIgnore(BLOCK_COL_START);
+        addIgnore(BLOCK_TYPE_END);
+        addIgnore(BLOCK_ROW_TYPE_NAME(1));
+        addIgnore(BLOCK_COL_TYPE_NAME(1));
+    }
 
 	DeltaRLE::Stats generateStats();
 
@@ -127,7 +138,7 @@ public:
 	StatsMap stats;
 	void genAllStats();
 	void outStats(std::ostream &os=std::cout);
-
+    
 	std::map <SpmIterOrder, std::set<uint64_t> > DeltasToEncode;
 
 	std::bitset<XFORM_MAX> xforms_ignore;
@@ -145,12 +156,18 @@ private:
 	              std::vector<double> &vs,
 	              std::vector<SpmRowElem> &newrow);
 
+	void doEncodeBlock(std::vector<uint64_t> &xs,
+                       std::vector<double> &vs,
+                       std::vector<SpmRowElem> &newrow);
+
 	void EncodeRow(const SpmRowElem *rstart,
 	               const SpmRowElem *rend,
 	               std::vector<SpmRowElem> &newrow);
 
 	void updateStats(std::vector<uint64_t> &xs,
 	                 DeltaRLE::Stats &stats);
+    void updateStatsBlock(std::vector<uint64_t> &xs,
+                          DeltaRLE::Stats &stats, uint64_t align);
 };
 
 #if 0
