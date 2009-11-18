@@ -15,7 +15,7 @@ extern int optind;
 
 static void help()
 {
-	fprintf(stderr, "Usage: %s [ -h -c -b [-l nr_loops]] mmf_file [method]\n", progname);
+	fprintf(stderr, "Usage: %s [ -h -c -b [-l nr_loops] [-L outer_loops]] mmf_file [method]\n", progname);
 	method_fprint(stderr, "available methods:\n", "\t", "\n", "");
 }
 
@@ -28,8 +28,9 @@ int main(int argc, char **argv)
 	int opt_check = 0;
 	int opt_bench = 0;
 	int loops_nr = 128;
+	int outer_loops = 4;
 	int c;
-	while ((c = getopt(argc, argv, "hcbl:")) != -1){
+	while ((c = getopt(argc, argv, "hcbl:L:")) != -1){
 		switch (c) {
 			case 'c':
 			opt_check = 1;
@@ -43,6 +44,13 @@ int main(int argc, char **argv)
 			method_fprint(stdout, "", " ", "\n", "");
 			exit(0);
 
+			case 'L':
+			outer_loops = atol(optarg);
+			break;
+
+			case 'l':
+			loops_nr = atol(optarg);
+			break;
 
 			default:
 			fprintf(stderr, "Error parsing arguments: -%c-\n", c);
@@ -119,30 +127,33 @@ int main(int argc, char **argv)
 	}
 
 	if (opt_bench){
+		int count;
 		double t = -666.0;
-		switch (elem_size + spmv_meth->mt_flag){
-			case 8:
-			t = spmv_double_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
-			break;
+		for (count=0; count < outer_loops; count++){
+			switch (elem_size + spmv_meth->mt_flag){
+				case 8:
+				t = spmv_double_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
+				break;
 
-			case (8+1):
-			t = spmv_double_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
-			break;
+				case (8+1):
+				t = spmv_double_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
+				break;
 
-			case 4:
-			t = spmv_float_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
-			break;
+				case 4:
+				t = spmv_float_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
+				break;
 
-			case (4+1):
-			t = spmv_float_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
-			break;
+				case (4+1):
+				t = spmv_float_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
+				break;
 
-			default:
-			fprintf(stderr, "woops!\n");
-			exit(1);
+				default:
+				fprintf(stderr, "woops!\n");
+				exit(1);
+			}
+			double flops = (double)(loops_nr*nnz*2)/((double)1000*1000*t);
+			printf("m:%s f:%s s:%lu t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
 		}
-		double flops = (double)(loops_nr*nnz*2)/((double)1000*1000*t);
-		printf("m:%s f:%s s:%lu t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
 	}
 	spmv_meth->destroy_fn(m);
 
