@@ -38,7 +38,7 @@ static void *do_spmv_thread(void *arg)
 	y = _tmp;         \
 } while (0)
 
-static void *do_spmv_thread_main(void *arg)
+static void *do_spmv_thread_main_swap(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread;
 	SPMV_NAME(_fn_t) *spmv_mt_fn;
@@ -50,20 +50,24 @@ static void *do_spmv_thread_main(void *arg)
 
 	VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
 
-	//printf("Hello I'm thread on cpu:%d\n", spm_mt_thread->cpu);
+	// assert that this is a rectangular matrix, and swap is OK
+	assert(x->size == y->size);
 	tsc_init(&tsc);
+
+	//printf("Hello I'm thread on cpu:%d\n", spm_mt_thread->cpu);
 	tsc_start(&tsc);
 	int i;
 	for (i=0; i<loops_nr; i++){
 		pthread_barrier_wait(&barrier);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
-		SWAP(x, y);
-		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 		pthread_barrier_wait(&barrier);
+		SWAP(x, y);
+		//VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 	}
 	tsc_pause(&tsc);
 	secs = tsc_getsecs(&tsc);
 	tsc_shut(&tsc);
+
 	return NULL;
 }
 
@@ -101,7 +105,7 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 			spm_mt->spm_threads[i].spmv_fn = fn;
 	}
 
-	pthread_create(tids, NULL, do_spmv_thread_main, spm_mt->spm_threads);
+	pthread_create(tids, NULL, do_spmv_thread_main_swap, spm_mt->spm_threads);
 	for (i=1; i<spm_mt->nr_threads; i++)
 		pthread_create(tids+i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
 
