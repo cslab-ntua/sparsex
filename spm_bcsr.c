@@ -993,6 +993,7 @@ init_mmf_wrap(char *mmf_file,
 		bcsr_mt->bcsr = bcsr;
 		//printf("bcsr_mt: thread:%ld row_start:%lu row_end:%lu\n", i, bcsr_mt->row_start, bcsr_mt->row_end);
 
+		spm_thread->cpu = cpus[i];
 		spm_thread->spm = bcsr_mt;
 		spm_thread->spmv_fn = NULL;
 	}
