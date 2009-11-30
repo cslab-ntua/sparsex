@@ -19,8 +19,8 @@ function run_crs32_mt {
 	fi
 
 	## add more iterations, since nehalem performance has larger variation
-	echo MT_CONF=$mtcnf ./spmv -b $mtx -L 7 spm_crs32_double_mt_numa_multiply
-	     MT_CONF=$mtcnf ./spmv -b $mtx -L 7 spm_crs32_double_mt_numa_multiply | scripts/spmv_avg.py
+	echo MT_CONF=$mtcnf ./spmv -c -b $mtx -L 7 spm_crs32_double_mt_numa_multiply
+	     MT_CONF=$mtcnf ./spmv -c -b $mtx -L 7 spm_crs32_double_mt_numa_multiply | scripts/spmv_avg.py
 }
 
 echo "Log started $(iddate) @$(hostname)"
