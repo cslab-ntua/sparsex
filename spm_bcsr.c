@@ -1512,35 +1512,7 @@ XSPMV_MT_METH_INIT(bcsr_mulv_4x2, bcsr_init_mmf_4x2, bcsr_size, bcsr_destroy, si
 
 #ifdef SPM_NUMA
 
-//#include <numa.h>
-
-static int numa_node_from_cpu(int cpu)
-{
-#if 0
-	struct bitmask *bmp;
-	int nnodes, node, ret;
-
-	bmp = numa_allocate_cpumask();
-	nnodes =  numa_num_configured_nodes();
-	for (node = 0; node < nnodes; node++){
-		numa_node_to_cpus(node, bmp);
-		if (numa_bitmask_isbitset(bmp, cpu)){
-			ret = node;
-			goto end;
-		}
-	}
-	ret = -1;
-end:
-	numa_bitmask_free(bmp);
-	return ret;
-#endif
-	return 0;
-}
-
-void *numa_alloc_onnode(unsigned long size, int node)
-{
-	return malloc(size);
-}
+#include <numa.h>
 
 static void *
 init_mmf_numa_wrap(char *mmf_file,
@@ -1565,7 +1537,7 @@ init_mmf_numa_wrap(char *mmf_file,
 		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
 		SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *)spm_thread->spm;
 		/* get numa node from cpu */
-		int node = numa_node_from_cpu(spm_thread->cpu);
+		int node = numa_node_of_cpu(spm_thread->cpu);
 		/* allocate new space */
 		SPM_BCSR_TYPE *numa_bcsr = numa_alloc_onnode(sizeof(SPM_BCSR_TYPE), node);
 		if (!numa_bcsr){
