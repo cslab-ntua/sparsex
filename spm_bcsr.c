@@ -1044,19 +1044,25 @@ static void inline bcsr_spmv_wrap(void *spm, VECTOR_TYPE * __restrict__ in, VECT
 	return;
 }
 
+static unsigned long __bcsr_size(SPM_BCSR_TYPE *numa_bcsr)
+{
+	unsigned long ret;
+	ret = sizeof(ELEM_TYPE)*numa_bcsr->nr_nzeros;
+	ret += sizeof(SPM_CRS_IDX_TYPE)*numa_bcsr->nr_blocks;
+	ret += sizeof(SPM_CRS_IDX_TYPE)*(numa_bcsr->nr_brows+1);
+	return ret;
+}
+
+
 static uint64_t bcsr_size(void *spm)
 {
 	spm_mt_t *spm_mt;
 	SPM_BCSR_TYPE *bcsr;
-	unsigned long r, c, ret = 0;
+	unsigned long ret;
 
 	spm_mt = spm;
 	bcsr = ((SPM_BCSR_MT_TYPE *)spm_mt->spm_threads->spm)->bcsr;
-	r = bcsr->br;
-	c = bcsr->bc;
-	ret +=  bcsr->nr_blocks*r*c*sizeof(ELEM_TYPE);
-	ret += (bcsr->nr_blocks)*sizeof(SPM_CRS_IDX_TYPE);
-	ret += (bcsr->nr_brows + 1)*sizeof(SPM_CRS_IDX_TYPE);
+	ret = __bcsr_size(bcsr);
 	return ret;
 }
 
@@ -1514,6 +1520,59 @@ XSPMV_MT_METH_INIT(bcsr_mulv_4x2, bcsr_init_mmf_4x2, bcsr_size, bcsr_destroy, si
 
 #include <numa.h>
 
+static inline unsigned long align(unsigned long size, unsigned long align)
+{
+	unsigned long rem, ret;;
+	rem = size % align;
+	ret = size;
+	if (rem){
+		ret += (align - rem);
+	}
+	//printf("align size=%lu align=%lu ret=%lu\n", size, align, ret);
+	return ret;
+}
+
+static inline unsigned align16(unsigned long size)
+{
+	return align(size, 16);
+}
+
+static SPM_BCSR_TYPE *alloc_numa_bcsr(uint64_t nnz, int r, int c, uint64_t nrows, int node)
+{
+	SPM_BCSR_TYPE *ret;
+	void *data;
+	unsigned long size, off_nnz, off_colind, off_rowptr;
+	unsigned long nr_blocks, nr_brows;
+
+	nr_blocks = nnz / (r*c);
+	nr_brows = nrows / r;
+
+	size =  (off_nnz = align16(sizeof(SPM_BCSR_TYPE)));
+	size += (off_colind = align16(sizeof(ELEM_TYPE)*nnz));
+	size += (off_rowptr = align16(sizeof(SPM_CRS_IDX_TYPE)*nr_blocks));
+	size += align16(sizeof(SPM_CRS_IDX_TYPE)*(nr_brows + 1));
+
+	ret = data = numa_alloc_onnode(size, node);
+	if (!ret){
+		perror("numa_alloc_onnode");
+		exit(1);
+	}
+
+	data += off_nnz;
+	ret->bvalues = data;
+	data += off_colind;
+	ret->bcol_ind = data;
+	data += off_rowptr;
+	ret->brow_ptr = data;
+
+	/* fill some fields */
+	ret->nr_nzeros = nnz;
+	ret->nr_blocks = nr_blocks;
+	ret->nr_brows = nr_brows;
+	ret->nr_rows = nrows;
+
+	return ret;
+}
 static void *
 init_mmf_numa_wrap(char *mmf_file,
               unsigned long *rows_nr, unsigned long *cols_nr,
@@ -1539,20 +1598,9 @@ init_mmf_numa_wrap(char *mmf_file,
 		/* get numa node from cpu */
 		int node = numa_node_of_cpu(spm_thread->cpu);
 		/* allocate new space */
-		SPM_BCSR_TYPE *numa_bcsr = numa_alloc_onnode(sizeof(SPM_BCSR_TYPE), node);
-		if (!numa_bcsr){
-			perror("numa_alloc_onnode");
-			exit(1);
-		}
 		uint64_t nnz = bcsr_mt->nnz_nr;
 		uint64_t nrows = bcsr_mt->row_end - bcsr_mt->row_start;
-		numa_bcsr->bvalues = numa_alloc_onnode(sizeof(ELEM_TYPE)*nnz, node);
-		numa_bcsr->bcol_ind = numa_alloc_onnode(sizeof(SPM_CRS_IDX_TYPE)*nnz/(r*c), node);
-		numa_bcsr->brow_ptr = numa_alloc_onnode(sizeof(SPM_CRS_IDX_TYPE)*(nrows/r+1), node);
-		if (!numa_bcsr->bvalues || !numa_bcsr->bcol_ind | !numa_bcsr->brow_ptr){
-			perror("numa_alloc_onnode");
-			exit(1);
-		}
+		SPM_BCSR_TYPE *numa_bcsr = alloc_numa_bcsr(nnz, r, c, nrows, node);
 		/* copy data */
 		memcpy(numa_bcsr->bvalues, bvalues, sizeof(ELEM_TYPE)*nnz);
 		bvalues += nnz;
@@ -1562,12 +1610,9 @@ init_mmf_numa_wrap(char *mmf_file,
 		memcpy(numa_bcsr->brow_ptr, brow_ptr, sizeof(SPM_CRS_IDX_TYPE)*(nrows/r+1));
 		brow_ptr += nrows/r;
 		//printf("thread:%lu cpu:%d bvalues:%p bcol_ind:%p brow_ptr:%p\n", i, spm_thread->cpu, numa_bcsr->bvalues, numa_bcsr->bcol_ind, numa_bcsr->brow_ptr);
-		/* fill numa_bcsr */
-		numa_bcsr->nr_rows = nrows;
+
+		/* fill remaining fields of numa_bcsr */
 		numa_bcsr->nr_cols = bcsr_mt->bcsr->nr_cols;
-		numa_bcsr->nr_nzeros = nnz;
-		numa_bcsr->nr_blocks = nnz / (r*c);
-		numa_bcsr->nr_brows = nrows / r;
 		numa_bcsr->storage = bcsr_mt->bcsr->storage;
 		numa_bcsr->br = bcsr_mt->bcsr->br;
 		numa_bcsr->bc = bcsr_mt->bcsr->bc;
@@ -1579,13 +1624,30 @@ init_mmf_numa_wrap(char *mmf_file,
 		bcsr_mt->bcsr = numa_bcsr;
 		total_nnz += nnz;
 	}
+	free(bcsr->brow_ptr);
+	free(bcsr->bcol_ind);
+	free(bcsr->bvalues);
+	free(bcsr);
 
 	return spm_mt;
 }
 
 static uint64_t bcsr_numa_size(void *spm)
 {
-	return 0;
+	spm_mt_t *spm_mt;
+	unsigned long ret = 0, i;
+
+	spm_mt = spm;
+	for (i=0; i<spm_mt->nr_threads; i++){
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *)spm_thread->spm;
+		ret += __bcsr_size(bcsr_mt->bcsr);
+	}
+	return ret;
+}
+
+static void bcsr_numa_destroy(void *bcsr)
+{
 }
 
 #define DECLARE_BCSR_NUMA(c, r)  \
@@ -1607,7 +1669,7 @@ static void spmv_bcsr_numa_ ## r ## x ## c (void *spm,   \
 XSPMV_MT_METH_INIT(spmv_bcsr_numa_ ## r ## x ## c,       \
                bcsr_numa_init_mmf_ ## r ## x ## c,       \
                bcsr_numa_size,                           \
-               bcsr_destroy,                             \
+               bcsr_numa_destroy,                        \
                sizeof(ELEM_TYPE))                        \
 
 DECLARE_BCSR_NUMA(1,1)
@@ -1626,6 +1688,30 @@ DECLARE_BCSR_NUMA(4,1)
 DECLARE_BCSR_NUMA(4,2)
 DECLARE_BCSR_NUMA(4,3)
 DECLARE_BCSR_NUMA(4,4)
+
+#define DECLARE_BCSR_NUMA_MULV(c, r) \
+static void bcsr_numa_mulv_ ## r ## x ## c (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out){ \
+	bcsr_mulv_## r ## x ## c (spm, in, out);\
+}\
+XSPMV_MT_METH_INIT(bcsr_numa_mulv_ ## r ## x ## c,  \
+               bcsr_numa_init_mmf_ ## r ## x ## c,  \
+               bcsr_numa_size,                      \
+               bcsr_numa_destroy,                   \
+               sizeof(ELEM_TYPE))                   \
+
+
+DECLARE_BCSR_NUMA_MULV(1,2)
+DECLARE_BCSR_NUMA_MULV(1,3)
+DECLARE_BCSR_NUMA_MULV(1,4)
+DECLARE_BCSR_NUMA_MULV(2,1)
+DECLARE_BCSR_NUMA_MULV(2,2)
+DECLARE_BCSR_NUMA_MULV(2,3)
+DECLARE_BCSR_NUMA_MULV(2,4)
+DECLARE_BCSR_NUMA_MULV(3,1)
+DECLARE_BCSR_NUMA_MULV(3,2)
+DECLARE_BCSR_NUMA_MULV(4,1)
+DECLARE_BCSR_NUMA_MULV(4,2)
+
 
 #endif /* SPM_NUMA */
 
