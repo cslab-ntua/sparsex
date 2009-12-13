@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv
+all: spmv draw
 
 ## Configuration
 dynarray_dir = ../../dynarray
@@ -34,8 +34,11 @@ mmf.o: mmf.cc spm.h mmf.h
 spm.o: spm.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
 
-draw.o: draw.cc spm.h draw.h
-	$(CXX_COMPILE) $(CAIROMM_FLAGS) $< -c -o $@
+#draw.o: draw.cc spm.h draw.h
+#	$(CXX_COMPILE) $(CAIROMM_FLAGS) $< -c -o $@
+
+draw: draw.cc spm.h draw.h spm.o mmf.o
+	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_FLAGS) $(CAIROMM_LIBS) $(dynarray_dep) spm.o mmf.o $<  -o $@
 
 csx.o: csx.cc csx.h spm.h delta.h
 	$(CXX_COMPILE) -I$(dynarray_dir) $< -c -o $@
@@ -46,8 +49,8 @@ drle.o: drle.cc drle.h spm.h
 test.o: test.cc drle.h spm.h
 	$(CXX_COMPILE) $< -c -o $@
 
-drle_shell: mmf.o spm.o drle.o draw.o drle_shell.cc
-	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_LIBS) $^ -o $@
+#drle_shell: mmf.o spm.o drle.o draw.o drle_shell.cc
+#	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_LIBS) $^ -o $@
 
 drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ -o $@

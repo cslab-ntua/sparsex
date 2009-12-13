@@ -13,7 +13,7 @@ namespace bll = boost::lambda;
 
 using namespace csx;
 
-void Draw(SpmIdx &spm,
+void Draw(SPM &spm,
           const char *filename,
 		  int row_start, int row_end,
 		  const int width, const int height)
@@ -21,7 +21,7 @@ void Draw(SpmIdx &spm,
 	//Cairo::RefPtr<Cairo::PdfSurface> surface;
 	Cairo::RefPtr<Cairo::ImageSurface> surface;
 	Cairo::RefPtr<Cairo::Context> cr;
-	SpmIdx::PointIter p, p_start, p_end;
+	SPM::PntIter p, p_start, p_end;
 	double max_cols, max_rows, x_pos, y_pos;
 	boost::function<double (double v, double max_coord, double max_v)> coord_fn;
 	boost::function<double (double a)> x_coord, y_coord;
@@ -39,7 +39,7 @@ void Draw(SpmIdx &spm,
 	// TODO:
 	//  If not HORIZNTAL, transform and transofrm back after end
 	if (row_end == 0)
-		row_end = spm.rows.size();
+		row_end = spm.nrows;
 	max_rows = (double)(row_end - row_start);
 	max_cols = (double)spm.ncols;
 
@@ -76,4 +76,21 @@ void Draw(SpmIdx &spm,
 	}
 	//cr->show_page();
 	surface->write_to_png(filename);
+}
+
+int main(int argc, const char *argv[])
+{
+	if (argc < 2){
+		std::cout << "Usage: " << argv[0] << " <mmf_file> [<out_file>]\n";
+		exit(1);
+	}
+
+	const char *out_file = argc > 2 ? argv[2] : "test.png";
+
+	SPM *Spm;
+
+	Spm = SPM::loadMMF(argv[1]);
+	Draw(*Spm, out_file, 0, 0, 600, 800);
+
+	return 0;
 }

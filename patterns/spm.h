@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <stdint.h>
 
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
