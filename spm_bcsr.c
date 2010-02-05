@@ -888,7 +888,7 @@ crs_to_bcsr(SPM_CRS_TYPE *crs, int r, int c)
     bcsr->bcol_ind  = SPM_MALLOC(SPM_CRS_IDX_TYPE, nr_blocks);
     bcsr->bvalues   = SPM_MALLOC(ELEM_TYPE, nr_blocks*r*c);
     /* If got so far, everything is ok; continue with init'ion and exit. */
-    bcsr->nr_nzeros = crs->nz;
+    bcsr->nr_nzeros = nr_blocks*r*c;
     bcsr->nr_blocks = nr_blocks;
     bcsr->nr_rows   = bcsr->nr_brows * r;
     bcsr->nr_cols   = iceil(crs->ncols, c) * c;
