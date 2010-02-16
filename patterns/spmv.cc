@@ -1,4 +1,3 @@
-
 #include <cstdlib>
 
 #include "spm.h"
@@ -28,7 +27,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 	CsxJit **Jits;
 
 	mt_get_options(&threads_nr, &threads_cpus);
-	std::cout << "Using " << threads_nr << " threads\n";
+//	std::cout << "Using " << threads_nr << " threads\n";
 
 	spm_mt = (spm_mt_t *)malloc(sizeof(spm_mt_t));
 	if (!spm_mt){
@@ -54,11 +53,32 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		Spm = Spms + i;
 		spm_mt_thread = spm_mt->spm_threads + i;
 
-		DrleMg = new DRLE_Manager(Spm, 4, 255-1);
+		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1);
+        DrleMg->ignoreAll();
+
+        // find transformations to apply
+        char *xform_string = getenv("XFORM_CONF");
+        if (xform_string) {
+            int t = atoi(strtok(xform_string, ","));
+            DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
+//            std::cout << "Encoding type: " << SpmTypesNames[t] << std::flush;
+            char *token;
+            while ( (token = strtok(NULL, ",")) != NULL) {
+                t = atoi(token);
+                DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
+//                std::cout << ", " << SpmTypesNames[t] << std::flush;
+            }
+
+//            std::cout << ": " << std::flush;
+        }
+
 		DrleMg->EncodeAll();
 
-		CsxMg = new CsxManager(Spm);
-		spm_mt_thread->spm = CsxMg->mkCsx();
+//        Spm->PrintElems(std::cout);
+//        Spm->PrintStats(std::cout);
+
+ 		CsxMg = new CsxManager(Spm);
+ 		spm_mt_thread->spm = CsxMg->mkCsx();
 
 		Jits[i] = new CsxJit(CsxMg, i);
 		Jits[i]->doHooks();
@@ -68,7 +88,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		delete DrleMg;
 	}
 
-	doOptimize(Jits[0]->M);
+ 	doOptimize(Jits[0]->M);
 
 	for (unsigned int i=0; i < threads_nr; i++){
 		spm_mt->spm_threads[i].spmv_fn = Jits[i]->doJit();
@@ -94,13 +114,13 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 	uint64_t nrows, ncols, nnz;
 
 	crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz);
-	std::cout << "Checking ... ";
+	std::cout << "Checking ... " << std::flush;
 	spmv_double_check_mt_loop(crs, spm_mt,
 	                          spm_crs32_double_multiply, 1,
 	                          nrows, ncols,
 	                          NULL);
 	spm_crs32_double_destroy(crs);
-	std::cout << "Check Passed\n";
+	std::cout << "Check Passed" << std::endl << std::flush;
 }
 
 static unsigned long CsxSize(spm_mt_t *spm_mt)
@@ -138,14 +158,19 @@ int main(int argc, char **argv)
 	spm_mt_t *spm_mt;
 
 	if (argc < 2){
-		std::cerr << "Usage: " << argv[0] << " <mmf_file>\n";
+		std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
 		exit(1);
 	}
 
-	spm_mt = getSpmMt(argv[1]);
-	CheckLoop(spm_mt, argv[1]);
-	BenchLoop(spm_mt, argv[1]);
-	putSpmMt(spm_mt);
+    for (int i = 1; i < argc; i++) {
+        std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
+//        std::cerr << basename(argv[i]) << ": " << std::endl << std::flush;
+        spm_mt = getSpmMt(argv[i]);
+        CheckLoop(spm_mt, argv[i]);
+        std::cerr.flush();
+        BenchLoop(spm_mt, argv[i]);
+        putSpmMt(spm_mt);
+    }
 
 	return 0;
 }

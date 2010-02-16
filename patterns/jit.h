@@ -89,6 +89,18 @@ public:
                   BasicBlock *BB_exit,
                   int delta_size,
                   bool reversed);
+
+    void BlockRowCase(BasicBlock *BB,
+/*                       BasicBlock *BB_lbody, */
+/*                       BasicBlock *BB_lexit, */
+                      BasicBlock *BB_exit,
+                      int r, int c);
+
+    void BlockColCase(BasicBlock *BB,
+/*                       BasicBlock *BB_lbody, */
+/*                       BasicBlock *BB_lexit, */
+                      BasicBlock *BB_exit,
+                      int r, int c);
 };
 
 

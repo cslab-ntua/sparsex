@@ -9,7 +9,7 @@ all: scripts/calc_bits spmv
 
 ## Configuration
 debug_dir    = ../debug
-cpu_dir      = ../cpu
+cpu_dir      = $(shell pwd)/../cpu
 dynarray_dir = ../dynarray
 phash_dir    = ../phash
 prfcnt_dir   = ../prfcnt
@@ -21,9 +21,9 @@ deps         = $(dynarray_dep) $(phash_dep)
 .PHONY: $(phash_dep) $(dynarray_dep)
 
 MHZ_SH      ?= $(cpu_dir)/cpu_mhz.sh
-#CL_BYTES    ?= $(shell $(shell rsrc resource cl_bytes.sh))
-#CACHE_BYTES ?= $(shell $(shell rsrc resource cache_bytes.sh))
-#CPU         ?= $(shell $(shell rsrc resource cpu_info.sh))
+CL_BYTES    ?= $(shell $(cpu_dir)/cl_bytes.sh)
+CACHE_BYTES ?= $(shell $(cpu_dir)/cache_bytes.sh)
+CPU         ?= $(shell $(cpu_dir)/cpu_info.sh)
 GCC         ?= gcc-4.3
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g

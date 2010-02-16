@@ -12,6 +12,8 @@ namespace bll = boost::lambda;
 
 using namespace csx;
 
+bool debug = false;
+
 template <typename T>
 struct RLE {
 	long freq;
@@ -97,6 +99,7 @@ void DRLE_Manager::updateStatsBlock(std::vector<uint64_t> &xs,
 {
 	std::vector< RLE<uint64_t> > rles;
 
+    assert(block_align);
 	if (xs.size() == 0)
 		return;
 
@@ -116,9 +119,10 @@ void DRLE_Manager::updateStatsBlock(std::vector<uint64_t> &xs,
             else
                 nr_elem = 0;
 
-            if (nr_elem / block_align >= 2) {
-                stats[rle.val].nnz += (nr_elem / block_align) * block_align;
-                stats[rle.val].npatterns++;
+            uint64_t    other_dim = nr_elem / (uint64_t) block_align;
+            if (other_dim >= 2) {
+                stats[other_dim].nnz += other_dim * block_align;
+                stats[other_dim].npatterns++;
             }
         }
 
@@ -150,7 +154,6 @@ DeltaRLE::Stats DRLE_Manager::generateStats()
 	return stats;
 }
 
-static uint64_t nr_patterns = 0;
 // Use to encode a part of a row
 //  xs: x values to encode
 //  vs: numerical values for the elements
@@ -221,6 +224,7 @@ void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
 	vs.clear();
 }
 
+static uint64_t nr_lines = 0;
 void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
                                  std::vector<double> &vs,
                                  std::vector<SpmRowElem> &newrow)
@@ -242,12 +246,12 @@ void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
     int block_align = isBlockType(this->spm->type);
     assert(block_align);
 
-    ++nr_patterns;
 	col = 0; // initialize column
 	elem.pattern = NULL; // Default inserter (for push_back copies)
 	FOREACH(RLE<uint64_t> rle, rles){
 		// create patterns
-//        std::cout << "freq:" << rle.freq << " val:" << rle.val << "\n";
+        //std::cout << "freq:" << rle.freq << " val:" << rle.val << "\n";
+
         col += rle.val;
         uint64_t skip_front, skip_back, nr_elem;
         if (col == 1) {
@@ -255,6 +259,9 @@ void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
             nr_elem = rle.freq;
         } else {
             skip_front = (col - 2) % block_align;
+            if (skip_front != 0)
+                skip_front  = block_align - skip_front;
+
             nr_elem = rle.freq + 1;
         }
         
@@ -271,18 +278,17 @@ void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
             nr_elem = 0;
 
 		if (rle.val == 1 &&
-            deltas_set->find(rle.val) != deltas_set->end() &&
+            deltas_set->find(nr_elem / block_align) != deltas_set->end() &&
             nr_elem >= (uint64_t) 2*block_align) {
 
             uint64_t    rle_start;
-//            std::cout << "nl:" << nr_patterns << " col:" << col << " sf:" << skip_front << " sb:" << skip_back << "\n\n";
             // We have a new block RLE
             if (col != 1) {
                 rle_start = col - 1;
                 // we need to annex the previous element
                 newrow.pop_back();
                 --vi;
-//                std::cout << "popped: " << *vi << std::endl;
+//                std::cout << "popped: " << *vi << std::endl << std::endl;
             } else {
                 rle_start = col;
             }
@@ -312,8 +318,12 @@ void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
                 elem.x = rle_start + skip_front + i*nr_elem_block;
                 newrow.push_back(elem);
                 last_elem = &newrow.back();
+//                if (debug)
+//                     std::cout << "nl:" << nr_lines << " rle_start:" << rle_start << " col:" << col << " sf:" << skip_front << " sb:" << skip_back << " nr_elem:" << nr_elem_block << std::endl;
+
                 last_elem->pattern =
-                    new DeltaRLE(nr_elem_block, 1, this->spm->type);
+                    new BlockRLE(nr_elem_block,
+                                 nr_elem_block / block_align, this->spm->type);
                 last_elem->vals = new double[nr_elem_block];
                 std::copy(vi, vi + nr_elem_block, last_elem->vals);
                 vi += nr_elem_block;
@@ -353,6 +363,7 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
 	// gather x values into xs vector until a pattern is found
 	// and encode them using doEncode()
 	for (const SpmRowElem *e = rstart; e < rend; e++){
+        
 		if (e->pattern == NULL){
 			xs.push_back(e->x);
 			vs.push_back(e->val);
@@ -403,6 +414,7 @@ void DRLE_Manager::Encode(SpmIterOrder type)
 		new_row.clear();
 		SpmBld->newRow();
 	}
+
 	SpmBld->Finalize();
 	delete SpmBld;
 
@@ -452,31 +464,57 @@ void DRLE_Manager::addIgnore(SpmIterOrder type)
 	this->xforms_ignore.set(type);
 }
 
+void DRLE_Manager::ignoreAll()
+{
+    this->xforms_ignore.set();
+}
+
+void DRLE_Manager::removeIgnore(SpmIterOrder type)
+{
+    // the following types are always ignored
+    if (type <= NONE ||
+        type == BLOCK_TYPE_START ||
+        type == BLOCK_ROW_TYPE_NAME(1) ||
+        type == BLOCK_COL_START ||
+        type == BLOCK_COL_TYPE_NAME(1) ||
+        type == BLOCK_TYPE_END ||
+        type >= XFORM_MAX)
+        return;
+
+    this->xforms_ignore.reset(type);
+}
+
+void DRLE_Manager::removeAll()
+{
+    for (int t = NONE; t < XFORM_MAX; t++)
+        this->xforms_ignore.reset(t);
+}
+
 void DRLE_Manager::genAllStats()
 {
 	DeltaRLE::Stats::iterator iter, tmp;
 	DeltaRLE::Stats *sp;
 
-    this->addIgnore(HORIZONTAL);
-    this->addIgnore(VERTICAL);
-    this->addIgnore(DIAGONAL);
-    this->addIgnore(REV_DIAGONAL);
+//     this->addIgnore(HORIZONTAL);
+//     this->addIgnore(VERTICAL);
+//     this->addIgnore(DIAGONAL);
+//     this->addIgnore(REV_DIAGONAL);
 
-//    this->addIgnore(BLOCK_ROW_TYPE_NAME(2));
-    this->addIgnore(BLOCK_ROW_TYPE_NAME(3));
-    this->addIgnore(BLOCK_ROW_TYPE_NAME(4));
-    this->addIgnore(BLOCK_ROW_TYPE_NAME(5));
-    this->addIgnore(BLOCK_ROW_TYPE_NAME(6));
-    this->addIgnore(BLOCK_ROW_TYPE_NAME(7));
-    this->addIgnore(BLOCK_ROW_TYPE_NAME(8));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(2));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(3));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(4));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(5));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(6));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(7));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(8));
 
-    this->addIgnore(BLOCK_COL_TYPE_NAME(2));
-    this->addIgnore(BLOCK_COL_TYPE_NAME(3));
-    this->addIgnore(BLOCK_COL_TYPE_NAME(4));
-    this->addIgnore(BLOCK_COL_TYPE_NAME(5));
-    this->addIgnore(BLOCK_COL_TYPE_NAME(6));
-    this->addIgnore(BLOCK_COL_TYPE_NAME(7));
-    this->addIgnore(BLOCK_COL_TYPE_NAME(8));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(2));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(3));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(4));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(5));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(6));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(7));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(8));
 
 	this->stats.clear();
 	for (int t=HORIZONTAL; t != XFORM_MAX; t++){

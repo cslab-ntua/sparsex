@@ -27,7 +27,7 @@ namespace bll = boost::lambda;
 using namespace csx;
 
 //
-// SPM::Builder hide the detaisl of dynarray
+// SPM::Builder hide the details of dynarray
 //
 
 SPM::Builder::Builder(SPM *_spm, uint64_t elems_nr, uint64_t rows_nr): spm(_spm)
@@ -558,27 +558,27 @@ inline TransformFn SPM::getRevXformFn(SpmIterOrder type)
         break;
         
     case BLOCK_COL_TYPE_NAME(3):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(3), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(4):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(4), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(5):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(5), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(6):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(6), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(7):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(7), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(8):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(8), bll::_1, bll::_1);
         break;
         
     default:
@@ -641,27 +641,27 @@ inline TransformFn SPM::getXformFn(SpmIterOrder type)
         break;
         
     case BLOCK_COL_TYPE_NAME(3):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_MAP_NAME(3), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(4):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_MAP_NAME(4), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(5):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_MAP_NAME(5), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(6):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_MAP_NAME(6), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(7):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_MAP_NAME(7), bll::_1, bll::_1);
         break;
         
     case BLOCK_COL_TYPE_NAME(8):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        ret = bll::bind(BLOCK_COL_MAP_NAME(8), bll::_1, bll::_1);
         break;
         
     default:
@@ -893,7 +893,7 @@ void SPM::PrintElems(std::ostream &out)
 		start = static_cast<CooElem>(*p);
 		vals = start.vals;
 
-//        std::cout << SpmTypesNames[pat->type] << std::endl;
+        std::cout << SpmTypesNames[pat->type] << std::endl;
 		xform_fn = getTransformFn(this->type, pat->type);
 		rxform_fn = getTransformFn(pat->type, this->type);
 
@@ -904,13 +904,89 @@ void SPM::PrintElems(std::ostream &out)
 		Pattern::Generator *g = (*p).pattern->generator(start);
 		while ( !g->isEmpty() ){
 			CooElem e = g->next();
+//			out << row_start + e.y << " " << e.x << " (patt coord.)" << std::endl;;
 			if (rxform_fn)
 				rxform_fn(e);
 			out << std::setiosflags(std::ios::scientific)
 			    << row_start + e.y << " " << e.x << " " << *vals++ << " cnt:" << cnt++ << "\n";
 		}
-//        out << "=== END OF PATTERN ===" << std::endl;
+        out << "=== END OF PATTERN ===" << std::endl;
 	}
+}
+
+void SPM::PrintStats(std::ostream& out)
+{
+    uint64_t    nr_rows_with_patterns;
+    uint64_t    nr_patterns, nr_patterns_before;
+    uint64_t    nr_nzeros_block;
+    uint64_t    nr_transitions;
+    uint64_t    nr_xform_patterns[XFORM_MAX];
+
+    nr_rows_with_patterns = this->getNrRows();
+    nr_patterns           = 0;
+    nr_nzeros_block       = 0;
+    nr_transitions        = 0;
+
+    memset(nr_xform_patterns, 0, sizeof(nr_xform_patterns));
+    for (uint64_t i = 0; i < this->getNrRows(); i++) {
+        uint64_t        pt_size, pt_size_before;
+        SpmIterOrder    pt_type, pt_type_before;
+        nr_patterns_before = nr_patterns;
+        const SpmRowElem *elem = this->rbegin(i);
+//        if (elem->pattern && isBlockType(elem->pattern->type))
+        if (elem->pattern) {
+            pt_size_before = pt_size = elem->pattern->getSize();
+            pt_type_before = pt_type = elem->pattern->type;
+        } else {
+            pt_size_before = pt_size = 0;
+            pt_type_before = pt_type = NONE;
+        }
+
+        for ( ; elem != this->rend(i); elem++) {
+//            if (elem->pattern && isBlockType(elem->pattern->type)) {
+            if (elem->pattern) {
+                ++nr_patterns;
+                pt_size = elem->pattern->getSize();
+                pt_type = elem->pattern->type;
+                nr_nzeros_block += pt_size;
+                if ((pt_type != pt_type_before) ||
+                    (pt_size_before && (pt_size != pt_size_before)))
+                    ++nr_transitions;
+
+                ++nr_xform_patterns[elem->pattern->type];
+                pt_size_before = pt_size;
+            } else {
+                pt_type = NONE;
+                ++nr_xform_patterns[NONE];
+                if (pt_type != pt_type_before)
+                    ++nr_transitions;
+            }
+
+            pt_type_before = pt_type;
+        }
+
+        if (nr_patterns == nr_patterns_before) {
+            // no pattern in this row
+            --nr_rows_with_patterns;
+        }
+    }
+
+    int nr_encoded_types = 0;
+    for (int i = 1; i < XFORM_MAX; i++)
+        if (nr_xform_patterns[i]) {
+            ++nr_encoded_types;
+            out << SpmTypesNames[i] << ": "
+            << nr_xform_patterns[i] << std::endl;
+        }
+
+    out << "Encoded types = " << nr_encoded_types << ", "
+        << "Avg patterns/row = "
+        << nr_patterns / (double) nr_rows_with_patterns << ", "
+        << "Avg nonzeros/pattern = "
+        << nr_nzeros_block / (double) nr_patterns << ", " 
+        << " Avg pattern transitions/row = "
+        << nr_transitions / (double) nr_rows_with_patterns
+        << std::endl;
 }
 
 #if 0

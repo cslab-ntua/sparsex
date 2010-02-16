@@ -124,7 +124,7 @@ void print_yx(uint64_t y, uint64_t x)
 
 void print_yxv(uint64_t y, uint64_t x, double v)
 {
-	printf("%lu %lu %lf\n", y+1, x+1, v);
+	printf("%lu %lu %le\n", y+1, x+1, v);
 }
 
 #if 0

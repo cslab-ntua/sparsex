@@ -5,7 +5,6 @@ all: spmv
 ## Configuration
 dynarray_dir = ../../dynarray
 
-
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O2 -Wdisabled-optimization
 #CXXFLAGS       += -Winline
@@ -65,7 +64,7 @@ spmv.o: spmv.cc
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
 spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o ../libspmv.o
-	$(GXX) -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) -o $@
+	$(GXX) -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) -lpthread -o $@
 
 clean:
 	rm -f *.o drle_shell drle_test jit

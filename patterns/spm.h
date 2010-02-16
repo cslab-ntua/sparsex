@@ -1,6 +1,7 @@
 #ifndef CSX_SPM_H__
 #define CSX_SPM_H__
 
+#include <inttypes.h>
 #include <vector>
 #include <map>
 #include <iterator>
@@ -152,7 +153,6 @@ static inline int isBlockType(SpmIterOrder t)
             (t - BLOCK_TYPE_START);
     else
         return 0;
-        
 }
 
 class Pattern {
@@ -160,7 +160,7 @@ public:
 	SpmIterOrder type;
 
 	virtual Pattern *clone() const = 0;
-	//virtual ~Pattern() const = 0;
+	virtual ~Pattern() {};
 	virtual long getSize() const = 0;
 	virtual long getPatId() const = 0;
 	virtual long x_increase(SpmIterOrder spm_iter_order) const = 0;
@@ -294,6 +294,7 @@ public:
 	void Print(std::ostream &out=std::cout);
 	void PrintElems(std::ostream &out=std::cout);
 	void PrintRows(std::ostream &out=std::cout);
+    void PrintStats(std::ostream &out=std::cout);
 
 	// iterators of the sparse matrix that return a SpmCooElem
 	class PntIter;

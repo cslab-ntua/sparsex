@@ -237,6 +237,59 @@ void CsxJit::DiagCase(BasicBlock *BB,
 	Yindx->addIncoming(YindxAdd, BB_lbody);
 }
 
+void CsxJit::BlockRowCase(BasicBlock *BB,
+//                           BasicBlock *BB_lbody,
+//                           BasicBlock *BB_lexit,
+                          BasicBlock *BB_exit,
+                          int r, int c)
+{
+    Value **Myx = new Value*[c+1];
+    Value **Yindx = new Value*[r+1];
+
+    Bld->SetInsertPoint(BB);
+
+    // Elements in block-row types are stored column-wise
+    Myx[0] = Bld->CreateLoad(MyxPtr);
+    for (int i = 0; i < c; i++) {
+        Yindx[0] = Bld->CreateLoad(YindxPtr);
+        for (int j = 0; j < r; j++) {
+            doOp(Myx[i], Yindx[j]);
+            Yindx[j+1] = Bld->CreateAdd(Yindx[j], One64);
+        }
+
+        Myx[i+1] = Bld->CreateGEP(Myx[i], One64);
+    }
+
+//    Bld->CreateStore(Myx[c-1], MyxPtr);
+    Bld->CreateBr(BB_exit);
+}
+
+void CsxJit::BlockColCase(BasicBlock *BB,
+//                           BasicBlock *BB_lbody,
+//                           BasicBlock *BB_lexit,
+                          BasicBlock *BB_exit,
+                          int r, int c)
+{
+    Value **Myx = new Value*[c+1];
+    Value **Yindx = new Value*[r+1];
+
+    Bld->SetInsertPoint(BB);
+
+    // Elements in block-col types are stored row-wise
+    Yindx[0] = Bld->CreateLoad(YindxPtr);
+    for (int i = 0; i < r; i++) {
+        Myx[0] = Bld->CreateLoad(MyxPtr);
+        for (int j = 0; j < c; j++) {
+            doOp(Myx[j], Yindx[i]);
+            Myx[j+1] = Bld->CreateGEP(Myx[j], One64);
+        }
+        Yindx[i+1] = Bld->CreateAdd(Yindx[i], One64);
+    }
+
+//    Bld->CreateStore(Myx[c-1], MyxPtr);
+    Bld->CreateBr(BB_exit);
+}
+
 void CsxJit::doPrint(Value *Myx, Value *Yindx)
 {
 	Value *X, *Xindx;
@@ -294,7 +347,7 @@ void CsxJit::doIncV()
 
 void CsxJit::doOp(Value *Myx, Value *Yindx)
 {
-	//doPrint(Myx, Yindx);
+//	doPrint(Myx, Yindx);
 	doMul(Myx, Yindx);
 	doIncV();
 }
@@ -313,7 +366,7 @@ void CsxJit::doDeltaAddMyx(int delta_bytes)
 		F = M->getFunction("u16_get");
 		break;
 
-		case 4:
+	case 4:
 		F = M->getFunction("u32_get");
 		break;
 
@@ -376,7 +429,8 @@ void CsxJit::doBodyHook()
 	BasicBlock *BB, *BB_next, *BB_default, *BB_case;
 	Value *PatternMask;
 	Value *v;
-	uint64_t delta;
+    uint64_t delta;
+    SpmIterOrder type;
 
 	BB = llvm_hook_newbb(M, "__body_hook", SpmvF, &BB_next);
 
@@ -406,21 +460,30 @@ void CsxJit::doBodyHook()
 
 		// Alocate case + loop BBs
 		BB_case = BasicBlock::Create("case", BB->getParent(), BB_default);
-		switch (pat_i->first){
-			// Deltas
-			case 8: case 16: case 32: case 64:
-			std::cout << "type:DELTA size:" << pat_i->first << " elements:" << pat_i->second.nr << "\n";
+        
+        type  = static_cast<SpmIterOrder>(pat_i->first / PID_OFFSET);
+        delta = pat_i->first % PID_OFFSET;
+		switch (type){
+            // Deltas
+        case 0:
+            assert(delta ==  8 ||
+                   delta == 16 ||
+                   delta == 32 ||
+                   delta == 64);
+//        case 8: case 16: case 32: case 64:
+			std::cout << "type:DELTA size:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lentry = BasicBlock::Create("lentry", BB->getParent(), BB_default);
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DeltaCase(BB_case,
 			          BB_lentry, BB_lbody,
 			          BB_next,
-			          pat_i->first / 8);
+			          delta / 8);
 			break;
 
 			// Horizontal
-			case 10000 ... 19999:
-			delta = pat_i->first - 10000;
+        case HORIZONTAL:
+//        case 10000 ... 19999:
+//			delta = pat_i->first - 10000;
 			std::cout << "type:DRLE order:HORIZONTAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			BB_lexit = BasicBlock::Create("lexit", BB->getParent(), BB_default);
@@ -431,8 +494,9 @@ void CsxJit::doBodyHook()
 			break;
 
 			// Vertical
-			case 20000 ... 29999:
-			delta = pat_i->first - 20000;
+        case VERTICAL:
+//        case 20000 ... 29999:
+//			delta = pat_i->first - 20000;
 			std::cout << "type:DRLE order:VERTICAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			VertCase(BB_case,
@@ -442,8 +506,9 @@ void CsxJit::doBodyHook()
 			break;
 
 			// Diagonal
-			case 30000 ... 39999:
-			delta = pat_i->first - 30000;
+        case DIAGONAL:
+//         case 30000 ... 39999:
+// 			delta = pat_i->first - 30000;
 			std::cout << "type:DRLE order:DIAGONAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DiagCase(BB_case,
@@ -454,8 +519,9 @@ void CsxJit::doBodyHook()
 			break;
 
 			// rdiag
-			case 40000 ... 49999:
-			delta = pat_i->first - 40000;
+        case REV_DIAGONAL:
+//         case 40000 ... 49999:
+// 			delta = pat_i->first - 40000;
 			std::cout << "type:DRLE order:REV_DIAGONAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DiagCase(BB_case,
@@ -465,7 +531,27 @@ void CsxJit::doBodyHook()
 			         true);
 			break;
 
-			default:
+        case BLOCK_TYPE_START ... BLOCK_COL_START - 1:
+            // This is a block row type
+ 			std::cout << "type:block_row: "
+                       << type - BLOCK_TYPE_START << "x" << delta
+                       << " nnz: " << pat_i->second.nr << std::endl;
+// 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
+// 			BB_lexit = BasicBlock::Create("lexit", BB->getParent(), BB_default);
+			BlockRowCase(BB_case, BB_next,
+                         type - BLOCK_TYPE_START, delta);
+            break;
+        case BLOCK_COL_START ... BLOCK_TYPE_END:
+            // This is a block col type
+			std::cout << "type:block_col: "
+                      << delta << "x" << type - BLOCK_COL_START
+                      << " nnz: " << pat_i->second.nr << std::endl;
+// 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
+// 			BB_lexit = BasicBlock::Create("lexit", BB->getParent(), BB_default);
+			BlockColCase(BB_case, BB_next,
+                         delta, type - BLOCK_COL_START);
+            break;
+        default:
 			assert(false);
 		}
 

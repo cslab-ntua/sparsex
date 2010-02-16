@@ -26,7 +26,8 @@ public:
 
 	virtual long x_increase(SpmIterOrder order) const
 	{
-		long ret;
+		long        ret;
+
 		ret = (order == this->type) ? (this->size*this->delta) : 1;
 		return ret;
 	}
@@ -49,28 +50,29 @@ public:
 		return out;
 	}
 
+#define PID_OFFSET 10000
 	virtual long getPatId() const
 	{
-		//******** Static Pattern Id Mapping:
-		//  10000 + delta => HORIZONTAL drle
-		#define PID_HORIZ_BASE 10000
-		//  20000 + delta => VERTICAL drle
-		#define PID_VERT_BASE 20000
-		//  30000 + delta => DIAGONAL drle
-		#define PID_DIAG_BASE 30000
-		//  40000 + delta => REV_DIAGONAL drle
-		#define PID_rDIAG_BASE 40000
-		//  50000 + block_align => BLOCK_R* drle
-		#define PID_BLOCK_R_BASE 50000
-		//  60000 + block_align => BLOCK_R* drle
-		#define PID_BLOCK_C_BASE 60000
-		switch (type){
-			case HORIZONTAL: return PID_HORIZ_BASE + this->delta;
-			case VERTICAL: return PID_VERT_BASE + this->delta;
-			case DIAGONAL: return PID_DIAG_BASE + this->delta;
-			case REV_DIAGONAL: return PID_rDIAG_BASE + this->delta;
-			default: assert(false);
-		}
+        assert(this->type > NONE && this->type < BLOCK_TYPE_START);
+
+        return type*PID_OFFSET + this->delta;
+
+// 		//******** Static Pattern Id Mapping:
+// 		//  10000 + delta => HORIZONTAL drle
+// 		#define PID_HORIZ_BASE 10000
+// 		//  20000 + delta => VERTICAL drle
+// 		#define PID_VERT_BASE 20000
+// 		//  30000 + delta => DIAGONAL drle
+// 		#define PID_DIAG_BASE 30000
+// 		//  40000 + delta => REV_DIAGONAL drle
+// 		#define PID_rDIAG_BASE 40000
+// 		switch (type){
+// 			case HORIZONTAL: return PID_HORIZ_BASE + this->delta;
+// 			case VERTICAL: return PID_VERT_BASE + this->delta;
+// 			case DIAGONAL: return PID_DIAG_BASE + this->delta;
+// 			case REV_DIAGONAL: return PID_rDIAG_BASE + this->delta;
+// 			default: assert(false);
+// 		}
 	}
 
 	virtual long getSize() const
@@ -80,13 +82,14 @@ public:
 
 	virtual uint64_t getNextX(uint64_t x0) const
 	{
-		return (x0 + this->delta);
+        return (x0 + this->delta);
 	}
 
 	class Generator;
 	Pattern::Generator *generator(CooElem start);
 
 	// key => delta value of rle
+    // key => second dimension for block rles.
 	typedef std::map<uint64_t, Pattern::StatsVal> Stats;
 };
 
@@ -106,7 +109,8 @@ public:
 	virtual CooElem next() {
 		CooElem ret(start);
 		assert(this->nr <= this->rle->size);
-		ret.x += (this->nr)*(this->rle->delta);
+        
+		ret.x += (this->nr)*this->rle->delta;
 		this->nr += 1;
 		return ret;
 	}
@@ -144,6 +148,9 @@ DRLE_Manager(SPM *_spm,
 	std::bitset<XFORM_MAX> xforms_ignore;
 
 	void addIgnore(SpmIterOrder type);
+    void ignoreAll();
+    void removeIgnore(SpmIterOrder type);
+    void removeAll();
 
 	SpmIterOrder chooseType();
 	uint64_t getTypeNNZ(SpmIterOrder type);
@@ -169,6 +176,33 @@ private:
     void updateStatsBlock(std::vector<uint64_t> &xs,
                           DeltaRLE::Stats &stats, uint64_t align);
 };
+
+class BlockRLE : public DeltaRLE {
+    uint32_t    other_dim;
+
+public:
+	BlockRLE(uint32_t size_, uint32_t other_dim_, SpmIterOrder type_)
+        : DeltaRLE(size_, 1, (assert(isBlockType(type_)), type_)) {
+
+        this->other_dim = other_dim_;
+    }
+
+    virtual uint32_t getOtherDim() const
+    {
+        return this->other_dim;
+    }
+
+	virtual long getPatId() const
+    {
+        return PID_OFFSET*this->type + this->other_dim;
+    }
+
+	virtual BlockRLE *clone() const
+	{
+		return new BlockRLE(*this);
+	}
+};
+
 
 #if 0
 inline std::ostream &operator<<(std::ostream &os, const DeltaRLE::Stats &stats)

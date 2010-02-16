@@ -154,7 +154,13 @@ csx_double_t *CsxManager::mkCsx()
 
 		rbegin = Spm->rbegin(i);
 		rend = Spm->rend(i);
+		if (debug)
+			std::cerr << "mkCsx(): row: " << i << "\n";
+
 		if (rbegin == rend){ // check if row is empty
+            if (debug)
+                std::cerr << "mkCsx(): row is empty" << std::endl;
+
 			if (this->new_row == false){
 				this->new_row = true; // in case the first row is empty
 			} else {
@@ -162,9 +168,6 @@ csx_double_t *CsxManager::mkCsx()
 			}
 			continue;
 		}
-
-		if (debug)
-			std::cerr << "mkCsx(): row: " << i << "\n";
 
 		this->doRow(rbegin, rend);
 		this->new_row = true;
@@ -267,12 +270,14 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 	pat_size = elem.pattern->getSize();
 	if (debug)
 		std::cerr << "AddPattern jmp: " << jmp << " pat_size: " << pat_size << "\n";
+    
 	pat_id = elem.pattern->getPatId();
 
 	ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
 	*ctl_flags = this->getFlag(pat_id, pat_size);
 
 	ctl_size = ctl_flags + 1;
+    // std::cerr << pat_size << std::endl;
 	assert(pat_size + (jmp ? 1 : 0) <= CTL_SIZE_MAX);
 	// if there is a jmp we are implicitly including one more element
 	// see also: 1feee866421a129fae861f094f64b6d803ecb8d5
@@ -324,7 +329,7 @@ uint64_t CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &ele
 // Ctl Rules
 // 1. Each unit leaves the x index at the last element it calculated on the
 // current row
-// 2. Size is the number of elements taht will be calculated
+// 2. Size is the number of elements that will be calculated
 void CsxManager::doRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 {
 	std::vector<uint64_t> xs;
