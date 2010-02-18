@@ -434,7 +434,7 @@ void DRLE_Manager::EncodeAll()
 		type = this->chooseType();
 		if (type == NONE)
 			break;
-		//std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
+		std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
 		this->Encode(type);
 	}
 }
@@ -546,9 +546,10 @@ void DRLE_Manager::genAllStats()
 	}
 }
 
-// get the number of non-zero elements that can be encoded
-// using drle for a specific iteration order (matrix type)
-uint64_t DRLE_Manager::getTypeNNZ(SpmIterOrder type)
+//
+// Gets a score for each type. This might be used for choosing an encoding.
+// 
+uint64_t DRLE_Manager::getTypeScore(SpmIterOrder type)
 {
 	DeltaRLE::Stats *sp;
 	DeltaRLE::Stats::iterator iter;
@@ -559,14 +560,21 @@ uint64_t DRLE_Manager::getTypeNNZ(SpmIterOrder type)
 		return ret;
 
 	sp = &this->stats[type];
+    uint64_t nr_nzeros_encoded = 0;
+    uint64_t nr_patterns = 0;
 	for (iter=sp->begin(); iter != sp->end(); ++iter){
-		ret += iter->second.nnz;
+		nr_nzeros_encoded += iter->second.nnz;
+        nr_patterns += iter->second.npatterns;
 	}
+
+//  ret = this->spm->nnz - (nr_patterns + this->spm->nnz - nr_nzeros_encoded);
+    ret = nr_nzeros_encoded - nr_patterns;
+    
 	return ret;
 }
 
 // choose a type to encode the matrix, based on the stats
-// (whichever maximizes getTypeNNZ())
+// (whichever maximizes getTypeScore())
 SpmIterOrder DRLE_Manager::chooseType()
 {
 	SpmIterOrder ret;
@@ -576,7 +584,7 @@ SpmIterOrder DRLE_Manager::chooseType()
 	ret = NONE;
 	max_out = 0;
 	for (iter=this->stats.begin(); iter != this->stats.end(); ++iter){
-		uint64_t out = this->getTypeNNZ(iter->first);
+		uint64_t out = this->getTypeScore(iter->first);
 		if (out > max_out){
 			max_out = out;
 			ret = iter->first;

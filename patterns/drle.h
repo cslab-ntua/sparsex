@@ -153,7 +153,7 @@ DRLE_Manager(SPM *_spm,
     void removeAll();
 
 	SpmIterOrder chooseType();
-	uint64_t getTypeNNZ(SpmIterOrder type);
+	uint64_t getTypeScore(SpmIterOrder type);
 
 	void Encode(SpmIterOrder type=NONE);
 	void EncodeAll();
