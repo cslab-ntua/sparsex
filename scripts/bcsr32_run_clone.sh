@@ -9,6 +9,7 @@ else
 	mtxfiles="$*"
 fi
 
+echo "Log started $(iddate) @$(hostname)"
 spmv="./spmv"
 for mtx in $(echo $mtxfiles)
 do
@@ -25,3 +26,4 @@ do
 	echo
 
 done
+echo "Log ended $(iddate) @$(hostname)"

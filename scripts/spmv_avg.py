@@ -3,7 +3,7 @@
 from stats import mean, deviation
 
 if __name__ == '__main__':
-	from sys import stdin
+	from sys import stdin, exit
 
 	tl = []
 	rl = []
@@ -18,6 +18,9 @@ if __name__ == '__main__':
 		m,f,s,t,r = l.split()
 		tl.append(float(t[2:]))
 		rl.append(float(r[2:]))
+
+	if not tl:
+		exit(0)
 
 	tl.sort()
 	rl.sort()

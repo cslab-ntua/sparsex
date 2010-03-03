@@ -53,7 +53,7 @@ fi
 vals=$(head -1 $file | awk '{ print $3 }')
 ttu=$(( ($vals+0.0)/($uvals+0.0) ))
 
-set -x
+#set -x
 set -e
 if [ $(( $ttu > $ttu_lim )) -eq 1 ] ; then
 	vi_bits=$(scripts/calc_bits $uvals)
