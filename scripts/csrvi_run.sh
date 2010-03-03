@@ -1,5 +1,7 @@
 #!/usr/bin/zsh
 
+set -e
+
 ttu_lim=1.5
 usage() {
 	echo "Usage: $(basename $0) <options> mmf_file"
@@ -41,7 +43,7 @@ fi
 vals=$(head -1 $file | awk '{ print $3 }')
 ttu=$(( ($vals+0.0)/($uvals+0.0) ))
 
-set -x
+#set -x
 if [ $(( $ttu > $ttu_lim )) -eq 1 ] ; then
 	vi_bits=$(scripts/calc_bits $uvals)
 	method="spm_crs32_vi${vi_bits}_double"

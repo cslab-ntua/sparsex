@@ -131,26 +131,6 @@ XSPMV_MT_METH_INIT(
 
 #include <numa.h>
 
-static int numa_node_from_cpu(int cpu)
-{
-	struct bitmask *bmp;
-	int nnodes, node, ret;
-
-	bmp = numa_allocate_cpumask();
-	nnodes =  numa_num_configured_nodes();
-	for (node = 0; node < nnodes; node++){
-		numa_node_to_cpus(node, bmp);
-		if (numa_bitmask_isbitset(bmp, cpu)){
-			ret = node;
-			goto end;
-		}
-	}
-	ret = -1;
-end:
-	numa_bitmask_free(bmp);
-	return ret;
-}
-
 void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
                                       uint64_t *rows_nr, uint64_t *cols_nr,
                                       uint64_t *nz_nr)
@@ -174,7 +154,7 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
 		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
 		SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
 		/* get numa node from cpu */
-		int node = numa_node_from_cpu(spm_thread->cpu);
+		int node = numa_node_of_cpu(spm_thread->cpu);
 		/* allocate new space */
 		SPM_CRS_TYPE *numa_crs = numa_alloc_onnode(sizeof(SPM_CRS_TYPE), node);
 		if (!numa_crs){

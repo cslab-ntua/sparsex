@@ -21,6 +21,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 {
 	unsigned int threads_nr, *threads_cpus;
 	spm_mt_t *spm_mt;
+	bool do_encode = true;
 	SPM *Spms, *Spm;
 	DRLE_Manager *DrleMg;
 	CsxManager *CsxMg;
@@ -44,6 +45,11 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 
 	Spms = SPM::loadMMF_mt(mmf_fname, threads_nr);
 	Jits = new CsxJit *[threads_nr];
+
+	if (getenv("CSX_DONT_ENCODE") != NULL){
+		std::cout << "CSX_DONT_ENCODE set. I will not encode\n";
+		do_encode = false;
+	}
 
 	for (unsigned int i=0; i < threads_nr; i++){
 		spm_mt_thread_t *spm_mt_thread;

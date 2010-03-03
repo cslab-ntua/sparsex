@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+set -e
+
 if [ -z "$1" ]; then
 	#mtxfiles=$(echo tests.mtx/* /s/matrices/sorted/(???~(024|041|042)).*.mtx.sorted)
 	mtxfiles=$(echo /s/matrices/sorted/???.*.mtx.sorted)
@@ -16,8 +18,9 @@ function run_crs32_mt {
 		exit 1
 	fi
 
-	echo MT_CONF=$mtcnf ./spmv -b $mtx spm_crs32_double_mt_numa_multiply
-	     MT_CONF=$mtcnf ./spmv -b $mtx spm_crs32_double_mt_numa_multiply
+	## add more iterations, since nehalem performance has larger variation
+	echo MT_CONF=$mtcnf ./spmv -c -b $mtx -L 7 spm_crs32_double_mt_numa_multiply
+	     MT_CONF=$mtcnf ./spmv -c -b $mtx -L 7 spm_crs32_double_mt_numa_multiply | scripts/spmv_avg.py
 }
 
 echo "Log started $(iddate) @$(hostname)"
@@ -25,32 +28,24 @@ for mtx in $(echo $mtxfiles)
 do
 	echo "*********************** $mtx **********************"
 
-	# serial
-	echo ./spmv -b $mtx spm_crs32_double_multiply
-	./spmv -b $mtx spm_crs32_double_multiply
-
-
 	#### 2 processors
-	# same core, two threads
-	run_crs32_mt $mtx "0,1"
-	# same die, different cores
-	run_crs32_mt $mtx "0,2"
-	# different die
-	run_crs32_mt $mtx "0,8"
-
+	# 0,1 same core, two threads
+	# 0,2 same die, different cores
+	# 0,8 different die
 	#### 4 processors
-	# same die, different cores
-	run_crs32_mt $mtx "0,2,4,6"
-	# two dies, two cores each
-	run_crs32_mt $mtx "0,4,8,12"
-
+	# 0,2,4,6 same die, different cores
+	# 0,4,8,12two dies, two cores each
 	#### 8 processors
-	# same die
-	run_crs32_mt $mtx "0,1,2,3,4,5,6,7"
-	# different die, all different cores
-	run_crs32_mt $mtx "0,2,4,6,8,10,12,14"
-
+	# 0,1,2,3,4,5,6,7 same die
+	# "0,2,4,6,8,10,12,14" different die, all different cores
 	##### 16 processors
-	run_crs32_mt $mtx "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+	#"0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+	for mt in \
+	"0" "0,1" "0,2" "0,8" \
+	"0,2,4,6" "0,4,8,12" "0,1,2,3,4,5,6,7"  \
+	"0,2,4,6,8,10,12,14" \
+	"0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"; do
+		run_crs32_mt $mtx $mt
+	done
 done
 echo "Log ended $(iddate) @$(hostname)"

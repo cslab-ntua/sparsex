@@ -7,27 +7,18 @@ else
 	mtxfiles="$*"
 fi
 
+spmv=./spmv
+
+echo "Log started $(iddate) @$(hostname)"
 for mtx in $(echo $mtxfiles)
 do
 	echo "*********************** $mtx **********************"
-
-	# serial
-	echo ./spmv -b $mtx spm_crs32_double_multiply
-	./spmv -b $mtx spm_crs32_double_multiply
-
-	echo MT_CONF=0,2 ./spmv -b $mtx spm_crs32_double_mt_multiply
-	     MT_CONF=0,2 ./spmv -b $mtx spm_crs32_double_mt_multiply
-
-	echo MT_CONF=0,4 ./spmv -b $mtx spm_crs32_double_mt_multiply
-	     MT_CONF=0,4 ./spmv -b $mtx spm_crs32_double_mt_multiply
-
-	echo MT_CONF=0,2,4,6 ./spmv -b $mtx spm_crs32_double_mt_multiply
-	     MT_CONF=0,2,4,6 ./spmv -b $mtx spm_crs32_double_mt_multiply
-
-	echo MT_CONF=0,1,2,3,4,5,6,7 ./spmv -b $mtx spm_crs32_double_mt_multiply
-	     MT_CONF=0,1,2,3,4,5,6,7 ./spmv -b $mtx spm_crs32_double_mt_multiply
-
+	for mt_conf in "0" "0,2"  "0,4"  "0,2,4,6"  "0,1,2,3,4,5,6,7"; do
+		echo MT_CONF=$mt_conf $spmv -c -b $mtx spm_crs32_double_mt_multiply
+		     MT_CONF=$mt_conf $spmv -c -b $mtx spm_crs32_double_mt_multiply | scripts/spmv_avg.py
+	done
 	echo '----------------------------------------'
 	echo
 
 done
+echo "Log ended $(iddate) @$(hostname)"
