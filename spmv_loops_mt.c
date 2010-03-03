@@ -62,7 +62,7 @@ static void *do_spmv_thread_main_swap(void *arg)
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
 		SWAP(x, y);
-		//VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
+		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 	}
 	tsc_pause(&tsc);
 	secs = tsc_getsecs(&tsc);
@@ -105,6 +105,11 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 			spm_mt->spm_threads[i].spmv_fn = fn;
 	}
 
+	/*
+	 * spawn two kind of threads:
+	 *  - 1  : do_spmv_thread_main_swap: computes, does SWAP(Y,X) and zeroes Y
+	 *  - N-1: do_spmv_thread: just computes
+	 */
 	pthread_create(tids, NULL, do_spmv_thread_main_swap, spm_mt->spm_threads);
 	for (i=1; i<spm_mt->nr_threads; i++)
 		pthread_create(tids+i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
