@@ -1004,7 +1004,6 @@ init_mmf_wrap(char *mmf_file,
 	return spm_mt;
 }
 
-
 static void inline bcsr_spmv_wrap(void *spm, VECTOR_TYPE * __restrict__ in, VECTOR_TYPE *__restrict__ out, int r, int c)
 {
 	SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *)spm;
@@ -1714,4 +1713,3 @@ DECLARE_BCSR_NUMA_MULV(4,2)
 
 
 #endif /* SPM_NUMA */
-

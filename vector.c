@@ -6,6 +6,8 @@
 
 //typedef double dv_t __attribute__ ((vector_size (16)));
 //typedef float fv_t __attribute__ ((vector_size (16)));
+#define ALIGN_BOUND (12)
+#define ALIGN(ul)  (ul + (ul % ALIGN_BOUND))
 
 VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 {
