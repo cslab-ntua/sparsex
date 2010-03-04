@@ -54,24 +54,28 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		spm_mt_thread = spm_mt->spm_threads + i;
 
 		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1);
-        DrleMg->ignoreAll();
+		DrleMg->ignoreAll();
 
-        // find transformations to apply
-        char *xform_string = getenv("XFORM_CONF");
-        if (xform_string) {
-            int t = atoi(strtok(xform_string, ","));
-            DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
-//            std::cout << "Encoding type: " << SpmTypesNames[t] << std::flush;
-            char *token;
-            while ( (token = strtok(NULL, ",")) != NULL) {
-                t = atoi(token);
-                DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
-//                std::cout << ", " << SpmTypesNames[t] << std::flush;
-            }
+		// find transformations to apply
+		const char *xform_orig = getenv("XFORM_CONF");
+		if (xform_orig) {
+			// copy xform_orig, because the second time around wont work
+			int len = strlen(xform_orig) + 1;
+			char xform_string[len];
+			strncpy(xform_string, xform_orig, len);
+			//std::cout << xform_string << std::endl;
 
-//            std::cout << ": " << std::flush;
-        }
-
+			int t = atoi(strtok(xform_string, ","));
+			DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
+			std::cout << "Encoding type: " << SpmTypesNames[t];
+			char *token;
+			while ( (token = strtok(NULL, ",")) != NULL) {
+				t = atoi(token);
+				DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
+				std::cout << ", " << SpmTypesNames[t] << std::flush;
+			}
+			std::cout << std::endl;
+		}
 		DrleMg->EncodeAll();
 
 //        Spm->PrintElems(std::cout);
