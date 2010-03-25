@@ -91,16 +91,19 @@ public:
                   bool reversed);
 
     void BlockRowCase(BasicBlock *BB,
-/*                       BasicBlock *BB_lbody, */
-/*                       BasicBlock *BB_lexit, */
+                      BasicBlock *BB_lbody_extern,
+                      BasicBlock *BB_lbody_intern,
+                      BasicBlock *BB_lexit_intern,
                       BasicBlock *BB_exit,
                       int r, int c);
 
-    void BlockColCase(BasicBlock *BB,
-/*                       BasicBlock *BB_lbody, */
-/*                       BasicBlock *BB_lexit, */
-                      BasicBlock *BB_exit,
-                      int r, int c);
+    void BlockRowCaseUnrolled(BasicBlock *BB,
+                              BasicBlock *BB_exit,
+                              int r, int c);
+
+    void BlockColCaseUnrolled(BasicBlock *BB,
+                              BasicBlock *BB_exit,
+                              int r, int c);
 };
 
 
