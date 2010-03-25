@@ -90,6 +90,10 @@ public:
                   int delta_size,
                   bool reversed);
 
+    void BlockRowCaseUnrolled(BasicBlock *BB,
+                              BasicBlock *BB_exit,
+                              int r, int c);
+
     void BlockRowCase(BasicBlock *BB,
                       BasicBlock *BB_lbody_extern,
                       BasicBlock *BB_lbody_intern,
