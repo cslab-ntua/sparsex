@@ -238,78 +238,18 @@ void CsxJit::DiagCase(BasicBlock *BB,
 }
 
 void CsxJit::BlockRowCase(BasicBlock *BB,
-                          BasicBlock *BB_lbody_extern,
-                          BasicBlock *BB_lbody_intern,
-                          BasicBlock *BB_lexit_intern,
+//                           BasicBlock *BB_lbody,
+//                           BasicBlock *BB_lexit,
                           BasicBlock *BB_exit,
                           int r, int c)
-{
-    Value *R, *Rtest, *C, *Ctest;
-    Value *Myx0, *Yindx0, *RcntNext, *CcntNext, *newMyx;
-    PHINode *Rcnt, *Ccnt, *Myx, *Yindx;
-
-    R = ConstantInt::get(Type::Int8Ty, r);
-    C = ConstantInt::get(Type::Int8Ty, c);
-
-    Bld->SetInsertPoint(BB);
-    Myx0 = Bld->CreateLoad(MyxPtr, "myx0");
-    Yindx0 = Bld->CreateLoad(YindxPtr);
-    Bld->CreateBr(BB_lbody_extern);
-
-    // External loop body
-    Bld->SetInsertPoint(BB_lbody_extern);
-    Myx   = Bld->CreatePHI(Myx0->getType(), "myx");
-    Ccnt  = Bld->CreatePHI(C->getType(), "j");
-    Yindx = Bld->CreatePHI(Yindx->getType(), "yindx");
-
-    Bld->CreateBr(BB_lbody_intern);
-
-    // Internal loop body
-    Bld->SetInsertPoint(BB_lbody_intern);
-    Rcnt = Bld->CreatePHI(R->getType(), "i");
-    doOp(Myx, Yindx);
-    newMyx = Bld->CreateGEP(Myx, One8);
-    
-
-    // Exit of internal loop body
-    Bld->SetInsertPoint(BB_lexit_intern);
-
-
-    // AlignOff = Bld->CreateMul(Ccnt, R);
-    // XOff = Bld->CreateAdd(AlignOff, Rcnt);
-    // newMyx = Bld->CreateGEP(Myx, XOff, "new_myx");
-    // RcntNext = Bld->CreateAdd(Rcnt, One8);
-    // Rtest = Bld->CreateICmpEQ(RcntNext, R, "r_test");
-    // Bld->CreateCondBr(r_test, BB_lexit_intern, BB_lbody_intern);
-    
-    // Rcnt->AddIncoming(Zero8, BB_lbody_extern);
-    // Rcnt->AddIncoming(RcntNext, BB_lbody_intern);
-}
-
-void CsxJit::BlockRowCaseUnrolled(BasicBlock *BB,
-                                  BasicBlock *BB_exit,
-                                  int r, int c)
 {
     Value **Myx = new Value*[c+1];
     Value **Yindx = new Value*[r+1];
 
     Bld->SetInsertPoint(BB);
 
-    Myx[0] = Bld->CreateLoad(MyxPtr);
-
-#ifdef NO_EXTRA_LOADS
-    Yindx[0] = Bld->CreateLoad(YindxPtr);
-    for (int i = 0; i < c; i++)
-        Myx[i+1] = Bld->CreateGEP(Myx[i], One64);
-
-    for (int j = 0; j < r; j++)
-        Yindx[j+1] = Bld->CreateAdd(Yindx[j], One64);
-    
-    for (int i = 0; i < c; i++)
-        for (int j = 0; j < r; j++)
-            doOp(Myx[i], Yindx[j]);
-#else
     // Elements in block-row types are stored column-wise
+    Myx[0] = Bld->CreateLoad(MyxPtr);
     for (int i = 0; i < c; i++) {
         Yindx[0] = Bld->CreateLoad(YindxPtr);
         for (int j = 0; j < r; j++) {
@@ -319,14 +259,16 @@ void CsxJit::BlockRowCaseUnrolled(BasicBlock *BB,
 
         Myx[i+1] = Bld->CreateGEP(Myx[i], One64);
     }
-#endif
 
+//    Bld->CreateStore(Myx[c-1], MyxPtr);
     Bld->CreateBr(BB_exit);
 }
 
-void CsxJit::BlockColCaseUnrolled(BasicBlock *BB,
-                                  BasicBlock *BB_exit,
-                                  int r, int c)
+void CsxJit::BlockColCase(BasicBlock *BB,
+//                           BasicBlock *BB_lbody,
+//                           BasicBlock *BB_lexit,
+                          BasicBlock *BB_exit,
+                          int r, int c)
 {
     Value **Myx = new Value*[c+1];
     Value **Yindx = new Value*[r+1];
@@ -335,17 +277,6 @@ void CsxJit::BlockColCaseUnrolled(BasicBlock *BB,
 
     // Elements in block-col types are stored row-wise
     Yindx[0] = Bld->CreateLoad(YindxPtr);
-#ifdef NO_EXTRA_LOADS
-    Myx[0] = Bld->CreateLoad(MyxPtr);
-    for (int j = 0; j < c; j++)
-        Myx[j+1] = Bld->CreateGEP(Myx[j], One64);
-
-    for (int i = 0; i < r; i++)
-        Yindx[i+1] = Bld->CreateAdd(Yindx[i], One64);
-    for (int i = 0; i < r; i++)
-        for (int j = 0; j < c; j++)
-            doOp(Myx[j], Yindx[i]);
-#else
     for (int i = 0; i < r; i++) {
         Myx[0] = Bld->CreateLoad(MyxPtr);
         for (int j = 0; j < c; j++) {
@@ -354,7 +285,6 @@ void CsxJit::BlockColCaseUnrolled(BasicBlock *BB,
         }
         Yindx[i+1] = Bld->CreateAdd(Yindx[i], One64);
     }
-#endif
 
 //    Bld->CreateStore(Myx[c-1], MyxPtr);
     Bld->CreateBr(BB_exit);
@@ -608,8 +538,8 @@ void CsxJit::doBodyHook()
                        << " nnz: " << pat_i->second.nr << std::endl;
 // 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 // 			BB_lexit = BasicBlock::Create("lexit", BB->getParent(), BB_default);
-			BlockRowCaseUnrolled(BB_case, BB_next,
-                                 type - BLOCK_TYPE_START, delta);
+			BlockRowCase(BB_case, BB_next,
+                         type - BLOCK_TYPE_START, delta);
             break;
         case BLOCK_COL_START ... BLOCK_TYPE_END:
             // This is a block col type
@@ -618,8 +548,8 @@ void CsxJit::doBodyHook()
                       << " nnz: " << pat_i->second.nr << std::endl;
 // 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 // 			BB_lexit = BasicBlock::Create("lexit", BB->getParent(), BB_default);
-			BlockColCaseUnrolled(BB_case, BB_next,
-                                 delta, type - BLOCK_COL_START);
+			BlockColCase(BB_case, BB_next,
+                         delta, type - BLOCK_COL_START);
             break;
         default:
 			assert(false);
