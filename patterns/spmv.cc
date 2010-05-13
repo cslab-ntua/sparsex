@@ -53,7 +53,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		Spm = Spms + i;
 		spm_mt_thread = spm_mt->spm_threads + i;
 
-		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1);
+		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, 256);
 		DrleMg->ignoreAll();
 
 		// find transformations to apply
@@ -168,7 +168,6 @@ int main(int argc, char **argv)
 
     for (int i = 1; i < argc; i++) {
         std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
-//        std::cerr << basename(argv[i]) << ": " << std::endl << std::flush;
         spm_mt = getSpmMt(argv[i]);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();

@@ -186,6 +186,10 @@ public:
 		uint64_t nnz;
 		long npatterns;
 		//StatsVal() : nnz(0) { }
+        void update(const StatsVal& new_vals) {
+            this->nnz += new_vals.nnz;
+            this->npatterns += new_vals.npatterns;
+        }
 	};
 };
 
@@ -279,10 +283,18 @@ public:
 	//         function returns with the number of elements used.
 	// elems_nr, rows_nr : size for elems and rows (initial) allocation
 	template <typename IterT>
-	uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end, uint64_t first_row,
+	uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
+                      uint64_t first_row,
 	                  unsigned long limit=0,
 	                  uint64_t elems_nr=0,
 	                  uint64_t rows_nr=0);
+
+	template <typename IterT>
+	uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
+                      uint64_t first_row,
+	                  unsigned long limit,
+	                  uint64_t elems_nr,
+	                  uint64_t rows_nr, SPM::Builder *SpmBld);
 
 	// load matrix from an MMF file
 	static SPM *loadMMF(const char *filename);
@@ -307,6 +319,10 @@ public:
 	TransformFn getRevXformFn(SpmIterOrder type);
 	TransformFn getXformFn(SpmIterOrder type);
 	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
+
+    SPM *extractWindow(uint64_t rs, uint64_t length);
+    SPM *getWindow(uint64_t rs, uint64_t length);
+    void insertWindow(const SPM *window);
 };
 
 void TestMMF(SPM *spm, const char *mmf_file);

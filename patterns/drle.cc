@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <exception>
+#include <stdexcept>
 
 #include <boost/foreach.hpp>
 #include <boost/lambda/lambda.hpp>
@@ -69,12 +71,57 @@ RLEncode(T input)
 	return output;
 }
 
+DRLE_Manager::DRLE_Manager(SPM *_spm,
+                           long min_limit_,
+                           long max_limit_,
+                           double min_perc_, uint64_t sort_window_size_)
+	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_),
+      min_perc(min_perc_), sort_window_size(sort_window_size_) {
+    // These are delimiters, ignore them by default.
+    addIgnore(BLOCK_TYPE_START);
+    addIgnore(BLOCK_COL_START);
+    addIgnore(BLOCK_TYPE_END);
+    addIgnore(BLOCK_ROW_TYPE_NAME(1));
+    addIgnore(BLOCK_COL_TYPE_NAME(1));
+
+    if (sort_window_size > spm->getNrRows()) {
+        std::cerr << "Invalid sort window size, ignoring." << std::endl;
+        sort_window_size = 0;
+    }
+
+    if (sort_window_size == 0 || sort_window_size == spm->getNrRows())
+        sort_windows = false;
+    else
+        sort_windows = true;
+}
+
+
+void DRLE_Manager::updateStats(SpmIterOrder type, DeltaRLE::Stats stats)
+{
+    if (this->stats.find(type) == this->stats.end()) {
+        // first time for this type
+        this->stats[type] = stats;
+    } else {
+        // update stats
+        for (DeltaRLE::Stats::const_iterator it = stats.begin();
+             it != stats.end(); ++it) {
+            this->stats[type][it->first].update(it->second);
+        }
+    }
+}
+
 void DRLE_Manager::updateStats(std::vector<uint64_t> &xs,
+                               DeltaRLE::Stats &stats)
+{
+    updateStats(this->spm, xs, stats);
+}
+
+void DRLE_Manager::updateStats(SPM *spm, std::vector<uint64_t> &xs,
                                DeltaRLE::Stats &stats)
 {
 	std::vector< RLE<uint64_t> > rles;
 
-    uint64_t    block_align = isBlockType(this->spm->type);
+    uint64_t    block_align = isBlockType(spm->type);
     if (block_align) {
         DRLE_Manager::updateStatsBlock(xs, stats, block_align);
         return;
@@ -131,24 +178,26 @@ void DRLE_Manager::updateStatsBlock(std::vector<uint64_t> &xs,
 	xs.clear();
 }
 
-DeltaRLE::Stats DRLE_Manager::generateStats()
+DeltaRLE::Stats DRLE_Manager::generateStats(uint64_t rs, uint64_t re)
 {
-	SPM *Spm;
+    return generateStats(this->spm, rs, re);
+}
+
+DeltaRLE::Stats DRLE_Manager::generateStats(SPM *Spm, uint64_t rs, uint64_t re)
+{
 	std::vector<uint64_t> xs;
 	DeltaRLE::Stats stats;
 
-	Spm = this->spm;
-
-	for (uint64_t i=0; i < Spm->getNrRows(); i++){
+	for (uint64_t i=rs; i < re; i++){
 		for (const SpmRowElem *elem = Spm->rbegin(i);
              elem != Spm->rend(i); elem++){
 			if (elem->pattern == NULL){
 				xs.push_back(elem->x);
 				continue;
 			}
-			this->updateStats(xs, stats);
+			this->updateStats(Spm, xs, stats);
 		}
-		this->updateStats(xs, stats);
+		this->updateStats(Spm, xs, stats);
 	}
 
 	return stats;
@@ -199,7 +248,8 @@ void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
                 // get a reference to the last element (avoid unnecessary copies)
                 last_elem = &newrow.back();
                 // set pattern
-                last_elem->pattern = new DeltaRLE(freq, rle.val, this->spm->type);
+                last_elem->pattern = new DeltaRLE(freq, rle.val,
+                                                  this->spm->type);
                 // set values
                 last_elem->vals = new double[freq];
                 std::copy(vi, vi + freq, last_elem->vals);
@@ -224,7 +274,7 @@ void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
 	vs.clear();
 }
 
-static uint64_t nr_lines = 0;
+//static uint64_t nr_lines = 0;
 void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
                                  std::vector<double> &vs,
                                  std::vector<SpmRowElem> &newrow)
@@ -362,7 +412,7 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
 
 	// gather x values into xs vector until a pattern is found
 	// and encode them using doEncode()
-	for (const SpmRowElem *e = rstart; e < rend; e++){
+	for (const SpmRowElem *e = rstart; e < rend; ++e){
         
 		if (e->pattern == NULL){
 			xs.push_back(e->x);
@@ -395,25 +445,26 @@ void DRLE_Manager::Encode(SpmIterOrder type)
 		return;
 	}
 
-	// Transform matrix to the desired iteration order
-	oldtype = Spm->type;
-	Spm->Transform(type);
-
 	// Do the encoding
 	SpmBld = new SPM::Builder(Spm);
-	for (uint64_t i=0; i < Spm->getNrRows(); i++){
-		EncodeRow(Spm->rbegin(i), Spm->rend(i), new_row);
 
-		nr_size = new_row.size();
-		if (nr_size > 0){
-			elems = SpmBld->AllocElems(nr_size);
-			for (uint64_t i=0; i < nr_size; i++){
-				mk_row_elem(new_row[i], elems + i);
-			}
-		}
-		new_row.clear();
-		SpmBld->newRow();
-	}
+    // Transform matrix to the desired iteration order
+    oldtype = Spm->type;
+    Spm->Transform(type);
+
+    for (uint64_t i=0; i < Spm->getNrRows(); i++){
+        EncodeRow(Spm->rbegin(i), Spm->rend(i), new_row);
+
+        nr_size = new_row.size();
+        if (nr_size > 0){
+            elems = SpmBld->AllocElems(nr_size);
+            for (uint64_t i=0; i < nr_size; i++){
+                mk_row_elem(new_row[i], elems + i);
+            }
+        }
+        new_row.clear();
+        SpmBld->newRow();
+    }
 
 	SpmBld->Finalize();
 	delete SpmBld;
@@ -517,14 +568,33 @@ void DRLE_Manager::genAllStats()
 //     this->addIgnore(BLOCK_COL_TYPE_NAME(8));
 
 	this->stats.clear();
+
 	for (int t=HORIZONTAL; t != XFORM_MAX; t++){
 		if (this->xforms_ignore[t])
 			continue;
 
 		SpmIterOrder type = SpmTypes[t];
-		this->spm->Transform(type);
-		this->stats[type] = this->generateStats();
-		this->spm->Transform(HORIZONTAL);
+
+        std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
+        if (sort_windows) {
+            uint64_t curr_row = 0;
+            while (curr_row <= this->spm->getNrRows()) {
+                SPM *window = this->spm->extractWindow(curr_row,
+                                                       this->sort_window_size);
+                window->Transform(type);
+                DeltaRLE::Stats l_stats = generateStats(window, 0,
+                                                        window->getNrRows());
+                updateStats(type, l_stats);
+                window->Transform(HORIZONTAL);
+                this->spm->insertWindow(window);
+                curr_row += this->sort_window_size;
+                delete window;
+            }
+        } else {
+            this->spm->Transform(type);
+            this->stats[type] = this->generateStats(0, this->spm->getNrRows());
+            this->spm->Transform(HORIZONTAL);
+        }
 
 		// ** Filter stats
 		// From http://www.sgi.com/tech/stl/Map.html:
