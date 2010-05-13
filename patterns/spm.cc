@@ -893,7 +893,7 @@ void SPM::PrintElems(std::ostream &out)
 		start = static_cast<CooElem>(*p);
 		vals = start.vals;
 
-        std::cout << SpmTypesNames[pat->type] << std::endl;
+        	std::cout << SpmTypesNames[pat->type] << std::endl;
 		xform_fn = getTransformFn(this->type, pat->type);
 		rxform_fn = getTransformFn(pat->type, this->type);
 

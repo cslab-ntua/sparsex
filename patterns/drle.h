@@ -82,7 +82,7 @@ public:
 
 	virtual uint64_t getNextX(uint64_t x0) const
 	{
-        return (x0 + this->delta);
+        	return (x0 + this->delta);
 	}
 
 	class Generator;
@@ -124,7 +124,7 @@ public:
 	long max_limit; // maximum length for RLEs
 	double min_perc; // min nnz percentage for considering an RLE
 
-DRLE_Manager(SPM *_spm,
+	DRLE_Manager(SPM *_spm,
              long min_limit_=4, long max_limit_ = std::numeric_limits<long>::max(),
              double min_perc_=.1)
 	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_), min_perc(min_perc_) {
@@ -156,6 +156,7 @@ DRLE_Manager(SPM *_spm,
 	uint64_t getTypeScore(SpmIterOrder type);
 
 	void Encode(SpmIterOrder type=NONE);
+	void Decode(SpmIterOrder type=NONE);			//Prosthesa edw
 	void EncodeAll();
 
 private:
@@ -166,14 +167,22 @@ private:
 	void doEncodeBlock(std::vector<uint64_t> &xs,
                        std::vector<double> &vs,
                        std::vector<SpmRowElem> &newrow);
+				
+	void doDecode(const SpmRowElem *elem,			//edw
+		      std::vector<SpmRowElem> &newrow);
 
 	void EncodeRow(const SpmRowElem *rstart,
 	               const SpmRowElem *rend,
 	               std::vector<SpmRowElem> &newrow);
 
+	void DecodeRow(const SpmRowElem *rstart,
+		       const SpmRowElem *rend, 
+		       std::vector<SpmRowElem> &newrow);	//kai edw
+
 	void updateStats(std::vector<uint64_t> &xs,
 	                 DeltaRLE::Stats &stats);
-    void updateStatsBlock(std::vector<uint64_t> &xs,
+    	
+	void updateStatsBlock(std::vector<uint64_t> &xs,
                           DeltaRLE::Stats &stats, uint64_t align);
 };
 

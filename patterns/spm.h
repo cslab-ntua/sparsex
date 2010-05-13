@@ -295,7 +295,7 @@ public:
 	void Print(std::ostream &out=std::cout);
 	void PrintElems(std::ostream &out=std::cout);
 	void PrintRows(std::ostream &out=std::cout);
-    void PrintStats(std::ostream &out=std::cout);
+    	void PrintStats(std::ostream &out=std::cout);
 
 	// iterators of the sparse matrix that return a SpmCooElem
 	class PntIter;
