@@ -8,7 +8,7 @@ dynarray_dir = ../../dynarray
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O2 -Wdisabled-optimization
 #CXXFLAGS       += -Winline
-LDFLAGS        = -pg
+LDFLAGS        = 
 CXXFLAGS       += -ggdb -rdynamic
 DEFS            =
 INC             =
@@ -74,7 +74,7 @@ spmv.o: spmv.cc
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
 spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o ../libspmv.o
-	$(GXX) $(LDFLAGS)  -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) -lpthread -o $@
+	$(GXX) $(LDFLAGS)  -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 clean:
 	rm -f *.o drle_shell drle_test jit

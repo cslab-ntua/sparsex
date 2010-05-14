@@ -93,6 +93,8 @@ DRLE_Manager::DRLE_Manager(SPM *_spm,
         sort_windows = false;
     else
         sort_windows = true;
+
+    std::cout << "sort window: " << sort_window_size << std::endl;
 }
 
 
@@ -579,14 +581,14 @@ void DRLE_Manager::genAllStats()
         if (sort_windows) {
             uint64_t curr_row = 0;
             while (curr_row <= this->spm->getNrRows()) {
-                SPM *window = this->spm->extractWindow(curr_row,
-                                                       this->sort_window_size);
+                SPM *window = this->spm->getWindow(curr_row,
+                                                   this->sort_window_size);
                 window->Transform(type);
                 DeltaRLE::Stats l_stats = generateStats(window, 0,
                                                         window->getNrRows());
                 updateStats(type, l_stats);
                 window->Transform(HORIZONTAL);
-                this->spm->insertWindow(window);
+                this->spm->putWindow(window);
                 curr_row += this->sort_window_size;
                 delete window;
             }

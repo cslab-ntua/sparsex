@@ -254,6 +254,7 @@ public:
 	uint64_t elems_size__;
 	uint64_t *rowptr__;
 	uint64_t rowptr_size__;
+    bool elems_mapped;
 
 	uint64_t getNrRows() { return this->rowptr_size__ - 1; }
 	//// SpmRowElem iterators
@@ -266,7 +267,7 @@ public:
 
 	SPM() : type(NONE), elems__(NULL), rowptr__(NULL) {}
 	~SPM(){
-		if (this->elems__)
+		if (!elems_mapped && this->elems__)
 			free(this->elems__);
 
 		if (this->rowptr__)
@@ -275,6 +276,7 @@ public:
 
 	// low level creation of spm
 	class Builder;
+    class VirtualBuilder;
 
 	// function for filling the matrix using point iterators
 	// pnts_start, pnts_end : point iterators start/end
@@ -322,7 +324,7 @@ public:
 
     SPM *extractWindow(uint64_t rs, uint64_t length);
     SPM *getWindow(uint64_t rs, uint64_t length);
-    void insertWindow(const SPM *window);
+    void putWindow(const SPM *window);
 };
 
 void TestMMF(SPM *spm, const char *mmf_file);
@@ -335,16 +337,16 @@ public:
 	dynarray_t *da_rowptr;
 
 	Builder(SPM *spm, uint64_t elems_nr=0, uint64_t rows_nr=0);
-	~Builder();
+	virtual ~Builder();
 
 	// Using these two functions requires caution: Memory is uninitialized
 	// use mk_row_elem functions
-	SpmRowElem *AllocElem();
-	SpmRowElem *AllocElems(uint64_t nr);
+    virtual SpmRowElem *AllocElem();
+	virtual SpmRowElem *AllocElems(uint64_t nr);
 
-	uint64_t getElemsCnt();
-	void newRow(uint64_t rdiff=1);
-	void Finalize();
+	virtual uint64_t getElemsCnt();
+	virtual void newRow(uint64_t rdiff=1);
+	virtual void Finalize();
 };
 
 class SPM::PntIter : public std::iterator<std::forward_iterator_tag, CooElem>
