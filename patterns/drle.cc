@@ -580,7 +580,7 @@ void DRLE_Manager::genAllStats()
         std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
         if (sort_windows) {
             uint64_t curr_row = 0;
-            while (curr_row <= this->spm->getNrRows()) {
+            while (curr_row < this->spm->getNrRows()) {
                 SPM *window = this->spm->getWindow(curr_row,
                                                    this->sort_window_size);
                 window->Transform(type);

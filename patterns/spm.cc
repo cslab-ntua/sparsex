@@ -573,7 +573,7 @@ SPM::PntIter::PntIter(SPM *_spm, uint64_t ridx) : spm(_spm), row_idx(ridx)
 	uint64_t rp_size = this->spm->rowptr_size__;
 
     assert(ridx < rp_size);
-	while (ridx < rp_size && rp[ridx] == rp[ridx+1])
+	while (ridx+1 < rp_size && rp[ridx] == rp[ridx+1])
 		ridx++;
 	this->row_idx = ridx;
 	this->elm_idx = rp[ridx];
@@ -596,18 +596,11 @@ void SPM::PntIter::operator++()
 	uint64_t *rp = this->spm->rowptr__;
 	uint64_t rp_size = this->spm->rowptr_size__;
 
-    if (this->elm_idx >= this->spm->elems_size__) {
-        std::cerr << "row_idx = " << row_idx << std::endl;
-        std::cerr << "rp_size = " << rp_size << std::endl;
-        std::cerr << "elems_size__ = " << spm->elems_size__ << std::endl;
-        std::cerr << "elm_idx = " << elm_idx << std::endl;
-        std::cerr << "elems_size__ = " << spm->elems_size__ << std::endl;
-        assert(this->elm_idx < this->spm->elems_size__);
-    }
+    assert(this->elm_idx < this->spm->elems_size__);
 	assert(this->row_idx < rp_size);
 
 	this->elm_idx++;
-	while (this->row_idx < rp_size && rp[this->row_idx +1] == this->elm_idx)
+	while (this->row_idx+1 < rp_size && rp[this->row_idx+1] == this->elm_idx)
 		this->row_idx++;
 }
 
