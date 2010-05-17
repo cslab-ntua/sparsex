@@ -1,8 +1,8 @@
 #!/bin/bash
 
-spmv_prog="./spmv"
-prog_out="dunnington.out"
-mt_conf="0,1,2 0,1,2,12,13,14 0,1,2,12,13,14,3,4,5,15,16,17 0,1,2,12,13,14,3,4,5,15,16,17,6,7,8,18,19,20"
+spmv_prog="./spmv_clone"
+prog_out="clone_wsort.out"
+mt_conf="0"
 
 matrices=$*
 
@@ -11,8 +11,12 @@ if [ -z "$matrices" ]; then
     echo "Usage: $0 [MATRIX]..."
 fi
 
+tmp_out=$(mktemp)
 for m in $matrices; do
     for c in $mt_conf; do
-        echo XFORM=$(seq -s, 1 22) MT_CONF=$c $spmv_prog $m &>> $prog_out
-    done
+		echo "MT_CONF=$c" >> $prog_out
+        WINDOW_SIZE=255 XFORM_CONF=$(seq -s, 1 22) MT_CONF=$c $spmv_prog $m &> $tmp_out
+		cat $tmp_out >> $prog_out
+    done 
 done
+/bin/rm $tmp_out
