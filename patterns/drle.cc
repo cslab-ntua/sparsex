@@ -464,6 +464,7 @@ void DRLE_Manager::Encode(SpmIterOrder type)
                 mk_row_elem(new_row[i], elems + i);
             }
         }
+
         new_row.clear();
         SpmBld->newRow();
     }

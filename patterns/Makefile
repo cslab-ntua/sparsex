@@ -4,11 +4,12 @@ all: spmv windows-sort
 
 ## Configuration
 dynarray_dir = ../../dynarray
+protodir = ./proto
 
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O2 -Wdisabled-optimization
 #CXXFLAGS       += -Winline
-LDFLAGS        = 
+LDFLAGS        =
 CXXFLAGS       += -ggdb -rdynamic
 DEFS            =
 INC             =
@@ -28,7 +29,7 @@ INC            += -I$(dynarray_dir)
 
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
-windows-sort.o: windows-sort.cpp spm.h mmf.h
+windows-sort.o: $(protodir)/windows-sort.cpp spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
 
 windows-sort: windows-sort.o spm.o mmf.o
