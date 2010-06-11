@@ -264,7 +264,6 @@ public:
 	~SPM(){
 		if (this->elems__)
 			free(this->elems__);
-
 		if (this->rowptr__)
 			free(this->rowptr__);
 	};

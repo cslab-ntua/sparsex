@@ -5,10 +5,9 @@
 #include <set>
 #include <bitset>
 #include <limits>
+#include <cassert>
 
 #include "spm.h"
-
-#include <cassert>
 
 namespace csx {
 
@@ -123,18 +122,18 @@ public:
 	long min_limit; // minimum length for RLEs
 	long max_limit; // maximum length for RLEs
 	double min_perc; // min nnz percentage for considering an RLE
-
+	
 	DRLE_Manager(SPM *_spm,
              long min_limit_=4, long max_limit_ = std::numeric_limits<long>::max(),
              double min_perc_=.1)
 	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_), min_perc(min_perc_) {
-        // These are delimiters, ignore them by default.
-        addIgnore(BLOCK_TYPE_START);
-        addIgnore(BLOCK_COL_START);
-        addIgnore(BLOCK_TYPE_END);
-        addIgnore(BLOCK_ROW_TYPE_NAME(1));
-        addIgnore(BLOCK_COL_TYPE_NAME(1));
-    }
+		// These are delimiters, ignore them by default.
+		addIgnore(BLOCK_TYPE_START);
+		addIgnore(BLOCK_COL_START);
+		addIgnore(BLOCK_TYPE_END);
+		addIgnore(BLOCK_ROW_TYPE_NAME(1));
+		addIgnore(BLOCK_COL_TYPE_NAME(1));
+	}
 
 	DeltaRLE::Stats generateStats();
 
@@ -148,9 +147,9 @@ public:
 	std::bitset<XFORM_MAX> xforms_ignore;
 
 	void addIgnore(SpmIterOrder type);
-    void ignoreAll();
-    void removeIgnore(SpmIterOrder type);
-    void removeAll();
+	void ignoreAll();
+	void removeIgnore(SpmIterOrder type);
+    	void removeAll();
 
 	SpmIterOrder chooseType();
 	uint64_t getTypeScore(SpmIterOrder type);
@@ -158,6 +157,8 @@ public:
 	void Encode(SpmIterOrder type=NONE);
 	void Decode(SpmIterOrder type=NONE);			//Prosthesa edw
 	void EncodeAll();
+	void MakeEncodeTree();					//edw
+	void EncodeSerial();					//edw
 
 private:
 	void doEncode(std::vector<uint64_t> &xs,
@@ -225,6 +226,29 @@ inline std::ostream &operator<<(std::ostream &os, const DeltaRLE::Stats &stats)
 #endif
 
 void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os);
+
+class Node {								//Prosthesa edw
+public:
+	uint32_t depth;
+	SpmIterOrder *type_path;
+	SpmIterOrder *type_ignore;
+
+	Node(uint32_t depth_)
+	: depth(depth_) {
+		uint32_t i;
+		this->type_path = new SpmIterOrder[XFORM_MAX];
+		this->type_ignore = new SpmIterOrder[XFORM_MAX];
+		for (i=0; i<((uint32_t) XFORM_MAX); i++) {
+			this->type_path[i] = NONE;
+			this->type_ignore[i] = NONE;
+		}
+	}
+	~Node() {}
+	void Insert(SpmIterOrder type);
+	void Ignore(SpmIterOrder type);
+	Node MakeChild(SpmIterOrder type);
+	void PrintNode();
+};
 
 } // end of csx namespace
 

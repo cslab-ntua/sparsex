@@ -1,4 +1,8 @@
 #include <algorithm>
+#include <vector>
+#include <iostream>
+#include <fstream>
+#include <ios>
 
 #include <boost/foreach.hpp>
 #include <boost/lambda/lambda.hpp>
@@ -77,10 +81,8 @@ void DRLE_Manager::updateStats(std::vector<uint64_t> &xs,
 		DRLE_Manager::updateStatsBlock(xs, stats, block_align);
 		return;
 	}
-
 	if (xs.size() == 0)
 		return;
-
 	rles = RLEncode(DeltaEncode(xs));
 	FOREACH(RLE<uint64_t> &rle, rles){
 		if (rle.freq >= this->min_limit){
@@ -144,7 +146,6 @@ DeltaRLE::Stats DRLE_Manager::generateStats()
 		}
 		this->updateStats(xs, stats);
 	}
-
 	return stats;
 }
 
@@ -156,11 +157,11 @@ void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
                             std::vector<double> &vs,
                             std::vector<SpmRowElem> &newrow)
 {
-	uint64_t col; // keep track of the current column
-	std::vector< RLE<uint64_t> > rles; // rle elements
-	std::set<uint64_t> *deltas_set; // delta values to encode for
-	std::vector<double>::iterator vi = vs.begin(); // value iterator
-	SpmRowElem elem; // temp element to perform insertions
+	uint64_t col; 						// keep track of the current column
+	std::vector< RLE<uint64_t> > rles; 			// rle elements
+	std::set<uint64_t> *deltas_set; 			// delta values to encode for
+	std::vector<double>::iterator vi = vs.begin(); 		// value iterator
+	SpmRowElem elem; 					// temp element to perform insertions
     
     	if (isBlockType(this->spm->type)) {
         	doEncodeBlock(xs, vs, newrow);
@@ -179,7 +180,6 @@ void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
 	FOREACH(RLE<uint64_t> rle, rles){
 		// create patterns
        		//std::cout << "freq:" << rle.freq << " val:" << rle.val << "\n";
-
 		if (deltas_set->find(rle.val) != deltas_set->end()){
 			while (rle.freq >= this->min_limit){
 				uint64_t freq;
@@ -364,6 +364,8 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
 			doEncode(xs, vs, newrow);
 		}
 		newrow.push_back(*e);
+		if (e->pattern)
+			delete e->pattern;
 	}
 
 	// Encode any remaining elements
@@ -409,7 +411,185 @@ void DRLE_Manager::Encode(SpmIterOrder type)
 
 	// Transform matrix to the original iteration order
 	Spm->Transform(oldtype);
+
 	this->addIgnore(type);
+}
+
+void DRLE_Manager::EncodeAll()
+{
+	SpmIterOrder type = NONE;
+	StatsMap::iterator iter;
+
+	for (;;){
+		this->genAllStats();
+		this->outStats(std::cerr);
+		type = this->chooseType();
+		if (type == NONE)
+			break;
+		std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
+		this->Encode(type);
+	}
+}
+
+Pattern::Generator *DeltaRLE::generator(CooElem start)
+{
+	DeltaRLE::Generator *g;
+	g = new DeltaRLE::Generator(start, this);
+	return g;
+}
+
+namespace csx {
+void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
+{
+	DeltaRLE::Stats::iterator iter;
+	for (iter=stats.begin(); iter != stats.end(); ++iter){
+		os << "    " << iter->first << "-> "
+		   << "np:" << iter->second.npatterns
+		   << " nnz: " <<  100*((double)iter->second.nnz/(double)spm.nnz) << "%"
+		   << " (" << iter->second.nnz << ")";
+	}
+}
+} // end csx namespace
+
+void DRLE_Manager::addIgnore(SpmIterOrder type)
+{
+	this->xforms_ignore.set(type);
+}
+
+void DRLE_Manager::ignoreAll()
+{
+	this->xforms_ignore.set();
+}
+
+void DRLE_Manager::removeIgnore(SpmIterOrder type)
+{
+	// the following types are always ignored
+	if (type <= NONE ||
+	    type == BLOCK_TYPE_START ||
+	    type == BLOCK_ROW_TYPE_NAME(1) ||
+	    type == BLOCK_COL_START ||
+	    type == BLOCK_COL_TYPE_NAME(1) ||
+	    type == BLOCK_TYPE_END ||
+	    type >= XFORM_MAX)
+		return;
+	this->xforms_ignore.reset(type);
+}
+
+void DRLE_Manager::removeAll()
+{
+    for (int t = NONE; t < XFORM_MAX; t++)
+        this->xforms_ignore.reset(t);
+}
+
+void DRLE_Manager::genAllStats()
+{
+	DeltaRLE::Stats::iterator iter, tmp;
+	DeltaRLE::Stats *sp;
+
+//     this->addIgnore(HORIZONTAL);
+//     this->addIgnore(VERTICAL);
+//     this->addIgnore(DIAGONAL);
+//     this->addIgnore(REV_DIAGONAL);
+
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(2));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(3));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(4));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(5));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(6));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(7));
+//     this->addIgnore(BLOCK_ROW_TYPE_NAME(8));
+
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(2));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(3));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(4));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(5));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(6));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(7));
+//     this->addIgnore(BLOCK_COL_TYPE_NAME(8));
+
+	this->stats.clear();
+	for (int t=HORIZONTAL; t != XFORM_MAX; t++){
+		
+		if (this->xforms_ignore[t])
+			continue;
+
+		SpmIterOrder type = SpmTypes[t];
+		this->spm->Transform(type);
+		this->stats[type] = this->generateStats();
+		this->spm->Transform(HORIZONTAL);
+
+		// ** Filter stats
+		// From http://www.sgi.com/tech/stl/Map.html:
+		// Map has the important property that inserting a new element into a
+		// map does not invalidate iterators that point to existing elements.
+		// Erasing an element from a map also does not invalidate any
+		// iterators, except, of course, for iterators that actually point to
+		// the element that is being erased.
+		sp = &this->stats[type];
+		for (iter = sp->begin(); iter != sp->end(); ) {
+			tmp = iter++;
+			double p = (double)tmp->second.nnz/(double)spm->nnz;
+			if (p < this->min_perc){
+				sp->erase(tmp);
+			} else {
+				this->DeltasToEncode[type].insert(tmp->first);
+			}
+		}
+	}
+}
+
+//
+// Gets a score for each type. This might be used for choosing an encoding.
+// 
+uint64_t DRLE_Manager::getTypeScore(SpmIterOrder type)
+{
+	DeltaRLE::Stats *sp;
+	DeltaRLE::Stats::iterator iter;
+	uint64_t ret;
+
+	ret = 0;
+	if (this->stats.find(type) == this->stats.end())
+		return ret;
+	sp = &this->stats[type];
+	uint64_t nr_nzeros_encoded = 0;
+	uint64_t nr_patterns = 0;
+	for (iter=sp->begin(); iter != sp->end(); ++iter){
+		nr_nzeros_encoded += iter->second.nnz;
+		nr_patterns += iter->second.npatterns;
+	}
+	//ret = this->spm->nnz - (nr_patterns + this->spm->nnz - nr_nzeros_encoded);
+	ret = nr_nzeros_encoded - nr_patterns;
+	return ret;
+}
+
+// choose a type to encode the matrix, based on the stats
+// (whichever maximizes getTypeScore())
+SpmIterOrder DRLE_Manager::chooseType()
+{
+	SpmIterOrder ret;
+	uint64_t max_out;
+	DRLE_Manager::StatsMap::iterator iter;
+
+	ret = NONE;
+	max_out = 0;
+	for (iter=this->stats.begin(); iter != this->stats.end(); ++iter){
+		uint64_t out = this->getTypeScore(iter->first);
+		if (out > max_out){
+			max_out = out;
+			ret = iter->first;
+		}
+	}
+	return ret;
+}
+
+void DRLE_Manager::outStats(std::ostream &os)
+{
+	DRLE_Manager::StatsMap::iterator iter;
+	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
+		os << SpmTypesNames[iter->first] << "\t";
+		DRLE_OutStats(iter->second, *(this->spm), os);
+		os << std::endl;
+	}
 }
 
 void DRLE_Manager::doDecode(const SpmRowElem *elem, std::vector<SpmRowElem> &newrow)
@@ -426,6 +606,8 @@ void DRLE_Manager::doDecode(const SpmRowElem *elem, std::vector<SpmRowElem> &new
 		newrow.push_back(new_elem);
 		cur_x = elem->pattern->getNextX(cur_x);
 	}
+	delete elem->pattern;
+	delete elem->vals;
 }
 
 void DRLE_Manager::DecodeRow(const SpmRowElem *rstart, const SpmRowElem *rend, std::vector<SpmRowElem> &newrow)
@@ -435,7 +617,9 @@ void DRLE_Manager::DecodeRow(const SpmRowElem *rstart, const SpmRowElem *rend, s
 			doDecode(e, newrow);
 		}
 		else {
-			newrow.push_back(*e);			
+			newrow.push_back(*e);
+			if (e->pattern)
+				delete e->pattern;
 		}
 	}
 }
@@ -477,184 +661,146 @@ void DRLE_Manager::Decode(SpmIterOrder type)
 
 	// Transform matrix to the original iteration order
 	Spm->Transform(oldtype);
+	this->removeIgnore(type);
 }
 
-void DRLE_Manager::EncodeAll()
-{
+void Node::Insert(SpmIterOrder type) {
+	uint32_t i=0;
+	
+	while (this->type_path[i] != NONE) {
+		assert(this->type_path[i] != type);
+		i++;	
+	}
+	this->type_path[i] = type;
+}
+
+void Node::Ignore(SpmIterOrder type) {
+	uint32_t i=0;
+	
+	while (this->type_ignore[i] != NONE) {
+		assert(this->type_ignore[i] != type);
+		i++;	
+	}
+	this->type_ignore[i] = type;
+}
+
+void Node::PrintNode() {
+	uint32_t i=0;
 	SpmIterOrder type;
 	
-	for (;;){
+	//printf("Depth: %d\n",this->depth);
+	while ((type = this->type_path[i]) != NONE) {
+		if (i != 0)
+			std::cout << ",";
+		std::cout << type;
+		i++;
+	}
+	std::cout << std::endl;
+}
+
+Node Node::MakeChild(SpmIterOrder type) {
+	Node new_node = Node(this->depth+1);
+
+	for (uint32_t i=0; i<((uint32_t) XFORM_MAX); i++) {
+		new_node.type_path[i] = this->type_path[i];
+		new_node.type_ignore[i] = this->type_ignore[i];
+	}
+	new_node.Insert(type);
+	return new_node;
+}
+
+void DRLE_Manager::MakeEncodeTree()
+{
+	uint32_t i,j;
+	uint32_t count=0;
+	StatsMap::iterator iter;
+	std::vector<Node> nodes;
+	std::vector<Node>::iterator it,it2;
+	
+	nodes.push_back(Node(0));
+	while (nodes.size() != 0) {
+		i = 0;
+		while (nodes[0].type_ignore[i] != NONE) {
+			this->addIgnore(nodes[0].type_ignore[i]);
+			i++;
+		}
 		this->genAllStats();
-		this->outStats(std::cerr);
-		type = this->chooseType();
-		if (type == NONE)
-			break;
-		std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
-		this->Encode(type);
-	}
-}
-
-Pattern::Generator *DeltaRLE::generator(CooElem start)
-{
-	DeltaRLE::Generator *g;
-	g = new DeltaRLE::Generator(start, this);
-	return g;
-}
-
-namespace csx {
-void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
-{
-	DeltaRLE::Stats::iterator iter;
-	for (iter=stats.begin(); iter != stats.end(); ++iter){
-		os << "    " << iter->first << "-> "
-		   << "np:" << iter->second.npatterns
-		   << " nnz: " <<  100*((double)iter->second.nnz/(double)spm.nnz) << "%"
-		   << " (" << iter->second.nnz << ")";
-	}
-}
-} // end csx namespace
-
-void DRLE_Manager::addIgnore(SpmIterOrder type)
-{
-	this->xforms_ignore.set(type);
-}
-
-void DRLE_Manager::ignoreAll()
-{
-    this->xforms_ignore.set();
-}
-
-void DRLE_Manager::removeIgnore(SpmIterOrder type)
-{
-    // the following types are always ignored
-    if (type <= NONE ||
-        type == BLOCK_TYPE_START ||
-        type == BLOCK_ROW_TYPE_NAME(1) ||
-        type == BLOCK_COL_START ||
-        type == BLOCK_COL_TYPE_NAME(1) ||
-        type == BLOCK_TYPE_END ||
-        type >= XFORM_MAX)
-        return;
-
-    this->xforms_ignore.reset(type);
-}
-
-void DRLE_Manager::removeAll()
-{
-    for (int t = NONE; t < XFORM_MAX; t++)
-        this->xforms_ignore.reset(t);
-}
-
-void DRLE_Manager::genAllStats()
-{
-	DeltaRLE::Stats::iterator iter, tmp;
-	DeltaRLE::Stats *sp;
-
-//     this->addIgnore(HORIZONTAL);
-//     this->addIgnore(VERTICAL);
-//     this->addIgnore(DIAGONAL);
-//     this->addIgnore(REV_DIAGONAL);
-
-//     this->addIgnore(BLOCK_ROW_TYPE_NAME(2));
-//     this->addIgnore(BLOCK_ROW_TYPE_NAME(3));
-//     this->addIgnore(BLOCK_ROW_TYPE_NAME(4));
-//     this->addIgnore(BLOCK_ROW_TYPE_NAME(5));
-//     this->addIgnore(BLOCK_ROW_TYPE_NAME(6));
-//     this->addIgnore(BLOCK_ROW_TYPE_NAME(7));
-//     this->addIgnore(BLOCK_ROW_TYPE_NAME(8));
-
-//     this->addIgnore(BLOCK_COL_TYPE_NAME(2));
-//     this->addIgnore(BLOCK_COL_TYPE_NAME(3));
-//     this->addIgnore(BLOCK_COL_TYPE_NAME(4));
-//     this->addIgnore(BLOCK_COL_TYPE_NAME(5));
-//     this->addIgnore(BLOCK_COL_TYPE_NAME(6));
-//     this->addIgnore(BLOCK_COL_TYPE_NAME(7));
-//     this->addIgnore(BLOCK_COL_TYPE_NAME(8));
-
-	this->stats.clear();
-	for (int t=HORIZONTAL; t != XFORM_MAX; t++){
-		if (this->xforms_ignore[t])
-			continue;
-
-		SpmIterOrder type = SpmTypes[t];
-		this->spm->Transform(type);
-		this->stats[type] = this->generateStats();
-		this->spm->Transform(HORIZONTAL);
-
-		// ** Filter stats
-		// From http://www.sgi.com/tech/stl/Map.html:
-		// Map has the important property that inserting a new element into a
-		// map does not invalidate iterators that point to existing elements.
-		// Erasing an element from a map also does not invalidate any
-		// iterators, except, of course, for iterators that actually point to
-		// the element that is being erased.
-		sp = &this->stats[type];
-		for (iter = sp->begin(); iter != sp->end(); ){
-			tmp = iter++;
-			double p = (double)tmp->second.nnz/(double)spm->nnz;
-			if (p < this->min_perc){
-				sp->erase(tmp);
-			} else {
-				this->DeltasToEncode[type].insert(tmp->first);
+		//this->outStats(std::cout);
+		i = 0;
+		while (nodes[0].type_ignore[i] != NONE) {
+			this->removeIgnore(nodes[0].type_ignore[i]);
+			i++;
+		}
+		i = 0;
+		for (iter=this->stats.begin(); iter != this->stats.end(); ++iter) {
+			if (this->getTypeScore(iter->first) == 0) {
+				nodes[0].Ignore(iter->first);
 			}
 		}
-	}
-}
-
-//
-// Gets a score for each type. This might be used for choosing an encoding.
-// 
-uint64_t DRLE_Manager::getTypeScore(SpmIterOrder type)
-{
-	DeltaRLE::Stats *sp;
-	DeltaRLE::Stats::iterator iter;
-	uint64_t ret;
-
-	ret = 0;
-	if (this->stats.find(type) == this->stats.end())
-		return ret;
-
-	sp = &this->stats[type];
-    uint64_t nr_nzeros_encoded = 0;
-    uint64_t nr_patterns = 0;
-	for (iter=sp->begin(); iter != sp->end(); ++iter){
-		nr_nzeros_encoded += iter->second.nnz;
-        nr_patterns += iter->second.npatterns;
-	}
-
-//  ret = this->spm->nnz - (nr_patterns + this->spm->nnz - nr_nzeros_encoded);
-    ret = nr_nzeros_encoded - nr_patterns;
-    
-	return ret;
-}
-
-// choose a type to encode the matrix, based on the stats
-// (whichever maximizes getTypeScore())
-SpmIterOrder DRLE_Manager::chooseType()
-{
-	SpmIterOrder ret;
-	uint64_t max_out;
-	DRLE_Manager::StatsMap::iterator iter;
-
-	ret = NONE;
-	max_out = 0;
-	for (iter=this->stats.begin(); iter != this->stats.end(); ++iter){
-		uint64_t out = this->getTypeScore(iter->first);
-		if (out > max_out){
-			max_out = out;
-			ret = iter->first;
+		it = nodes.begin();
+		for (iter=this->stats.begin(); iter != this->stats.end(); ++iter) {
+			if (this->getTypeScore(iter->first) > 0) {
+				it++;
+				it = nodes.insert(it,nodes[0].MakeChild(iter->first));
+			}
 		}
+		if (it != nodes.begin()) {
+			//std::cout << "Encode to " << SpmTypesNames[nodes[1].type_path[nodes[1].depth-1]] << std::endl;
+			this->Encode(nodes[1].type_path[nodes[1].depth-1]);
+		}
+		else {
+			nodes[0].PrintNode();
+			count++;
+			if (nodes.size() != 1) {
+				i = 0;
+				while (nodes[0].type_path[i] == nodes[1].type_path[i])
+					i++;
+				for (j=1; j<=nodes[0].depth-i; j++) {
+					//std::cout << "Decode from " << SpmTypesNames[nodes[0].type_path[nodes[0].depth-j]] << std::endl;
+					this->Decode(nodes[0].type_path[nodes[0].depth-j]);
+				}
+				while (i < nodes[1].depth) {
+					//std::cout << "Encode to " << SpmTypesNames[nodes[1].type_path[i]] << std::endl;
+					this->Encode(nodes[1].type_path[i]);
+					i++;
+				}
+			}
+			else {
+				for (j=1; j<=nodes[0].depth; j++) {
+					//std::cout << "Decode from " << SpmTypesNames[nodes[0].type_path[nodes[0].depth-j]] << std::endl;
+					this->Decode(nodes[0].type_path[nodes[0].depth-j]);
+				}
+			}
+		}
+		delete nodes[0].type_path;
+		delete nodes[0].type_ignore;
+		nodes.erase(nodes.begin());
 	}
-
-	return ret;
+	std::cout << "Tree has " << count << " possible paths" << std::endl;
 }
 
-void DRLE_Manager::outStats(std::ostream &os)
-{
-	DRLE_Manager::StatsMap::iterator iter;
-	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
-		os << SpmTypesNames[iter->first] << "\t";
-		DRLE_OutStats(iter->second, *(this->spm), os);
-		os << std::endl;
+void DRLE_Manager::EncodeSerial() {
+	
+	const char *xform_orig = getenv("XFORM_CONF");
+	if (xform_orig) {
+		int len = strlen(xform_orig) + 1;
+		char xform_string[len];
+		strncpy(xform_string, xform_orig, len);
+
+		int t = atoi(strtok(xform_string, ","));
+		for (uint32_t i=0; i<XFORM_MAX; i++)
+			this->addIgnore((SpmIterOrder) i);
+		this->removeIgnore(static_cast<SpmIterOrder>(t));
+		this->genAllStats();
+		this->Encode(static_cast<SpmIterOrder>(t));
+		char *token;
+		while ( (token = strtok(NULL, ",")) != NULL) {
+			t = atoi(token);
+			for (uint32_t i=0; i<XFORM_MAX; i++)
+				this->addIgnore((SpmIterOrder) i);
+			this->removeIgnore(static_cast<SpmIterOrder>(t));
+			this->genAllStats();			
+			this->Encode(static_cast<SpmIterOrder>(t));
+		}
 	}
 }

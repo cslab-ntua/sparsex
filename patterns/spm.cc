@@ -36,7 +36,6 @@ SPM::Builder::Builder(SPM *_spm, uint64_t elems_nr, uint64_t rows_nr): spm(_spm)
 
 	this->da_elems = dynarray_create(sizeof(SpmRowElem), elems_nr ? elems_nr : 512);
 	this->da_rowptr = dynarray_create(sizeof(uint64_t), rows_nr ? rows_nr : 512);
-
 	rowptr = (uint64_t *)dynarray_alloc(this->da_rowptr);
 	*rowptr = 0;
 }
@@ -136,8 +135,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
 	SpmRowElem *elem;
 	uint64_t row_prev, row;
 	SPM::Builder *SpmBld;
-
-	SpmBld = new SPM::Builder(this, elems_nr, rows_nr);
+	SpmBld = new SPM::Builder(this,elems_nr,rows_nr);
 
 	row_prev = first_row;
 	for (; pi != pnts_end; ++pi){
@@ -153,7 +151,6 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
 		elem = SpmBld->AllocElem();
 		mk_row_elem(*pi, elem);
 	}
-
 	SpmBld->Finalize();
 	delete SpmBld;
 
@@ -187,7 +184,6 @@ SPM *SPM::loadMMF_mt(MMF &mmf, const long nr)
 	MMF::iterator iter_end = mmf.end();
 
 	ret = new SPM[nr];
-
 	row_start = limit = cnt = 0;
 	for (long i=0; i<nr; i++){
 		spm = ret + i;
@@ -482,6 +478,8 @@ SpmCooElem SPM::PntIter::operator*()
 	ret.val = e->val;
 	p = e-> pattern;
 	ret.pattern = (p == NULL) ? NULL : p->clone();
+	if (p != NULL)
+		delete p;
 	return ret;
 }
 
@@ -510,80 +508,79 @@ inline TransformFn SPM::getRevXformFn(SpmIterOrder type)
 {
 	boost::function<void (CooElem &p)> ret;
 	switch(type) {
-    case HORIZONTAL:
-		break;
+		case HORIZONTAL:
+			break;
 
-    case VERTICAL:
-		ret = bll::bind(pnt_rmap_V, bll::_1, bll::_1);
-		break;
+		case VERTICAL:
+			ret = bll::bind(pnt_rmap_V, bll::_1, bll::_1);
+			break;
 
-    case DIAGONAL:
-		ret = bll::bind(pnt_rmap_D, bll::_1, bll::_1, this->nrows);
-		break;
+		case DIAGONAL:
+			ret = bll::bind(pnt_rmap_D, bll::_1, bll::_1, this->nrows);
+			break;
 
-    case REV_DIAGONAL:
-		ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, this->ncols);
-		break;
+		case REV_DIAGONAL:
+			ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, this->ncols);
+			break;
 
-    case BLOCK_ROW_TYPE_NAME(2):
-        ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(3):
-        ret = bll::bind(BLOCK_ROW_RMAP_NAME(3), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(4):
-        ret = bll::bind(BLOCK_ROW_RMAP_NAME(4), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(5):
-        ret = bll::bind(BLOCK_ROW_RMAP_NAME(5), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(6):
-        ret = bll::bind(BLOCK_ROW_RMAP_NAME(6), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(7):
-        ret = bll::bind(BLOCK_ROW_RMAP_NAME(7), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(8):
-        ret = bll::bind(BLOCK_ROW_RMAP_NAME(8), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(2):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(3):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(3), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(4):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(4), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(5):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(5), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(6):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(6), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(7):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(7), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(8):
-        ret = bll::bind(BLOCK_COL_RMAP_NAME(8), bll::_1, bll::_1);
-        break;
-        
-    default:
-		std::cerr << "Unknown type: " << type << std::endl;
-		assert(false);
+		case BLOCK_ROW_TYPE_NAME(2):
+			ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
+        		break;
+
+		case BLOCK_ROW_TYPE_NAME(3):
+			ret = bll::bind(BLOCK_ROW_RMAP_NAME(3), bll::_1, bll::_1);
+			break;
+		
+		case BLOCK_ROW_TYPE_NAME(4):
+			ret = bll::bind(BLOCK_ROW_RMAP_NAME(4), bll::_1, bll::_1);
+			break;
+	
+		case BLOCK_ROW_TYPE_NAME(5):
+			ret = bll::bind(BLOCK_ROW_RMAP_NAME(5), bll::_1, bll::_1);
+			break;
+
+		case BLOCK_ROW_TYPE_NAME(6):
+			ret = bll::bind(BLOCK_ROW_RMAP_NAME(6), bll::_1, bll::_1);
+			break;
+
+		case BLOCK_ROW_TYPE_NAME(7):
+			ret = bll::bind(BLOCK_ROW_RMAP_NAME(7), bll::_1, bll::_1);
+			break;
+
+		case BLOCK_ROW_TYPE_NAME(8):
+			ret = bll::bind(BLOCK_ROW_RMAP_NAME(8), bll::_1, bll::_1);
+			break;
+		
+		case BLOCK_COL_TYPE_NAME(2):
+			ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+			break;
+	
+		case BLOCK_COL_TYPE_NAME(3):
+			ret = bll::bind(BLOCK_COL_RMAP_NAME(3), bll::_1, bll::_1);
+			break;
+
+		case BLOCK_COL_TYPE_NAME(4):
+			ret = bll::bind(BLOCK_COL_RMAP_NAME(4), bll::_1, bll::_1);
+			break;
+
+		case BLOCK_COL_TYPE_NAME(5):
+			ret = bll::bind(BLOCK_COL_RMAP_NAME(5), bll::_1, bll::_1);
+			break;
+
+		case BLOCK_COL_TYPE_NAME(6):
+			ret = bll::bind(BLOCK_COL_RMAP_NAME(6), bll::_1, bll::_1);
+			break;
+
+		case BLOCK_COL_TYPE_NAME(7):
+			ret = bll::bind(BLOCK_COL_RMAP_NAME(7), bll::_1, bll::_1);
+			break;
+		case BLOCK_COL_TYPE_NAME(8):
+			ret = bll::bind(BLOCK_COL_RMAP_NAME(8), bll::_1, bll::_1);
+			break;
+
+		default:
+			std::cerr << "Unknown type: " << type << std::endl;
+			assert(false);
 	}
 	return ret;
 }
@@ -708,6 +705,9 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 	elems.reserve(this->elems_size__);
 	for(p=p0; p != pe; ++p){
 		SpmCooElem p_new = SpmCooElem(*p);
+		/*SpmRowElem *e = p.spm->elems__ + p.elm_idx;
+		if (e->pattern != NULL)
+			delete e->pattern;*/
 		xform_fn(p_new);
 		elems.push_back(p_new);
 	}

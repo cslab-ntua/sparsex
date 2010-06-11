@@ -27,32 +27,26 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 	CsxJit **Jits;
 
 	mt_get_options(&threads_nr, &threads_cpus);
-//	std::cout << "Using " << threads_nr << " threads\n";
-
+	//std::cout << "Using " << threads_nr << " threads\n";
 	spm_mt = (spm_mt_t *)malloc(sizeof(spm_mt_t));
 	if (!spm_mt){
 		perror("malloc");
 		exit(1);
 	}
-
 	spm_mt->nr_threads = threads_nr;
 	spm_mt->spm_threads = (spm_mt_thread_t *)malloc(sizeof(spm_mt_thread_t)*threads_nr);
 	if (!spm_mt->spm_threads){
 		perror("malloc");
 		exit(1);
 	}
-
 	Spms = SPM::loadMMF_mt(mmf_fname, threads_nr);
 	Jits = new CsxJit *[threads_nr];
-
 	for (unsigned int i=0; i < threads_nr; i++){
 		spm_mt_thread_t *spm_mt_thread;
 
 		std::cout << "==> Thread: #" << i << "\n";
-
 		Spm = Spms + i;
 		spm_mt_thread = spm_mt->spm_threads + i;
-
 		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1);
 		DrleMg->ignoreAll();
 
@@ -76,10 +70,13 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 			}
 			std::cout << std::endl;
 		}
+		//DrleMg->EncodefromFile(mmf_fname);
+		//DrleMg->EncodeSerial();
+		//DrleMg->MakeEncodeTree();
 		DrleMg->EncodeAll();
-
-//        Spm->PrintElems(std::cout);
-//        Spm->PrintStats(std::cout);
+		
+		//Spm->PrintElems(std::cout);
+		//Spm->PrintStats(std::cout);
 
  		CsxMg = new CsxManager(Spm);
  		spm_mt_thread->spm = CsxMg->mkCsx();
@@ -165,16 +162,14 @@ int main(int argc, char **argv)
 		std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
 		exit(1);
 	}
-
-    for (int i = 1; i < argc; i++) {
-        std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
-//        std::cerr << basename(argv[i]) << ": " << std::endl << std::flush;
-        spm_mt = getSpmMt(argv[i]);
-        CheckLoop(spm_mt, argv[i]);
-        std::cerr.flush();
-        BenchLoop(spm_mt, argv[i]);
-        putSpmMt(spm_mt);
-    }
-
+	for (int i = 1; i < argc; i++) {
+		std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
+		//std::cerr << basename(argv[i]) << ": " << std::endl << std::flush;
+		spm_mt = getSpmMt(argv[i]);
+		CheckLoop(spm_mt, argv[i]);
+		std::cerr.flush();
+		BenchLoop(spm_mt, argv[i]);
+		putSpmMt(spm_mt);
+	}
 	return 0;
 }

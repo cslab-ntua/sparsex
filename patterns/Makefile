@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv draw
+all: spmv windows-sort
 
 ## Configuration
 dynarray_dir = ../../dynarray
@@ -8,6 +8,7 @@ dynarray_dir = ../../dynarray
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O2 -Wdisabled-optimization
 #CXXFLAGS       += -Winline
+LDFLAGS        = 
 CXXFLAGS       += -ggdb -rdynamic
 DEFS            =
 INC             =
@@ -27,6 +28,12 @@ INC            += -I$(dynarray_dir)
 
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
+windows-sort.o: windows-sort.cpp spm.h mmf.h
+	$(CXX_COMPILE) $< -c -o $@
+
+windows-sort: windows-sort.o spm.o mmf.o
+	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(dynarray_dep) spm.o mmf.o windows-sort.o -lrt -o $@
+
 mmf.o: mmf.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
 
@@ -36,8 +43,8 @@ spm.o: spm.cc spm.h mmf.h
 #draw.o: draw.cc spm.h draw.h
 #	$(CXX_COMPILE) $(CAIROMM_FLAGS) $< -c -o $@
 
-draw: draw.cc spm.h draw.h spm.o mmf.o
-	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_FLAGS) $(CAIROMM_LIBS) $(dynarray_dep) spm.o mmf.o $<  -o $@
+# draw: draw.cc spm.h draw.h spm.o mmf.o
+# 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_FLAGS) $(CAIROMM_LIBS) $(dynarray_dep) spm.o mmf.o $<  -o $@
 
 csx.o: csx.cc csx.h spm.h delta.h
 	$(CXX_COMPILE) -I$(dynarray_dir) $< -c -o $@
@@ -67,7 +74,7 @@ spmv.o: spmv.cc
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
 spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o ../libspmv.o
-	$(GXX) -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) -lpthread -o $@
+	$(GXX) $(LDFLAGS)  -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 clean:
 	rm -f *.o drle_shell drle_test jit
