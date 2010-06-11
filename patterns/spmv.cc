@@ -13,6 +13,7 @@ extern "C" {
 	#include "../spm_crs.h"
 	#include "../spm_mt.h"
 	#include "../spmv_loops_mt.h"
+    #include "../../prfcnt/tsc.h"
 }
 
 using namespace csx;
@@ -41,13 +42,20 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 	}
 	Spms = SPM::loadMMF_mt(mmf_fname, threads_nr);
 	Jits = new CsxJit *[threads_nr];
+    const char *wsize_str = getenv("WINDOW_SIZE");
+    uint64_t    wsize;
+    if (!wsize_str)
+        wsize = 0;
+    else
+        wsize = atol(wsize_str);
+
 	for (unsigned int i=0; i < threads_nr; i++){
 		spm_mt_thread_t *spm_mt_thread;
 
 		std::cout << "==> Thread: #" << i << "\n";
 		Spm = Spms + i;
 		spm_mt_thread = spm_mt->spm_threads + i;
-		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1);
+		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize);
 		DrleMg->ignoreAll();
 
 		// find transformations to apply
@@ -70,13 +78,18 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 			}
 			std::cout << std::endl;
 		}
-		//DrleMg->EncodefromFile(mmf_fname);
+
 		//DrleMg->EncodeSerial();
 		//DrleMg->MakeEncodeTree();
+        tsc_t timer;
+        tsc_init(&timer);
+        tsc_start(&timer);
 		DrleMg->EncodeAll();
-		
-		//Spm->PrintElems(std::cout);
-		//Spm->PrintStats(std::cout);
+        tsc_pause(&timer);
+        tsc_report(&timer);
+
+//        Spm->PrintElems(std::cout);
+//        Spm->PrintStats(std::cout);
 
  		CsxMg = new CsxManager(Spm);
  		spm_mt_thread->spm = CsxMg->mkCsx();
@@ -162,14 +175,15 @@ int main(int argc, char **argv)
 		std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
 		exit(1);
 	}
-	for (int i = 1; i < argc; i++) {
-		std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
-		//std::cerr << basename(argv[i]) << ": " << std::endl << std::flush;
-		spm_mt = getSpmMt(argv[i]);
-		CheckLoop(spm_mt, argv[i]);
-		std::cerr.flush();
-		BenchLoop(spm_mt, argv[i]);
-		putSpmMt(spm_mt);
-	}
+
+    for (int i = 1; i < argc; i++) {
+        std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
+        spm_mt = getSpmMt(argv[i]);
+        CheckLoop(spm_mt, argv[i]);
+        std::cerr.flush();
+        BenchLoop(spm_mt, argv[i]);
+        putSpmMt(spm_mt);
+    }
+
 	return 0;
 }

@@ -122,20 +122,14 @@ public:
 	long min_limit; // minimum length for RLEs
 	long max_limit; // maximum length for RLEs
 	double min_perc; // min nnz percentage for considering an RLE
-	
-	DRLE_Manager(SPM *_spm,
-             long min_limit_=4, long max_limit_ = std::numeric_limits<long>::max(),
-             double min_perc_=.1)
-	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_), min_perc(min_perc_) {
-		// These are delimiters, ignore them by default.
-		addIgnore(BLOCK_TYPE_START);
-		addIgnore(BLOCK_COL_START);
-		addIgnore(BLOCK_TYPE_END);
-		addIgnore(BLOCK_ROW_TYPE_NAME(1));
-		addIgnore(BLOCK_COL_TYPE_NAME(1));
-	}
 
-	DeltaRLE::Stats generateStats();
+DRLE_Manager(SPM *_spm,
+             long min_limit_=4,
+             long max_limit_ = std::numeric_limits<long>::max(),
+             double min_perc_=.1, uint64_t sort_window_size_ = 0);
+
+    DeltaRLE::Stats generateStats(SPM *spm, uint64_t rs, uint64_t re);
+    DeltaRLE::Stats generateStats(uint64_t rs, uint64_t re);
 
 	typedef std::map <SpmIterOrder, DeltaRLE::Stats> StatsMap;
 	StatsMap stats;
@@ -176,15 +170,24 @@ private:
 	               const SpmRowElem *rend,
 	               std::vector<SpmRowElem> &newrow);
 
+
 	void DecodeRow(const SpmRowElem *rstart,
 		       const SpmRowElem *rend, 
 		       std::vector<SpmRowElem> &newrow);	//kai edw
+
+
+	void updateStats(SPM *spm, std::vector<uint64_t> &xs,
+			 DeltaRLE::Stats &stats);
 
 	void updateStats(std::vector<uint64_t> &xs,
 	                 DeltaRLE::Stats &stats);
     	
 	void updateStatsBlock(std::vector<uint64_t> &xs,
                           DeltaRLE::Stats &stats, uint64_t align);
+    void updateStats(SpmIterOrder type, DeltaRLE::Stats stats);
+
+    uint64_t sort_window_size;
+    bool sort_windows;
 };
 
 class BlockRLE : public DeltaRLE {
@@ -192,10 +195,11 @@ class BlockRLE : public DeltaRLE {
 
 public:
 	BlockRLE(uint32_t size_, uint32_t other_dim_, SpmIterOrder type_)
-        : DeltaRLE(size_, 1, (assert(isBlockType(type_)), type_)) {
+        : DeltaRLE(size_, 1, (assert(isBlockType(type_)), type_))
+        {
 
-        this->other_dim = other_dim_;
-    }
+            this->other_dim = other_dim_;
+        }
 
     virtual uint32_t getOtherDim() const
     {
