@@ -55,7 +55,8 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		std::cout << "==> Thread: #" << i << "\n";
 		Spm = Spms + i;
 		spm_mt_thread = spm_mt->spm_threads + i;
-		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize);
+		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1,
+                                  wsize, DRLE_Manager::SPLIT_BY_NNZ);
 		DrleMg->ignoreAll();
 
 		// find transformations to apply

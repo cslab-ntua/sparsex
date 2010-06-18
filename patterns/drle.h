@@ -123,10 +123,16 @@ public:
 	long max_limit; // maximum length for RLEs
 	double min_perc; // min nnz percentage for considering an RLE
 
+    typedef enum {
+        SPLIT_BY_ROWS = 0,
+        SPLIT_BY_NNZ,
+    } split_alg_t;
+
 DRLE_Manager(SPM *_spm,
              long min_limit_=4,
              long max_limit_ = std::numeric_limits<long>::max(),
-             double min_perc_=.1, uint64_t sort_window_size_ = 0);
+             double min_perc_=.1, uint64_t sort_window_size_ = 0,
+             split_alg_t split_type_ = SPLIT_BY_ROWS);
 
     DeltaRLE::Stats generateStats(SPM *spm, uint64_t rs, uint64_t re);
     DeltaRLE::Stats generateStats(uint64_t rs, uint64_t re);
@@ -143,7 +149,7 @@ DRLE_Manager(SPM *_spm,
 	void addIgnore(SpmIterOrder type);
 	void ignoreAll();
 	void removeIgnore(SpmIterOrder type);
-    	void removeAll();
+    void removeAll();
 
 	SpmIterOrder chooseType();
 	uint64_t getTypeScore(SpmIterOrder type);
@@ -186,8 +192,18 @@ private:
                           DeltaRLE::Stats &stats, uint64_t align);
     void updateStats(SpmIterOrder type, DeltaRLE::Stats stats);
 
-    uint64_t sort_window_size;
+    void compute_sort_splits();
+    void check_and_set_sorting();
+    void do_compute_sort_splits_by_rows();
+    void do_compute_sort_splits_by_nnz();
+    void do_check_sort_by_rows();
+    void do_check_sort_by_nnz();
+
     bool sort_windows;
+    uint64_t sort_window_size;
+    split_alg_t split_type;
+    std::vector<uint64_t> sort_splits;
+    typedef std::vector<uint64_t>::iterator sort_split_iterator;
 };
 
 class BlockRLE : public DeltaRLE {

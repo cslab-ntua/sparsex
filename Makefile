@@ -24,7 +24,7 @@ MHZ_SH      ?= $(cpu_dir)/cpu_mhz.sh
 CL_BYTES    ?= $(shell $(cpu_dir)/cl_bytes.sh)
 CACHE_BYTES ?= $(shell $(cpu_dir)/cache_bytes.sh)
 CPU         ?= $(shell $(cpu_dir)/cpu_info.sh)
-GCC         ?= gcc-4.3
+GCC         ?= llvm-gcc
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
 #CFLAGS      += -funroll-all-loops #-march=nocona

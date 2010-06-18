@@ -2,7 +2,7 @@
 
 spmv_prog="./spmv_clone"
 prog_out="clone_wsort.out"
-mt_conf="0"
+mt_conf="0,1 0,4 0,1,2,3 0,1,4,5"
 
 matrices=$*
 

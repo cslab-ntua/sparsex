@@ -183,9 +183,9 @@ SPM *SPM::getWindow(uint64_t rs, uint64_t length)
     ret->elems__ = &this->elems__[es];
     ret->elems_size__ = ee - es;
 
-    ret->nrows = this->nrows;
+    ret->nrows = ret->rowptr_size__ - 1;
     ret->ncols = this->ncols;
-    ret->nnz = this->nnz;
+    ret->nnz = ret->elems_size__;
     ret->row_start = this->row_start + rs;
     ret->type = this->type;
     ret->elems_mapped = true;
@@ -225,9 +225,9 @@ SPM *SPM::extractWindow(uint64_t rs, uint64_t length)
     ret->SetElems(elem_begin, elem_end, rs+1);
     elems.clear();
 
-    ret->nrows = this->nrows;
+    ret->nrows = ret->rowptr_size__ - 1;
     ret->ncols = this->ncols;
-    ret->nnz = this->nnz;
+    ret->nnz = ret->elems_size__;
     ret->row_start = this->row_start + rs;
     ret->type = this->type;
     ret->elems_mapped = true;
