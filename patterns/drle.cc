@@ -469,8 +469,8 @@ void DRLE_Manager::Encode(SpmIterOrder type)
 	delete SpmBld;
 
 	// Transform matrix to the original iteration order
-	Spm->Transform(oldtype);
-
+	//Spm->Transform(oldtype);						//****** Na to xanavalw
+	Spm->Transform(HORIZONTAL);						//****** Na to vgalw
 	this->addIgnore(type);
 }
 
@@ -575,7 +575,7 @@ void DRLE_Manager::genAllStats()
 
 		SpmIterOrder type = SpmTypes[t];
 
-        std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
+        //std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
         if (sort_windows) {
             uint64_t curr_row = 0;
             while (curr_row < this->spm->getNrRows()) {
@@ -593,7 +593,7 @@ void DRLE_Manager::genAllStats()
         } else {
             this->spm->Transform(type);
             this->stats[type] = this->generateStats(0, this->spm->getNrRows());
-            this->spm->Transform(HORIZONTAL);
+            //this->spm->Transform(HORIZONTAL);							//****** Na to xanavalw
         }
 
 		// ** Filter stats
@@ -604,7 +604,7 @@ void DRLE_Manager::genAllStats()
 		// iterators, except, of course, for iterators that actually point to
 		// the element that is being erased.
 		sp = &this->stats[type];
-		for (iter = sp->begin(); iter != sp->end(); ) {
+		for (iter = sp->begin(); iter != sp->end(); ) {//****** Na to xanavalw
 			tmp = iter++;
 			double p = (double)tmp->second.nnz/(double)spm->nnz;
 			if (p < this->min_perc){

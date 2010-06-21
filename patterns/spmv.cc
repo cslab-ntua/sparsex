@@ -79,14 +79,14 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 			std::cout << std::endl;
 		}
 
-		//DrleMg->EncodeSerial();
+		/*tsc_t timer;
+        	tsc_init(&timer);
+        	tsc_start(&timer);*/
+		DrleMg->EncodeSerial();		
 		//DrleMg->MakeEncodeTree();
-        tsc_t timer;
-        tsc_init(&timer);
-        tsc_start(&timer);
-		DrleMg->EncodeAll();
-        tsc_pause(&timer);
-        tsc_report(&timer);
+		//DrleMg->EncodeAll();
+        	/*tsc_pause(&timer);
+        	tsc_report(&timer);*/
 
 //        Spm->PrintElems(std::cout);
 //        Spm->PrintStats(std::cout);
@@ -179,7 +179,7 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
         spm_mt = getSpmMt(argv[i]);
-        CheckLoop(spm_mt, argv[i]);
+     	CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
         putSpmMt(spm_mt);

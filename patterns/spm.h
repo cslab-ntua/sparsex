@@ -254,7 +254,7 @@ public:
 	uint64_t elems_size__;
 	uint64_t *rowptr__;
 	uint64_t rowptr_size__;
-    bool elems_mapped;
+    	bool elems_mapped;
 
 	uint64_t getNrRows() { return this->rowptr_size__ - 1; }
 	//// SpmRowElem iterators
@@ -340,7 +340,7 @@ public:
 
 	// Using these two functions requires caution: Memory is uninitialized
 	// use mk_row_elem functions
-    virtual SpmRowElem *AllocElem();
+    	virtual SpmRowElem *AllocElem();
 	virtual SpmRowElem *AllocElems(uint64_t nr);
 
 	virtual uint64_t getElemsCnt();
