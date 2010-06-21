@@ -76,9 +76,12 @@ RLEncode(T input)
 DRLE_Manager::DRLE_Manager(SPM *_spm,
                            long min_limit_,
                            long max_limit_,
-                           double min_perc_, uint64_t sort_window_size_)
+                           double min_perc_,
+                           uint64_t sort_window_size_,
+                           split_alg_t split_type_)
 	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_),
-      min_perc(min_perc_), sort_window_size(sort_window_size_) {
+      min_perc(min_perc_), sort_window_size(sort_window_size_),
+      split_type(split_type_) {
     // These are delimiters, ignore them by default.
     addIgnore(BLOCK_TYPE_START);
     addIgnore(BLOCK_COL_START);
@@ -86,19 +89,103 @@ DRLE_Manager::DRLE_Manager(SPM *_spm,
     addIgnore(BLOCK_ROW_TYPE_NAME(1));
     addIgnore(BLOCK_COL_TYPE_NAME(1));
 
-    if (sort_window_size > spm->getNrRows()) {
-        std::cerr << "Invalid sort window size, ignoring." << std::endl;
-        sort_window_size = 0;
-    }
-
-    if (sort_window_size == 0 || sort_window_size == spm->getNrRows())
-        sort_windows = false;
-    else
-        sort_windows = true;
+    check_and_set_sorting();
+    if (sort_windows)
+        compute_sort_splits();
 
     std::cout << "sort window: " << sort_window_size << std::endl;
 }
 
+
+void DRLE_Manager::check_and_set_sorting()
+{
+    switch (split_type) {
+    case DRLE_Manager::SPLIT_BY_ROWS:
+        do_check_sort_by_rows();
+        break;
+    case DRLE_Manager::SPLIT_BY_NNZ:
+        do_check_sort_by_nnz();
+        break;
+    default:
+        throw new std::invalid_argument("Unknown split algorithm");
+    }
+}
+
+void DRLE_Manager::do_check_sort_by_rows()
+{
+    if (sort_window_size > spm->getNrRows())
+        throw new std::invalid_argument("Invalid sort window");
+
+    if (sort_window_size == 0 ||
+        sort_window_size == spm->getNrRows())
+        sort_windows = false;
+    else
+        sort_windows = true;
+}
+
+void DRLE_Manager::do_check_sort_by_nnz()
+{
+    if (sort_window_size > spm->elems_size__)
+        throw new std::invalid_argument("Invalid sort window");
+
+    if (sort_window_size == 0 ||
+        sort_window_size == spm->elems_size__)
+        sort_windows = false;
+    else
+        sort_windows = true;
+}
+
+void DRLE_Manager::compute_sort_splits()
+{
+    switch (split_type) {
+    case DRLE_Manager::SPLIT_BY_ROWS:
+        do_compute_sort_splits_by_rows();
+        break;
+    case DRLE_Manager::SPLIT_BY_NNZ:
+        do_compute_sort_splits_by_nnz();
+        break;
+    default:
+        throw new std::invalid_argument("Unknown split algorithm");
+    }
+}
+
+void DRLE_Manager::do_compute_sort_splits_by_rows()
+{
+    uint64_t nr_rows = spm->getNrRows();
+    uint64_t i;
+    for (i = 0; i <= nr_rows; i += sort_window_size)
+        sort_splits.push_back(i);
+    if (i > nr_rows && i - nr_rows < sort_window_size / 2)
+        sort_splits.push_back(nr_rows);
+    else {
+        // the last window is too short; merge it with the previous
+        sort_splits.pop_back();
+        sort_splits.push_back(nr_rows);
+    }
+}
+
+void DRLE_Manager::do_compute_sort_splits_by_nnz()
+{
+    uint64_t nzeros_cnt;
+    uint64_t nr_rows = spm->getNrRows();
+
+    nzeros_cnt = 0;
+    sort_splits.push_back(0);
+    for (uint64_t i = 0; i < nr_rows; ++i) {
+        uint64_t new_nzeros_cnt =
+            nzeros_cnt + spm->rowptr__[i+1] - spm->rowptr__[i];
+        if (new_nzeros_cnt < sort_window_size) {
+            nzeros_cnt = new_nzeros_cnt;
+        } else {
+            // new split
+            sort_splits.push_back(i+1);
+            nzeros_cnt = 0;
+        }
+    }
+
+    if (sort_splits.back() < nr_rows)
+        sort_splits.push_back(nr_rows);
+}
 
 void DRLE_Manager::updateStats(SpmIterOrder type, DeltaRLE::Stats stats)
 {
@@ -587,7 +674,6 @@ void DRLE_Manager::genAllStats()
                 updateStats(type, l_stats);
                 window->Transform(HORIZONTAL);
                 this->spm->putWindow(window);
-                curr_row += this->sort_window_size;
                 delete window;
             }
         } else {
@@ -652,7 +738,9 @@ SpmIterOrder DRLE_Manager::chooseType()
 	max_out = 0;
 	for (iter=this->stats.begin(); iter != this->stats.end(); ++iter){
 		uint64_t out = this->getTypeScore(iter->first);
-		if (out > max_out){
+		if (out == 0) {
+			this->addIgnore(iter->first);
+		} else if (out > max_out){
 			max_out = out;
 			ret = iter->first;
 		}
