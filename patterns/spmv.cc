@@ -35,20 +35,31 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		exit(1);
 	}
 	spm_mt->nr_threads = threads_nr;
-	spm_mt->spm_threads = (spm_mt_thread_t *)malloc(sizeof(spm_mt_thread_t)*threads_nr);
+	spm_mt->spm_threads =
+        (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t)*threads_nr);
 	if (!spm_mt->spm_threads){
 		perror("malloc");
 		exit(1);
 	}
 	Spms = SPM::loadMMF_mt(mmf_fname, threads_nr);
 	Jits = new CsxJit *[threads_nr];
-    const char *wsize_str = getenv("WINDOW_SIZE");
+    const char  *wsize_str = getenv("WINDOW_SIZE");
     uint64_t    wsize;
     if (!wsize_str)
         wsize = 0;
     else
         wsize = atol(wsize_str);
 
+    const char  *sampling_prob_str = getenv("SAMPLING_PROB");
+    double      sampling_prob;
+    if (!sampling_prob_str)
+        sampling_prob = 0.0;
+    else
+        sampling_prob = atof(sampling_prob_str);
+
+    tsc_t timer;
+    tsc_init(&timer);
+    tsc_start(&timer);
 	for (unsigned int i=0; i < threads_nr; i++){
 		spm_mt_thread_t *spm_mt_thread;
 
@@ -56,7 +67,8 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		Spm = Spms + i;
 		spm_mt_thread = spm_mt->spm_threads + i;
 		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1,
-                                  wsize, DRLE_Manager::SPLIT_BY_NNZ);
+                                  wsize, DRLE_Manager::SPLIT_BY_NNZ,
+                                  sampling_prob);
 		DrleMg->ignoreAll();
 
 		// find transformations to apply
@@ -82,12 +94,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 
 		//DrleMg->EncodeSerial();
 		//DrleMg->MakeEncodeTree();
-        tsc_t timer;
-        tsc_init(&timer);
-        tsc_start(&timer);
 		DrleMg->EncodeAll();
-        tsc_pause(&timer);
-        tsc_report(&timer);
 
 //        Spm->PrintElems(std::cout);
 //        Spm->PrintStats(std::cout);
@@ -114,6 +121,8 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 	delete[] Jits;
 	delete[] Spms;
 
+    tsc_pause(&timer);
+    tsc_report(&timer);
 	return spm_mt;
 }
 

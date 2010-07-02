@@ -6,6 +6,8 @@
 #include <bitset>
 #include <limits>
 #include <cassert>
+#include <cstdlib>
+#include <stdexcept>
 
 #include "spm.h"
 
@@ -132,7 +134,8 @@ DRLE_Manager(SPM *_spm,
              long min_limit_=4,
              long max_limit_ = std::numeric_limits<long>::max(),
              double min_perc_=.1, uint64_t sort_window_size_ = 0,
-             split_alg_t split_type_ = SPLIT_BY_ROWS);
+             split_alg_t split_type_ = SPLIT_BY_ROWS,
+             double probability = 1.0);
 
     DeltaRLE::Stats generateStats(SPM *spm, uint64_t rs, uint64_t re);
     DeltaRLE::Stats generateStats(uint64_t rs, uint64_t re);
@@ -159,6 +162,16 @@ DRLE_Manager(SPM *_spm,
 	void EncodeAll();
 	void MakeEncodeTree();					//edw
 	void EncodeSerial();					//edw
+    void set_sampling_probability(double probability) {
+        if (probability < 0.0 || probability > 1.0)
+            throw new std::invalid_argument("invalid sampling probability");
+
+        sampling_probability = probability;
+    }
+
+    double get_sampling_probability(double probability) {
+        return sampling_probability;
+    }
 
 private:
 	void doEncode(std::vector<uint64_t> &xs,
@@ -191,6 +204,7 @@ private:
 	void updateStatsBlock(std::vector<uint64_t> &xs,
                           DeltaRLE::Stats &stats, uint64_t align);
     void updateStats(SpmIterOrder type, DeltaRLE::Stats stats);
+    void correct_stats(SpmIterOrder type, double factor);
 
     void compute_sort_splits();
     void check_and_set_sorting();
@@ -204,6 +218,7 @@ private:
     split_alg_t split_type;
     std::vector<uint64_t> sort_splits;
     typedef std::vector<uint64_t>::iterator sort_split_iterator;
+    double sampling_probability;
 };
 
 class BlockRLE : public DeltaRLE {
