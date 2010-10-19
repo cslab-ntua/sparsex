@@ -78,7 +78,8 @@ DRLE_Manager::DRLE_Manager(SPM *_spm,
                            long max_limit_,
                            double min_perc_,
                            uint64_t sort_window_size_,
-                           split_alg_t split_type_)
+                           split_alg_t split_type_,
+                           double probability)
 	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_),
       min_perc(min_perc_), sort_window_size(sort_window_size_),
       split_type(split_type_) {
@@ -90,10 +91,13 @@ DRLE_Manager::DRLE_Manager(SPM *_spm,
     addIgnore(BLOCK_COL_TYPE_NAME(1));
 
     check_and_set_sorting();
-    if (sort_windows)
+    if (sort_windows) {
         compute_sort_splits();
 
-    //std::cout << "sort window: " << sort_window_size << std::endl;
+        // Initialize sampling stuff
+        srand48(0);
+        set_sampling_probability(probability);
+    }
 }
 
 
@@ -187,6 +191,25 @@ void DRLE_Manager::do_compute_sort_splits_by_nnz()
         sort_splits.push_back(nr_rows);
 }
 
+//
+// Iterate over stats of `type' and multiply them by `factor'
+// 
+void DRLE_Manager::correct_stats(SpmIterOrder type, double factor)
+{
+    if (stats.find(type) == stats.end())
+        return;
+
+//    std::cout << "correcting factor: " << factor << std::endl;
+    DeltaRLE::Stats *l_stats = &stats[type];
+    DeltaRLE::Stats::iterator   iter;
+    for (iter = l_stats->begin(); iter != l_stats->end(); ++iter) {
+        iter->second.nnz = (uint64_t) (iter->second.nnz*factor);
+        iter->second.npatterns = (long) (iter->second.npatterns*factor);
+        assert(iter->second.nnz <= spm->nnz);
+    }
+}
+
+
 void DRLE_Manager::updateStats(SpmIterOrder type, DeltaRLE::Stats stats)
 {
     if (this->stats.find(type) == this->stats.end()) {
@@ -241,27 +264,29 @@ void DRLE_Manager::updateStatsBlock(std::vector<uint64_t> &xs,
 
 	rles = RLEncode(DeltaEncode(xs));
     	uint64_t unit_start = 0;
-	FOREACH(RLE<uint64_t> &rle, rles){
+        FOREACH(RLE<uint64_t> &rle, rles){
         	unit_start += rle.val;
-		// printf("(v,f,u) = (%ld,%ld,%ld)\n", rle.val, rle.freq, unit_start);
+            // printf("(v,f,u) = (%ld,%ld,%ld)\n", rle.val, rle.freq, unit_start);
         	if (rle.val == 1) {
-        		// Start of the real block is at `unit_start - 1' with one-based
-            		// indexing. When computing the `%' we need zero-based indexing.
-            		uint64_t nr_elem = rle.freq + 1;
-            		uint64_t skip_front = (unit_start == 1) ? 0 : (unit_start - 2) % block_align;
-            		if (nr_elem > skip_front)
-                		nr_elem -= skip_front;
-            		else
-                		nr_elem = 0;
-            		uint64_t other_dim = nr_elem / (uint64_t) block_align;
-            		if (other_dim >= 2) {
-                		stats[other_dim].nnz += other_dim * block_align;
-                		stats[other_dim].npatterns++;
-            		}
+        		// Start of the real block is at `unit_start - 1' with
+                // one-based indexing. When computing the `%' we need
+                // zero-based indexing.
+                uint64_t nr_elem = rle.freq + 1;
+                uint64_t skip_front = (unit_start == 1) ? 0 :
+                    (unit_start - 2) % block_align;
+                if (nr_elem > skip_front)
+                    nr_elem -= skip_front;
+                else
+                    nr_elem = 0;
+                uint64_t other_dim = nr_elem / (uint64_t) block_align;
+                if (other_dim >= 2) {
+                    stats[other_dim].nnz += other_dim * block_align;
+                    stats[other_dim].npatterns++;
+                }
         	}
         	unit_start += rle.val*(rle.freq - 1);
-	}
-	xs.clear();
+        }
+        xs.clear();
 }
 
 DeltaRLE::Stats DRLE_Manager::generateStats(uint64_t rs, uint64_t re)
@@ -375,8 +400,8 @@ void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
 	// that are in the ->DeltasToEncode set
 	deltas_set = &this->DeltasToEncode[this->spm->type];
 
-    	int block_align = isBlockType(this->spm->type);
-    	assert(block_align);
+    int block_align = isBlockType(this->spm->type);
+    assert(block_align);
 
 	col = 0; // initialize column
 	elem.pattern = NULL; // Default inserter (for push_back copies)
@@ -687,23 +712,36 @@ void DRLE_Manager::genAllStats()
 			continue;
 
 		SpmIterOrder type = SpmTypes[t];
-		//std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
-        	if (sort_windows) {
-			uint64_t curr_row = 0;
-			while (curr_row < this->spm->getNrRows()) {
-				SPM *window = this->spm->getWindow(curr_row,this->sort_window_size);
-                		window->Transform(type);
-                		DeltaRLE::Stats l_stats = generateStats(window, 0,window->getNrRows());
-                		updateStats(type, l_stats);
-                		window->Transform(HORIZONTAL);
-                		this->spm->putWindow(window);
-                		delete window;
-            		}
-        	} else {
-            		this->spm->Transform(type);
-            		this->stats[type] = this->generateStats(0, this->spm->getNrRows());
-            		this->spm->Transform(HORIZONTAL);
-        	}
+        //std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
+        uint64_t samples_cnt = 0;
+		if (sort_windows) {
+            sort_split_iterator iter;
+            for (iter = sort_splits.begin();
+                 iter != sort_splits.end() - 1; ++iter) {
+                if (drand48() < 1 - sampling_probability)
+                    continue;
+                ++samples_cnt;
+                uint64_t window_size = *(iter + 1) - *iter;
+                SPM *window = this->spm->getWindow(*iter, window_size);
+                window->Transform(type);
+                DeltaRLE::Stats w_stats = generateStats(window, 0,
+                                                        window->getNrRows());
+                updateStats(type, w_stats);
+                window->Transform(HORIZONTAL);
+                this->spm->putWindow(window);
+                delete window;
+            }
+
+            // std::cout << "nr_splits = " << sort_splits.size() - 1 << ", "
+            //           << "nr_samples = " << samples_cnt << std::endl;
+            correct_stats(type,
+                          (sort_splits.size() - 1) / ((double) samples_cnt));
+
+        } else {
+            this->spm->Transform(type);
+            this->stats[type] = this->generateStats(0, this->spm->getNrRows());
+            this->spm->Transform(HORIZONTAL);
+        }
 
 		// ** Filter stats
 		// From http://www.sgi.com/tech/stl/Map.html:
