@@ -79,10 +79,11 @@ DRLE_Manager::DRLE_Manager(SPM *_spm,
                            double min_perc_,
                            uint64_t sort_window_size_,
                            split_alg_t split_type_,
-                           double probability)
+                           double probability, uint64_t samples_max_)
 	: spm(_spm), min_limit(min_limit_), max_limit(max_limit_),
       min_perc(min_perc_), sort_window_size(sort_window_size_),
-      split_type(split_type_) {
+      split_type(split_type_), sampling_probability(probability),
+      samples_max(samples_max_) {
     // These are delimiters, ignore them by default.
     addIgnore(BLOCK_TYPE_START);
     addIgnore(BLOCK_COL_START);
@@ -95,8 +96,22 @@ DRLE_Manager::DRLE_Manager(SPM *_spm,
         compute_sort_splits();
 
         // Initialize sampling stuff
+        check_probability(sampling_probability);
         srand48(0);
-        set_sampling_probability(probability);
+        if (samples_max > sort_splits.size())
+            samples_max = sort_splits.size();
+        
+        if (sampling_probability == 0) {
+            // Automatically adjust probability to uniformly sample the
+            // whole matrix
+            double new_sampling_probability =
+                std::min(1.0, ((double) samples_max + 1) / sort_splits.size());
+            sampling_probability = new_sampling_probability;
+        }
+        std::cout << "sort_window_size: " << sort_window_size << std::endl;
+        std::cout << "sampling_prob: " << sampling_probability << std::endl;
+        std::cout << "samples_max: " << samples_max << std::endl;
+        //print_sort_splits(std::cout);
     }
 }
 
@@ -187,8 +202,28 @@ void DRLE_Manager::do_compute_sort_splits_by_nnz()
         }
     }
 
-    if (sort_splits.back() < nr_rows)
-        sort_splits.push_back(nr_rows);
+    if (nzeros_cnt) {
+        if (nzeros_cnt > sort_window_size / 2) {
+            sort_splits.push_back(nr_rows);
+        } else {
+            // last window is too short: merge with previous
+            sort_splits.pop_back();
+            sort_splits.push_back(nr_rows);
+        }    
+    }
+}
+
+void DRLE_Manager::print_sort_splits(std::ostream& out)
+{
+    sort_split_iterator iter;
+    for (iter = sort_splits.begin();
+         iter != sort_splits.end() - 1; ++iter) {
+        uint64_t rs = *iter;
+        uint64_t re = *(iter + 1);
+        uint64_t nnz = spm->rowptr__[re] - spm->rowptr__[rs];
+        out << "(rs, re, nnz) = ("
+            << rs << ", " << re << ", " << nnz << ")" << std::endl;
+    }
 }
 
 //
@@ -688,29 +723,54 @@ void DRLE_Manager::genAllStats()
 		SpmIterOrder type = SpmTypes[t];
 
         std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
-        uint64_t samples_cnt = 0;
 		if (sort_windows) {
+            uint64_t sampling_failures = 0;
+        again:
+            uint64_t samples_nnz = 0;
+            uint64_t samples_cnt = 0;
+
             sort_split_iterator iter;
             for (iter = sort_splits.begin();
                  iter != sort_splits.end() - 1; ++iter) {
-                if (drand48() < 1 - sampling_probability)
+                DeltaRLE::Stats w_stats;
+                if (samples_cnt >= samples_max)
+                    break;
+
+                if (drand48() < 1. - sampling_probability)
                     continue;
-                ++samples_cnt;
                 uint64_t window_size = *(iter + 1) - *iter;
                 SPM *window = this->spm->getWindow(*iter, window_size);
+
+                // Check for empty windows, since nonzeros might be captured
+                // from previous patterns.
+                if  (!window->nnz)
+                    goto exit_loop;
+
+                ++samples_cnt;
+                samples_nnz += window->nnz;
                 window->Transform(type);
-                DeltaRLE::Stats w_stats = generateStats(window, 0,
-                                                        window->getNrRows());
+                w_stats = generateStats(window, 0, window->getNrRows());
                 updateStats(type, w_stats);
                 window->Transform(HORIZONTAL);
                 this->spm->putWindow(window);
+            exit_loop:
                 delete window;
             }
 
-            // std::cout << "nr_splits = " << sort_splits.size() - 1 << ", "
-            //           << "nr_samples = " << samples_cnt << std::endl;
-            correct_stats(type,
-                          (sort_splits.size() - 1) / ((double) samples_cnt));
+            if (samples_nnz) {
+                correct_stats(type,
+                              (spm->nnz) / ((double) samples_nnz));
+            } else {
+                ++sampling_failures;
+                if (sampling_failures < max_sampling_tries) {
+                    // couldn't sample the matrix, try again
+                    goto again;
+                } else
+                    std::cerr <<
+                        "Warning: could not sample matrix: "
+                        "increase sampling probability or "
+                        "decrease sampling window size" << std::endl;
+            }
 
         } else {
             this->spm->Transform(type);
@@ -729,7 +789,7 @@ void DRLE_Manager::genAllStats()
 		for (iter = sp->begin(); iter != sp->end(); ) {
 			tmp = iter++;
 			double p = (double)tmp->second.nnz/(double)spm->nnz;
-			if (p < this->min_perc){
+			if (p < this->min_perc || tmp->first >= PID_OFFSET){
 				sp->erase(tmp);
 			} else {
 				this->DeltasToEncode[type].insert(tmp->first);

@@ -241,8 +241,9 @@ mt_lib.o: mt_lib.c mt_lib.h
 ext_prog.o: ext_prog.c ext_prog.h
 	$(COMPILE) -c $< -o $@
 
+spmv.o: GCC = gcc-4.3
 spmv.o: spmv.c
-	$(COMPILE) -c $< -o $@
+	$(COMPILE) $(CFLAGS) -c $< -o $@
 
 spmv: spmv.o libspmv.o
 	$(COMPILE) $(LIBS) $^ -o $@

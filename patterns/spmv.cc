@@ -13,7 +13,7 @@ extern "C" {
 	#include "../spm_crs.h"
 	#include "../spm_mt.h"
 	#include "../spmv_loops_mt.h"
-    #include "../../prfcnt/tsc.h"
+    #include "../../prfcnt/timer.h"
 }
 
 using namespace csx;
@@ -51,15 +51,22 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         wsize = atol(wsize_str);
 
     const char  *sampling_prob_str = getenv("SAMPLING_PROB");
+    const char  *samples = getenv("SAMPLES");
     double      sampling_prob;
+    uint64_t    samples_max;
     if (!sampling_prob_str)
         sampling_prob = 0.0;
     else
         sampling_prob = atof(sampling_prob_str);
 
-    tsc_t timer;
-    tsc_init(&timer);
-    tsc_start(&timer);
+    if (!samples)
+        samples_max = std::numeric_limits<uint64_t>::max();
+    else
+        samples_max = atol(samples);
+
+    xtimer_t timer;
+    timer_init(&timer);
+    timer_start(&timer);
 	for (unsigned int i=0; i < threads_nr; i++){
 		spm_mt_thread_t *spm_mt_thread;
 
@@ -68,12 +75,12 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 		spm_mt_thread = spm_mt->spm_threads + i;
 		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1,
                                   wsize, DRLE_Manager::SPLIT_BY_NNZ,
-                                  sampling_prob);
+                                  sampling_prob, samples_max);
 		DrleMg->ignoreAll();
 
 		// find transformations to apply
 		const char *xform_orig = getenv("XFORM_CONF");
-		if (xform_orig) {
+		if (xform_orig && strlen(xform_orig) != 0) {
 			// copy xform_orig, because the second time around wont work
 			int len = strlen(xform_orig) + 1;
 			char xform_string[len];
@@ -121,8 +128,9 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 	delete[] Jits;
 	delete[] Spms;
 
-    tsc_pause(&timer);
-    tsc_report(&timer);
+    timer_pause(&timer);
+    std::cout << "Preprocessing time: "
+              << timer_secs(&timer) << " sec" << std::endl;
 	return spm_mt;
 }
 
@@ -187,7 +195,7 @@ int main(int argc, char **argv)
 	}
 
     for (int i = 1; i < argc; i++) {
-        std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
+        std::cout << basename(argv[i]) << ": " << std::endl;
         spm_mt = getSpmMt(argv[i]);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
