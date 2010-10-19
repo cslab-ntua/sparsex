@@ -58,7 +58,8 @@ void *thread_function(void *initial_data)
     while (xform_buf[i] != -1) {
         int t = xform_buf[i++];
         DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
-        strcat(buffer,", ");
+        if (i != 1)
+            strcat(buffer,", ");
         strcat(buffer,SpmTypesNames[t]);
     }
     strcat(buffer,"\n");

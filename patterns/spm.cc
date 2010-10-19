@@ -724,84 +724,67 @@ inline TransformFn SPM::getRevXformFn(SpmIterOrder type)
 
 inline TransformFn SPM::getXformFn(SpmIterOrder type)
 {
-	boost::function<void (CooElem &p)> ret;
-	switch(type) {
-    case HORIZONTAL:
-		ret = NULL;
-		break;
-    case VERTICAL:
-		ret = bll::bind(pnt_map_V, bll::_1, bll::_1);
-		break;
-
-    case DIAGONAL:
-		ret = bll::bind(pnt_map_D, bll::_1, bll::_1, this->nrows);
-		break;
-
-    case REV_DIAGONAL:
-		ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->ncols);
-		break;
-
-    case BLOCK_ROW_TYPE_NAME(2):
-        ret = bll::bind(BLOCK_ROW_MAP_NAME(2), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(3):
-        ret = bll::bind(BLOCK_ROW_MAP_NAME(3), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(4):
-        ret = bll::bind(BLOCK_ROW_MAP_NAME(4), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(5):
-        ret = bll::bind(BLOCK_ROW_MAP_NAME(5), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(6):
-        ret = bll::bind(BLOCK_ROW_MAP_NAME(6), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(7):
-        ret = bll::bind(BLOCK_ROW_MAP_NAME(7), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_ROW_TYPE_NAME(8):
-        ret = bll::bind(BLOCK_ROW_MAP_NAME(8), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(2):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(3):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(3), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(4):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(4), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(5):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(5), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(6):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(6), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(7):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(7), bll::_1, bll::_1);
-        break;
-        
-    case BLOCK_COL_TYPE_NAME(8):
-        ret = bll::bind(BLOCK_COL_MAP_NAME(8), bll::_1, bll::_1);
-        break;
-        
-    default:
-		std::cerr << "Unknown type: " << type << std::endl;
-		assert(false);
-	}
-	return ret;
+    boost::function<void (CooElem &p)> ret;
+    switch(type) {
+        case HORIZONTAL:
+            ret = NULL;
+            break;
+        case VERTICAL:
+            ret = bll::bind(pnt_map_V, bll::_1, bll::_1);
+            break;
+        case DIAGONAL:
+            ret = bll::bind(pnt_map_D, bll::_1, bll::_1, this->nrows);
+            break;
+        case REV_DIAGONAL:
+            ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->ncols);
+            break;
+        case BLOCK_ROW_TYPE_NAME(2):
+            ret = bll::bind(BLOCK_ROW_MAP_NAME(2), bll::_1, bll::_1);
+            break;
+        case BLOCK_ROW_TYPE_NAME(3):
+            ret = bll::bind(BLOCK_ROW_MAP_NAME(3), bll::_1, bll::_1);
+            break;
+        case BLOCK_ROW_TYPE_NAME(4):
+            ret = bll::bind(BLOCK_ROW_MAP_NAME(4), bll::_1, bll::_1);
+            break;
+        case BLOCK_ROW_TYPE_NAME(5):
+            ret = bll::bind(BLOCK_ROW_MAP_NAME(5), bll::_1, bll::_1);
+            break;
+        case BLOCK_ROW_TYPE_NAME(6):
+            ret = bll::bind(BLOCK_ROW_MAP_NAME(6), bll::_1, bll::_1);
+            break;
+        case BLOCK_ROW_TYPE_NAME(7):
+            ret = bll::bind(BLOCK_ROW_MAP_NAME(7), bll::_1, bll::_1);
+            break;
+        case BLOCK_ROW_TYPE_NAME(8):
+            ret = bll::bind(BLOCK_ROW_MAP_NAME(8), bll::_1, bll::_1);
+            break;
+        case BLOCK_COL_TYPE_NAME(2):
+            ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+            break;
+        case BLOCK_COL_TYPE_NAME(3):
+            ret = bll::bind(BLOCK_COL_MAP_NAME(3), bll::_1, bll::_1);
+            break;
+        case BLOCK_COL_TYPE_NAME(4):
+            ret = bll::bind(BLOCK_COL_MAP_NAME(4), bll::_1, bll::_1);
+            break;
+        case BLOCK_COL_TYPE_NAME(5):
+            ret = bll::bind(BLOCK_COL_MAP_NAME(5), bll::_1, bll::_1);
+            break;
+        case BLOCK_COL_TYPE_NAME(6):
+            ret = bll::bind(BLOCK_COL_MAP_NAME(6), bll::_1, bll::_1);
+            break;
+        case BLOCK_COL_TYPE_NAME(7):
+            ret = bll::bind(BLOCK_COL_MAP_NAME(7), bll::_1, bll::_1);
+            break;
+        case BLOCK_COL_TYPE_NAME(8):
+            ret = bll::bind(BLOCK_COL_MAP_NAME(8), bll::_1, bll::_1);
+            break;
+        default:
+            std::cerr << "Unknown type: " << type << std::endl;
+            assert(false);
+    }
+    return ret;
 }
 
 inline TransformFn SPM::getTransformFn(SpmIterOrder from_type,
@@ -825,20 +808,20 @@ inline TransformFn SPM::getTransformFn(SpmIterOrder from_type,
 
 void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 {
-	PntIter p0, pe, p;
-	std::vector<SpmCooElem> elems;
-	boost::function<void (CooElem &p)> xform_fn;
+    PntIter p0, pe, p;
+    std::vector<SpmCooElem> elems;
+    boost::function<void (CooElem &p)> xform_fn;
 
-	if (this->type == t)
-		return;
+    if (this->type == t)
+        return;
 
-	// Get the appropriate transformation function
-	xform_fn = this->getTransformFn(this->type, t);
+    // Get the appropriate transformation function
+    xform_fn = this->getTransformFn(this->type, t);
 
-	// Create a vector of points
-	//  In the first version of this we used special iterators that
-	//  removed elements, for minimal memory usage.
-	//  For now we keep it simple.
+    // Create a vector of points
+    //  In the first version of this we used special iterators that
+    //  removed elements, for minimal memory usage.
+    //  For now we keep it simple.
     elems.reserve(this->elems_size__);
     p0 = points_begin(rs);
     pe = points_end(re);
