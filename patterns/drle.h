@@ -51,7 +51,9 @@ public:
 		return out;
 	}
 
-	#define PID_OFFSET 10000
+
+#define PID_OFFSET 10000L
+
 	virtual long getPatId() const
 	{
 		assert(this->type > NONE && this->type < BLOCK_TYPE_START);
@@ -132,7 +134,8 @@ public:
              long max_limit_ = std::numeric_limits<long>::max(),
              double min_perc_=.1, uint64_t sort_window_size_ = 0,
              split_alg_t split_type_ = SPLIT_BY_ROWS,
-             double probability = 1.0);
+             double probability = 1.0,
+             uint64_t samples_max_ = std::numeric_limits<uint64_t>::max());
 
 	DeltaRLE::Stats generateStats(SPM *spm, uint64_t rs, uint64_t re);
 	DeltaRLE::Stats generateStats(uint64_t rs, uint64_t re);
@@ -158,18 +161,29 @@ public:
 	void Decode(SpmIterOrder type=NONE);			//Prosthesa edw
 	void EncodeAll(char *buffer);
 	void MakeEncodeTree();					//edw
-	void EncodeSerial(int *xform_str);			//edw
-    void set_sampling_probability(double probability) {
-        if (probability < 0.0 || probability > 1.0)
-            throw new std::invalid_argument("invalid sampling probability");
+	void EncodeSerial(int *xform_str);					//edw
+    void set_sampling_probability(double probability)
+        {
+            check_probability(probability);
+            sampling_probability = probability;
+        }
 
-        sampling_probability = probability;
-    }
+    double get_sampling_probability(double probability)
+        {
+            return sampling_probability;
+        }
 
-    double get_sampling_probability(double probability) {
-        return sampling_probability;
-    }
+    void set_samples_max(uint64_t nr_samples)
+        {
+            samples_max = nr_samples;
+        }
 
+    uint64_t get_samples_max()
+        {
+            return samples_max;
+        }
+
+    void print_sort_splits(std::ostream& out);
 private:
 	void doEncode(std::vector<uint64_t> &xs,
 	              std::vector<double> &vs,
@@ -214,12 +228,19 @@ private:
     void do_check_sort_by_rows();
     void do_check_sort_by_nnz();
 
+    void check_probability(double probability) {
+        if (probability < 0.0 || probability > 1.0)
+            throw new std::invalid_argument("invalid sampling probability");
+    }
+
     bool sort_windows;
     uint64_t sort_window_size;
     split_alg_t split_type;
     std::vector<uint64_t> sort_splits;
     typedef std::vector<uint64_t>::iterator sort_split_iterator;
     double sampling_probability;
+    uint64_t samples_max;
+    static const uint64_t max_sampling_tries = 3;
 };
 
 class BlockRLE : public DeltaRLE {

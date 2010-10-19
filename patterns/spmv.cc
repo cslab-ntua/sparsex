@@ -20,7 +20,7 @@ extern "C" {
 	#include "../spm_crs.h"
 	#include "../spm_mt.h"
 	#include "../spmv_loops_mt.h"
-    	#include "../../prfcnt/tsc.h"
+    #include "../../prfcnt/timer.h"
 }
 
 #define BUFFER_SIZE 50000
@@ -34,6 +34,7 @@ typedef struct parameters {
 	char * buffer;
         int * xform_buf;
         double sampling_prob;
+        uint64_t samples_max;
 } Parameters;
 
 void *thread_function(void *initial_data)
@@ -45,6 +46,7 @@ void *thread_function(void *initial_data)
     char *buffer = data->buffer;
     int *xform_buf = data->xform_buf;
     double sampling_prob = data->sampling_prob;
+    uint64_t samples_max = data->samples_max;
 
     char number[4];
     DRLE_Manager *DrleMg;
@@ -53,7 +55,7 @@ void *thread_function(void *initial_data)
     sprintf(number,"%d",thread_no);
     strcat(buffer,number);
     strcat(buffer,"\n");
-    DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize, DRLE_Manager::SPLIT_BY_NNZ, sampling_prob);
+    DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize, DRLE_Manager::SPLIT_BY_NNZ, sampling_prob, samples_max);
     DrleMg->ignoreAll();
     int i=0;
     strcat(buffer,"Encoding type: ");
@@ -76,7 +78,6 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     unsigned int threads_nr, *threads_cpus;
     spm_mt_t *spm_mt;
     SPM *Spms;
-    //timeval start,end,result;
     char ** buffer;
     int *xform_buf;
     Parameters *data;
@@ -92,7 +93,6 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     }
 
     spm_mt->nr_threads = threads_nr;
-    std::cout << "Threads no: " << threads_nr << std::endl;
     spm_mt->spm_threads = (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t)*threads_nr);
     if (!spm_mt->spm_threads){
         perror("malloc");
@@ -112,15 +112,23 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         wsize = atol(wsize_str);
 
     const char  *sampling_prob_str = getenv("SAMPLING_PROB");
-    double sampling_prob;
+    const char  *samples = getenv("SAMPLES");
+    double      sampling_prob;
+    uint64_t    samples_max;
+
     if (!sampling_prob_str)
         sampling_prob = 0.0;
     else
         sampling_prob = atof(sampling_prob_str);
 
-    tsc_t timer;
-    tsc_init(&timer);
-    tsc_start(&timer);
+    if (!samples)
+        samples_max = std::numeric_limits<uint64_t>::max();
+    else
+        samples_max = atol(samples);
+
+    xtimer_t timer;
+    timer_init(&timer);
+    timer_start(&timer);
 
     char *xform_orig = getenv("XFORM_CONF");
     xform_buf = (int *) malloc(XFORM_MAX*sizeof(int));
@@ -172,7 +180,6 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     }
 
     for (unsigned int i=0; i < threads_nr; i++) {
-        std::cout << "I : " << i << std::endl;
         buffer[i] = (char *) malloc(BUFFER_SIZE*sizeof(char));
         if (!buffer[i]){
             perror("malloc");
@@ -184,6 +191,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         data[i].buffer = buffer[i];
         data[i].xform_buf = xform_buf;
         data[i].sampling_prob = sampling_prob;
+        data[i].samples_max = samples_max;
     }
 
     for (unsigned int i=1; i<threads_nr; i++)
@@ -192,7 +200,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     for (unsigned int i=0; i < threads_nr; i++){
         if (i > 0)
             pthread_join(threads[i-1],NULL);
-        CsxManager *CsxMg = new CsxManager(&Spms[i]);\
+        CsxManager *CsxMg = new CsxManager(&Spms[i]);
 	spm_mt->spm_threads[i].spm = CsxMg->mkCsx();
         Jits[i] = new CsxJit(CsxMg, i);
         Jits[i]->doHooks(buffer[i]);
@@ -210,8 +218,9 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     free(data);
     free(threads);
     delete[] Spms;
-    tsc_pause(&timer);
-    tsc_report(&timer);
+    timer_pause(&timer);
+    std::cout << "Preprocessing time: "
+              << timer_secs(&timer) << " sec" << std::endl;
     return spm_mt;
 }
 
@@ -275,7 +284,7 @@ int main(int argc, char **argv)
     }
 
     for (int i = 1; i < argc; i++) {
-        std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
+        std::cout << basename(argv[i]) << ": " << std::endl;
         spm_mt = getSpmMt(argv[i]);
      	CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
