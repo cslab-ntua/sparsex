@@ -93,7 +93,7 @@ DRLE_Manager::DRLE_Manager(SPM *_spm,
     if (sort_windows)
         compute_sort_splits();
 
-    std::cout << "sort window: " << sort_window_size << std::endl;
+    //std::cout << "sort window: " << sort_window_size << std::endl;
 }
 
 
@@ -211,11 +211,11 @@ void DRLE_Manager::updateStats(SPM *spm, std::vector<uint64_t> &xs,
                                DeltaRLE::Stats &stats)
 {
 	std::vector< RLE<uint64_t> > rles;
-    uint64_t    block_align = isBlockType(spm->type);
-    if (block_align) {
-        DRLE_Manager::updateStatsBlock(xs, stats, block_align);
-        return;
-    }
+	uint64_t    block_align = isBlockType(spm->type);
+	if (block_align) {
+        	DRLE_Manager::updateStatsBlock(xs, stats, block_align);
+        	return;
+    	}
 
 	if (xs.size() == 0)
 		return;
@@ -275,8 +275,7 @@ DeltaRLE::Stats DRLE_Manager::generateStats(SPM *Spm, uint64_t rs, uint64_t re)
 	DeltaRLE::Stats stats;
 
 	for (uint64_t i=rs; i < re; i++){
-		for (const SpmRowElem *elem = Spm->rbegin(i);
-             elem != Spm->rend(i); elem++){
+		for (const SpmRowElem *elem = Spm->rbegin(i); elem != Spm->rend(i); elem++){
 			if (elem->pattern == NULL){
 				xs.push_back(elem->x);
 				continue;
@@ -561,18 +560,22 @@ void DRLE_Manager::Encode(SpmIterOrder type)
 	this->addIgnore(type);
 }
 
-void DRLE_Manager::EncodeAll()
+void DRLE_Manager::EncodeAll(char *buffer)
 {
 	SpmIterOrder type = NONE;
 	StatsMap::iterator iter;
 
 	for (;;){
 		this->genAllStats();
-		this->outStats(std::cerr);
+		this->outStats(buffer);		
+		//this->outStats(std::cerr);
 		type = this->chooseType();
 		if (type == NONE)
 			break;
-		std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
+		strcat(buffer,"Encode to ");
+		strcat(buffer,SpmTypesNames[type]);
+		strcat(buffer,"\n");		
+		//std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
 		this->Encode(type);
 	}
 }
@@ -593,6 +596,29 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
 		   << "np:" << iter->second.npatterns
 		   << " nnz: " <<  100*((double)iter->second.nnz/(double)spm.nnz) << "%"
 		   << " (" << iter->second.nnz << ")";
+	}
+}
+
+void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, char *buffer)
+{
+	DeltaRLE::Stats::iterator iter;
+	char temp[100];
+	for (iter=stats.begin(); iter != stats.end(); ++iter){
+		strcat(buffer,"    ");
+		sprintf(temp,"%ld",iter->first);
+		strcat(buffer,temp);
+		strcat(buffer,"-> ");
+		strcat(buffer,"np:");
+		sprintf(temp,"%ld",iter->second.npatterns);
+		strcat(buffer,temp);
+		strcat(buffer," nnz: ");
+		sprintf(temp,"%lf",100*((double)iter->second.nnz/(double)spm.nnz));
+		strcat(buffer,temp);
+		strcat(buffer,"%");
+		strcat(buffer," (");
+		sprintf(temp,"%ld",iter->second.nnz);
+		strcat(buffer,temp);
+		strcat(buffer,")");
 	}
 }
 } // end csx namespace
@@ -661,26 +687,23 @@ void DRLE_Manager::genAllStats()
 			continue;
 
 		SpmIterOrder type = SpmTypes[t];
-
-        //std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
-        if (sort_windows) {
-            uint64_t curr_row = 0;
-            while (curr_row < this->spm->getNrRows()) {
-                SPM *window = this->spm->getWindow(curr_row,
-                                                   this->sort_window_size);
-                window->Transform(type);
-                DeltaRLE::Stats l_stats = generateStats(window, 0,
-                                                        window->getNrRows());
-                updateStats(type, l_stats);
-                window->Transform(HORIZONTAL);
-                this->spm->putWindow(window);
-                delete window;
-            }
-        } else {
-            this->spm->Transform(type);
-            this->stats[type] = this->generateStats(0, this->spm->getNrRows());
-            //this->spm->Transform(HORIZONTAL);							//****** Na to xanavalw
-        }
+		//std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
+        	if (sort_windows) {
+			uint64_t curr_row = 0;
+			while (curr_row < this->spm->getNrRows()) {
+				SPM *window = this->spm->getWindow(curr_row,this->sort_window_size);
+                		window->Transform(type);
+                		DeltaRLE::Stats l_stats = generateStats(window, 0,window->getNrRows());
+                		updateStats(type, l_stats);
+                		window->Transform(HORIZONTAL);
+                		this->spm->putWindow(window);
+                		delete window;
+            		}
+        	} else {
+            		this->spm->Transform(type);
+            		this->stats[type] = this->generateStats(0, this->spm->getNrRows());
+            		this->spm->Transform(HORIZONTAL);
+        	}
 
 		// ** Filter stats
 		// From http://www.sgi.com/tech/stl/Map.html:
@@ -690,7 +713,7 @@ void DRLE_Manager::genAllStats()
 		// iterators, except, of course, for iterators that actually point to
 		// the element that is being erased.
 		sp = &this->stats[type];
-		for (iter = sp->begin(); iter != sp->end(); ) {//****** Na to xanavalw
+		for (iter = sp->begin(); iter != sp->end(); ) {
 			tmp = iter++;
 			double p = (double)tmp->second.nnz/(double)spm->nnz;
 			if (p < this->min_perc){
@@ -755,6 +778,17 @@ void DRLE_Manager::outStats(std::ostream &os)
 		os << SpmTypesNames[iter->first] << "\t";
 		DRLE_OutStats(iter->second, *(this->spm), os);
 		os << std::endl;
+	}
+}
+
+void DRLE_Manager::outStats(char *buffer)
+{
+	DRLE_Manager::StatsMap::iterator iter;
+	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
+		strcat(buffer,SpmTypesNames[iter->first]);
+		strcat(buffer,"\t");
+		DRLE_OutStats(iter->second, *(this->spm), buffer);
+		strcat(buffer,"\n");
 	}
 }
 
@@ -945,28 +979,16 @@ void DRLE_Manager::MakeEncodeTree()
 	std::cout << "Tree has " << count << " possible paths" << std::endl;
 }
 
-void DRLE_Manager::EncodeSerial() {
-	
-	const char *xform_orig = getenv("XFORM_CONF");
-	if (xform_orig) {
-		int len = strlen(xform_orig) + 1;
-		char xform_string[len];
-		strncpy(xform_string, xform_orig, len);
+void DRLE_Manager::EncodeSerial(int *xform_buf)
+{
+    int i=0;
 
-		int t = atoi(strtok(xform_string, ","));
-		for (uint32_t i=0; i<XFORM_MAX; i++)
-			this->addIgnore((SpmIterOrder) i);
-		this->removeIgnore(static_cast<SpmIterOrder>(t));
-		this->genAllStats();
-		this->Encode(static_cast<SpmIterOrder>(t));
-		char *token;
-		while ( (token = strtok(NULL, ",")) != NULL) {
-			t = atoi(token);
-			for (uint32_t i=0; i<XFORM_MAX; i++)
-				this->addIgnore((SpmIterOrder) i);
-			this->removeIgnore(static_cast<SpmIterOrder>(t));
-			this->genAllStats();			
-			this->Encode(static_cast<SpmIterOrder>(t));
-		}
-	}
+    while (xform_buf[i] != -1) {
+        int t = xform_buf[i++];
+        for (uint32_t i=0; i<XFORM_MAX; i++)
+            this->addIgnore((SpmIterOrder) i);
+        this->removeIgnore(static_cast<SpmIterOrder>(t));
+        this->genAllStats();
+        this->Encode(static_cast<SpmIterOrder>(t));
+    }
 }

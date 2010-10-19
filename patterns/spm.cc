@@ -296,14 +296,14 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
 
 SPM *SPM::loadMMF_mt(const char *mmf_file, const long nr)
 {
-	SPM *ret;
-	std::ifstream mmf;
+    SPM *ret;
+    std::ifstream mmf;
 
-	mmf.open(mmf_file);
-	ret = loadMMF_mt(mmf, nr);
-	mmf.close();
+    mmf.open(mmf_file);
+    ret = loadMMF_mt(mmf, nr);
+    mmf.close();
 
-	return ret;
+    return ret;
 }
 
 SPM *SPM::loadMMF_mt(std::istream &in, const long nr)
@@ -726,6 +726,9 @@ inline TransformFn SPM::getXformFn(SpmIterOrder type)
 {
 	boost::function<void (CooElem &p)> ret;
 	switch(type) {
+    case HORIZONTAL:
+		ret = NULL;
+		break;
     case VERTICAL:
 		ret = bll::bind(pnt_map_V, bll::_1, bll::_1);
 		break;
@@ -736,10 +739,6 @@ inline TransformFn SPM::getXformFn(SpmIterOrder type)
 
     case REV_DIAGONAL:
 		ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->ncols);
-		break;
-
-    case HORIZONTAL:
-		ret = NULL;
 		break;
 
     case BLOCK_ROW_TYPE_NAME(2):
@@ -799,6 +798,7 @@ inline TransformFn SPM::getXformFn(SpmIterOrder type)
         break;
         
     default:
+		std::cerr << "Unknown type: " << type << std::endl;
 		assert(false);
 	}
 	return ret;

@@ -27,16 +27,16 @@ public:
 
 	class PatInfo {
 	public:
-		uint8_t flag; // flags allocated for this pattern
-		uint64_t nr;  // number of non-zero elemenets
+		uint8_t flag; 	// flags allocated for this pattern
+		uint64_t nr;  	// number of non-zero elemenets
 		PatInfo(uint8_t flag_, uint64_t nr_): flag(flag_), nr(nr_) {}
 		PatInfo(): flag(0), nr(0) {}
 	};
 	typedef std::map<long,PatInfo> PatMap;
 
 	PatMap patterns;
-	uint8_t flag_avail; // current available flag
-	bool row_jmps; // does ctl include row_jmps
+	uint8_t flag_avail;	// current available flag
+	bool row_jmps;		// does ctl include row_jmps
 
 	// value parse info
 	double *values;
@@ -45,8 +45,8 @@ public:
 	// ctl-encoding parse information
 	dynarray_t *ctl_da;
 	uint64_t last_col;
-	bool new_row; // marker of new_row
-	uint64_t empty_rows; // number of empty rows since last non-empty row
+	bool new_row;		// marker of new_row
+	uint64_t empty_rows;	// number of empty rows since last non-empty row
 
 	CsxManager(SPM *spm_) :
 	spm(spm_), flag_avail(0), row_jmps(false), ctl_da(NULL), last_col(0), empty_rows(0) {}

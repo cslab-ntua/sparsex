@@ -1,4 +1,11 @@
 #include <cstdlib>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <pthread.h>
+#include <iostream>
+#include <fstream>
+#include <string>
 
 #include "spm.h"
 #include "mmf.h"
@@ -13,108 +20,185 @@ extern "C" {
 	#include "../spm_crs.h"
 	#include "../spm_mt.h"
 	#include "../spmv_loops_mt.h"
-    #include "../../prfcnt/tsc.h"
+    	#include "../../prfcnt/tsc.h"
 }
+
+#define BUFFER_SIZE 50000
 
 using namespace csx;
 
+typedef struct parameters {
+	unsigned int thread_no;
+	SPM *Spm;
+	uint64_t wsize;
+	char * buffer;
+        int * xform_buf;
+} Parameters;
+
+void *thread_function(void *initial_data)
+{
+    Parameters *data = (Parameters *) initial_data;
+    unsigned int thread_no = data->thread_no;
+    SPM *Spm = data->Spm;
+    uint64_t wsize = data->wsize;
+    char *buffer = data->buffer;
+    int *xform_buf = data->xform_buf;
+
+    char number[4];
+    DRLE_Manager *DrleMg;
+
+    strcpy(buffer,"==> Thread: #");
+    sprintf(number,"%d",thread_no);
+    strcat(buffer,number);
+    strcat(buffer,"\n");
+    DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize, DRLE_Manager::SPLIT_BY_NNZ);
+    DrleMg->ignoreAll();
+    int i=0;
+    strcat(buffer,"Encoding type: ");
+    while (xform_buf[i] != -1) {
+        int t = xform_buf[i++];
+        DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
+        strcat(buffer,", ");
+        strcat(buffer,SpmTypesNames[t]);
+    }
+    strcat(buffer,"\n");
+    DrleMg->EncodeAll(buffer);
+    //DrleMg->EncodeSerial(xform_buf);
+    delete DrleMg;
+    return 0;
+}
+
 static spm_mt_t *getSpmMt(char *mmf_fname)
 {
-	unsigned int threads_nr, *threads_cpus;
-	spm_mt_t *spm_mt;
-	SPM *Spms, *Spm;
-	DRLE_Manager *DrleMg;
-	CsxManager *CsxMg;
-	CsxJit **Jits;
+    unsigned int threads_nr, *threads_cpus;
+    spm_mt_t *spm_mt;
+    SPM *Spms;
+    //timeval start,end,result;
+    char ** buffer;
+    int *xform_buf;
+    Parameters *data;
+    pthread_t *threads;
+    CsxJit **Jits;
 
-	mt_get_options(&threads_nr, &threads_cpus);
-	//std::cout << "Using " << threads_nr << " threads\n";
-	spm_mt = (spm_mt_t *)malloc(sizeof(spm_mt_t));
-	if (!spm_mt){
-		perror("malloc");
-		exit(1);
-	}
-	spm_mt->nr_threads = threads_nr;
-	spm_mt->spm_threads = (spm_mt_thread_t *)malloc(sizeof(spm_mt_thread_t)*threads_nr);
-	if (!spm_mt->spm_threads){
-		perror("malloc");
-		exit(1);
-	}
-	Spms = SPM::loadMMF_mt(mmf_fname, threads_nr);
-	Jits = new CsxJit *[threads_nr];
+    mt_get_options(&threads_nr, &threads_cpus);
+
+    spm_mt = (spm_mt_t *) malloc(sizeof(spm_mt_t));
+    if (!spm_mt){
+        perror("malloc");
+        exit(1);
+    }
+
+    spm_mt->nr_threads = threads_nr;
+
+    spm_mt->spm_threads = (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t)*threads_nr);
+    if (!spm_mt->spm_threads){
+        perror("malloc");
+        exit(1);
+    }
+
+    for (unsigned int i=0; i<threads_nr; i++)
+        spm_mt->spm_threads[i].cpu = threads_cpus[i];
+    Spms = SPM::loadMMF_mt(mmf_fname, threads_nr);
+
     const char *wsize_str = getenv("WINDOW_SIZE");
-    uint64_t    wsize;
+    uint64_t wsize;
     if (!wsize_str)
         wsize = 0;
     else
         wsize = atol(wsize_str);
 
-	for (unsigned int i=0; i < threads_nr; i++){
-		spm_mt_thread_t *spm_mt_thread;
+    char *xform_orig = getenv("XFORM_CONF");
+    xform_buf = (int *) malloc(XFORM_MAX*sizeof(int *));
+    if (!xform_buf){
+        perror("malloc");
+        exit(1);
+    }
 
-		std::cout << "==> Thread: #" << i << "\n";
-		Spm = Spms + i;
-		spm_mt_thread = spm_mt->spm_threads + i;
-		DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1,
-                                  wsize, DRLE_Manager::SPLIT_BY_NNZ);
-		DrleMg->ignoreAll();
+    if (xform_orig) {
+        int t = atoi(strtok(xform_orig, ","));
+	int j=0;
+        char *token;
 
-		// find transformations to apply
-		const char *xform_orig = getenv("XFORM_CONF");
-		if (xform_orig) {
-			// copy xform_orig, because the second time around wont work
-			int len = strlen(xform_orig) + 1;
-			char xform_string[len];
-			strncpy(xform_string, xform_orig, len);
-			//std::cout << xform_string << std::endl;
+	xform_buf[j] = t;
+	j++;
+        while ( (token = strtok(NULL, ",")) != NULL) {
+            t = atoi(token);
+    	    xform_buf[j] = t;
+            j++;
+        }
+	while (j < XFORM_MAX) {
+    	    xform_buf[j] = -1;
+            j++;
+        }
+    }
+    // gettimeofday(&start,NULL);
 
-			int t = atoi(strtok(xform_string, ","));
-			DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
-			std::cout << "Encoding type: " << SpmTypesNames[t];
-			char *token;
-			while ( (token = strtok(NULL, ",")) != NULL) {
-				t = atoi(token);
-				DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
-				std::cout << ", " << SpmTypesNames[t] << std::flush;
-			}
-			std::cout << std::endl;
-		}
+    threads = (pthread_t *) malloc((threads_nr-1)*sizeof(pthread_t));
+    if (!threads){
+        perror("malloc");
+        exit(1);
+    }
 
-		/*tsc_t timer;
-        	tsc_init(&timer);
-        	tsc_start(&timer);*/
-		DrleMg->EncodeSerial();		
-		//DrleMg->MakeEncodeTree();
-		//DrleMg->EncodeAll();
-        	/*tsc_pause(&timer);
-        	tsc_report(&timer);*/
+    data = (Parameters *) malloc(threads_nr*sizeof(Parameters));
+    if (!data){
+        perror("malloc");
+        exit(1);
+    }
 
-//        Spm->PrintElems(std::cout);
-//        Spm->PrintStats(std::cout);
+    buffer = (char **) malloc(threads_nr*sizeof(char *));
+    if (!buffer){
+        perror("malloc");
+        exit(1);
+    }
 
- 		CsxMg = new CsxManager(Spm);
- 		spm_mt_thread->spm = CsxMg->mkCsx();
+    Jits = (CsxJit **) malloc(threads_nr*sizeof(CsxJit *));
+    if (!Jits){
+        perror("malloc");
+        exit(1);
+    }
 
-		Jits[i] = new CsxJit(CsxMg, i);
-		Jits[i]->doHooks();
-		spm_mt_thread->cpu = threads_cpus[i];
+    for (unsigned int i=0; i < threads_nr; i++) {
 
-		delete CsxMg;
-		delete DrleMg;
-	}
+        buffer[i] = (char *) malloc(BUFFER_SIZE*sizeof(char));
+        if (!buffer[i]){
+            perror("malloc");
+            exit(1);
+        }
+        data[i].Spm = &Spms[i];
+        data[i].wsize = wsize;
+        data[i].thread_no = i;
+        data[i].buffer = buffer[i];
+        data[i].xform_buf = xform_buf;
+    }
 
- 	doOptimize(Jits[0]->M);
-
-	for (unsigned int i=0; i < threads_nr; i++){
-		spm_mt->spm_threads[i].spmv_fn = Jits[i]->doJit();
-		delete Jits[i];
-	}
-
-	free(threads_cpus);
-	delete[] Jits;
-	delete[] Spms;
-
-	return spm_mt;
+    for (unsigned int i=1; i<threads_nr; i++)
+        pthread_create(&threads[i-1],NULL,thread_function,(void *) &data[i]);
+    thread_function((void *) &data[0]);
+    for (unsigned int i=0; i < threads_nr; i++){
+        if (i > 0)
+            pthread_join(threads[i-1],NULL);
+        CsxManager *CsxMg = new CsxManager(&Spms[i]);\
+	spm_mt->spm_threads[i].spm = CsxMg->mkCsx();
+        Jits[i] = new CsxJit(CsxMg, i);
+        Jits[i]->doHooks(buffer[i]);
+        delete CsxMg;
+        std::cout << buffer[i];
+        free(buffer[i]);
+    }
+    doOptimize(Jits[0]->M);
+    for (unsigned int i=0; i < threads_nr; i++){
+        spm_mt->spm_threads[i].spmv_fn = Jits[i]->doJit();
+        delete Jits[i];
+    }
+    free(Jits);
+    free(buffer);
+    free(data);
+    free(threads);
+    //gettimeofday(&end,NULL);
+    //timersub(&end,&start,&result);
+    //std::cout << "Time: " << result.tv_sec << "." << result.tv_usec << std::endl;
+    delete[] Spms;
+    return spm_mt;
 }
 
 static void putSpmMt(spm_mt_t *spm_mt)
@@ -170,12 +254,11 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 
 int main(int argc, char **argv)
 {
-	spm_mt_t *spm_mt;
-
-	if (argc < 2){
-		std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
-		exit(1);
-	}
+    spm_mt_t *spm_mt;
+    if (argc < 2){
+        std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
+	exit(1);
+    }
 
     for (int i = 1; i < argc; i++) {
         std::cout << basename(argv[i]) << ": " << std::endl << std::flush;
@@ -186,5 +269,5 @@ int main(int argc, char **argv)
         putSpmMt(spm_mt);
     }
 
-	return 0;
+    return 0;
 }

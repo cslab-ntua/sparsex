@@ -49,12 +49,11 @@ public:
 		return out;
 	}
 
-#define PID_OFFSET 10000
+	#define PID_OFFSET 10000
 	virtual long getPatId() const
 	{
-        assert(this->type > NONE && this->type < BLOCK_TYPE_START);
-
-        return type*PID_OFFSET + this->delta;
+		assert(this->type > NONE && this->type < BLOCK_TYPE_START);
+		return type*PID_OFFSET + this->delta;
 
 // 		//******** Static Pattern Id Mapping:
 // 		//  10000 + delta => HORIZONTAL drle
@@ -86,9 +85,8 @@ public:
 
 	class Generator;
 	Pattern::Generator *generator(CooElem start);
-
 	// key => delta value of rle
-    // key => second dimension for block rles.
+	// key => second dimension for block rles.
 	typedef std::map<uint64_t, Pattern::StatsVal> Stats;
 };
 
@@ -108,7 +106,6 @@ public:
 	virtual CooElem next() {
 		CooElem ret(start);
 		assert(this->nr <= this->rle->size);
-        
 		ret.x += (this->nr)*this->rle->delta;
 		this->nr += 1;
 		return ret;
@@ -123,42 +120,42 @@ public:
 	long max_limit; // maximum length for RLEs
 	double min_perc; // min nnz percentage for considering an RLE
 
-    typedef enum {
-        SPLIT_BY_ROWS = 0,
-        SPLIT_BY_NNZ,
-    } split_alg_t;
+	typedef enum {
+		SPLIT_BY_ROWS = 0,
+		SPLIT_BY_NNZ,
+	} split_alg_t;
 
-DRLE_Manager(SPM *_spm,
-             long min_limit_=4,
-             long max_limit_ = std::numeric_limits<long>::max(),
-             double min_perc_=.1, uint64_t sort_window_size_ = 0,
-             split_alg_t split_type_ = SPLIT_BY_ROWS);
+	DRLE_Manager(SPM *_spm,
+		long min_limit_=4,
+		long max_limit_ = std::numeric_limits<long>::max(),
+		double min_perc_=.1, uint64_t sort_window_size_ = 0,
+		split_alg_t split_type_ = SPLIT_BY_ROWS);
 
-    DeltaRLE::Stats generateStats(SPM *spm, uint64_t rs, uint64_t re);
-    DeltaRLE::Stats generateStats(uint64_t rs, uint64_t re);
+	DeltaRLE::Stats generateStats(SPM *spm, uint64_t rs, uint64_t re);
+	DeltaRLE::Stats generateStats(uint64_t rs, uint64_t re);
 
 	typedef std::map <SpmIterOrder, DeltaRLE::Stats> StatsMap;
 	StatsMap stats;
 	void genAllStats();
 	void outStats(std::ostream &os=std::cout);
+	void outStats(char *buffer);
     
 	std::map <SpmIterOrder, std::set<uint64_t> > DeltasToEncode;
-
 	std::bitset<XFORM_MAX> xforms_ignore;
 
 	void addIgnore(SpmIterOrder type);
 	void ignoreAll();
 	void removeIgnore(SpmIterOrder type);
-    void removeAll();
+	void removeAll();
 
 	SpmIterOrder chooseType();
 	uint64_t getTypeScore(SpmIterOrder type);
 
 	void Encode(SpmIterOrder type=NONE);
 	void Decode(SpmIterOrder type=NONE);			//Prosthesa edw
-	void EncodeAll();
+	void EncodeAll(char *buffer);
 	void MakeEncodeTree();					//edw
-	void EncodeSerial();					//edw
+	void EncodeSerial(int *xform_str);			//edw
 
 private:
 	void doEncode(std::vector<uint64_t> &xs,
@@ -184,48 +181,50 @@ private:
 
 	void updateStats(SPM *spm, std::vector<uint64_t> &xs,
 			 DeltaRLE::Stats &stats);
+	
+	void updateStats2(SPM *spm, std::vector<uint64_t> &xs,
+			 DeltaRLE::Stats &stats);
 
 	void updateStats(std::vector<uint64_t> &xs,
 	                 DeltaRLE::Stats &stats);
     	
 	void updateStatsBlock(std::vector<uint64_t> &xs,
                           DeltaRLE::Stats &stats, uint64_t align);
-    void updateStats(SpmIterOrder type, DeltaRLE::Stats stats);
+    	void updateStats(SpmIterOrder type, DeltaRLE::Stats stats);
+	
+	void compute_sort_splits();
+	void check_and_set_sorting();
+	void do_compute_sort_splits_by_rows();
+	void do_compute_sort_splits_by_nnz();
+	void do_check_sort_by_rows();
+	void do_check_sort_by_nnz();
 
-    void compute_sort_splits();
-    void check_and_set_sorting();
-    void do_compute_sort_splits_by_rows();
-    void do_compute_sort_splits_by_nnz();
-    void do_check_sort_by_rows();
-    void do_check_sort_by_nnz();
-
-    bool sort_windows;
-    uint64_t sort_window_size;
-    split_alg_t split_type;
-    std::vector<uint64_t> sort_splits;
-    typedef std::vector<uint64_t>::iterator sort_split_iterator;
+	bool sort_windows;
+	uint64_t sort_window_size;
+	split_alg_t split_type;
+	std::vector<uint64_t> sort_splits;
+	typedef std::vector<uint64_t>::iterator sort_split_iterator;
 };
 
 class BlockRLE : public DeltaRLE {
-    uint32_t    other_dim;
+	uint32_t    other_dim;
 
 public:
 	BlockRLE(uint32_t size_, uint32_t other_dim_, SpmIterOrder type_)
-        : DeltaRLE(size_, 1, (assert(isBlockType(type_)), type_))
-        {
-
-            this->other_dim = other_dim_;
+	: DeltaRLE(size_, 1, (assert(isBlockType(type_)), type_))
+	{
+		this->other_dim = other_dim_;
         }
 
-    virtual uint32_t getOtherDim() const
-    {
-        return this->other_dim;
-    }
+	virtual uint32_t getOtherDim() const
+	{
+		return this->other_dim;
+	}
 
 	virtual long getPatId() const
-    {
-        return PID_OFFSET*this->type + this->other_dim;
-    }
+	{
+		return PID_OFFSET*this->type + this->other_dim;
+	}
 
 	virtual BlockRLE *clone() const
 	{
@@ -246,6 +245,7 @@ inline std::ostream &operator<<(std::ostream &os, const DeltaRLE::Stats &stats)
 #endif
 
 void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os);
+void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, char *buffer);
 
 class Node {								//Prosthesa edw
 public:

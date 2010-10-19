@@ -61,25 +61,25 @@ typedef enum {
 	VERTICAL,
 	DIAGONAL,
 	REV_DIAGONAL,
-    BLOCK_TYPE_START,
-    BLOCK_ROW_TYPE_NAME(1),
-    BLOCK_ROW_TYPE_NAME(2),
-    BLOCK_ROW_TYPE_NAME(3),
-    BLOCK_ROW_TYPE_NAME(4),
-    BLOCK_ROW_TYPE_NAME(5),
-    BLOCK_ROW_TYPE_NAME(6),
-    BLOCK_ROW_TYPE_NAME(7),
-    BLOCK_ROW_TYPE_NAME(8),
-    BLOCK_COL_START,
-    BLOCK_COL_TYPE_NAME(1),
-    BLOCK_COL_TYPE_NAME(2),
-    BLOCK_COL_TYPE_NAME(3),
-    BLOCK_COL_TYPE_NAME(4),
-    BLOCK_COL_TYPE_NAME(5),
-    BLOCK_COL_TYPE_NAME(6),
-    BLOCK_COL_TYPE_NAME(7),
-    BLOCK_COL_TYPE_NAME(8),
-    BLOCK_TYPE_END,
+    	BLOCK_TYPE_START,
+    	BLOCK_ROW_TYPE_NAME(1),
+    	BLOCK_ROW_TYPE_NAME(2),
+    	BLOCK_ROW_TYPE_NAME(3),
+    	BLOCK_ROW_TYPE_NAME(4),
+    	BLOCK_ROW_TYPE_NAME(5),
+    	BLOCK_ROW_TYPE_NAME(6),
+    	BLOCK_ROW_TYPE_NAME(7),
+    	BLOCK_ROW_TYPE_NAME(8),
+   	BLOCK_COL_START,
+    	BLOCK_COL_TYPE_NAME(1),
+    	BLOCK_COL_TYPE_NAME(2),
+    	BLOCK_COL_TYPE_NAME(3),
+    	BLOCK_COL_TYPE_NAME(4),
+    	BLOCK_COL_TYPE_NAME(5),
+    	BLOCK_COL_TYPE_NAME(6),
+    	BLOCK_COL_TYPE_NAME(7),
+    	BLOCK_COL_TYPE_NAME(8),
+    	BLOCK_TYPE_END,
 	XFORM_MAX
 } SpmIterOrder;
 
@@ -186,10 +186,10 @@ public:
 		uint64_t nnz;
 		long npatterns;
 		//StatsVal() : nnz(0) { }
-        void update(const StatsVal& new_vals) {
-            this->nnz += new_vals.nnz;
-            this->npatterns += new_vals.npatterns;
-        }
+        	void update(const StatsVal& new_vals) {
+           		this->nnz += new_vals.nnz;
+            		this->npatterns += new_vals.npatterns;
+        	}
 	};
 };
 
@@ -244,22 +244,21 @@ typedef boost::function<void (CooElem &p)> TransformFn;
 
 class SPM {
 public:
-	// Charateristics of sparse matrix
-	uint64_t nrows, ncols, nnz;
-
-	SpmIterOrder type;
+    	// Charateristics of sparse matrix
+    	uint64_t nrows, ncols, nnz;
+    	SpmIterOrder type;
 
 	// Elements of sparse matrix
 	SpmRowElem *elems__;
 	uint64_t elems_size__;
 	uint64_t *rowptr__;
 	uint64_t rowptr_size__;
-    	bool elems_mapped;
+	bool elems_mapped;
 
 	uint64_t getNrRows() { return this->rowptr_size__ - 1; }
 	//// SpmRowElem iterators
-	SpmRowElem *rbegin(uint64_t ridx=0); // start of ridx row
-	SpmRowElem *rend(uint64_t ridx=0); // end of ridx row
+	SpmRowElem *rbegin(uint64_t ridx=0); 	// start of ridx row
+	SpmRowElem *rend(uint64_t ridx=0); 	// end of ridx row
 
 	// Since this can be a partition of the original matrix,
 	// this designates the first row of this partition
