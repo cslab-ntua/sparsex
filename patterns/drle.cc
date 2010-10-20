@@ -1080,12 +1080,11 @@ void DRLE_Manager::MakeEncodeTree()
 
 void DRLE_Manager::EncodeSerial(int *xform_buf)
 {
-    int i=0;
+    for (uint32_t i = 0; i < XFORM_MAX; ++i)
+        this->addIgnore((SpmIterOrder) i);
 
-    while (xform_buf[i] != -1) {
-        int t = xform_buf[i++];
-        for (uint32_t i=0; i<XFORM_MAX; i++)
-            this->addIgnore((SpmIterOrder) i);
+    for (int i = 0; xform_buf[i] != -1; ++i) {
+        int t = xform_buf[i];
         this->removeIgnore(static_cast<SpmIterOrder>(t));
         this->genAllStats();
         this->Encode(static_cast<SpmIterOrder>(t));
