@@ -11,6 +11,8 @@
 
 #include "spm.h"
 
+#define BUFFER_SIZE 50*1024
+
 namespace csx {
 
 class DeltaRLE : public Pattern {

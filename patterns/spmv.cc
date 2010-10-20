@@ -23,7 +23,6 @@ extern "C" {
 #include "../../prfcnt/timer.h"
 }
 
-#define BUFFER_SIZE 50*1024
 #define DIGITS_MAX  4
 
 using namespace csx;
@@ -36,6 +35,7 @@ typedef struct parameters {
     int         *xform_buf;
     double      sampling_prob;
     uint64_t    samples_max;
+    bool        encode_serial;
 } Parameters;
 
 void *thread_function(void *initial_data)
@@ -68,9 +68,13 @@ void *thread_function(void *initial_data)
             strncat(buffer, ", ", BUFFER_SIZE - 1);
         strncat(buffer, SpmTypesNames[t], BUFFER_SIZE - 1);
     }
+
     strncat(buffer,"\n", BUFFER_SIZE - 1);
-    DrleMg->EncodeAll(buffer);
-    //DrleMg->EncodeSerial(xform_buf);
+    if (data->encode_serial)
+        DrleMg->EncodeSerial(xform_buf);
+    else
+        DrleMg->EncodeAll(buffer);
+
     delete DrleMg;
     return 0;
 }
@@ -128,9 +132,12 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     else
         samples_max = atol(samples);
 
-    xtimer_t timer;
-    timer_init(&timer);
-    timer_start(&timer);
+    const char  *encode_serial_str = getenv("ENCODE_SERIAL");
+    int         encode_serial;
+    if (!encode_serial_str)
+        encode_serial = 0;
+    else
+        encode_serial = atoi(encode_serial_str);
 
     char *xform_orig = getenv("XFORM_CONF");
     xform_buf = (int *) malloc(XFORM_MAX*sizeof(int));
@@ -154,6 +161,10 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     }
 
     xform_buf[next] = -1;
+
+    xtimer_t timer;
+    timer_init(&timer);
+    timer_start(&timer);
 
     threads = (pthread_t *) malloc((nr_threads-1)*sizeof(pthread_t));
     if (!threads){
@@ -192,6 +203,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         data[i].xform_buf = xform_buf;
         data[i].sampling_prob = sampling_prob;
         data[i].samples_max = samples_max;
+        data[i].encode_serial = encode_serial;
     }
 
     for (unsigned int i=1; i<nr_threads; i++)

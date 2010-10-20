@@ -632,9 +632,9 @@ void DRLE_Manager::EncodeAll(char *buffer)
 		type = this->chooseType();
 		if (type == NONE)
 			break;
-		strcat(buffer,"Encode to ");
-		strcat(buffer,SpmTypesNames[type]);
-		strcat(buffer,"\n");		
+		strncat(buffer,"Encode to ", BUFFER_SIZE - 1);
+		strncat(buffer,SpmTypesNames[type], BUFFER_SIZE - 1);
+		strncat(buffer,"\n", BUFFER_SIZE - 1);
 		//std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
 		this->Encode(type);
 	}
@@ -664,21 +664,21 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, char *buffer)
 	DeltaRLE::Stats::iterator iter;
 	char temp[100];
 	for (iter=stats.begin(); iter != stats.end(); ++iter){
-		strcat(buffer,"    ");
+		strncat(buffer, "    ", BUFFER_SIZE - 1);
 		sprintf(temp,"%ld",iter->first);
-		strcat(buffer,temp);
-		strcat(buffer,"-> ");
-		strcat(buffer,"np:");
+		strncat(buffer, temp, BUFFER_SIZE - 1);
+		strncat(buffer, "-> ", BUFFER_SIZE - 1);
+		strncat(buffer, "np:", BUFFER_SIZE - 1);
 		sprintf(temp,"%ld",iter->second.npatterns);
-		strcat(buffer,temp);
-		strcat(buffer," nnz: ");
+		strncat(buffer, temp, BUFFER_SIZE - 1);
+		strncat(buffer, " nnz: ", BUFFER_SIZE - 1);
 		sprintf(temp,"%lf",100*((double)iter->second.nnz/(double)spm.nnz));
-		strcat(buffer,temp);
-		strcat(buffer,"%");
-		strcat(buffer," (");
+		strncat(buffer, temp, BUFFER_SIZE - 1);
+		strncat(buffer, "%", BUFFER_SIZE - 1);
+		strncat(buffer, " (", BUFFER_SIZE - 1);
 		sprintf(temp,"%ld",iter->second.nnz);
-		strcat(buffer,temp);
-		strcat(buffer,")");
+		strncat(buffer, temp, BUFFER_SIZE - 1);
+		strncat(buffer, ")", BUFFER_SIZE - 1);
 	}
 }
 } // end csx namespace
@@ -884,10 +884,10 @@ void DRLE_Manager::outStats(char *buffer)
 {
 	DRLE_Manager::StatsMap::iterator iter;
 	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
-		strcat(buffer,SpmTypesNames[iter->first]);
-		strcat(buffer,"\t");
+		strncat(buffer, SpmTypesNames[iter->first], BUFFER_SIZE - 1);
+		strncat(buffer, "\t", BUFFER_SIZE - 1);
 		DRLE_OutStats(iter->second, *(this->spm), buffer);
-		strcat(buffer,"\n");
+		strncat(buffer, "\n", BUFFER_SIZE - 1);
 	}
 }
 
