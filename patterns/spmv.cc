@@ -15,26 +15,27 @@
 #include "llvm_jit_help.h"
 
 extern "C" {
-	#include "../mt_lib.h"
-	#include "../spmv_method.h"
-	#include "../spm_crs.h"
-	#include "../spm_mt.h"
-	#include "../spmv_loops_mt.h"
-    #include "../../prfcnt/timer.h"
+#include "../mt_lib.h"
+#include "../spmv_method.h"
+#include "../spm_crs.h"
+#include "../spm_mt.h"
+#include "../spmv_loops_mt.h"
+#include "../../prfcnt/timer.h"
 }
 
-#define BUFFER_SIZE 50000
+#define BUFFER_SIZE 50*1024
+#define DIGITS_MAX  4
 
 using namespace csx;
 
 typedef struct parameters {
 	unsigned int thread_no;
-	SPM *Spm;
-	uint64_t wsize;
-	char * buffer;
-        int * xform_buf;
-        double sampling_prob;
-        uint64_t samples_max;
+	SPM         *Spm;
+	uint64_t    wsize;
+	char        *buffer;
+    int         *xform_buf;
+    double      sampling_prob;
+    uint64_t    samples_max;
 } Parameters;
 
 void *thread_function(void *initial_data)
@@ -48,25 +49,26 @@ void *thread_function(void *initial_data)
     double sampling_prob = data->sampling_prob;
     uint64_t samples_max = data->samples_max;
 
-    char number[4];
+    char number[DIGITS_MAX];
     DRLE_Manager *DrleMg;
 
-    strcpy(buffer,"==> Thread: #");
-    sprintf(number,"%d",thread_no);
-    strcat(buffer,number);
-    strcat(buffer,"\n");
-    DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize, DRLE_Manager::SPLIT_BY_NNZ, sampling_prob, samples_max);
+    strncpy(buffer,"==> Thread: #", BUFFER_SIZE);
+    snprintf(number, DIGITS_MAX, "%d",thread_no);
+    strncat(buffer, number, BUFFER_SIZE - 1);
+    strncat(buffer, "\n", BUFFER_SIZE - 1);
+    DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize,
+                              DRLE_Manager::SPLIT_BY_NNZ, sampling_prob,
+                              samples_max);
     DrleMg->ignoreAll();
-    int i=0;
-    strcat(buffer,"Encoding type: ");
-    while (xform_buf[i] != -1) {
-        int t = xform_buf[i++];
+    strncat(buffer,"Encoding type: ", BUFFER_SIZE - 1);
+    for (int i = 0; xform_buf[i] != -1; ++i) {
+        int t = xform_buf[i];
         DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
-        if (i != 1)
-            strcat(buffer,", ");
-        strcat(buffer,SpmTypesNames[t]);
+        if (i > 0)
+            strncat(buffer, ", ", BUFFER_SIZE - 1);
+        strncat(buffer, SpmTypesNames[t], BUFFER_SIZE - 1);
     }
-    strcat(buffer,"\n");
+    strncat(buffer,"\n", BUFFER_SIZE - 1);
     DrleMg->EncodeAll(buffer);
     //DrleMg->EncodeSerial(xform_buf);
     delete DrleMg;
@@ -75,7 +77,7 @@ void *thread_function(void *initial_data)
 
 static spm_mt_t *getSpmMt(char *mmf_fname)
 {
-    unsigned int threads_nr, *threads_cpus;
+    unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
     SPM *Spms;
     char ** buffer;
@@ -84,7 +86,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     pthread_t *threads;
     CsxJit **Jits;
 
-    mt_get_options(&threads_nr, &threads_cpus);
+    mt_get_options(&nr_threads, &threads_cpus);
 
     spm_mt = (spm_mt_t *) malloc(sizeof(spm_mt_t));
     if (!spm_mt){
@@ -92,16 +94,16 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         exit(1);
     }
 
-    spm_mt->nr_threads = threads_nr;
-    spm_mt->spm_threads = (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t)*threads_nr);
+    spm_mt->nr_threads = nr_threads;
+    spm_mt->spm_threads = (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t)*nr_threads);
     if (!spm_mt->spm_threads){
         perror("malloc");
         exit(1);
     }
 
-    for (unsigned int i=0; i<threads_nr; i++)
+    for (unsigned int i=0; i<nr_threads; i++)
         spm_mt->spm_threads[i].cpu = threads_cpus[i];
-    Spms = SPM::loadMMF_mt(mmf_fname, threads_nr);
+    Spms = SPM::loadMMF_mt(mmf_fname, nr_threads);
 
     const char *wsize_str = getenv("WINDOW_SIZE");
     uint64_t wsize;
@@ -137,49 +139,47 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         exit(1);
     }
 
+    int next = 0;
     if (xform_orig) {
         int t = atoi(strtok(xform_orig, ","));
-	int j=0;
         char *token;
 
-	xform_buf[j] = t;
-	j++;
+        xform_buf[next] = t;
+        ++next;
         while ( (token = strtok(NULL, ",")) != NULL) {
             t = atoi(token);
-    	    xform_buf[j] = t;
-            j++;
-        }
-	while (j < XFORM_MAX) {
-    	    xform_buf[j] = -1;
-            j++;
+    	    xform_buf[next] = t;
+            ++next;
         }
     }
 
-    threads = (pthread_t *) malloc((threads_nr-1)*sizeof(pthread_t));
+    xform_buf[next] = -1;
+
+    threads = (pthread_t *) malloc((nr_threads-1)*sizeof(pthread_t));
     if (!threads){
         perror("malloc");
         exit(1);
     }
 
-    data = (Parameters *) malloc(threads_nr*sizeof(Parameters));
+    data = (Parameters *) malloc(nr_threads*sizeof(Parameters));
     if (!data){
         perror("malloc");
         exit(1);
     }
 
-    buffer = (char **) malloc(threads_nr*sizeof(char *));
+    buffer = (char **) malloc(nr_threads*sizeof(char *));
     if (!buffer){
         perror("malloc");
         exit(1);
     }
 
-    Jits = (CsxJit **) malloc(threads_nr*sizeof(CsxJit *));
+    Jits = (CsxJit **) malloc(nr_threads*sizeof(CsxJit *));
     if (!Jits){
         perror("malloc");
         exit(1);
     }
 
-    for (unsigned int i=0; i < threads_nr; i++) {
+    for (unsigned int i=0; i < nr_threads; i++) {
         buffer[i] = (char *) malloc(BUFFER_SIZE*sizeof(char));
         if (!buffer[i]){
             perror("malloc");
@@ -194,22 +194,26 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         data[i].samples_max = samples_max;
     }
 
-    for (unsigned int i=1; i<threads_nr; i++)
+    for (unsigned int i=1; i<nr_threads; i++)
         pthread_create(&threads[i-1],NULL,thread_function,(void *) &data[i]);
+
     thread_function((void *) &data[0]);
-    for (unsigned int i=0; i < threads_nr; i++){
-        if (i > 0)
-            pthread_join(threads[i-1],NULL);
+    // Wait for other threads to finish
+    for (unsigned int i = 1; i < nr_threads; ++i)
+        pthread_join(threads[i-1],NULL);
+    
+    for (unsigned int i=0; i < nr_threads; ++i){
         CsxManager *CsxMg = new CsxManager(&Spms[i]);
-	spm_mt->spm_threads[i].spm = CsxMg->mkCsx();
+        spm_mt->spm_threads[i].spm = CsxMg->mkCsx();
         Jits[i] = new CsxJit(CsxMg, i);
         Jits[i]->doHooks(buffer[i]);
         delete CsxMg;
         std::cout << buffer[i];
         free(buffer[i]);
     }
+
     doOptimize(Jits[0]->M);
-    for (unsigned int i=0; i < threads_nr; i++){
+    for (unsigned int i=0; i < nr_threads; i++){
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->doJit();
         delete Jits[i];
     }
@@ -272,7 +276,7 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 	secs = spmv_double_bench_mt_loop(spm_mt, loops_nr, nrows, ncols, NULL);
 	flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
 	printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-	        "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+           "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
 }
 
 int main(int argc, char **argv)
@@ -280,7 +284,7 @@ int main(int argc, char **argv)
     spm_mt_t *spm_mt;
     if (argc < 2){
         std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
-	exit(1);
+        exit(1);
     }
 
     for (int i = 1; i < argc; i++) {
