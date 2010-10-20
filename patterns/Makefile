@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv windows-sort
+all: spmv windows-sort csx_llvm_tmpl.llvm.bc
 
 ## Configuration
 dynarray_dir = ../../dynarray
