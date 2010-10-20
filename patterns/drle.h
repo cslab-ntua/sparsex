@@ -160,10 +160,10 @@ public:
 	uint64_t getTypeScore(SpmIterOrder type);
 
 	void Encode(SpmIterOrder type=NONE);
-	void Decode(SpmIterOrder type=NONE);			//Prosthesa edw
+	void Decode(SpmIterOrder type=NONE);
 	void EncodeAll(char *buffer);
-	void MakeEncodeTree();					//edw
-	void EncodeSerial(int *xform_str);					//edw
+	void MakeEncodeTree();
+	void EncodeSerial(int *xform, int *deltas);
     void set_sampling_probability(double probability)
         {
             check_probability(probability);

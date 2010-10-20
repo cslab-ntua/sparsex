@@ -35,7 +35,7 @@ typedef struct parameters {
     int         *xform_buf;
     double      sampling_prob;
     uint64_t    samples_max;
-    bool        encode_serial;
+    int         *deltas;
 } Parameters;
 
 void *thread_function(void *initial_data)
@@ -70,8 +70,8 @@ void *thread_function(void *initial_data)
     }
 
     strncat(buffer,"\n", BUFFER_SIZE - 1);
-    if (data->encode_serial)
-        DrleMg->EncodeSerial(xform_buf);
+    if (data->deltas)
+        DrleMg->EncodeSerial(xform_buf, data->deltas);
     else
         DrleMg->EncodeAll(buffer);
 
@@ -86,6 +86,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     SPM *Spms;
     char ** buffer;
     int *xform_buf;
+    int *deltas;
     Parameters *data;
     pthread_t *threads;
     CsxJit **Jits;
@@ -132,12 +133,30 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     else
         samples_max = atol(samples);
 
-    const char  *encode_serial_str = getenv("ENCODE_SERIAL");
-    int         encode_serial;
-    if (!encode_serial_str)
-        encode_serial = 0;
-    else
-        encode_serial = atoi(encode_serial_str);
+    char  *encode_deltas_str = getenv("ENCODE_DELTAS");
+    deltas = NULL;
+    if (encode_deltas_str) {
+        deltas = (int *) malloc(XFORM_MAX*sizeof(*deltas));
+        memset(deltas, -1, XFORM_MAX*sizeof(*deltas));
+        if (!deltas) {
+            perror("malloc");
+            exit(1);
+        }
+
+        char    *token = strtok(encode_deltas_str, ",");
+        int     delta = (token) ? atoi(token) : -1;
+        int     next = 0;
+        
+        deltas[next] = delta;
+        ++next;
+        while ( (token = strtok(NULL, ",")) != NULL) {
+            int delta = atoi(token);
+    	    deltas[next] = (delta) ? delta : -1;
+            ++next;
+        }
+
+        deltas[next] = -1;
+    }
 
     char *xform_orig = getenv("XFORM_CONF");
     xform_buf = (int *) malloc(XFORM_MAX*sizeof(int));
@@ -203,7 +222,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         data[i].xform_buf = xform_buf;
         data[i].sampling_prob = sampling_prob;
         data[i].samples_max = samples_max;
-        data[i].encode_serial = encode_serial;
+        data[i].deltas = deltas;
     }
 
     for (unsigned int i=1; i<nr_threads; i++)

@@ -440,7 +440,7 @@ void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
 
 	col = 0; // initialize column
 	elem.pattern = NULL; // Default inserter (for push_back copies)
-	FOREACH(RLE<uint64_t> rle, rles){
+	FOREACH(RLE<uint64_t> rle, rles) {
 	
 	// create patterns
         //std::cout << "freq:" << rle.freq << " val:" << rle.val << "\n";
@@ -615,8 +615,8 @@ void DRLE_Manager::Encode(SpmIterOrder type)
 	delete SpmBld;
 
 	// Transform matrix to the original iteration order
-	//Spm->Transform(oldtype);						//****** Na to xanavalw
-	Spm->Transform(HORIZONTAL);						//****** Na to vgalw
+	//Spm->Transform(oldtype);
+	Spm->Transform(HORIZONTAL);
 	this->addIgnore(type);
 }
 
@@ -1078,15 +1078,19 @@ void DRLE_Manager::MakeEncodeTree()
 	std::cout << "Tree has " << count << " possible paths" << std::endl;
 }
 
-void DRLE_Manager::EncodeSerial(int *xform_buf)
+void DRLE_Manager::EncodeSerial(int *xform_buf, int *deltas)
 {
     for (uint32_t i = 0; i < XFORM_MAX; ++i)
         this->addIgnore((SpmIterOrder) i);
 
+    int last_delta = deltas[0];
     for (int i = 0; xform_buf[i] != -1; ++i) {
-        int t = xform_buf[i];
-        this->removeIgnore(static_cast<SpmIterOrder>(t));
-        this->genAllStats();
-        this->Encode(static_cast<SpmIterOrder>(t));
+        SpmIterOrder t = static_cast<SpmIterOrder>(xform_buf[i]);
+        int delta = (deltas[i] == -1) ? last_delta : deltas[i];
+        this->removeIgnore(t);
+        this->DeltasToEncode[t].insert(delta);
+        this->Encode(t);
+        this->addIgnore(t);
+        last_delta = delta;
     }
 }
