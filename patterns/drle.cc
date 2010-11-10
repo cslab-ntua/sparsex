@@ -298,30 +298,33 @@ void DRLE_Manager::updateStatsBlock(std::vector<uint64_t> &xs,
 		return;
 
 	rles = RLEncode(DeltaEncode(xs));
-    	uint64_t unit_start = 0;
-        FOREACH(RLE<uint64_t> &rle, rles){
-        	unit_start += rle.val;
-            // printf("(v,f,u) = (%ld,%ld,%ld)\n", rle.val, rle.freq, unit_start);
-        	if (rle.val == 1) {
-        		// Start of the real block is at `unit_start - 1' with
-                // one-based indexing. When computing the `%' we need
-                // zero-based indexing.
-                uint64_t nr_elem = rle.freq + 1;
-                uint64_t skip_front = (unit_start == 1) ? 0 :
-                    (unit_start - 2) % block_align;
-                if (nr_elem > skip_front)
-                    nr_elem -= skip_front;
-                else
-                    nr_elem = 0;
-                uint64_t other_dim = nr_elem / (uint64_t) block_align;
-                if (other_dim >= 2) {
-                    stats[other_dim].nnz += other_dim * block_align;
-                    stats[other_dim].npatterns++;
-                }
-        	}
-        	unit_start += rle.val*(rle.freq - 1);
+    uint64_t unit_start = 0;
+    FOREACH(RLE<uint64_t> &rle, rles){
+        unit_start += rle.val;
+        // printf("(v,f,u) = (%ld,%ld,%ld)\n", rle.val, rle.freq, unit_start);
+        if (rle.val == 1) {
+            // Start of the real block is at `unit_start - 1' with
+            // one-based indexing. When computing the `%' we need
+            // zero-based indexing.
+            uint64_t nr_elem = rle.freq + 1;
+            uint64_t skip_front = (unit_start == 1) ? 0 :
+                (unit_start - 2) % block_align;
+
+            std::cout << skip_front << std::endl;
+            if (nr_elem > skip_front)
+                nr_elem -= skip_front;
+            else
+                nr_elem = 0;
+            
+            uint64_t other_dim = nr_elem / (uint64_t) block_align;
+            if (other_dim >= 2) {
+                stats[other_dim].nnz += other_dim * block_align;
+                stats[other_dim].npatterns++;
+            }
         }
-        xs.clear();
+        unit_start += rle.val*(rle.freq - 1);
+    }
+    xs.clear();
 }
 
 DeltaRLE::Stats DRLE_Manager::generateStats(uint64_t rs, uint64_t re)
