@@ -21,75 +21,50 @@ namespace csx {
 
 class MMF;
 
+
+//Kalo
 struct RowElem {
-	uint64_t x;
-	union {
-		double val;
-		double *vals;
-	};
+    uint64_t x;
+    union {
+        double val;
+        double *vals;
+    };
 };
 
+//Kalo
 struct CooElem : public RowElem {
-	uint64_t y;
+    uint64_t y;
 };
 
 static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 {
-	int64_t ret;
-	ret = p0.y - p1.y;
-	if (ret == 0){
-		ret = p0.x - p1.x;
-	}
-	if (ret > 0){
-		return 1;
-	} else if (ret < 0){
-		return -1;
-	} else {
-		return 0;
-	}
+    int64_t ret;
+    ret = p0.y - p1.y;
+    if (ret == 0){
+        ret = p0.x - p1.x;
+    }
+    if (ret > 0){
+        return 1;
+    } else if (ret < 0){
+        return -1;
+    } else {
+        return 0;
+    }
 }
 
 #define STRINGIFY__(s) #s
 #define STRINGIFY(s)  STRINGIFY__(s)
 #define BLOCK_ROW_TYPE_NAME(r)  BLOCK_R ## r
 #define BLOCK_COL_TYPE_NAME(c)  BLOCK_C ## c
+#define BLOCK_ROW_DIAGONAL_TYPE_NAME(rd)  BLOCK_RD ## rd
 
-
+//Names -> Leave them;
 typedef enum {
-	NONE=0,
-	HORIZONTAL,
-	VERTICAL,
-	DIAGONAL,
-	REV_DIAGONAL,
-    	BLOCK_TYPE_START,
-    	BLOCK_ROW_TYPE_NAME(1),
-    	BLOCK_ROW_TYPE_NAME(2),
-    	BLOCK_ROW_TYPE_NAME(3),
-    	BLOCK_ROW_TYPE_NAME(4),
-    	BLOCK_ROW_TYPE_NAME(5),
-    	BLOCK_ROW_TYPE_NAME(6),
-    	BLOCK_ROW_TYPE_NAME(7),
-    	BLOCK_ROW_TYPE_NAME(8),
-   	BLOCK_COL_START,
-    	BLOCK_COL_TYPE_NAME(1),
-    	BLOCK_COL_TYPE_NAME(2),
-    	BLOCK_COL_TYPE_NAME(3),
-    	BLOCK_COL_TYPE_NAME(4),
-    	BLOCK_COL_TYPE_NAME(5),
-    	BLOCK_COL_TYPE_NAME(6),
-    	BLOCK_COL_TYPE_NAME(7),
-    	BLOCK_COL_TYPE_NAME(8),
-    	BLOCK_TYPE_END,
-	XFORM_MAX
-} SpmIterOrder;
-
-//
-const SpmIterOrder SpmTypes[] = {
-	NONE,
-	HORIZONTAL,
-	VERTICAL,
-	DIAGONAL,
-	REV_DIAGONAL,
+    NONE=0,
+    HORIZONTAL,
+    VERTICAL,
+    DIAGONAL,
+    REV_DIAGONAL,
     BLOCK_TYPE_START,
     BLOCK_ROW_TYPE_NAME(1),
     BLOCK_ROW_TYPE_NAME(2),
@@ -108,16 +83,63 @@ const SpmIterOrder SpmTypes[] = {
     BLOCK_COL_TYPE_NAME(6),
     BLOCK_COL_TYPE_NAME(7),
     BLOCK_COL_TYPE_NAME(8),
+    BLOCK_ROW_DIAGONAL_START,
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(1),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(2),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(3),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(4),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(5),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(6),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(7),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(8),
     BLOCK_TYPE_END,
-	XFORM_MAX
+    XFORM_MAX
+} SpmIterOrder;
+
+const SpmIterOrder SpmTypes[] = {
+    NONE,
+    HORIZONTAL,
+    VERTICAL,
+    DIAGONAL,
+    REV_DIAGONAL,
+    BLOCK_TYPE_START,
+    BLOCK_ROW_TYPE_NAME(1),
+    BLOCK_ROW_TYPE_NAME(2),
+    BLOCK_ROW_TYPE_NAME(3),
+    BLOCK_ROW_TYPE_NAME(4),
+    BLOCK_ROW_TYPE_NAME(5),
+    BLOCK_ROW_TYPE_NAME(6),
+    BLOCK_ROW_TYPE_NAME(7),
+    BLOCK_ROW_TYPE_NAME(8),
+    BLOCK_COL_START,
+    BLOCK_COL_TYPE_NAME(1),
+    BLOCK_COL_TYPE_NAME(2),
+    BLOCK_COL_TYPE_NAME(3),
+    BLOCK_COL_TYPE_NAME(4),
+    BLOCK_COL_TYPE_NAME(5),
+    BLOCK_COL_TYPE_NAME(6),
+    BLOCK_COL_TYPE_NAME(7),
+    BLOCK_COL_TYPE_NAME(8),
+    BLOCK_ROW_DIAGONAL_START,
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(1),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(2),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(3),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(4),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(5),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(6),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(7),
+    BLOCK_ROW_DIAGONAL_TYPE_NAME(8),
+    BLOCK_TYPE_END,
+    XFORM_MAX
 };
 
+//Names why _;
 const char *SpmTypesNames[] = {
-	"__NONE__",
-	"HORIZONTAL",
-	"VERTICAL",
-	"DIAGONAL",
-	"REV_DIAGONAL",
+    "__NONE__",
+    "HORIZONTAL",
+    "VERTICAL",
+    "DIAGONAL",
+    "REV_DIAGONAL",
     "__BLOCK_TYPE_START__",
     STRINGIFY(BLOCK_ROW_TYPE_NAME(1)),
     STRINGIFY(BLOCK_ROW_TYPE_NAME(2)),
@@ -136,13 +158,23 @@ const char *SpmTypesNames[] = {
     STRINGIFY(BLOCK_COL_TYPE_NAME(6)),
     STRINGIFY(BLOCK_COL_TYPE_NAME(7)),
     STRINGIFY(BLOCK_COL_TYPE_NAME(8)),
+    "__BLOCK_ROW_DIAGONAL_START__",
+    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(1)),
+    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(2)),
+    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(3)),
+    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(4)),
+    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(5)),
+    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(6)),
+    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(7)),
+    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(8)),
     "__BLOCK_TYPE_END__",
-	"__XFORM_MAX__"
+    "__XFORM_MAX__"
 };
 
 /*
- *  Returns block alignment if `t' is a block type, otherwise returns `0'.
- */ 
+ *  Returns block alignment if `blockt' is a block type, otherwise returns `0'.
+ */
+//TODO:Change and make safer. It is not sure that we will always have 8 sizes.
 static inline int isBlockType(SpmIterOrder t)
 {
     /*
@@ -150,12 +182,12 @@ static inline int isBlockType(SpmIterOrder t)
      *  SpmIterOrder enum (see the definition of SpmIterOrder).
      */
     if (t > BLOCK_TYPE_START && t < BLOCK_TYPE_END)
-        return (t - BLOCK_COL_START > 0) ? (t - BLOCK_COL_START) :
-            (t - BLOCK_TYPE_START);
+        return (t - BLOCK_TYPE_START)%9;
     else
         return 0;
 }
 
+//seems good
 class Pattern {
 public:
 	SpmIterOrder type;

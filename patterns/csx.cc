@@ -6,7 +6,7 @@
 #define FOREACH BOOST_FOREACH
 
 extern "C" {
-	#include "dynarray.h"
+    #include "dynarray.h"
 }
 
 #include "spm.h"
@@ -20,23 +20,23 @@ static bool debug = false;
 template <typename IterT, typename ValT>
 void DeltaEncode(IterT start, IterT end, ValT &x0)
 {
-	IterT i;
-	ValT prev, tmp;
+    IterT i;
+    ValT prev, tmp;
 
-	prev = x0;
-	for (i=start; i != end; ++i){
-		tmp = *i;
-		*i -= prev;
-		prev = tmp;
-	}
+    prev = x0;
+    for (i=start; i != end; ++i){
+        tmp = *i;
+        *i -= prev;
+        prev = tmp;
+    }
 }
 
 template <typename T>
 void Copy(T *dst, uint64_t *src, long nr_items)
 {
-	for (long i=0; i<nr_items; i++){
-		dst[i] = static_cast<T>(src[i]);
-	}
+    for (long i=0; i<nr_items; i++){
+        dst[i] = static_cast<T>(src[i]);
+    }
 }
 
 
@@ -218,7 +218,7 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     max = 0;
     if (xs_size > 1){
         vi = xs.begin();
-        std::advance(vi, 1); 	// advance over jmp
+        std::advance(vi, 1); // advance over jmp
         max = *(std::max_element(vi, xs.end()));
     }
     delta_size =  getDeltaSize(max);
@@ -288,7 +288,11 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 // return ujmp
 uint64_t CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem)
 {
-    uint64_t lastx;
+    if (xs.size() != 0)
+        this->AddXs(xs);
+    return 0;
+
+    /*uint64_t lastx;
     if (xs.size() == 0)
         return 0;
 
@@ -306,10 +310,10 @@ uint64_t CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &ele
         this->AddXs(xs);
         return 0;
     }
-    xs.pop_back();
+    //xs.pop_back();
     if (xs.size() > 0)
         this->AddXs(xs);
-    return lastx - this->last_col;
+    return lastx - this->last_col;*/
 }
 
 // Ctl Rules

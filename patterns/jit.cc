@@ -671,10 +671,10 @@ void CsxJit::doBodyHook(char *buffer)
         case BLOCK_COL_START ... BLOCK_TYPE_END:
             // This is a block col type
 			strcat(buffer,"type:block_col: ");
-			sprintf(temp,"%d",type - BLOCK_COL_START);
+			sprintf(temp,"%ld",delta);
 			strcat(buffer,temp);
 			strcat(buffer,"x");
-			sprintf(temp,"%ld",delta);
+			sprintf(temp,"%d",type - BLOCK_COL_START);
 			strcat(buffer,temp);
 			strcat(buffer," nnz:");
 			sprintf(temp,"%ld",pat_i->second.nr);

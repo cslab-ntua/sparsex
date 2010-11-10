@@ -142,7 +142,7 @@ public:
 
 	typedef std::map <SpmIterOrder, DeltaRLE::Stats> StatsMap;
 	StatsMap stats;
-	void genAllStats();
+	void genAllStats(uint64_t operate);
 	void outStats(std::ostream &os=std::cout);
 	void outStats(char *buffer);
     
@@ -157,11 +157,11 @@ public:
 	SpmIterOrder chooseType();
 	uint64_t getTypeScore(SpmIterOrder type);
 
-	void Encode(SpmIterOrder type=NONE);
-	void Decode(SpmIterOrder type=NONE);			//Prosthesa edw
-	void EncodeAll(char *buffer);
-	void MakeEncodeTree();					//edw
-	void EncodeSerial(int *xform_str);					//edw
+	void Encode(SpmIterOrder type=NONE, uint64_t operate=0);
+	void Decode(SpmIterOrder type=NONE);					//Prosthesa edw
+	void EncodeAll(char *buffer, uint64_t operate);
+	void MakeEncodeTree(uint64_t operate);					//edw
+	void EncodeSerial(int *xform_str, uint64_t operate);			//edw
     void set_sampling_probability(double probability)
         {
             check_probability(probability);
@@ -187,29 +187,34 @@ public:
 private:
 	void doEncode(std::vector<uint64_t> &xs,
 	              std::vector<double> &vs,
-	              std::vector<SpmRowElem> &newrow);
+	              std::vector<SpmRowElem> &newrow,
+                      uint64_t operate);
 
 	void doEncodeBlock(std::vector<uint64_t> &xs,
-                       std::vector<double> &vs,
-                       std::vector<SpmRowElem> &newrow);
+                           std::vector<double> &vs,
+                           std::vector<SpmRowElem> &newrow);
+
+	void doEncodeBlockAlt(std::vector<uint64_t> &xs,
+                              std::vector<double> &vs,
+                              std::vector<SpmRowElem> &newrow); //edw
 				
 	void doDecode(const SpmRowElem *elem,			//edw
 		      std::vector<SpmRowElem> &newrow);
 
 	void EncodeRow(const SpmRowElem *rstart,
 	               const SpmRowElem *rend,
-	               std::vector<SpmRowElem> &newrow);
+	               std::vector<SpmRowElem> &newrow,
+                       uint64_t operate);
 
 
 	void DecodeRow(const SpmRowElem *rstart,
 		       const SpmRowElem *rend, 
 		       std::vector<SpmRowElem> &newrow);	//kai edw
 
+        void cut_max_limit(DeltaRLE::Stats *stats, uint64_t block_align);
+        void operateStats(DeltaRLE::Stats *stats, uint64_t size, uint64_t block_align);		//kai edw
 
 	void updateStats(SPM *spm, std::vector<uint64_t> &xs,
-			 DeltaRLE::Stats &stats);
-	
-	void updateStats2(SPM *spm, std::vector<uint64_t> &xs,
 			 DeltaRLE::Stats &stats);
 
 	void updateStats(std::vector<uint64_t> &xs,
