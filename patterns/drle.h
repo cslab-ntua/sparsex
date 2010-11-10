@@ -11,6 +11,8 @@
 
 #include "spm.h"
 
+#define BUFFER_SIZE 50*1024
+
 namespace csx {
 
 class DeltaRLE : public Pattern {
@@ -158,10 +160,10 @@ public:
 	uint64_t getTypeScore(SpmIterOrder type);
 
 	void Encode(SpmIterOrder type=NONE, uint64_t operate=0);
-	void Decode(SpmIterOrder type=NONE);					//Prosthesa edw
+	void Decode(SpmIterOrder type=NONE);
 	void EncodeAll(char *buffer, uint64_t operate);
-	void MakeEncodeTree(uint64_t operate);					//edw
-	void EncodeSerial(int *xform_str, uint64_t operate);			//edw
+	void MakeEncodeTree();
+	void EncodeSerial(int *xform, int *deltas, uint64_t operate);
     void set_sampling_probability(double probability)
         {
             check_probability(probability);

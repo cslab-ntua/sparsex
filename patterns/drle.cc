@@ -305,7 +305,7 @@ void DRLE_Manager::updateStatsBlock(std::vector<uint64_t> &xs,
     FOREACH(RLE<uint64_t> &rle, rles){
         unit_start += rle.val;
         //printf("(v,f,u) = (%ld,%ld,%ld)\n", rle.val, rle.freq, unit_start);
-        if (rle.val == 1) {
+       if (rle.val == 1) {
             // Start of the real block is at `unit_start - 1' with
             // one-based indexing. When computing the `%' we need
             // zero-based indexing.
@@ -323,12 +323,12 @@ void DRLE_Manager::updateStatsBlock(std::vector<uint64_t> &xs,
                 skip_front = (block_align - (unit_start-2) % block_align) % block_align;
             }
             //std::cout << "Skip Front: " << skip_front << std::endl;
-            if (nr_elem > skip_front)
+           if (nr_elem > skip_front)
                 nr_elem -= skip_front;
             else
                 nr_elem = 0;
-            uint64_t other_dim = nr_elem / (uint64_t) block_align; 
-            //std::cout << "Dimension: " << other_dim << std::endl;
+           
+            uint64_t other_dim = nr_elem / (uint64_t) block_align;
             if (other_dim >= 2) {
                 stats[other_dim].nnz += other_dim * block_align;
                 stats[other_dim].npatterns++;
@@ -456,7 +456,7 @@ void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
 
 	col = 0; // initialize column
 	elem.pattern = NULL; // Default inserter (for push_back copies)
-	FOREACH(RLE<uint64_t> rle, rles){
+	FOREACH(RLE<uint64_t> rle, rles) {
 	
 	// create patterns
         //std::cout << "freq:" << rle.freq << " val:" << rle.val << "\n";
@@ -743,8 +743,7 @@ void DRLE_Manager::Encode(SpmIterOrder type, uint64_t operate)
     delete SpmBld;
 
     // Transform matrix to the original iteration order
-    //Spm->Transform(oldtype);						//****** Na to xanavalw
-    Spm->Transform(HORIZONTAL);						//****** Na to vgalw
+    Spm->Transform(oldtype);
     this->addIgnore(type);
 }
 
@@ -760,9 +759,9 @@ void DRLE_Manager::EncodeAll(char *buffer, uint64_t operate)
 		type = this->chooseType();
 		if (type == NONE)
 			break;
-		strcat(buffer,"Encode to ");
-		strcat(buffer,SpmTypesNames[type]);
-		strcat(buffer,"\n");		
+		strncat(buffer,"Encode to ", BUFFER_SIZE - 1);
+		strncat(buffer,SpmTypesNames[type], BUFFER_SIZE - 1);
+		strncat(buffer,"\n", BUFFER_SIZE - 1);
 		//std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
 		this->Encode(type, operate);
 	}
@@ -792,21 +791,21 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, char *buffer)
 	DeltaRLE::Stats::iterator iter;
 	char temp[100];
 	for (iter=stats.begin(); iter != stats.end(); ++iter){
-		strcat(buffer,"    ");
+		strncat(buffer, "    ", BUFFER_SIZE - 1);
 		sprintf(temp,"%ld",iter->first);
-		strcat(buffer,temp);
-		strcat(buffer,"-> ");
-		strcat(buffer,"np:");
+		strncat(buffer, temp, BUFFER_SIZE - 1);
+		strncat(buffer, "-> ", BUFFER_SIZE - 1);
+		strncat(buffer, "np:", BUFFER_SIZE - 1);
 		sprintf(temp,"%ld",iter->second.npatterns);
-		strcat(buffer,temp);
-		strcat(buffer," nnz: ");
+		strncat(buffer, temp, BUFFER_SIZE - 1);
+		strncat(buffer, " nnz: ", BUFFER_SIZE - 1);
 		sprintf(temp,"%lf",100*((double)iter->second.nnz/(double)spm.nnz));
-		strcat(buffer,temp);
-		strcat(buffer,"%");
-		strcat(buffer," (");
+		strncat(buffer, temp, BUFFER_SIZE - 1);
+		strncat(buffer, "%", BUFFER_SIZE - 1);
+		strncat(buffer, " (", BUFFER_SIZE - 1);
 		sprintf(temp,"%ld",iter->second.nnz);
-		strcat(buffer,temp);
-		strcat(buffer,")");
+		strncat(buffer, temp, BUFFER_SIZE - 1);
+		strncat(buffer, ")", BUFFER_SIZE - 1);
 	}
 }
 } // end csx namespace
@@ -1123,15 +1122,13 @@ void DRLE_Manager::outStats(std::ostream &os)
 
 void DRLE_Manager::outStats(char *buffer)
 {
-    DRLE_Manager::StatsMap::iterator iter;
-    for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
-        if (!iter->second.empty()) {
-            strcat(buffer,SpmTypesNames[iter->first]);
-            strcat(buffer,"\t");
-            DRLE_OutStats(iter->second, *(this->spm), buffer);
-            strcat(buffer,"\n");
-        }
-    }
+	DRLE_Manager::StatsMap::iterator iter;
+	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
+		strncat(buffer, SpmTypesNames[iter->first], BUFFER_SIZE - 1);
+		strncat(buffer, "\t", BUFFER_SIZE - 1);
+		DRLE_OutStats(iter->second, *(this->spm), buffer);
+		strncat(buffer, "\n", BUFFER_SIZE - 1);
+	}
 }
 
 void DRLE_Manager::doDecode(const SpmRowElem *elem, std::vector<SpmRowElem> &newrow)
@@ -1321,16 +1318,19 @@ void DRLE_Manager::MakeEncodeTree(uint64_t operate)
 	std::cout << "Tree has " << count << " possible paths" << std::endl;
 }
 
-void DRLE_Manager::EncodeSerial(int *xform_buf, uint64_t operate)
+void DRLE_Manager::EncodeSerial(int *xform_buf, int *deltas, uint64_t operate)
 {
-    int i=0;
+    for (uint32_t i = 0; i < XFORM_MAX; ++i)
+        this->addIgnore((SpmIterOrder) i);
 
-    while (xform_buf[i] != -1) {
-        int t = xform_buf[i++];
-        for (uint32_t i=0; i<XFORM_MAX; i++)
-            this->addIgnore((SpmIterOrder) i);
-        this->removeIgnore(static_cast<SpmIterOrder>(t));
-        this->genAllStats(operate);
-        this->Encode(static_cast<SpmIterOrder>(t), operate);
+    int last_delta = deltas[0];
+    for (int i = 0; xform_buf[i] != -1; ++i) {
+        SpmIterOrder t = static_cast<SpmIterOrder>(xform_buf[i]);
+        int delta = (deltas[i] == -1) ? last_delta : deltas[i];
+        this->removeIgnore(t);
+        this->DeltasToEncode[t].insert(delta);
+        this->Encode(t, operate);
+        this->addIgnore(t);
+        last_delta = delta;
     }
 }
