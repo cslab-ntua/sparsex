@@ -73,9 +73,9 @@ void *thread_function(void *initial_data)
 
     strncat(buffer,"\n", BUFFER_SIZE - 1);
     if (data->deltas)
-        DrleMg->EncodeSerial(xform_buf, data->deltas);
+        DrleMg->EncodeSerial(xform_buf, data->deltas, operate);
     else
-        DrleMg->EncodeAll(buffer);
+        DrleMg->EncodeAll(buffer, operate);
 
     delete DrleMg;
     return 0;
@@ -93,9 +93,9 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     pthread_t *threads;
     CsxJit **Jits;
 
-    mt_get_options(&threads_nr, &threads_cpus);
+    mt_get_options(&nr_threads, &threads_cpus);
     std::cout << "MT_CONF: ";
-    for (unsigned int i=0; i<threads_nr; i++) {
+    for (unsigned int i=0; i<nr_threads; i++) {
         if (i != 0)
             std::cout << ",";
         std::cout << threads_cpus[i];

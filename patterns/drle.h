@@ -162,7 +162,7 @@ public:
 	void Encode(SpmIterOrder type=NONE, uint64_t operate=0);
 	void Decode(SpmIterOrder type=NONE);
 	void EncodeAll(char *buffer, uint64_t operate);
-	void MakeEncodeTree();
+	void MakeEncodeTree(uint64_t operate);
 	void EncodeSerial(int *xform, int *deltas, uint64_t operate);
     void set_sampling_probability(double probability)
         {

@@ -849,7 +849,7 @@ inline TransformFn SPM::getXformFn(SpmIterOrder type)
     return ret;
 }
 
-inline TransformFn SPM::getTransformFn(SpmIteupdateStatsrOrder from_type,
+inline TransformFn SPM::getTransformFn(SpmIterOrder from_type,
                                        SpmIterOrder to_type)
 {
     boost::function<void (CooElem &p)> xform_fn, rxform_fn;
@@ -886,7 +886,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
     // For now we keep it simple.
     elems.reserve(this->elems_size__);
     p0 = points_begin(rs);
-    pe = points_end(re);updateStats
+    pe = points_end(re);
     for(p=p0; p != pe; ++p){
         SpmCooElem p_new = SpmCooElem(*p);
         xform_fn(p_new);
@@ -926,7 +926,7 @@ void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
     boost::function<void (CooElem &p)> xform_fn;
     xform_fn = bll::bind(pnt_map_D, bll::_1, bll::_1, y);
     PrintTransform(y, x, xform_fn, out);
-}updateStats
+}
 
 void PrintRDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 {
@@ -938,7 +938,7 @@ void PrintRDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 void TestTransform(uint64_t y, uint64_t x, TransformFn xform_fn, TransformFn rxform_fn)
 {
 	uint64_t i,j;
-	CooElem p0, p1;updateStats
+	CooElem p0, p1;
 	for (i=1; i <= y; i++){
 		for (j=1; j <= x;  j++){
 			p0.y = i;
@@ -954,7 +954,7 @@ void TestTransform(uint64_t y, uint64_t x, TransformFn xform_fn, TransformFn rxf
 				exit(1);
 			}
 		}
-	}updateStats
+	}
 }
 
 void TestRDiagTransform(uint64_t y, uint64_t x)
@@ -1126,7 +1126,7 @@ void SPM::PrintStats(std::ostream& out)
 
         for ( ; elem != this->rend(i); elem++) {
 //            if (elem->pattern && isBlockType(elem->pattern->type)) {
-            if (elem->pattern) {updateStats
+            if (elem->pattern) {
                 ++nr_patterns;
                 pt_size = elem->pattern->getSize();
                 pt_type = elem->pattern->type;
