@@ -59,8 +59,8 @@ public:
     void doOp(Value *MyX=NULL, Value *Yindx=NULL);
 
     void doNewRowHook();
-    void doBodyHook(char *buffer);
-    void doHooks(char *buffer);
+    void doBodyHook(std::ostream &os);
+    void doHooks(std::ostream &os);
     void *doJit();
 
     void doDeltaAddMyx(int delta_bytes);

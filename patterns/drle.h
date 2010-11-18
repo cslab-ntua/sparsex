@@ -11,8 +11,6 @@
 
 #include "spm.h"
 
-#define BUFFER_SIZE 50*1024
-
 namespace csx {
 
 class DeltaRLE : public Pattern {
@@ -146,7 +144,6 @@ public:
 	StatsMap stats;
 	void genAllStats(uint64_t operate);
 	void outStats(std::ostream &os=std::cout);
-	void outStats(char *buffer);
     
 	std::map <SpmIterOrder, std::set<uint64_t> > DeltasToEncode;
 	std::bitset<XFORM_MAX> xforms_ignore;
@@ -161,7 +158,7 @@ public:
 
 	void Encode(SpmIterOrder type=NONE, uint64_t operate=0);
 	void Decode(SpmIterOrder type=NONE);
-	void EncodeAll(char *buffer, uint64_t operate);
+	void EncodeAll(std::ostream &os, uint64_t operate);
 	void MakeEncodeTree(uint64_t operate);
 	void EncodeSerial(int *xform, int *deltas, uint64_t operate);
     void set_sampling_probability(double probability)
@@ -289,7 +286,6 @@ inline std::ostream &operator<<(std::ostream &os, const DeltaRLE::Stats &stats)
 #endif
 
 void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os);
-void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, char *buffer);
 
 class Node {								//Prosthesa edw
 public:

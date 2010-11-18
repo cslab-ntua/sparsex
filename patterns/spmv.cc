@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 #include "spm.h"
@@ -26,17 +27,18 @@ extern "C" {
 #define DIGITS_MAX  4
 
 using namespace csx;
+using namespace std;
 
 typedef struct parameters {
-    unsigned int thread_no;
-    SPM *Spm;
-    uint64_t wsize;
-    char * buffer;
-    int * xform_buf;
-    double sampling_prob;
-    uint64_t samples_max;
-    uint64_t operate;
-    int *deltas;
+    unsigned int    thread_no;
+    SPM *           Spm;
+    uint64_t        wsize;
+    ostringstream   buffer;
+    int             *xform_buf;
+    double          sampling_prob;
+    uint64_t        samples_max;
+    uint64_t        operate;
+    int             *deltas;
 } Parameters;
 
 void *thread_function(void *initial_data)
@@ -45,33 +47,30 @@ void *thread_function(void *initial_data)
     unsigned int thread_no = data->thread_no;
     SPM *Spm = data->Spm;
     uint64_t wsize = data->wsize;
-    char *buffer = data->buffer;
+    ostringstream &buffer = data->buffer;
     int *xform_buf = data->xform_buf;
     double sampling_prob = data->sampling_prob;
     uint64_t samples_max = data->samples_max;
     uint64_t operate = data->operate;
 
-    char number[DIGITS_MAX];
     DRLE_Manager *DrleMg;
 
-    strncpy(buffer,"==> Thread: #", BUFFER_SIZE);
-    snprintf(number, DIGITS_MAX, "%d",thread_no);
-    strncat(buffer, number, BUFFER_SIZE - 1);
-    strncat(buffer, "\n", BUFFER_SIZE - 1);
+    buffer << "==> Thread: #" << thread_no << endl;
     DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, sampling_prob,
                               samples_max);
     DrleMg->ignoreAll();
-    strncat(buffer,"Encoding type: ", BUFFER_SIZE - 1);
+    buffer << "Encoding type: ";
     for (int i = 0; xform_buf[i] != -1; ++i) {
         int t = xform_buf[i];
         DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
         if (i > 0)
-            strncat(buffer, ", ", BUFFER_SIZE - 1);
-        strncat(buffer, SpmTypesNames[t], BUFFER_SIZE - 1);
+            buffer << ",";
+
+        buffer << SpmTypesNames[t];
     }
 
-    strncat(buffer,"\n", BUFFER_SIZE - 1);
+    buffer << endl;
     if (data->deltas)
         DrleMg->EncodeSerial(xform_buf, data->deltas, operate);
     else
@@ -86,7 +85,6 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
     SPM *Spms;
-    char ** buffer;
     int *xform_buf;
     int *deltas;
     Parameters *data;
@@ -115,8 +113,9 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         exit(1);
     }
 
-    for (unsigned int i=0; i<nr_threads; i++)
+    for (unsigned int i=0; i<nr_threads; i++) {
         spm_mt->spm_threads[i].cpu = threads_cpus[i];
+    }
     Spms = SPM::loadMMF_mt(mmf_fname, nr_threads);
 
     const char *operate_str = getenv("OPERATE_BLOCKS");
@@ -194,19 +193,19 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     	    xform_buf[next] = t;
             ++next;
         }
-    }
-    else
+        xform_buf[next] = -1;
+    } else {
         xform_buf[0] = 0;
+    }
+
     std::cout << "Encoding type: ";
-    for (unsigned int i=0; xform_buf[i]!=-1; i++) {
+    for (unsigned int i = 0; xform_buf[i] != -1; i++) {
         int t = xform_buf[i];
         if (i != 0)
             std::cout << ", ";
         std::cout << SpmTypesNames[t];
     }
     std::cout << std::endl;
-
-    xform_buf[next] = -1;
 
     xtimer_t timer;
     timer_init(&timer);
@@ -218,17 +217,13 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         exit(1);
     }
 
-    data = (Parameters *) malloc(nr_threads*sizeof(Parameters));
-    if (!data){
-        perror("malloc");
-        exit(1);
-    }
+    data = new Parameters[nr_threads];
 
-    buffer = (char **) malloc(nr_threads*sizeof(char *));
-    if (!buffer){
-        perror("malloc");
-        exit(1);
-    }
+    // data = (Parameters *) malloc(nr_threads*sizeof(Parameters));
+    // if (!data){
+    //     perror("malloc");
+    //     exit(1);
+    // }
 
     Jits = (CsxJit **) malloc(nr_threads*sizeof(CsxJit *));
     if (!Jits){
@@ -237,20 +232,16 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     }
 
     for (unsigned int i=0; i < nr_threads; i++) {
-        buffer[i] = (char *) malloc(BUFFER_SIZE*sizeof(char));
-        if (!buffer[i]){
-            perror("malloc");
-            exit(1);
-        }
         data[i].Spm = &Spms[i];
         data[i].wsize = wsize;
         data[i].thread_no = i;
-        data[i].buffer = buffer[i];
         data[i].xform_buf = xform_buf;
         data[i].sampling_prob = sampling_prob;
         data[i].samples_max = samples_max;
         data[i].operate = operate;
         data[i].deltas = deltas;
+        // clear the buffer
+        data[i].buffer.str("");
     }
 
     for (unsigned int i=1; i<nr_threads; i++)
@@ -265,10 +256,9 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         CsxManager *CsxMg = new CsxManager(&Spms[i]);
         spm_mt->spm_threads[i].spm = CsxMg->mkCsx();
         Jits[i] = new CsxJit(CsxMg, i);
-        Jits[i]->doHooks(buffer[i]);
+        Jits[i]->doHooks(data[i].buffer);
         delete CsxMg;
-        std::cout << buffer[i];
-        free(buffer[i]);
+        std::cout << data[i].buffer.str();
     }
 
     doOptimize(Jits[0]->M);
@@ -276,11 +266,11 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->doJit();
         delete Jits[i];
     }
+
     free(Jits);
-    free(buffer);
-    free(data);
     free(threads);
     delete[] Spms;
+    delete[] data;
     timer_pause(&timer);
     std::cout << "Preprocessing time: "
               << timer_secs(&timer) << " sec" << std::endl;
@@ -351,5 +341,6 @@ int main(int argc, char **argv)
         BenchLoop(spm_mt, argv[i]);
         putSpmMt(spm_mt);
     }
+
     return 0;
 }

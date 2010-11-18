@@ -25,7 +25,7 @@ CL_BYTES    ?= $(shell $(cpu_dir)/cl_bytes.sh)
 CACHE_BYTES ?= $(shell $(cpu_dir)/cache_bytes.sh)
 CPU         ?= $(shell $(cpu_dir)/cpu_info.sh)
 GCC         ?= llvm-gcc
-CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
+CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC -DCPU_CORE -DSPMV_PRFCNT
 CFLAGS      += -g
 #CFLAGS      += -funroll-all-loops #-march=nocona
 #DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
@@ -192,7 +192,7 @@ spmv_loops.o: spmv_loops.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_double.o
 	$(LD) -i spmv_loops_{float,double}.o -o spmv_loops.o
 
-spmv_loops_mt.o: spmv_loops_mt.c spmv_method.h vector.h
+spmv_loops_mt.o: spmv_loops_mt.c spmv_method.h vector.h ../prfcnt/*.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_mt_float.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_double.o
 	$(LD) -i spmv_loops_mt_{float,double}.o -o spmv_loops_mt.o

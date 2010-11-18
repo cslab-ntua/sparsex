@@ -747,22 +747,20 @@ void DRLE_Manager::Encode(SpmIterOrder type, uint64_t operate)
     this->addIgnore(type);
 }
 
-void DRLE_Manager::EncodeAll(char *buffer, uint64_t operate)
+void DRLE_Manager::EncodeAll(std::ostream &os, uint64_t operate)
 {
 	SpmIterOrder type = NONE;
 	StatsMap::iterator iter;
 
 	for (;;){
 		this->genAllStats(operate);
-		this->outStats(buffer);		
+		this->outStats(os);		
 		//this->outStats(std::cerr);
 		type = this->chooseType();
 		if (type == NONE)
 			break;
-		strncat(buffer,"Encode to ", BUFFER_SIZE - 1);
-		strncat(buffer,SpmTypesNames[type], BUFFER_SIZE - 1);
-		strncat(buffer,"\n", BUFFER_SIZE - 1);
-		//std::cerr << "Encode to " << SpmTypesNames[type] << std::endl;
+
+        os << "Encode to " << SpmTypesNames[type] << "\n";
 		this->Encode(type, operate);
 	}
 }
@@ -786,28 +784,6 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
 	}
 }
 
-void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, char *buffer)
-{
-	DeltaRLE::Stats::iterator iter;
-	char temp[100];
-	for (iter=stats.begin(); iter != stats.end(); ++iter){
-		strncat(buffer, "    ", BUFFER_SIZE - 1);
-		sprintf(temp,"%ld",iter->first);
-		strncat(buffer, temp, BUFFER_SIZE - 1);
-		strncat(buffer, "-> ", BUFFER_SIZE - 1);
-		strncat(buffer, "np:", BUFFER_SIZE - 1);
-		sprintf(temp,"%ld",iter->second.npatterns);
-		strncat(buffer, temp, BUFFER_SIZE - 1);
-		strncat(buffer, " nnz: ", BUFFER_SIZE - 1);
-		sprintf(temp,"%lf",100*((double)iter->second.nnz/(double)spm.nnz));
-		strncat(buffer, temp, BUFFER_SIZE - 1);
-		strncat(buffer, "%", BUFFER_SIZE - 1);
-		strncat(buffer, " (", BUFFER_SIZE - 1);
-		sprintf(temp,"%ld",iter->second.nnz);
-		strncat(buffer, temp, BUFFER_SIZE - 1);
-		strncat(buffer, ")", BUFFER_SIZE - 1);
-	}
-}
 } // end csx namespace
 
 void DRLE_Manager::addIgnore(SpmIterOrder type)
@@ -1117,17 +1093,6 @@ void DRLE_Manager::outStats(std::ostream &os)
 		os << SpmTypesNames[iter->first] << "\t";
 		DRLE_OutStats(iter->second, *(this->spm), os);
 		os << std::endl;
-	}
-}
-
-void DRLE_Manager::outStats(char *buffer)
-{
-	DRLE_Manager::StatsMap::iterator iter;
-	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
-		strncat(buffer, SpmTypesNames[iter->first], BUFFER_SIZE - 1);
-		strncat(buffer, "\t", BUFFER_SIZE - 1);
-		DRLE_OutStats(iter->second, *(this->spm), buffer);
-		strncat(buffer, "\n", BUFFER_SIZE - 1);
 	}
 }
 

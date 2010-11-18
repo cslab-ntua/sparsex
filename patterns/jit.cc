@@ -507,14 +507,13 @@ void CsxJit::DeltaCase(BasicBlock *BB,
 	Cnt->addIncoming(NextCnt, BB_body);
 }
 
-void CsxJit::doBodyHook(char *buffer)
+void CsxJit::doBodyHook(std::ostream &os)
 {
     BasicBlock *BB, *BB_next, *BB_default, *BB_case;
     Value *PatternMask;
     Value *v;
     uint64_t delta;
     SpmIterOrder type;
-    char temp[100];
 
     BB = llvm_hook_newbb(M, "__body_hook", SpmvF, &BB_next);
 
@@ -554,16 +553,10 @@ void CsxJit::doBodyHook(char *buffer)
                    delta == 16 ||
                    delta == 32 ||
                    delta == 64);
-//        case 8: case 16: case 32: case 64:
-			strcat(buffer,"type:DELTA size:");
-			sprintf(temp,"%ld",delta);
-			strcat(buffer,temp);
-			strcat(buffer," elements:");
-			sprintf(temp,"%ld",pat_i->second.nr);
-			strcat(buffer,temp);
-			strcat(buffer,"\n");
-			//std::cout << "type:DELTA size:" << delta << " elements:" << pat_i->second.nr << "\n";
-			BB_lentry = BasicBlock::Create("lentry", BB->getParent(), BB_default);
+			os << "type:DELTA size:" << delta << " elements:"
+               << pat_i->second.nr << std::endl;
+			BB_lentry = BasicBlock::Create("lentry", BB->getParent(),
+                                           BB_default);
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DeltaCase(BB_case,
 			          BB_lentry, BB_lbody,
@@ -573,16 +566,8 @@ void CsxJit::doBodyHook(char *buffer)
 
 			// Horizontal
         case HORIZONTAL:
-//        case 10000 ... 19999:
-//			delta = pat_i->first - 10000;
-			strcat(buffer,"type:DRLE order:HORIZONTAL delta:");
-			sprintf(temp,"%ld",delta);
-			strcat(buffer,temp);
-			strcat(buffer," elements:");
-			sprintf(temp,"%ld",pat_i->second.nr);
-			strcat(buffer,temp);
-			strcat(buffer,"\n");
-			//std::cout << "type:DRLE order:HORIZONTAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
+			os << "type:DRLE order:HORIZONTAL delta:" << delta
+               << " elements:" << pat_i->second.nr << std::endl;
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			BB_lexit = BasicBlock::Create("lexit", BB->getParent(), BB_default);
 			HorizCase(BB_case,
@@ -593,16 +578,8 @@ void CsxJit::doBodyHook(char *buffer)
 
 			// Vertical
         case VERTICAL:
-//        case 20000 ... 29999:
-//			delta = pat_i->first - 20000;
-			strcat(buffer,"type:DRLE order:VERTICAL delta:");
-			sprintf(temp,"%ld",delta);
-			strcat(buffer,temp);
-			strcat(buffer," elements:");
-			sprintf(temp,"%ld",pat_i->second.nr);
-			strcat(buffer,temp);
-			strcat(buffer,"\n");
-			//std::cout << "type:DRLE order:VERTICAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
+			os << "type:DRLE order:VERTICAL delta:" << delta
+               << " elements:" << pat_i->second.nr << std::endl;
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			VertCase(BB_case,
 			         BB_lbody,
@@ -612,16 +589,8 @@ void CsxJit::doBodyHook(char *buffer)
 
 			// Diagonal
         case DIAGONAL:
-//         case 30000 ... 39999:
-// 			delta = pat_i->first - 30000;
-			strcat(buffer,"type:DRLE order:DIAGONAL delta:");
-			sprintf(temp,"%ld",delta);
-			strcat(buffer,temp);
-			strcat(buffer," elements:");
-			sprintf(temp,"%ld",pat_i->second.nr);
-			strcat(buffer,temp);
-			strcat(buffer,"\n");
-			//std::cout << "type:DRLE order:DIAGONAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
+			os << "type:DRLE order:DIAGONAL delta:" << delta
+               << " elements:" << pat_i->second.nr << std::endl;
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DiagCase(BB_case,
 			         BB_lbody,
@@ -632,16 +601,8 @@ void CsxJit::doBodyHook(char *buffer)
 
 			// rdiag
         case REV_DIAGONAL:
-//         case 40000 ... 49999:
-// 			delta = pat_i->first - 40000;
-			strcat(buffer,"type:DRLE order:REV_DIAGONAL delta:");
-			sprintf(temp,"%ld",delta);
-			strcat(buffer,temp);
-			strcat(buffer," elements:");
-			sprintf(temp,"%ld",pat_i->second.nr);
-			strcat(buffer,temp);
-			strcat(buffer,"\n");
-			//std::cout << "type:DRLE order:REV_DIAGONAL delta:" << delta << " elements:" << pat_i->second.nr << "\n";
+			os << "type:DRLE order:REV_DIAGONAL delta:" << delta
+               << " elements:" << pat_i->second.nr << std::endl;
 			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			DiagCase(BB_case,
 			         BB_lbody,
@@ -652,16 +613,8 @@ void CsxJit::doBodyHook(char *buffer)
 
         case BLOCK_TYPE_START ... BLOCK_COL_START - 1:
             // This is a block row type
-			strcat(buffer,"type:block_row: ");
-			sprintf(temp,"%d",type - BLOCK_TYPE_START);
-			strcat(buffer,temp);
-			strcat(buffer,"x");
-			sprintf(temp,"%ld",delta);
-			strcat(buffer,temp);
-			strcat(buffer," nnz:");
-			sprintf(temp,"%ld",pat_i->second.nr);
-			strcat(buffer,temp);
-			strcat(buffer,"\n");
+			os << "type:block_row: " << (type - BLOCK_TYPE_START) << "x"
+               << delta << " nnz:" << pat_i->second.nr << std::endl;
  			BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
 			BlockRowCaseRolled(BB_case, BB_lbody, BB_next,
                                            type - BLOCK_TYPE_START, delta);
@@ -670,19 +623,12 @@ void CsxJit::doBodyHook(char *buffer)
             break;
         case BLOCK_COL_START ... BLOCK_TYPE_END:
             // This is a block col type
-			strcat(buffer,"type:block_col: ");
-			sprintf(temp,"%ld",delta);
-			strcat(buffer,temp);
-			strcat(buffer,"x");
-			sprintf(temp,"%d",type - BLOCK_COL_START);
-			strcat(buffer,temp);
-			strcat(buffer," nnz:");
-			sprintf(temp,"%ld",pat_i->second.nr);
-			strcat(buffer,temp);
-			strcat(buffer,"\n");
-                        BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
-                        BlockColCaseRolled(BB_case, BB_lbody, BB_next,
-                                           delta, type - BLOCK_COL_START);
+			os << "type:block_col: " << delta << "x"
+               << (type - BLOCK_TYPE_START) << " nnz:"
+               <<  pat_i->second.nr << std::endl;
+            BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
+            BlockColCaseRolled(BB_case, BB_lbody, BB_next,
+                               delta, type - BLOCK_COL_START);
 			/*BlockColCaseUnrolled(BB_case, BB_next,
                                              delta, type - BLOCK_COL_START);*/
             break;
@@ -697,10 +643,10 @@ void CsxJit::doBodyHook(char *buffer)
 	}
 }
 
-void CsxJit::doHooks(char *buffer)
+void CsxJit::doHooks(std::ostream &os)
 {
 	doNewRowHook();
-	doBodyHook(buffer);
+	doBodyHook(os);
 }
 
 void *CsxJit::doJit()
