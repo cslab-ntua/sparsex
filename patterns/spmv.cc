@@ -149,6 +149,14 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     else
         samples_max = atol(samples);
 
+    // Print data
+    std::cout << "Window size: " << wsize << std::endl;
+    std::cout << "Number of samples: " << samples_max << std::endl;
+    if (sampling_prob)
+        std::cout << "Sampling prob: " << sampling_prob << std::endl;
+    else
+        std::cout << "Sampling prob: Not set" << std::endl;
+
     char  *encode_deltas_str = getenv("ENCODE_DELTAS");
     deltas = NULL;
     if (encode_deltas_str) {
