@@ -24,6 +24,7 @@ extern "C" {
 }
 
 #define DIGITS_MAX  4
+#define DELTAS_MAX  30
 
 using namespace csx;
 
@@ -35,48 +36,35 @@ typedef struct parameters {
     int * xform_buf;
     double sampling_prob;
     uint64_t samples_max;
-    uint64_t operate;
-    int *deltas;
+    bool operate;
+    int **deltas;
 } Parameters;
 
 void *thread_function(void *initial_data)
 {
     Parameters *data = (Parameters *) initial_data;
-    unsigned int thread_no = data->thread_no;
-    SPM *Spm = data->Spm;
-    uint64_t wsize = data->wsize;
     char *buffer = data->buffer;
-    int *xform_buf = data->xform_buf;
-    double sampling_prob = data->sampling_prob;
-    uint64_t samples_max = data->samples_max;
-    uint64_t operate = data->operate;
 
     char number[DIGITS_MAX];
     DRLE_Manager *DrleMg;
 
-    strncpy(buffer,"==> Thread: #", BUFFER_SIZE);
-    snprintf(number, DIGITS_MAX, "%d",thread_no);
+    strncpy(buffer, "==> Thread: #", BUFFER_SIZE);
+    snprintf(number, DIGITS_MAX, "%d", data->thread_no);
     strncat(buffer, number, BUFFER_SIZE - 1);
     strncat(buffer, "\n", BUFFER_SIZE - 1);
-    DrleMg = new DRLE_Manager(Spm, 4, 255-1, 0.1, wsize,
-                              DRLE_Manager::SPLIT_BY_NNZ, sampling_prob,
-                              samples_max);
+    DrleMg = new DRLE_Manager(data->Spm, 4, 255-1, 0.1, data->wsize,
+                              DRLE_Manager::SPLIT_BY_NNZ, data->sampling_prob,
+                              data->samples_max);
     DrleMg->ignoreAll();
-    strncat(buffer,"Encoding type: ", BUFFER_SIZE - 1);
-    for (int i = 0; xform_buf[i] != -1; ++i) {
-        int t = xform_buf[i];
+    for (int i=0; data->xform_buf[i]!=-1; ++i) {
+        int t = data->xform_buf[i];
         DrleMg->removeIgnore(static_cast<SpmIterOrder>(t));
-        if (i > 0)
-            strncat(buffer, ", ", BUFFER_SIZE - 1);
-        strncat(buffer, SpmTypesNames[t], BUFFER_SIZE - 1);
     }
-
-    strncat(buffer,"\n", BUFFER_SIZE - 1);
     if (data->deltas)
-        DrleMg->EncodeSerial(xform_buf, data->deltas, operate);
+        DrleMg->EncodeSerial(data->xform_buf, data->deltas[0], data->operate);
     else
-        DrleMg->EncodeAll(buffer, operate);
-
+        DrleMg->EncodeAll(buffer, data->operate);
+    //DrleMg->MakeEncodeTree(data->operate);
     delete DrleMg;
     return 0;
 }
@@ -88,7 +76,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     SPM *Spms;
     char ** buffer;
     int *xform_buf;
-    int *deltas;
+    int **deltas;
     Parameters *data;
     pthread_t *threads;
     CsxJit **Jits;
@@ -120,16 +108,14 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     Spms = SPM::loadMMF_mt(mmf_fname, nr_threads);
 
     const char *operate_str = getenv("OPERATE_BLOCKS");
-    uint64_t operate;
-
+    bool operate;
     if (!operate_str)
-        operate = 0;
+        operate = false;
     else
-        operate = 1;
+        operate = true;
 
     const char *wsize_str = getenv("WINDOW_SIZE");
     uint64_t wsize;
-
     if (!wsize_str)
         wsize = 0;
     else
@@ -139,7 +125,6 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     const char *samples = getenv("SAMPLES");
     double sampling_prob;
     uint64_t samples_max;
-
     if (!sampling_prob_str)
         sampling_prob = 0.0;
     else
@@ -153,26 +138,54 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     char  *encode_deltas_str = getenv("ENCODE_DELTAS");
     deltas = NULL;
     if (encode_deltas_str) {
-        deltas = (int *) malloc(XFORM_MAX*sizeof(*deltas));
-        memset(deltas, -1, XFORM_MAX*sizeof(*deltas));
+
+        deltas = (int **) malloc(XFORM_MAX*sizeof(int *));
         if (!deltas) {
             perror("malloc");
             exit(1);
         }
-
-        char    *token = strtok(encode_deltas_str, ",");
-        int     delta = (token) ? atoi(token) : -1;
-        int     next = 0;
-        
-        deltas[next] = delta;
-        ++next;
-        while ( (token = strtok(NULL, ",")) != NULL) {
-            int delta = atoi(token);
-    	    deltas[next] = (delta) ? delta : -1;
-            ++next;
+        for (int i=0; i<XFORM_MAX; i++) {
+            deltas[i] = (int *) malloc(DELTAS_MAX*sizeof(int));
+            if (!deltas[i]) {
+                perror("malloc");
+                exit(1);
+            }
         }
 
-        deltas[next] = -1;
+        char **temp = (char **) malloc(XFORM_MAX*sizeof(char *));
+        char *token = strtok(encode_deltas_str, "(");
+        int next = 0;
+        int str_length = strcspn(token,")");
+        temp[next] = (char *) malloc((str_length+1)*sizeof(char));
+        strncpy(temp[next], token, str_length);
+        temp[next][str_length] = 0;
+        std::cout << "String: " << temp[next] << std::endl;
+        ++next;
+        while ( (token = strtok(NULL, "(")) != NULL) {
+            str_length = strcspn(token,")");
+            temp[next] = (char *) malloc((str_length-1)*sizeof(char));
+            strncpy(temp[next], token, str_length);
+            temp[next][str_length] = 0;
+            std::cout << "String: " << temp[next] << std::endl;
+            ++next;
+        }
+        for (int i=0; i<next; i++) {
+            int j=0;
+
+            token = strtok(temp[i], ",");
+            deltas[i][j] = atoi(token);
+            ++j;
+            while ((token = strtok(NULL, ",")) != NULL) {
+                deltas[i][j] = atoi(token);
+                ++j;
+            }
+            deltas[i][j] = -1;
+        }
+        for (int i=0; i<next; i++) {
+            for (int j=0; deltas[i][j]!=-1; j++)
+                std::cout << deltas[i][j] << " ";
+            std::cout << std::endl;
+        }
     }
 
     char *xform_orig = getenv("XFORM_CONF");
@@ -182,8 +195,8 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         exit(1);
     }
 
-    int next = 0;
     if (xform_orig) {
+        int next = 0;
         int t = atoi(strtok(xform_orig, ","));
         char *token;
 
@@ -194,19 +207,18 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     	    xform_buf[next] = t;
             ++next;
         }
+        xform_buf[next] = -1;
     }
     else
         xform_buf[0] = 0;
     std::cout << "Encoding type: ";
-    for (unsigned int i=0; xform_buf[i]!=-1; i++) {
+    for (int i=0; xform_buf[i]!=-1; i++) {
         int t = xform_buf[i];
         if (i != 0)
             std::cout << ", ";
         std::cout << SpmTypesNames[t];
     }
     std::cout << std::endl;
-
-    xform_buf[next] = -1;
 
     xtimer_t timer;
     timer_init(&timer);

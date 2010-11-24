@@ -369,7 +369,7 @@ DeltaRLE::Stats DRLE_Manager::generateStats(SPM *Spm, uint64_t rs, uint64_t re)
 void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
                             std::vector<double> &vs,
                             std::vector<SpmRowElem> &newrow,
-                            uint64_t operate)
+                            bool operate)
 {
     uint64_t col;					// keep track of the current column
     std::vector< RLE<uint64_t> > rles;			// rle elements
@@ -378,7 +378,7 @@ void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
     SpmRowElem elem;					// temp element to perform insertions
     
     if (isBlockType(this->spm->type)) {
-        if (operate == 0)
+        if (!operate)
             doEncodeBlock(xs, vs, newrow);
         else
             doEncodeBlockAlt(xs, vs, newrow);
@@ -679,7 +679,7 @@ void DRLE_Manager::doEncodeBlockAlt(std::vector<uint64_t> &xs,
 }
 
 void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
-                             std::vector<SpmRowElem> &newrow, uint64_t operate)
+                             std::vector<SpmRowElem> &newrow, bool operate)
 {
     std::vector<uint64_t> xs;
     std::vector<double> vs;
@@ -706,7 +706,7 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
     }
 }
 
-void DRLE_Manager::Encode(SpmIterOrder type, uint64_t operate)
+void DRLE_Manager::Encode(SpmIterOrder type, bool operate)
 {
     SPM *Spm;
     SPM::Builder *SpmBld;
@@ -747,7 +747,7 @@ void DRLE_Manager::Encode(SpmIterOrder type, uint64_t operate)
     this->addIgnore(type);
 }
 
-void DRLE_Manager::EncodeAll(char *buffer, uint64_t operate)
+void DRLE_Manager::EncodeAll(char *buffer, bool operate)
 {
 	SpmIterOrder type = NONE;
 	StatsMap::iterator iter;
@@ -971,7 +971,7 @@ void DRLE_Manager::operateStats(DeltaRLE::Stats *sp, uint64_t size, uint64_t blo
     }
 }   
 
-void DRLE_Manager::genAllStats(uint64_t operate)
+void DRLE_Manager::genAllStats(bool operate)
 {
     DeltaRLE::Stats::iterator iter, tmp;
     DeltaRLE::Stats *sp;
@@ -1046,7 +1046,7 @@ void DRLE_Manager::genAllStats(uint64_t operate)
         // the element that is being erased.
         sp = &this->stats[type];
         uint64_t block_align = isBlockType(type);
-        if (block_align && operate == 1) {
+        if (block_align && operate) {
             //std::cout << "Block Align:" << block_align << std::endl;
             cut_max_limit(sp, block_align);
             operateStats(sp, spm->nnz, block_align);
@@ -1054,7 +1054,7 @@ void DRLE_Manager::genAllStats(uint64_t operate)
         for (iter = sp->begin(); iter != sp->end(); ) {
             tmp = iter++;
             double p = (double)tmp->second.nnz/(double)spm->nnz;
-            if (p < this->min_perc || tmp->first >= PID_OFFSET){
+            if (p < this->min_perc || tmp->first >= PID_OFFSET /*|| (block_align==0 && tmp->first>1)*/){
                 sp->erase(tmp);
             } else {
                 //std::cout << tmp->first << std::endl;
@@ -1112,23 +1112,27 @@ SpmIterOrder DRLE_Manager::chooseType()
 
 void DRLE_Manager::outStats(std::ostream &os)
 {
-	DRLE_Manager::StatsMap::iterator iter;
-	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
-		os << SpmTypesNames[iter->first] << "\t";
-		DRLE_OutStats(iter->second, *(this->spm), os);
-		os << std::endl;
-	}
+    DRLE_Manager::StatsMap::iterator iter;
+    for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
+         if (!iter->second.empty()) {
+             os << SpmTypesNames[iter->first] << "\t";
+             DRLE_OutStats(iter->second, *(this->spm), os);
+             os << std::endl;
+         }
+    }
 }
 
 void DRLE_Manager::outStats(char *buffer)
 {
-	DRLE_Manager::StatsMap::iterator iter;
-	for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
-		strncat(buffer, SpmTypesNames[iter->first], BUFFER_SIZE - 1);
-		strncat(buffer, "\t", BUFFER_SIZE - 1);
-		DRLE_OutStats(iter->second, *(this->spm), buffer);
-		strncat(buffer, "\n", BUFFER_SIZE - 1);
+    DRLE_Manager::StatsMap::iterator iter;
+    for (iter = this->stats.begin(); iter != this->stats.end(); ++iter){
+        if (!iter->second.empty()) {
+            strncat(buffer, SpmTypesNames[iter->first], BUFFER_SIZE - 1);
+            strncat(buffer, "\t", BUFFER_SIZE - 1);
+            DRLE_OutStats(iter->second, *(this->spm), buffer);
+            strncat(buffer, "\n", BUFFER_SIZE - 1);
 	}
+    }
 }
 
 void DRLE_Manager::doDecode(const SpmRowElem *elem, std::vector<SpmRowElem> &newrow)
@@ -1203,16 +1207,6 @@ void DRLE_Manager::Decode(SpmIterOrder type)
 	this->removeIgnore(type);
 }
 
-void Node::Insert(SpmIterOrder type) {
-	uint32_t i=0;
-	
-	while (this->type_path[i] != NONE) {
-		assert(this->type_path[i] != type);
-		i++;	
-	}
-	this->type_path[i] = type;
-}
-
 void Node::Ignore(SpmIterOrder type) {
 	uint32_t i=0;
 	
@@ -1224,101 +1218,111 @@ void Node::Ignore(SpmIterOrder type) {
 }
 
 void Node::PrintNode() {
-	uint32_t i=0;
-	SpmIterOrder type;
-	
-	//printf("Depth: %d\n",this->depth);
-	while ((type = this->type_path[i]) != NONE) {
-		if (i != 0)
-			std::cout << ",";
-		std::cout << type;
-		i++;
-	}
-	std::cout << std::endl;
+    for (uint32_t i=0; i<depth; i++) {
+        if (i != 0)
+            std::cout << ",";
+        std::cout << this->type_path[i];
+    }
+    std::cout << std::endl;
+    for (uint32_t i=0; i<depth; i++) {
+        SpmIterOrder temp_type = this->type_path[i];
+        std::set<uint64_t>::iterator it=this->deltas_path[temp_type].begin();
+
+        if (i != 0)
+            std::cout << ",";
+        std::cout << "(";
+        for (uint32_t i=1; i<(uint32_t) this->deltas_path[temp_type].size(); i++) {
+            std::cout << *it << ",";
+            ++it;
+        }
+        std::cout << *it << ")";
+    }
+    std::cout << std::endl;
 }
 
-Node Node::MakeChild(SpmIterOrder type) {
-	Node new_node = Node(this->depth+1);
+Node Node::MakeChild(SpmIterOrder type, std::set<uint64_t> deltas) {
+    Node new_node = Node(this->depth+1);
 
-	for (uint32_t i=0; i<((uint32_t) XFORM_MAX); i++) {
-		new_node.type_path[i] = this->type_path[i];
-		new_node.type_ignore[i] = this->type_ignore[i];
-	}
-	new_node.Insert(type);
-	return new_node;
+    for (uint32_t i=0; i<((uint32_t) XFORM_MAX); i++) {
+        new_node.type_ignore[i] = this->type_ignore[i];
+    }
+    for (uint32_t i=0; i< this->depth; i++) {
+        SpmIterOrder temp_type = this->type_path[i];
+        new_node.type_path[i] = temp_type;
+        new_node.deltas_path[temp_type] = this->deltas_path[temp_type];
+    }
+    new_node.type_path[this->depth] = type;
+    new_node.deltas_path[type] = deltas;
+    return new_node;
 }
 
-void DRLE_Manager::MakeEncodeTree(uint64_t operate)
+void DRLE_Manager::MakeEncodeTree(bool operate)
 {
-	uint32_t i,j;
-	uint32_t count=0;
-	StatsMap::iterator iter;
-	std::vector<Node> nodes;
-	std::vector<Node>::iterator it,it2;
-	
-	nodes.push_back(Node(0));
-	while (nodes.size() != 0) {
-		i = 0;
-		while (nodes[0].type_ignore[i] != NONE) {
-			this->addIgnore(nodes[0].type_ignore[i]);
-			i++;
-		}
-		this->genAllStats(operate);
-		//this->outStats(std::cout);
-		i = 0;
-		while (nodes[0].type_ignore[i] != NONE) {
-			this->removeIgnore(nodes[0].type_ignore[i]);
-			i++;
-		}
-		i = 0;
-		for (iter=this->stats.begin(); iter != this->stats.end(); ++iter) {
-			if (this->getTypeScore(iter->first) == 0) {
-				nodes[0].Ignore(iter->first);
-			}
-		}
-		it = nodes.begin();
-		for (iter=this->stats.begin(); iter != this->stats.end(); ++iter) {
-			if (this->getTypeScore(iter->first) > 0) {
-				it++;
-				it = nodes.insert(it,nodes[0].MakeChild(iter->first));
-			}
-		}
-		if (it != nodes.begin()) {
-			//std::cout << "Encode to " << SpmTypesNames[nodes[1].type_path[nodes[1].depth-1]] << std::endl;
-			this->Encode(nodes[1].type_path[nodes[1].depth-1], operate);
-		}
-		else {
-			nodes[0].PrintNode();
-			count++;
-			if (nodes.size() != 1) {
-				i = 0;
-				while (nodes[0].type_path[i] == nodes[1].type_path[i])
-					i++;
-				for (j=1; j<=nodes[0].depth-i; j++) {
-					//std::cout << "Decode from " << SpmTypesNames[nodes[0].type_path[nodes[0].depth-j]] << std::endl;
-					this->Decode(nodes[0].type_path[nodes[0].depth-j]);
-				}
-				while (i < nodes[1].depth) {
-					//std::cout << "Encode to " << SpmTypesNames[nodes[1].type_path[i]] << std::endl;
-					this->Encode(nodes[1].type_path[i], operate);
-					i++;
-				}
-			}
-			else {
-				for (j=1; j<=nodes[0].depth; j++) {
-					//std::cout << "Decode from " << SpmTypesNames[nodes[0].type_path[nodes[0].depth-j]] << std::endl;
-					this->Decode(nodes[0].type_path[nodes[0].depth-j]);
-				}
-			}
-		}
-		delete nodes[0].type_path;
-		delete nodes[0].type_ignore;
-		nodes.erase(nodes.begin());
-	}
-	std::cout << "Tree has " << count << " possible paths" << std::endl;
+    uint32_t i,j;
+    uint32_t count=0;
+    StatsMap::iterator iter;
+    std::vector<Node> nodes;
+    std::vector<Node>::iterator it,it2;
+
+    nodes.push_back(Node(0));					//create initial code
+    while (nodes.size() != 0) {					//while you have a choise
+        for (i=0; nodes[0].type_ignore[i]!=NONE; i++){		//ignore all the inappropriate types	
+            this->addIgnore(nodes[0].type_ignore[i]);
+        }
+        this->genAllStats(operate);				//run the stats for this node
+        //this->outStats(std::cout);
+        for (i=0; nodes[0].type_ignore[i]!=NONE; i++){		//refresh the ignore buffer	
+            this->removeIgnore(nodes[0].type_ignore[i]);
+        }
+        for (iter=this->stats.begin(); iter != this->stats.end(); ++iter) {		//ignore the types that do not have score
+            if (this->getTypeScore(iter->first) == 0) {
+                nodes[0].Ignore(iter->first);
+            }
+        }
+        it = nodes.begin();								//insert into bfs tree the types that have score
+        for (iter=this->stats.begin(); iter != this->stats.end(); ++iter) {
+            if (this->getTypeScore(iter->first) > 0) {
+                it++;
+                it = nodes.insert(it,nodes[0].MakeChild(iter->first,this->DeltasToEncode[iter->first]));
+            }
+        }
+        if (it != nodes.begin()) {							//if a node has children he is not a leaf
+            //std::cout << "Encode to " << SpmTypesNames[nodes[1].type_path[nodes[1].depth-1]] << std::endl;
+            this->Encode(nodes[1].type_path[nodes[1].depth-1], operate);
+        }
+        else {										//else it is. Type him and procceed to the next path.
+            nodes[0].PrintNode();
+            count++;
+            if (nodes.size() != 1) {
+                i = 0;
+                while (nodes[0].type_path[i] == nodes[1].type_path[i])
+                    i++;
+                for (j=1; j<=nodes[0].depth-i; j++) {
+                     //std::cout << "Decode from " << SpmTypesNames[nodes[0].type_path[nodes[0].depth-j]] << std::endl;
+                     this->Decode(nodes[0].type_path[nodes[0].depth-j]);
+                }
+                while (i < nodes[1].depth) {
+                    //std::cout << "Encode to " << SpmTypesNames[nodes[1].type_path[i]] << std::endl;
+                    this->Encode(nodes[1].type_path[i], operate);
+                    i++;
+                }
+            }
+            else {
+                for (j=1; j<=nodes[0].depth; j++) {
+                    //std::cout << "Decode from " << SpmTypesNames[nodes[0].type_path[nodes[0].depth-j]] << std::endl;
+                    this->Decode(nodes[0].type_path[nodes[0].depth-j]);
+                }
+            }
+        }
+        delete nodes[0].type_path;				//delete this node and go to next
+        delete nodes[0].type_ignore;				
+        nodes.erase(nodes.begin());				
+    }
+    std::cout << "Tree has " << count << " possible paths" << std::endl;
+    exit(0);
 }
 
-void DRLE_Manager::EncodeSerial(int *xform_buf, int *deltas, uint64_t operate)
+void DRLE_Manager::EncodeSerial(int *xform_buf, int *deltas, bool operate)
 {
     for (uint32_t i = 0; i < XFORM_MAX; ++i)
         this->addIgnore((SpmIterOrder) i);

@@ -144,7 +144,7 @@ public:
 
 	typedef std::map <SpmIterOrder, DeltaRLE::Stats> StatsMap;
 	StatsMap stats;
-	void genAllStats(uint64_t operate);
+	void genAllStats(bool operate);
 	void outStats(std::ostream &os=std::cout);
 	void outStats(char *buffer);
     
@@ -159,11 +159,11 @@ public:
 	SpmIterOrder chooseType();
 	uint64_t getTypeScore(SpmIterOrder type);
 
-	void Encode(SpmIterOrder type=NONE, uint64_t operate=0);
+	void Encode(SpmIterOrder type=NONE, bool operate=false);
 	void Decode(SpmIterOrder type=NONE);
-	void EncodeAll(char *buffer, uint64_t operate);
-	void MakeEncodeTree(uint64_t operate);
-	void EncodeSerial(int *xform, int *deltas, uint64_t operate);
+	void EncodeAll(char *buffer, bool operate);
+	void MakeEncodeTree(bool operate);
+	void EncodeSerial(int *xform, int *deltas, bool operate);
     void set_sampling_probability(double probability)
         {
             check_probability(probability);
@@ -190,7 +190,7 @@ private:
 	void doEncode(std::vector<uint64_t> &xs,
 	              std::vector<double> &vs,
 	              std::vector<SpmRowElem> &newrow,
-                      uint64_t operate);
+                      bool operate);
 
 	void doEncodeBlock(std::vector<uint64_t> &xs,
                            std::vector<double> &vs,
@@ -206,7 +206,7 @@ private:
 	void EncodeRow(const SpmRowElem *rstart,
 	               const SpmRowElem *rend,
 	               std::vector<SpmRowElem> &newrow,
-                       uint64_t operate);
+                       bool operate);
 
 
 	void DecodeRow(const SpmRowElem *rstart,
@@ -293,25 +293,24 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, char *buffer);
 
 class Node {								//Prosthesa edw
 public:
-	uint32_t depth;
-	SpmIterOrder *type_path;
-	SpmIterOrder *type_ignore;
+    uint32_t depth;
+    std::map <SpmIterOrder, std::set<uint64_t> > deltas_path;
+    SpmIterOrder *type_path;
+    SpmIterOrder *type_ignore;
 
-	Node(uint32_t depth_)
-	: depth(depth_) {
-		uint32_t i;
-		this->type_path = new SpmIterOrder[XFORM_MAX];
-		this->type_ignore = new SpmIterOrder[XFORM_MAX];
-		for (i=0; i<((uint32_t) XFORM_MAX); i++) {
-			this->type_path[i] = NONE;
-			this->type_ignore[i] = NONE;
-		}
-	}
-	~Node() {}
-	void Insert(SpmIterOrder type);
-	void Ignore(SpmIterOrder type);
-	Node MakeChild(SpmIterOrder type);
-	void PrintNode();
+    Node(uint32_t depth_)
+    : depth(depth_) {
+        uint32_t i;
+        this->type_path = new SpmIterOrder[depth];
+        this->type_ignore = new SpmIterOrder[XFORM_MAX];
+        for (i=0; i<((uint32_t) XFORM_MAX); i++)
+            this->type_ignore[i] = NONE;
+    }
+    ~Node() {}
+    void Insert(SpmIterOrder type);
+    void Ignore(SpmIterOrder type);
+    Node MakeChild(SpmIterOrder type, std::set<uint64_t> deltas);
+    void PrintNode();
 };
 
 } // end of csx namespace
