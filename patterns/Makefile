@@ -7,7 +7,7 @@ dynarray_dir = ../../dynarray
 protodir = ./proto
 
 GXX            ?= g++
-CXXFLAGS       ?= -Wall -O2 -Wdisabled-optimization
+CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCPU_CORE
 #CXXFLAGS       += -Winline
 LDFLAGS        =
 CXXFLAGS       += -ggdb -rdynamic

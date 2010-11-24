@@ -5,6 +5,7 @@ struct spm_mt_thread {
 	void              *spm;
 	void              *spmv_fn;
 	unsigned int      cpu;
+    void              *data;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
 
