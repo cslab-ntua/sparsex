@@ -149,11 +149,11 @@ csx_double_t *CsxManager::mkCsx()
 
     this->values_idx = 0;
     this->new_row = false;		// do not mark first row
-    for (uint64_t i=0; i < Spm->getNrRows(); i++){
+    for (uint64_t i=0; i < Spm->GetNrRows(); i++){
         const SpmRowElem *rbegin, *rend;
 
-        rbegin = Spm->rbegin(i);
-        rend = Spm->rend(i);
+        rbegin = Spm->RowBegin(i);
+        rend = Spm->RowEnd(i);
         if (debug)
             std::cerr << "mkCsx(): row: " << i << "\n";
         if (rbegin == rend){ 		// check if row is empty
@@ -261,10 +261,10 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     long pat_size, pat_id;
     uint64_t ujmp;
 
-    pat_size = elem.pattern->getSize();
+    pat_size = elem.pattern->GetSize();
     if (debug)
         std::cerr << "AddPattern jmp: " << jmp << " pat_size: " << pat_size << "\n";
-    pat_id = elem.pattern->getPatId();
+    pat_id = elem.pattern->GetPatId();
     ctl_flags = (uint8_t *)dynarray_alloc_nr(this->ctl_da, 2);
     *ctl_flags = this->getFlag(pat_id, pat_size);
     ctl_size = ctl_flags + 1;
@@ -280,7 +280,7 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     if (debug)
         std::cerr << "AddPattern ujmp " << ujmp << "\n";
     da_put_ul(this->ctl_da, ujmp);
-    this->last_col = elem.pattern->x_increase_jmp(this->spm->type, elem.x);
+    this->last_col = elem.pattern->ColIncreaseJmp(this->spm->type, elem.x);
     if (debug)
         std::cerr << "last_col:" << this->last_col << "\n";
 }
@@ -306,7 +306,7 @@ uint64_t CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &ele
     // previous element can ``disappear'' if it is included
     // in another type of pattern.
     // Todo: maybe it's cleaner to fix the parsing
-    if (elem.pattern->getNextX(lastx) != elem.x){
+    if (elem.pattern->GetNextCol(lastx) != elem.x){
         this->AddXs(xs);
         return 0;
     }
@@ -334,7 +334,7 @@ void CsxManager::doRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
             jmp = this->PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
             this->AddPattern(*spm_elem, jmp);
-            for (long i=0; i < spm_elem->pattern->getSize(); i++){
+            for (long i=0; i < spm_elem->pattern->GetSize(); i++){
                 this->values[this->values_idx++] = spm_elem->vals[i];
             }
             continue;

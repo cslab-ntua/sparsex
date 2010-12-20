@@ -624,7 +624,7 @@ void CsxJit::doBodyHook(std::ostream &os)
         case BLOCK_COL_START ... BLOCK_TYPE_END:
             // This is a block col type
 			os << "type:block_col: " << delta << "x"
-               << (type - BLOCK_TYPE_START) << " nnz:"
+               << (type - BLOCK_COL_START) << " nnz:"
                <<  pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create("lbody", BB->getParent(), BB_default);
             BlockColCaseRolled(BB_case, BB_lbody, BB_next,

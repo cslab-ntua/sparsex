@@ -21,44 +21,14 @@ namespace csx {
 
 class MMF;
 
-
-//Kalo
-struct RowElem {
-    uint64_t x;
-    union {
-        double val;
-        double *vals;
-    };
-};
-
-//Kalo
-struct CooElem : public RowElem {
-    uint64_t y;
-};
-
-static inline int CooCmp(const CooElem &p0, const CooElem &p1)
-{
-    int64_t ret;
-    ret = p0.y - p1.y;
-    if (ret == 0){
-        ret = p0.x - p1.x;
-    }
-    if (ret > 0){
-        return 1;
-    } else if (ret < 0){
-        return -1;
-    } else {
-        return 0;
-    }
-}
-
+/**
+*   Definition and names of different types of patterns.
+*/
 #define STRINGIFY__(s) #s
 #define STRINGIFY(s)  STRINGIFY__(s)
 #define BLOCK_ROW_TYPE_NAME(r)  BLOCK_R ## r
 #define BLOCK_COL_TYPE_NAME(c)  BLOCK_C ## c
-#define BLOCK_ROW_DIAGONAL_TYPE_NAME(rd)  BLOCK_RD ## rd
 
-//Names -> Leave them;
 typedef enum {
     NONE=0,
     HORIZONTAL,
@@ -83,15 +53,6 @@ typedef enum {
     BLOCK_COL_TYPE_NAME(6),
     BLOCK_COL_TYPE_NAME(7),
     BLOCK_COL_TYPE_NAME(8),
-    BLOCK_ROW_DIAGONAL_START,
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(1),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(2),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(3),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(4),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(5),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(6),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(7),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(8),
     BLOCK_TYPE_END,
     XFORM_MAX
 } SpmIterOrder;
@@ -120,20 +81,10 @@ const SpmIterOrder SpmTypes[] = {
     BLOCK_COL_TYPE_NAME(6),
     BLOCK_COL_TYPE_NAME(7),
     BLOCK_COL_TYPE_NAME(8),
-    BLOCK_ROW_DIAGONAL_START,
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(1),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(2),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(3),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(4),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(5),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(6),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(7),
-    BLOCK_ROW_DIAGONAL_TYPE_NAME(8),
     BLOCK_TYPE_END,
     XFORM_MAX
 };
 
-//Names why _;
 const char *SpmTypesNames[] = {
     "__NONE__",
     "HORIZONTAL",
@@ -158,48 +109,85 @@ const char *SpmTypesNames[] = {
     STRINGIFY(BLOCK_COL_TYPE_NAME(6)),
     STRINGIFY(BLOCK_COL_TYPE_NAME(7)),
     STRINGIFY(BLOCK_COL_TYPE_NAME(8)),
-    "__BLOCK_ROW_DIAGONAL_START__",
-    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(1)),
-    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(2)),
-    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(3)),
-    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(4)),
-    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(5)),
-    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(6)),
-    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(7)),
-    STRINGIFY(BLOCK_ROW_DIAGONAL_TYPE_NAME(8)),
     "__BLOCK_TYPE_END__",
     "__XFORM_MAX__"
 };
 
-/*
- *  Returns block alignment if `blockt' is a block type, otherwise returns `0'.
+/**
+ *  Returns block alignment if 't' is a block type, otherwise returns 0.
  */
-//TODO:Change and make safer. It is not sure that we will always have 8 sizes.
 static inline int isBlockType(SpmIterOrder t)
 {
-    /*
+    /**
      *  This function assumes specific order for block type elements in
      *  SpmIterOrder enum (see the definition of SpmIterOrder).
      */
-    if (t > BLOCK_TYPE_START && t < BLOCK_TYPE_END)
-        return (t - BLOCK_TYPE_START)%9;
+    if (t > BLOCK_TYPE_START && t < BLOCK_COL_START)
+        return t - BLOCK_TYPE_START;
+    else if (t > BLOCK_COL_START && t < BLOCK_TYPE_END)
+        return t-BLOCK_COL_START;
     else
         return 0;
 }
 
-//seems good
+/**
+*   Holds column and value or values of non-zero elements of CSX
+*/
+struct RowElem {
+    uint64_t x;
+    union {
+        double val;
+        double *vals;
+    };
+};
+
+/**
+*   Expansion of RowElem which holds row of non-zero elements of CSX
+*/
+struct CooElem : public RowElem {
+    uint64_t y;
+};
+
+
+/**
+*   Returns 1 if p0 is after p1,
+*   returns -1 if p0 is before p1 and
+*   returns 0 if po and p1 are the same element
+*/
+static inline int CooCmp(const CooElem &p0, const CooElem &p1)
+{
+    int64_t ret;
+    
+    ret = p0.y - p1.y;
+    if (ret == 0)
+        ret = p0.x - p1.x;
+    if (ret > 0)
+        return 1;
+    else if (ret < 0)
+        return -1;
+    else
+        return 0;
+}
+
+/**
+*   Class that describes pattern of non-zero elements
+*/
 class Pattern {
 public:
 	SpmIterOrder type;
 
-	virtual Pattern *clone() const = 0;
+	virtual Pattern *Clone() const = 0;
 	virtual ~Pattern() {};
-	virtual long getSize() const = 0;
-	virtual long getPatId() const = 0;
-	virtual long x_increase(SpmIterOrder spm_iter_order) const = 0;
-	virtual uint64_t x_increase_jmp(SpmIterOrder spm_iter_order, uint64_t jmp) const = 0;
-	virtual std::ostream &print_on(std::ostream &) const = 0;
+	virtual long GetSize() const = 0;
+	virtual long GetPatId() const = 0;
+	//*** We do not use ColIncrease.
+	virtual long ColIncrease(SpmIterOrder spm_iter_order) const = 0;
+	virtual uint64_t ColIncreaseJmp(SpmIterOrder spm_iter_order,
+	                                uint64_t jmp)
+	                                const = 0;
+	virtual std::ostream &PrintOn(std::ostream &) const = 0;
 
+	//*** We use class Generator only on PrintElems which is not used.
 	class Generator {
 	public:
 		virtual bool isEmpty() const = 0;
@@ -207,26 +195,33 @@ public:
 	};
 	virtual Generator *generator(CooElem start) = 0;
 
-	// get the next x
-	// Todo: maybe use this for a common generator
-	virtual uint64_t getNextX(uint64_t x0) const = 0;
+    /**
+    *   Get the column of the next non-zero element
+    */
+    //*** I do not understand todo operation.
+	// TODO: maybe use this for a common generator
+	virtual uint64_t GetNextCol(uint64_t x0) const = 0;
 
-	// stats for a specific pattern. For now it's just the number of non-zero
-	// elements that adhere to this pattern.
-	class StatsVal {
+	/**
+	*   Stats for a specific type of pattern of sparse matrix. More
+    *   specifically, it just holds the number of non-zero elements and 
+    *   patterns that adhere to this specific type of pattern.
+    */
+    class StatsVal {
 	public:
 		uint64_t nnz;
 		long npatterns;
-		//StatsVal() : nnz(0) { }
-        	void update(const StatsVal& new_vals) {
-           		this->nnz += new_vals.nnz;
-            		this->npatterns += new_vals.npatterns;
-        	}
+        
+        void Update(const StatsVal& new_vals) {
+            this->nnz += new_vals.nnz;
+            this->npatterns += new_vals.npatterns;
+        }
 	};
 };
 
-
-class SpmPattern {
+//*** Merge SpmPattern with Pattern Class? 
+class SpmPattern
+{
 public:
 	Pattern *pattern;
 
@@ -234,7 +229,7 @@ public:
 	SpmPattern(const SpmPattern &spm_p){
 		// make a copy, so we don't fsck up when destructor is called
 		Pattern *p;
-		this->pattern = ((p = spm_p.pattern) == NULL) ? NULL : p->clone();
+		this->pattern = ((p = spm_p.pattern) == NULL) ? NULL : p->Clone();
 	}
 
 	~SpmPattern() {
@@ -251,7 +246,7 @@ public:
 
 		// make a copy, so we don't fsck up when destructor is called
 		Pattern *p;
-		this->pattern = ((p = spm_p.pattern) == NULL) ? NULL : p->clone();
+		this->pattern = ((p = spm_p.pattern) == NULL) ? NULL : p->Clone();
 		return *this;
 	}
 };
@@ -259,26 +254,21 @@ public:
 class SpmCooElem: public CooElem, public SpmPattern {};
 class SpmRowElem: public RowElem, public SpmPattern {};
 
-void mk_row_elem(const CooElem &p, SpmRowElem *ret);
-void mk_row_elem(const SpmCooElem &p, SpmRowElem *ret);
-void mk_row_elem(const SpmRowElem &p, SpmRowElem *ret);
+void MakeRowElem(const CooElem &p, SpmRowElem *ret);
+//*** This function is not used (the second one).
+void MakeRowElem(const SpmCooElem &p, SpmRowElem *ret);
+void MakeRowElem(const SpmRowElem &p, SpmRowElem *ret);
 
-#if 0
-typedef std::vector<CooElem> SpmPoints;
-typedef std::vector<SpmCooElem> SpmCooElems;
-typedef std::vector<SpmRowElem> SpmRowElems;
-typedef std::vector<SpmRowElems> SpmRows;
-#endif
-
+//*** The SpmPointIter is not used.
 typedef std::iterator<std::forward_iterator_tag, CooElem> SpmPointIter;
 typedef boost::function<void (CooElem &p)> TransformFn;
 
-
-class SPM {
+class SPM
+{
 public:
-    	// Charateristics of sparse matrix
-    	uint64_t nrows, ncols, nnz;
-    	SpmIterOrder type;
+    // Charateristics of sparse matrix
+    uint64_t nrows, ncols, nnz;
+    SpmIterOrder type;
 
 	// Elements of sparse matrix
 	SpmRowElem *elems__;
@@ -287,17 +277,21 @@ public:
 	uint64_t rowptr_size__;
 	bool elems_mapped;
 
-	uint64_t getNrRows() { return this->rowptr_size__ - 1; }
-	//// SpmRowElem iterators
-	SpmRowElem *rbegin(uint64_t ridx=0); 	// start of ridx row
-	SpmRowElem *rend(uint64_t ridx=0); 	// end of ridx row
+	uint64_t GetNrRows()
+	{
+	    return this->rowptr_size__ - 1;
+	}
+	// SpmRowElem iterators
+	SpmRowElem *RowBegin(uint64_t ridx=0); 	// start of ridx row
+	SpmRowElem *RowEnd(uint64_t ridx=0); 	// end of ridx row
 
 	// Since this can be a partition of the original matrix,
 	// this designates the first row of this partition
 	uint64_t row_start;
 
 	SPM() : type(NONE), elems__(NULL), rowptr__(NULL) {}
-	~SPM(){
+	~SPM()
+	{
 		if (!elems_mapped && this->elems__)
 			free(this->elems__);
 		if (this->rowptr__)
@@ -317,9 +311,9 @@ public:
 	template <typename IterT>
 	uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
                       uint64_t first_row,
-	                  unsigned long limit=0,
-	                  uint64_t elems_nr=0,
-	                  uint64_t rows_nr=0);
+	                  unsigned long limit = 0,
+	                  uint64_t elems_nr = 0,
+	                  uint64_t rows_nr = 0);
 
 	template <typename IterT>
 	uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
@@ -329,32 +323,34 @@ public:
 	                  uint64_t rows_nr, SPM::Builder *SpmBld);
 
 	// load matrix from an MMF file
-	static SPM *loadMMF(const char *filename);
-	static SPM *loadMMF(std::istream &in=std::cin);
-	static SPM *loadMMF_mt(const char *mmf_file, const long nr);
-	static SPM *loadMMF_mt(std::istream &in, const long nr);
-	static SPM *loadMMF_mt(MMF &mmf, const long nr);
+	static SPM *LoadMMF(const char *filename);
+	static SPM *LoadMMF(std::istream &in=std::cin);
+	static SPM *LoadMMF_mt(const char *mmf_file, const long nr);
+	static SPM *LoadMMF_mt(std::istream &in, const long nr);
+	static SPM *LoadMMF_mt(MMF &mmf, const long nr);
 
 	// Print Functions
+	//*** Print functions are not used.
 	void Print(std::ostream &out=std::cout);
 	void PrintElems(std::ostream &out=std::cout);
 	void PrintRows(std::ostream &out=std::cout);
-    	void PrintStats(std::ostream &out=std::cout);
+    void PrintStats(std::ostream &out=std::cout);
 
 	// iterators of the sparse matrix that return a SpmCooElem
 	class PntIter;
-	PntIter points_begin(uint64_t ridx=0);
-	PntIter points_end(uint64_t ridx=0);
+	PntIter PointsBegin(uint64_t ridx=0);
+	PntIter PointsEnd(uint64_t ridx=0);
 
 	// Transformation Functions
 	void Transform(SpmIterOrder type, uint64_t rs=0, uint64_t re=0);
-	TransformFn getRevXformFn(SpmIterOrder type);
-	TransformFn getXformFn(SpmIterOrder type);
-	TransformFn getTransformFn(SpmIterOrder from, SpmIterOrder to);
+	TransformFn GetRevXformFn(SpmIterOrder type);
+	TransformFn GetXformFn(SpmIterOrder type);
+	TransformFn GetTransformFn(SpmIterOrder from, SpmIterOrder to);
 
-    SPM *extractWindow(uint64_t rs, uint64_t length);
-    SPM *getWindow(uint64_t rs, uint64_t length);
-    void putWindow(const SPM *window);
+    //*** ExtractWindow function is not used.
+    SPM *ExtractWindow(uint64_t rs, uint64_t length);
+    SPM *GetWindow(uint64_t rs, uint64_t length);
+    void PutWindow(const SPM *window);
 };
 
 void TestMMF(SPM *spm, const char *mmf_file);
@@ -370,12 +366,12 @@ public:
 	virtual ~Builder();
 
 	// Using these two functions requires caution: Memory is uninitialized
-	// use mk_row_elem functions
-    	virtual SpmRowElem *AllocElem();
+	// use MakeRowElem functions
+    virtual SpmRowElem *AllocElem();
 	virtual SpmRowElem *AllocElems(uint64_t nr);
 
-	virtual uint64_t getElemsCnt();
-	virtual void newRow(uint64_t rdiff=1);
+	virtual uint64_t GetElemsCnt();
+	virtual void NewRow(uint64_t rdiff=1);
 	virtual void Finalize();
 };
 
@@ -403,11 +399,6 @@ std::ostream &operator<<(std::ostream &os, const Pattern &p);
 std::ostream &operator<<(std::ostream &out, CooElem p);
 std::ostream &operator<<(std::ostream &out, const SpmCooElem e);
 std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
-#if 0
-std::ostream &operator<<(std::ostream &out, const SpmRowElems &elems);
-std::ostream &operator<<(std::ostream &out, const SpmRows &rows);
-std::ostream &operator<<(std::ostream &out, SpmIdx::PointIter pi);
-#endif
 
 } // csx namespace end
 

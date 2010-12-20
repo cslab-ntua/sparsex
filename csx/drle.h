@@ -20,41 +20,40 @@ public:
 	DeltaRLE(uint32_t _size, uint32_t _delta, SpmIterOrder _type):
 	size(_size), delta(_delta){ this->type = _type; }
 
-	virtual DeltaRLE *clone() const
+	virtual DeltaRLE *Clone() const
 	{
 		return new DeltaRLE(*this);
 	}
 
-	virtual long x_increase(SpmIterOrder order) const
+	virtual long ColIncrease(SpmIterOrder order) const
 	{
-		long        ret;
+		long    ret;
 
 		ret = (order == this->type) ? (this->size*this->delta) : 1;
 		return ret;
 	}
 
-	virtual uint64_t x_increase_jmp(SpmIterOrder order, uint64_t jmp) const
+	virtual uint64_t ColIncreaseJmp(SpmIterOrder order, uint64_t jmp) const
 	{
 		long ret;
 
 		ret = jmp;
-		if (order == this->type){
+		if (order == this->type)
 			ret += ((this->size-1)*this->delta);
-		}
-
 		return ret;
 	}
 
-	virtual std::ostream &print_on(std::ostream &out) const
+	virtual std::ostream &PrintOn(std::ostream &out) const
 	{
-		out << "drle: size=" << this->size << " len=" << this->delta << " type=" << this->type;
+		out << "drle: size=" << this->size << " len=" << this->delta 
+		    << " type=" << this->type;
 		return out;
 	}
 
 
 #define PID_OFFSET 10000L
 
-	virtual long getPatId() const
+	virtual long GetPatId() const
 	{
 		assert(this->type > NONE && this->type < BLOCK_TYPE_START);
 		return type*PID_OFFSET + this->delta;
@@ -77,12 +76,12 @@ public:
 // 		}
 	}
 
-	virtual long getSize() const
+	virtual long GetSize() const
 	{
 		return this->size;
 	}
 
-	virtual uint64_t getNextX(uint64_t x0) const
+	virtual uint64_t GetNextCol(uint64_t x0) const
 	{
         	return (x0 + this->delta);
 	}
@@ -160,7 +159,7 @@ public:
 	void Decode(SpmIterOrder type=NONE);
 	void EncodeAll(std::ostream &os, bool operate);
 	void MakeEncodeTree(bool operate);
-	void EncodeSerial(int *xform, int *deltas, bool operate);
+	void EncodeSerial(int *xform, int **deltas, bool operate);
     void set_sampling_probability(double probability)
         {
             check_probability(probability);
@@ -262,12 +261,12 @@ public:
 		return this->other_dim;
 	}
 
-	virtual long getPatId() const
+	virtual long GetPatId() const
 	{
 		return PID_OFFSET*this->type + this->other_dim;
 	}
 
-	virtual BlockRLE *clone() const
+	virtual BlockRLE *Clone() const
 	{
 		return new BlockRLE(*this);
 	}

@@ -24,7 +24,7 @@ extern "C" {
 #include "../../prfcnt/timer.h"
 }
 
-#define DELTAS_MAX  30  // max deltas that an encoding type may have
+#define DELTAS_MAX  64  // max deltas that an encoding type may have
 
 using namespace csx;
 using namespace std;
@@ -41,6 +41,25 @@ typedef struct parameters {
     bool            split_blocks;
     int             **deltas;
 } Parameters;
+
+int convert_string_to_string_sequence(char *str, char **str_buf, const char *start_sep, const char *end_sep) {
+    char *token = strtok(str, start_sep);
+    int next = 0;
+    int str_length = strcspn(token, end_sep);
+    
+    str_buf[next] = (char *) malloc((str_length+1)*sizeof(char));
+    strncpy(str_buf[next], token, str_length);
+    str_buf[next][str_length] = 0;
+    ++next;
+    while ( (token = strtok(NULL, start_sep)) != NULL) { 
+        str_length = strcspn(token, end_sep);
+        str_buf[next] = (char *) malloc((str_length-1)*sizeof(char));
+        strncpy(str_buf[next], token, str_length);
+        str_buf[next][str_length] = 0;
+        ++next;
+    }
+    return next;
+}
 
 // Parallel Preprocessing
 void *thread_function(void *initial_data)
@@ -62,9 +81,9 @@ void *thread_function(void *initial_data)
        else find statistical data for the types in XFORM_CONF, choose the best choise,
        encode it and proceed likewise until there is no satisfying encoding*/
     if (data->deltas)
-        DrleMg->EncodeSerial(data->xform_buf, data->deltas[0], data->split_blocks);
+        DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
     else
-        DrleMg->EncodeAll(data->buffer, data->split_blocks);
+        DrleMg->EncodeAll(data->buffer, data->split_blocks); 
     //DrleMg->MakeEncodeTree(data->split_blocks);
     delete DrleMg;
     return 0;
@@ -146,24 +165,11 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 
         // fill deltas with the appropriate data
         char **temp = (char **) malloc(XFORM_MAX*sizeof(char *));
-        char *token = strtok(encode_deltas_str, "{");
-        int next = 0;
-        int str_length = strcspn(token,"}");
-        temp[next] = (char *) malloc((str_length+1)*sizeof(char));
-        strncpy(temp[next], token, str_length);
-        temp[next][str_length] = 0;
-        ++next;
-        while ( (token = strtok(NULL, "{")) != NULL) {
-            str_length = strcspn(token,"}");
-            temp[next] = (char *) malloc((str_length-1)*sizeof(char));
-            strncpy(temp[next], token, str_length);
-            temp[next][str_length] = 0;
-            ++next;
-        }
-        for (int i=0; i<next; i++) {
+        int temp_size = convert_string_to_string_sequence(encode_deltas_str, temp, "{", "}");
+        for (int i=0; i<temp_size; i++) {
             int j=0;
 
-            token = strtok(temp[i], ",");
+            char *token = strtok(temp[i], ",");
             deltas[i][j] = atoi(token);
             ++j;
             while ((token = strtok(NULL, ",")) != NULL) {
@@ -174,7 +180,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         }
         // print deltas
         std::cout << "Deltas to Encode: ";
-        for (int i=0; i<next; i++) {
+        for (int i=0; i<temp_size; i++) {
             if (i != 0)
                 std::cout << "}, ";
             std::cout << "{";
@@ -189,32 +195,39 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     // take WINDOW_SIZE
     const char *wsize_str = getenv("WINDOW_SIZE");
     uint64_t wsize;
-    if (!wsize_str)
+    if (!wsize_str) {
         wsize = 0;
-    else
+        std::cout << "Window size: Not set" << std::endl;
+    }
+    else {
         wsize = atol(wsize_str);
-    std::cout << "Window size: " << wsize << std::endl;
+        std::cout << "Window size: " << wsize << std::endl;
+    }
 
     // take SAMPLES
     const char *samples = getenv("SAMPLES");
     uint64_t samples_max;
-    if (!samples)
+    if (!samples) {
         samples_max = std::numeric_limits<uint64_t>::max();
-    else
+        std::cout << "Number of samples: Not set" << std::endl;
+    }
+    else {
         samples_max = atol(samples);
-    std::cout << "Number of samples: " << samples_max << std::endl;
+        std::cout << "Number of samples: " << samples_max << std::endl;
+    }
 
     // take SAMPLING_PROB
     const char *sampling_prob_str = getenv("SAMPLING_PROB");
     double sampling_prob;
-    if (!sampling_prob_str)
+    if (!sampling_prob_str) {
         sampling_prob = 0.0;
-    else
-        sampling_prob = atof(sampling_prob_str);
-    if (sampling_prob)
-        std::cout << "Sampling prob: " << sampling_prob << std::endl;
-    else
         std::cout << "Sampling prob: Not set" << std::endl;
+    }
+    else {
+        sampling_prob = atof(sampling_prob_str);
+        std::cout << "Sampling prob: " << sampling_prob << std::endl;
+    }
+
 
     // take SPLIT_BLOCKS
     const char *split_blocks_str = getenv("SPLIT_BLOCKS");
@@ -241,7 +254,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     }
 
     // Load the appropriate sub-matrix to each thread
-    Spms = SPM::loadMMF_mt(mmf_fname, nr_threads);
+    Spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
 
     // Start timer for preprocessing    
     xtimer_t timer;
