@@ -270,7 +270,7 @@ void DRLE_Manager::updateStats(SPM *spm, std::vector<uint64_t> &xs,
                                DeltaRLE::Stats &stats)
 {
 	std::vector< RLE<uint64_t> > rles;
-	uint64_t block_align = isBlockType(spm->type);
+	uint64_t block_align = IsBlockType(spm->type);
 	if (block_align) {
         	DRLE_Manager::updateStatsBlock(xs, stats, block_align);
         	return;
@@ -375,7 +375,7 @@ void DRLE_Manager::doEncode(std::vector<uint64_t> &xs,
     std::vector<double>::iterator vi = vs.begin();	// value iterator
     SpmRowElem elem;					// temp element to perform insertions
     
-    if (isBlockType(this->spm->type)) {
+    if (IsBlockType(this->spm->type)) {
         if (!operate)
             doEncodeBlock(xs, vs, newrow);
         else
@@ -449,7 +449,7 @@ void DRLE_Manager::doEncodeBlock(std::vector<uint64_t> &xs,
 	// that are in the ->DeltasToEncode set
 	deltas_set = &this->DeltasToEncode[this->spm->type];
 
-    int block_align = isBlockType(this->spm->type);
+    int block_align = IsBlockType(this->spm->type);
     assert(block_align);
 
 	col = 0; // initialize column
@@ -578,7 +578,7 @@ void DRLE_Manager::doEncodeBlockAlt(std::vector<uint64_t> &xs,
     // Not all delta rles are to be encoded, only those
     // that are in the ->DeltasToEncode set
     deltas_set = &this->DeltasToEncode[this->spm->type];
-    int block_align = isBlockType(this->spm->type);
+    int block_align = IsBlockType(this->spm->type);
     assert(block_align);
 
     col = 0; // initialize column
@@ -1017,7 +1017,7 @@ void DRLE_Manager::genAllStats(bool operate)
         // iterators, except, of course, for iterators that actually point to
         // the element that is being erased.
         sp = &this->stats[type];
-        uint64_t block_align = isBlockType(type);
+        uint64_t block_align = IsBlockType(type);
         if (block_align && operate) {
             //std::cout << "Block Align:" << block_align << std::endl;
             cut_max_limit(sp, block_align);

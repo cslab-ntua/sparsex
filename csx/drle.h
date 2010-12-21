@@ -251,7 +251,7 @@ class BlockRLE : public DeltaRLE {
 
 public:
 	BlockRLE(uint32_t size_, uint32_t other_dim_, SpmIterOrder type_)
-	: DeltaRLE(size_, 1, (assert(isBlockType(type_)), type_))
+	: DeltaRLE(size_, 1, (assert(IsBlockType(type_)), type_))
 	{
 		this->other_dim = other_dim_;
         }

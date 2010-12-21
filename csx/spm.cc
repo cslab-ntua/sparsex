@@ -1073,7 +1073,7 @@ void SPM::PrintStats(std::ostream& out)
         SpmIterOrder    pt_type, pt_type_before;
         nr_patterns_before = nr_patterns;
         const SpmRowElem *elem = this->RowBegin(i);
-//        if (elem->pattern && isBlockType(elem->pattern->type))
+//        if (elem->pattern && IsBlockType(elem->pattern->type))
         if (elem->pattern) {
             pt_size_before = pt_size = elem->pattern->GetSize();
             pt_type_before = pt_type = elem->pattern->type;
@@ -1083,7 +1083,7 @@ void SPM::PrintStats(std::ostream& out)
         }
 
         for ( ; elem != this->RowEnd(i); elem++) {
-//            if (elem->pattern && isBlockType(elem->pattern->type)) {
+//            if (elem->pattern && IsBlockType(elem->pattern->type)) {
             if (elem->pattern) {
                 ++nr_patterns;
                 pt_size = elem->pattern->GetSize();
