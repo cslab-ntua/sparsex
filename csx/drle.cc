@@ -763,7 +763,7 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool operate)
 	}
 }
 
-Pattern::Generator *DeltaRLE::generator(CooElem start)
+DeltaRLE::Generator *DeltaRLE::generator(CooElem start)
 {
 	DeltaRLE::Generator *g;
 	g = new DeltaRLE::Generator(start, this);
@@ -868,7 +868,7 @@ void DRLE_Manager::cut_max_limit(DeltaRLE::Stats *sp, uint64_t block_align)
         }
         for (iter=temp.begin(); iter!=temp.end(); ++iter) {
             //std::cout << "Delta Passed:" << iter->first << std::endl;
-            sp->insert(std::pair<const long unsigned int, csx::Pattern::StatsVal>(iter->first,iter->second));
+            sp->insert(std::pair<const long unsigned int, csx::DeltaRLE::StatsVal>(iter->first,iter->second));
         }
     }
 }
@@ -939,7 +939,7 @@ void DRLE_Manager::operateStats(DeltaRLE::Stats *sp, uint64_t size, uint64_t blo
     }
     for (iter=temp.begin(); iter!=temp.end(); ++iter) {
         //std::cout << "Delta Passed:" << iter->first << std::endl;
-        sp->insert(std::pair<const long unsigned int, csx::Pattern::StatsVal>(iter->first,iter->second));
+        sp->insert(std::pair<const long unsigned int, csx::DeltaRLE::StatsVal>(iter->first,iter->second));
     }
 }   
 
