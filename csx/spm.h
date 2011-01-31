@@ -469,19 +469,19 @@ public:
      *  @param pnts_end   point iterators end.
      *  @param first_row  first row of the matrix.
      *  @param limit      limit for the number of elements.
-     *  @param elems_nr   size for elems allocation.
-     *  @param rows_nr    size for rows allocation.
+     *  @param nr_elems   size for elems allocation.
+     *  @param nr_rows    size for rows allocation.
      *  @param SpmBld     point to a builder responsible for allocations.
      *  @return           number of elements allocated.
      */
     template <typename IterT>
     uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
                       uint64_t first_row, unsigned long limit = 0,
-                      uint64_t elems_nr = 0, uint64_t rows_nr = 0);
+                      uint64_t nr_elems = 0, uint64_t nr_rows = 0);
     template <typename IterT>
     uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
                       uint64_t first_row, unsigned long limit,
-                      uint64_t elems_nr, uint64_t rows_nr,
+                      uint64_t nr_elems, uint64_t nr_rows,
                       SPM::Builder *SpmBld);
 
     /**
@@ -588,7 +588,7 @@ public:
     dynarray_t *da_elems;
     dynarray_t *da_rowptr;
 
-    Builder(SPM *spm, uint64_t elems_nr=0, uint64_t rows_nr=0);
+    Builder(SPM *spm, uint64_t nr_elems=0, uint64_t nr_rows=0);
     virtual ~Builder();
 
     /**
