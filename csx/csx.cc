@@ -21,6 +21,13 @@
 #include "delta.h"
 #include "csx.h"
 
+#ifdef SPM_NUMA
+#   define USE_NUMA 1
+#   include <numa.h>
+#else
+#   define USE_NUMA 0
+#endif
+
 using namespace csx;
 
 static bool debug = false;
@@ -73,8 +80,26 @@ csx_double_t *CsxManager::MakeCsx()
 {
     csx_double_t *csx;
 
+#ifdef SPM_NUMA
+    int cpu = sched_getcpu();
+    if (cpu < 0) {
+        perror("sched_getcpu() failed");
+        exit(1);
+    }
+
+    int node = numa_node_of_cpu(cpu);
+    if (node < 0) {
+        perror("numa_node_of_cpu() failed");
+        exit(1);
+    }
+
+    csx = (csx_double_t *) numa_alloc_onnode(sizeof(csx_double_t), node);
+    values_ = (double *) numa_alloc_onnode(sizeof(double)*spm_->nr_nzeros_,
+                                           node);
+#else    
     csx = (csx_double_t *) malloc(sizeof(csx_double_t));
     values_ = (double *) malloc(sizeof(double)*spm_->nr_nzeros_);
+#endif  // SPM_NUMA
     if (!csx || !values_) {
         std::cerr << __FUNCTION__ << ": malloc failed\n";
         exit(1);

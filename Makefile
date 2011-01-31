@@ -1,4 +1,3 @@
-
 SUBDIRS = lib/dynarray lib/spm csx
 
 .PHONY: all clean $(SUBDIRS)

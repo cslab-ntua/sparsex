@@ -18,6 +18,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <numa.h>
 
 #include "spm.h"
 #include "mmf.h"
@@ -26,12 +27,19 @@
 #include "jit.h"
 #include "llvm_jit_help.h"
 
+#ifdef SPM_NUMA
+#include <numa.h>
+#endif
+
 extern "C" {
 #include "mt_lib.h"
 #include "spmv_method.h"
 #include "spm_crs.h"
 #include "spm_mt.h"
 #include "spmv_loops_mt.h"
+#ifdef SPM_NUMA
+#   include "spmv_loops_mt_numa.h"
+#endif
 #include "timer.h"
 #include "ctl_ll.h"
 #include <libgen.h>
@@ -58,13 +66,15 @@ extern "C" {
     ret_;                                  \
 })
 
-
 using namespace csx;
 
 ///> Thread data essential for parallel preprocessing
 typedef struct thread_info {
     unsigned int thread_no;
+    unsigned int cpu;
     SPM * spm;
+    spm_mt_thread_t *spm_encoded;
+    CsxManager      *csxmg;
     uint64_t wsize;
     std::ostringstream buffer;
     int *xform_buf;
@@ -276,6 +286,11 @@ void *PreprocessThread(void *thread_info)
         DrleMg->EncodeAll(data->buffer, data->split_blocks);
 
     // DrleMg->MakeEncodeTree(data->split_blocks);
+
+    csx_double_t *csx = data->csxmg->MakeCsx();
+    data->spm_encoded->spm = csx;
+    data->spm_encoded->part_info = (void *) csx->nrows;
+
     delete DrleMg;
     return 0;
 }
@@ -330,6 +345,8 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
 
     for (unsigned int i = 0; i < nr_threads; i++)
         spm_mt->spm_threads[i].cpu = threads_cpus[i];
+        spm_mt->spm_threads[i].node = numa_node_of_cpu(threads_cpus[i]);
+    }
 
     // Load the appropriate sub-matrix to each thread
     Spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
@@ -345,8 +362,11 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     data = new thread_info_t[nr_threads];
     for (unsigned int i = 0; i < nr_threads; i++) {
         data[i].spm = &Spms[i];
+        data[i].spm_encoded = &spm_mt->spm_threads[i];
+        data[i].csxmg = new CsxManager(&Spms[i]);
         data[i].wsize = wsize;
         data[i].thread_no = i;
+        data[i].cpu = threads_cpus[i];
         data[i].xform_buf = xform_buf;
         data[i].sampling_prob = sampling_prob;
         data[i].samples_max = samples_max;
@@ -370,11 +390,8 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     Jits = (CsxJit **) xmalloc(nr_threads * sizeof(CsxJit *));
 
     for (unsigned int i = 0; i < nr_threads; ++i){
-        CsxManager *CsxMg = new CsxManager(&Spms[i]);
-        spm_mt->spm_threads[i].spm = CsxMg->MakeCsx();
-        Jits[i] = new CsxJit(CsxMg, i);
+        Jits[i] = new CsxJit(data[i].csxmg, i);
         Jits[i]->GenCode(data[i].buffer);
-        delete CsxMg;
         std::cout << data[i].buffer.str();
     }
 
@@ -419,10 +436,18 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 
     crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz);
     std::cout << "Checking ... " << std::flush;
-    spmv_double_check_mt_loop(crs, spm_mt, spm_crs32_double_multiply, 1, nrows,
-                              ncols, NULL);
+#ifdef SPM_NUMA
+#   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
+#else
+#   define SPMV_CHECK_FN spmv_double_check_mt_loop
+#endif
+    SPMV_CHECK_FN(crs, spm_mt,
+                  spm_crs32_double_multiply, 1,
+                  nrows, ncols,
+                  NULL);
     spm_crs32_double_destroy(crs);
     std::cout << "Check Passed" << std::endl << std::flush;
+#undef SPMV_CHECK_FN
 }
 
 /**
@@ -454,11 +479,19 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     double secs, flops;
     long loops_nr = 128;
 
+#ifdef SPM_NUMA
+#   define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
+#else
+#   define SPMV_BENCH_FN spmv_double_bench_mt_loop
+#endif
+
     getMmfHeader(mmf_name, nrows, ncols, nnz);
-    secs = spmv_double_bench_mt_loop(spm_mt, loops_nr, nrows, ncols, NULL);
-    flops = (double) (loops_nr*nnz*2) / ((double) 1000*1000*secs);
+    secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
+    flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
     printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-           "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+	   "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+
+#undef SPMV_BENCH_FN
 }
 
 int main(int argc, char **argv)

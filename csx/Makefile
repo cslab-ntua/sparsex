@@ -33,6 +33,11 @@ LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
+ifeq ($(shell $(cpu_dir)/numa_lib.sh FOO),FOO)
+	DEFS += -DSPM_NUMA
+	override LDFLAGS += -lnuma
+endif
+
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
 # define __STDC_FORMAT_MACROS, so that we can use PRIu64

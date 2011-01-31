@@ -21,7 +21,8 @@
 #include "prfcnt.h"
 #endif /* SPMV_PRFCNT */
 
-static VECTOR_TYPE *x=NULL, *y=NULL;
+static VECTOR_TYPE *x = NULL;
+static VECTOR_TYPE *y = NULL;
 static pthread_barrier_t barrier;
 static unsigned long loops_nr = 0;
 static float secs = 0.0;
@@ -29,16 +30,14 @@ static float secs = 0.0;
 static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
-#ifdef SPMV_PRFCNT
-	prfcnt_t *prfcnt = (prfcnt_t *) spm_mt_thread->data;
-#endif
 	SPMV_NAME(_fn_t) *spmv_mt_fn = spm_mt_thread->spmv_fn;
 	setaffinity_oncpu(spm_mt_thread->cpu);
 	int i;
 
 #ifdef SPMV_PRFCNT
-	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
-	prfcnt_start(prfcnt);
+    prfcnt_t    *prfcnt = (prfcnt_t *) spm_mt_thread->data;
+    prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
+    prfcnt_start(prfcnt);
 #endif
 
 	for (i=0; i<loops_nr; i++){
@@ -294,3 +293,4 @@ void SPMV_NAME(_check_mt_loop_serial) (void *spm, spm_mt_t *spm_mt,
 	VECTOR_NAME(_destroy)(y);
 	VECTOR_NAME(_destroy)(y2);
 }
+
