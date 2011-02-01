@@ -10,7 +10,7 @@ all: scripts/calc_bits spmv
 ## Configuration
 debug_dir    = ../debug
 cpu_dir      = $(shell pwd)/../cpu
-dynarray_dir = ../dynarray
+dynarray_dir = lib/dynarray
 phash_dir    = ../phash
 prfcnt_dir   = ../prfcnt
 
@@ -51,7 +51,7 @@ ifeq ($(shell $(cpu_dir)/numa_lib.sh FOO),FOO)
 endif
 
 spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o #spm_delta.o spm_delta_vec.o spmv_ur.o spm_crsr.o matrix.o
-libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o spm_crsvi_utils.o spm_csrdu_vi.o spm_csrdu_vi_mul.o spm_bcsr.o
+libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o spm_crsvi_utils.o spm_csrdu_vi.o spm_csrdu_vi_mul.o spm_bcsr.o $(dynarray_dep)
 
 vector.o: vector.c vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o vector_float.o

@@ -84,6 +84,7 @@ void *thread_function(void *initial_data)
         DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
     else
         DrleMg->EncodeAll(data->buffer, data->split_blocks);
+        
     //DrleMg->MakeEncodeTree(data->split_blocks);
     delete DrleMg;
     return 0;

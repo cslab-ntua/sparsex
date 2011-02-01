@@ -3,13 +3,14 @@
 all: spmv windows-sort csx_llvm_tmpl.llvm.bc
 
 ## Configuration
-dynarray_dir = ../../dynarray
-protodir = ./proto
+dynarray_dir = ../lib/dynarray
+protodir     = ./proto
+llvmconf     = llvm-config-2.7
 
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCPU_CORE
 #CXXFLAGS       += -Winline
-LDFLAGS        =
+LDFLAGS         =
 CXXFLAGS       += -ggdb -rdynamic
 DEFS            =
 INC             =
@@ -20,9 +21,9 @@ CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 
 #llvm
 llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter
-LLVM_CFLAGS     = $(shell llvm-config --cflags)
-LLVM_CXXFLAGS   = $(shell llvm-config --cxxflags)
-LLVM_LDFLAGS    = $(shell llvm-config --ldflags --libs $(llvm_deps))
+LLVM_CFLAGS     = $(shell $(llvmconf) --cflags)
+LLVM_CXXFLAGS   = $(shell $(llvmconf) --cxxflags)
+LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 INC            += -I$(dynarray_dir)
