@@ -253,14 +253,14 @@ void MakeRowElem(const SpmRowElem &p, SpmRowElem *ret)
 
 SpmRowElem *SPM::RowBegin(uint64_t ridx)
 {
-    assert(ridx < this->rowptr_size__ - 1);
-    return &this->elems__[this->rowptr__[ridx]];
+    assert(ridx < this->rowptr_size - 1);
+    return &this->elems[this->rowptr[ridx]];
 }
 
 SpmRowElem *SPM::RowEnd(uint64_t ridx)
 {
-    assert(ridx < this->rowptr_size__ - 1);
-    return &this->elems__[this->rowptr__[ridx + 1]];
+    assert(ridx < this->rowptr_size - 1);
+    return &this->elems[this->rowptr[ridx + 1]];
 }
 
 template <typename IterT>
@@ -286,7 +286,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
         MakeRowElem(*pi, elem);
     }
     
-    return this->elems_size__;
+    return this->elems_size;
 }
 
 template <typename IterT>
@@ -298,7 +298,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
     SetElems(pi, pnts_end, first_row, limit, nr_elems, nrows, SpmBld);
     SpmBld->Finalize();
     delete SpmBld;
-    return this->elems_size__;
+    return this->elems_size;
 }
 
 SPM *SPM::LoadMMF_mt(const char *mmf_file, const long nr)
@@ -309,7 +309,6 @@ SPM *SPM::LoadMMF_mt(const char *mmf_file, const long nr)
     mmf.open(mmf_file);
     ret = LoadMMF_mt(mmf, nr);
     mmf.close();
-
     return ret;
 }
 
@@ -332,7 +331,7 @@ SPM *SPM::LoadMMF_mt(MMF &mmf, const long nr)
         spm = ret + i;
         limit = (mmf.nnz - cnt) / (nr - i);
         spm->nnz = spm->SetElems(iter, iter_end, row_start + 1, limit);
-        spm->nrows = spm->rowptr_size__ - 1;
+        spm->nrows = spm->rowptr_size - 1;
         spm->ncols = mmf.ncols;
         spm->row_start = row_start;
         row_start += spm->nrows;
@@ -519,7 +518,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
     if (this->type == t)
         return;
     xform_fn = this->GetTransformFn(this->type, t);
-    elems.reserve(this->elems_size__);
+    elems.reserve(this->elems_size);
     p0 = PointsBegin(rs);
     pe = PointsEnd(re);
     for(p=p0; p != pe; ++p) {
@@ -539,6 +538,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
 {
     boost::function<void (CooElem &p)> ret;
+    
     switch(type) {
         case HORIZONTAL:
             break;
@@ -604,6 +604,7 @@ inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
 inline TransformFn SPM::GetXformFn(SpmIterOrder type)
 {
     boost::function<void (CooElem &p)> ret;
+    
     switch(type) {
         case HORIZONTAL:
             ret = NULL;
@@ -683,26 +684,26 @@ inline TransformFn SPM::GetTransformFn(SpmIterOrder from_type,
 
 SPM *SPM::GetWindow(uint64_t rs, uint64_t length)
 {
-    if (rs + length > this->rowptr_size__ - 1)
-        length = this->rowptr_size__ - rs - 1;
+    if (rs + length > this->rowptr_size - 1)
+        length = this->rowptr_size - rs - 1;
 
     SPM *ret = new SPM();
-    uint64_t es = this->rowptr__[rs];
-    uint64_t ee = this->rowptr__[rs+length];
+    uint64_t es = this->rowptr[rs];
+    uint64_t ee = this->rowptr[rs+length];
 
-    ret->rowptr__ = new uint64_t[length+1];
-    ret->rowptr_size__ = length + 1;
-    for (uint64_t i = 0; i < ret->rowptr_size__; i++)
-        ret->rowptr__[i] = this->rowptr__[rs+i] - es;
-    ret->elems__ = &this->elems__[es];
-    ret->elems_size__ = ee - es;
-    ret->nrows = ret->rowptr_size__ - 1;
+    ret->rowptr = new uint64_t[length+1];
+    ret->rowptr_size = length + 1;
+    for (uint64_t i = 0; i < ret->rowptr_size; i++)
+        ret->rowptr[i] = this->rowptr[rs+i] - es;
+    ret->elems = &this->elems[es];
+    ret->elems_size = ee - es;
+    ret->nrows = ret->rowptr_size - 1;
     ret->ncols = this->ncols;
-    ret->nnz = ret->elems_size__;
+    ret->nnz = ret->elems_size;
     ret->row_start = this->row_start + rs;
     ret->type = this->type;
-    ret->elems_mapped = true;
-    assert(ret->rowptr__[ret->rowptr_size__-1] == ret->elems_size__);
+    ret->elems_mapped_ = true;
+    assert(ret->rowptr[ret->rowptr_size-1] == ret->elems_size);
     return ret;
 }
 
@@ -713,11 +714,11 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
     PntIter p0, pe, p;
     SPM *ret = new SPM();
     
-    if (rs + length > this->rowptr_size__ - 1)
-        length = this->rowptr_size__ - rs - 1;
+    if (rs + length > this->rowptr_size - 1)
+        length = this->rowptr_size - rs - 1;
     
-    uint64_t es = this->rowptr__[rs];
-    uint64_t ee = this->rowptr__[rs+length];
+    uint64_t es = this->rowptr[rs];
+    uint64_t ee = this->rowptr[rs+length];
     
     assert(es <= ee);  
     elems.reserve(ee - es);
@@ -729,13 +730,13 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
     elem_end = elems.end();
     ret->SetElems(elem_begin, elem_end, rs+1);
     elems.clear();
-    ret->nrows = ret->rowptr_size__ - 1;
+    ret->nrows = ret->rowptr_size - 1;
     ret->ncols = this->ncols;
-    ret->nnz = ret->elems_size__;
+    ret->nnz = ret->elems_size;
     ret->row_start = this->row_start + rs;
     ret->type = this->type;
-    ret->elems_mapped = true;   
-    assert(ret->rowptr__[ret->rowptr_size__-1] == ret->elems_size__);
+    ret->elems_mapped_ = true;   
+    assert(ret->rowptr[ret->rowptr_size-1] == ret->elems_size);
     return ret;
 }
 
@@ -745,60 +746,33 @@ void SPM::PutWindow(const SPM *window)
     assert(this->type == window->type);
 
     uint64_t rs = window->row_start - this->row_start;
-    uint64_t es = this->rowptr__[rs];
+    uint64_t es = this->rowptr[rs];
 
-    for (uint64_t i = 0; i < window->rowptr_size__; i++)
-        this->rowptr__[rs+i] = es + window->rowptr__[i];
+    for (uint64_t i = 0; i < window->rowptr_size; i++)
+        this->rowptr[rs+i] = es + window->rowptr[i];
 
-    if (!window->elems_mapped)
-        memcpy(&this->elems__[es], window->elems__,
-               window->elems_size__*sizeof(SpmRowElem));
-}
-
-SPM::Builder::Builder(SPM *_spm, uint64_t nr_elems, uint64_t nrows): spm(_spm)
-{
-    uint64_t *rowptr;
-    
-    if (this->spm->elems_mapped) {
-        this->da_elems = dynarray_init_frombuff(sizeof(SpmRowElem),
-                                                this->spm->elems_size__,
-                                                this->spm->elems__,
-                                                this->spm->elems_size__);
-        dynarray_seek(this->da_elems, 0);
-    } else {
-        this->da_elems = dynarray_create(sizeof(SpmRowElem),
-                                         nr_elems ? nr_elems : 512);
-    }
-    
-	this->da_rowptr = dynarray_create(sizeof(uint64_t),
-                                      nrows ? nrows : 512);
-	rowptr = (uint64_t *)dynarray_alloc(this->da_rowptr);
-	*rowptr = 0;
-}
-
-SPM::Builder::~Builder()
-{
-    assert(this->da_elems == NULL);
-    assert(this->da_rowptr == NULL);
+    if (!window->elems_mapped_)
+        memcpy(&this->elems[es], window->elems,
+               window->elems_size*sizeof(SpmRowElem));
 }
 
 SpmRowElem *SPM::Builder::AllocElem()
 {
-    if (this->spm->elems_mapped)
-        assert(dynarray_size(this->da_elems) < this->spm->elems_size__);
-    return (SpmRowElem *) dynarray_alloc(this->da_elems);
+    if (this->spm_->elems_mapped_)
+        assert(dynarray_size(this->da_elems_) < this->spm_->elems_size);
+    return (SpmRowElem *) dynarray_alloc(this->da_elems_);
 }
 
 SpmRowElem *SPM::Builder::AllocElems(uint64_t nr)
 {
-    if (this->spm->elems_mapped)
-        assert(dynarray_size(this->da_elems) + nr < this->spm->elems_size__);
-	return (SpmRowElem *)dynarray_alloc_nr(this->da_elems, nr);
+    if (this->spm_->elems_mapped_)
+        assert(dynarray_size(this->da_elems_) + nr < this->spm_->elems_size);
+    return (SpmRowElem *)dynarray_alloc_nr(this->da_elems_, nr);
 }
 
 uint64_t SPM::Builder::GetElemsCnt()
 {
-    return dynarray_size(this->da_elems);
+    return dynarray_size(this->da_elems_);
 }
 
 void SPM::Builder::NewRow(uint64_t rdiff)
@@ -807,7 +781,7 @@ void SPM::Builder::NewRow(uint64_t rdiff)
     uint64_t elems_cnt;
     
     elems_cnt = GetElemsCnt();
-    rowptr = (uint64_t *)dynarray_alloc_nr(this->da_rowptr, rdiff);
+    rowptr = (uint64_t *)dynarray_alloc_nr(this->da_rowptr_, rdiff);
     for (uint64_t i=0; i < rdiff; i++)
         rowptr[i] = elems_cnt;
 }
@@ -816,76 +790,24 @@ void SPM::Builder::Finalize()
 {
     uint64_t *last_rowptr;
     
-    last_rowptr = (uint64_t *)dynarray_get_last(this->da_rowptr);
-    if (*last_rowptr != dynarray_size(this->da_elems))
+    last_rowptr = (uint64_t *)dynarray_get_last(this->da_rowptr_);
+    if (*last_rowptr != dynarray_size(this->da_elems_))
         NewRow();
-    if (!spm->elems_mapped && spm->elems__)
-		free(spm->elems__);
-	if (spm->rowptr__)
-		free(spm->rowptr__);
-    if (spm->elems_mapped)
-        assert(spm->elems_size__ == dynarray_size(da_elems));
-	spm->elems_size__ = dynarray_size(da_elems);
-    if (spm->elems_mapped)
-        free(this->da_elems);
+    if (!spm_->elems_mapped_ && spm_->elems)
+	free(spm_->elems);
+    if (spm_->rowptr)
+	free(spm_->rowptr);
+    if (spm_->elems_mapped_)
+        assert(spm_->elems_size == dynarray_size(da_elems_));
+	spm_->elems_size = dynarray_size(da_elems_);
+    if (spm_->elems_mapped_)
+        free(this->da_elems_);
     else
-        spm->elems__ = (SpmRowElem *)dynarray_destroy(da_elems);
-    spm->rowptr_size__ = dynarray_size(da_rowptr);
-    spm->rowptr__ = (uint64_t *)dynarray_destroy(da_rowptr);
-    this->da_elems = this->da_rowptr = NULL;
-}
-
-SPM::PntIter::PntIter(): spm(NULL), row_idx(0), elm_idx(0) { }
-
-SPM::PntIter::PntIter(SPM *_spm, uint64_t ridx) : spm(_spm), row_idx(ridx)
-{
-    uint64_t *rp = this->spm->rowptr__;
-    uint64_t rp_size = this->spm->rowptr_size__;
+        spm_->elems = (SpmRowElem *)dynarray_destroy(da_elems_);
     
-    assert(ridx < rp_size);
-    while (ridx+1 < rp_size && rp[ridx] == rp[ridx+1])
-        ridx++;
-    this->row_idx = ridx;
-    this->elm_idx = rp[ridx];
-}
-
-bool SPM::PntIter::operator==(const PntIter &pi)
-{
-    return (spm = pi.spm) && (row_idx == pi.row_idx) && (elm_idx == pi.elm_idx);
-}
-
-bool SPM::PntIter::operator!=(const PntIter &pi)
-{
-    return !(*this == pi);
-}
-
-void SPM::PntIter::operator++()
-{
-    uint64_t *rp = this->spm->rowptr__;
-    uint64_t rp_size = this->spm->rowptr_size__;
-    
-    assert(this->elm_idx < this->spm->elems_size__);
-    assert(this->row_idx < rp_size);
-    this->elm_idx++;
-    while (this->row_idx+1 < rp_size && rp[this->row_idx+1] == this->elm_idx)
-        this->row_idx++;
-}
-
-SpmCooElem SPM::PntIter::operator*()
-{
-    SpmCooElem ret;
-    SpmRowElem *e;
-    DeltaRLE *p;
-    
-    ret.y = this->row_idx + 1;
-    e = this->spm->elems__ + this->elm_idx;
-    ret.x = e->x;
-    ret.val = e->val;
-    p = e-> pattern;
-    ret.pattern = (p == NULL) ? NULL : p->Clone();
-    if (p != NULL)
-        delete p;
-    return ret;
+    spm_->rowptr_size = dynarray_size(da_rowptr_);
+    spm_->rowptr = (uint64_t *)dynarray_destroy(da_rowptr_);
+    this->da_elems_ = this->da_rowptr_ = NULL;
 }
 
 //*** Do I keep the code from now on;
@@ -906,12 +828,12 @@ void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
         
         out << std::endl;
     }
-    
 }
 
 void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 {
     boost::function<void (CooElem &p)> xform_fn;
+    
     xform_fn = bll::bind(pnt_map_D, bll::_1, bll::_1, y);
     PrintTransform(y, x, xform_fn, out);
 }
@@ -919,6 +841,7 @@ void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 void PrintRDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 {
     boost::function<void (CooElem &p)> xform_fn;
+    
     xform_fn = bll::bind(pnt_map_rD, bll::_1, bll::_1, x);
     PrintTransform(y, x, xform_fn, out);
 }

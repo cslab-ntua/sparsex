@@ -494,7 +494,7 @@ void DRLE_Manager::PrintSortSplits(std::ostream& out)
     for (iter = sort_splits.begin(); iter != sort_splits.end() - 1; ++iter) {
         uint64_t rs = *iter;
         uint64_t re = *(iter + 1);
-        uint64_t nnz = spm->rowptr__[re] - spm->rowptr__[rs];
+        uint64_t nnz = spm->rowptr[re] - spm->rowptr[rs];
         
         out << "(rs, re, nnz) = (" << rs << ", " << re << ", " << nnz << ")" 
             << std::endl;
@@ -1098,7 +1098,7 @@ void DRLE_Manager::DoComputeSortSplitsByNNZ()
     sort_splits.push_back(0);
     for (uint64_t i = 0; i < nr_rows; ++i) {
         uint64_t new_nzeros_cnt = 
-            nzeros_cnt + spm->rowptr__[i+1] - spm->rowptr__[i];
+            nzeros_cnt + spm->rowptr[i+1] - spm->rowptr[i];
         if (new_nzeros_cnt < sort_window_size) {
             nzeros_cnt = new_nzeros_cnt;
         } else {
@@ -1129,10 +1129,10 @@ void DRLE_Manager::DoCheckSortByRows()
 
 void DRLE_Manager::DoCheckSortByNNZ()
 {
-    if (sort_window_size > spm->elems_size__)
+    if (sort_window_size > spm->elems_size)
         assert(false && "Invalid sort window");
     if (sort_window_size == 0 ||
-        sort_window_size == spm->elems_size__)
+        sort_window_size == spm->elems_size)
         sort_windows = false;
     else
         sort_windows = true;
