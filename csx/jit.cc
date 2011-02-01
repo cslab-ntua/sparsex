@@ -4,7 +4,6 @@
 
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ModuleProvider.h"
 
 #include "spm.h"
 #include "csx.h"
@@ -20,7 +19,7 @@ using namespace csx;
 
 CsxJit::CsxJit(CsxManager *_csxmg, unsigned int tid) : CsxMg(_csxmg)
 {
-    this->M   = SingleModule::getM(CSX_TEMPLATE);
+    this->M   = SingleModule::getM(CSX_TEMPLATE, this->Ctx);
     this->Bld = new IRBuilder<>(this->Ctx);
 
     // create a new spmv function for the therad

@@ -77,14 +77,17 @@ void *thread_function(void *initial_data)
     DrleMg->IgnoreAll();
     for (int i = 0; data->xform_buf[i] != -1; ++i)
         DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
-    /* If deltas choices given encode the matrix with the order given by XFORM_CONF,
-       else find statistical data for the types in XFORM_CONF, choose the best choise,
-       encode it and proceed likewise until there is no satisfying encoding*/
-    /*if (data->deltas)
+
+     // If deltas choices given encode the matrix with the order given by
+     //   XFORM_CONF, else find statistical data for the types in XFORM_CONF,
+     //   choose the best choise, encode it and proceed likewise until there is
+     //   no satisfying encoding
+    if (data->deltas)
         DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
     else
-        DrleMg->EncodeAll(data->buffer, data->split_blocks);*/ 
-    DrleMg->MakeEncodeTree(data->split_blocks);
+        DrleMg->EncodeAll(data->buffer, data->split_blocks); 
+
+    //DrleMg->MakeEncodeTree(data->split_blocks);
     delete DrleMg;
     return 0;
 }

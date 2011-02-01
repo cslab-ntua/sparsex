@@ -6,7 +6,6 @@
 #include "llvm/Module.h"
 #include "llvm/BasicBlock.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ModuleProvider.h"
 
 #include <map>
 
@@ -20,11 +19,11 @@ using namespace llvm;
  */
 
 // load an llvm module from a bitcode file
-Module *ModuleFromFile(const char *file);
+Module *ModuleFromFile(const char *file, LLVMContext &Ctx);
 // store an llvm module to a bitcode file
 void ModuleToFile(Module *M, const char *file);
 // link code from a bitcode file to an llvm module
-void LinkFileToModule(Module *Module, const char *file);
+void LinkFileToModule(Module *Module, const char *file, LLVMContext &Ctx);
 // do optimization passes
 void doOptimize(Module *M);
 // helper functions for inlining
@@ -78,7 +77,7 @@ public:
     static RefMap refs;
     static JitMap jits;
 
-    static Module *getM(const char *MName);
+    static Module *getM(const char *MName, LLVMContext &ctx);
     static ExecutionEngine *getJIT(Module *M);
 };
 

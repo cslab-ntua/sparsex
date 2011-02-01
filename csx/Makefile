@@ -3,7 +3,7 @@
 all: spmv windows-sort csx_llvm_tmpl.llvm.bc
 
 ## Configuration
-dynarray_dir = ../../dynarray
+dynarray_dir = ../lib/dynarray
 protodir     = ./proto
 llvmconf     = llvm-config-2.7
 

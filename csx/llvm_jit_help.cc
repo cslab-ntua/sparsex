@@ -32,7 +32,7 @@ using namespace llvm;
 
 /////////// Utility Functions ///////////
 
-Module *ModuleFromFile(const char *file, LLVMContext Ctx)
+Module *ModuleFromFile(const char *file, LLVMContext &Ctx)
 {
     std::string Error;
     MemoryBuffer *MB = MemoryBuffer::getFile(file, &Error);
@@ -62,10 +62,10 @@ void ModuleToFile(Module *M, const char *file)
     WriteBitcodeToFile(M, output);
 }
 
-void LinkFileToModule(Module *M, const char *file)
+void LinkFileToModule(Module *M, const char *file, LLVMContext &Ctx)
 {
     std::string Err;
-    Module *newM = ModuleFromFile(file);
+    Module *newM = ModuleFromFile(file, Ctx);
     int err = Linker::LinkModules(M, newM, &Err);
     if (err){
         std::cerr << "Error in linking " << file << " " << Err << "\n";
@@ -426,14 +426,14 @@ SingleModule::ModMap SingleModule::modules;
 SingleModule::RefMap SingleModule::refs;
 SingleModule::JitMap SingleModule::jits;
 
-Module *SingleModule::getM(const char *mod_name)
+Module *SingleModule::getM(const char *mod_name, LLVMContext& Ctx)
 {
     Module *ret;
     ModMap::iterator it;
 
     it = modules.find(mod_name);
     if (it == modules.end()){
-        ret = ModuleFromFile(mod_name);
+        ret = ModuleFromFile(mod_name, Ctx);
         modules.insert(std::make_pair(mod_name, ret));
         refs.insert(std::make_pair(ret, 1));
     } else {
