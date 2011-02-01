@@ -93,8 +93,6 @@ std::ostream &operator<<(std::ostream &out, SPM::PntIter pi)
 #define BLOCK_ROW_RMAP_NAME(r)  pnt_rmap_bR ## r
 #define BLOCK_COL_MAP_NAME(c)   pnt_map_bC ## c
 #define BLOCK_COL_RMAP_NAME(c)  pnt_rmap_bC ## c
-#define BLOCK_ROW_DIAGONAL_MAP_NAME(rd)   pnt_map_bRD ## rd
-#define BLOCK_ROW_DIAGONAL_RMAP_NAME(rd)  pnt_rmap_bRD ## rd
 
 #define DEFINE_BLOCK_ROW_MAP_FN(r)                                      \
     static inline void BLOCK_ROW_MAP_NAME(r)                            \
@@ -150,52 +148,52 @@ static inline void pnt_rmap_V(const CooElem &src, CooElem &dst)
 
 static inline void pnt_map_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
-	uint64_t src_x = src.x;
-	uint64_t src_y = src.y;
-	
-	assert(nrows + src_x - src_y > 0);
-	dst.y = nrows + src_x - src_y;
-	dst.x = (src_x < src_y) ? src_x : src_y;
+    uint64_t src_x = src.x;
+    uint64_t src_y = src.y;
+    
+    assert(nrows + src_x - src_y > 0);
+    dst.y = nrows + src_x - src_y;
+    dst.x = (src_x < src_y) ? src_x : src_y;
 }
 
 static inline void pnt_rmap_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
-	uint64_t src_x = src.x;
-	uint64_t src_y = src.y;
-	
-	if (src_y < nrows) {
-		dst.x = src_x;
-		dst.y = nrows + src_x - src_y;
-	} else {
-		dst.y = src_x;
-		dst.x = src_y + src_x - nrows;
-	}
+    uint64_t src_x = src.x;
+    uint64_t src_y = src.y;
+    
+    if (src_y < nrows) {
+        dst.x = src_x;
+        dst.y = nrows + src_x - src_y;
+    } else {
+        dst.y = src_x;
+        dst.x = src_y + src_x - nrows;
+    }
 }
 
 static inline void pnt_map_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 {
-	uint64_t src_x = src.x;
-	uint64_t src_y = src.y;
-	uint64_t dst_y;
-	
-	dst.y = dst_y = src_x + src_y - 1;
-	dst.x = (dst_y <= ncols) ? src_y : ncols + 1 - src_x;
+    uint64_t src_x = src.x;
+    uint64_t src_y = src.y;
+    uint64_t dst_y;
+    
+    dst.y = dst_y = src_x + src_y - 1;
+    dst.x = (dst_y <= ncols) ? src_y : ncols + 1 - src_x;
 }
 
 static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 {
-	uint64_t src_x = src.x;
-	uint64_t src_y = src.y;
-	
-	if (src_y <= ncols) {
-		dst.y = src_x;
-		dst.x = src_y + 1 - src_x;
-	} else {
-		dst.y = src_x + src_y - ncols;
-		dst.x = ncols + 1 - src_x;
-	}
-	
-	dst.y = src_y - dst.x + 1;
+    uint64_t src_x = src.x;
+    uint64_t src_y = src.y;
+    
+    if (src_y <= ncols) {
+        dst.y = src_x;
+        dst.x = src_y + 1 - src_x;
+    } else {
+        dst.y = src_x + src_y - ncols;
+        dst.x = ncols + 1 - src_x;
+    }
+    
+    dst.y = src_y - dst.x + 1;
 }
 
 DEFINE_BLOCK_ROW_MAP_FN(2)
@@ -234,7 +232,7 @@ void MakeRowElem(const CooElem &p, SpmRowElem *ret)
 {
     ret->x = p.x;
     ret->val = p.val;
-	ret->pattern = NULL;
+    ret->pattern = NULL;
 }
 
 void MakeRowElem(const SpmCooElem &p, SpmRowElem *ret)
@@ -1057,3 +1055,5 @@ int main(int argc, char **argv)
 	//std::cout << obj.rows;
 }
 #endif
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

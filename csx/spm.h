@@ -295,7 +295,12 @@ public:
 	}
     };
     
-    virtual Generator *generator(CooElem start);
+    virtual Generator *generator(CooElem start)
+    {
+        Generator *g;
+        g = new DeltaRLE::Generator(start, this);
+        return g;
+    }
 
     /**
      *  Find the column of the next non-zero element within pattern.
@@ -615,7 +620,6 @@ public:
      *  @param rdiff difference between the number of current and new line.
      */
     virtual void NewRow(uint64_t rdiff=1);
-    
     
     virtual void Finalize();
 };

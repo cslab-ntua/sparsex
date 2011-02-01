@@ -70,21 +70,21 @@ void *thread_function(void *initial_data)
     // Print Thread_Id
     data->buffer << "==> Thread: #" << data->thread_no << endl;
     // Init DrleMg which takes statistical data and encodes and decodes the matrix
-    DrleMg = new DRLE_Manager(data->Spm, 4, 255-1, 0.1, data->wsize,
+    DrleMg = new DRLE_Manager(data->Spm, 4, 255-1, 0.01, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_prob,
                               data->samples_max);
     // Adjust the ignore settings properly
-    DrleMg->ignoreAll();
+    DrleMg->IgnoreAll();
     for (int i = 0; data->xform_buf[i] != -1; ++i)
-        DrleMg->removeIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
+        DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
     /* If deltas choices given encode the matrix with the order given by XFORM_CONF,
        else find statistical data for the types in XFORM_CONF, choose the best choise,
        encode it and proceed likewise until there is no satisfying encoding*/
-    if (data->deltas)
+    /*if (data->deltas)
         DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
     else
-        DrleMg->EncodeAll(data->buffer, data->split_blocks); 
-    //DrleMg->MakeEncodeTree(data->split_blocks);
+        DrleMg->EncodeAll(data->buffer, data->split_blocks);*/ 
+    DrleMg->MakeEncodeTree(data->split_blocks);
     delete DrleMg;
     return 0;
 }
