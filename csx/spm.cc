@@ -779,10 +779,10 @@ SPM::Builder::Builder(SPM *spm, uint64_t nr_elems, uint64_t nr_rows) : spm_(spm)
         dynarray_seek(da_elems_, 0);
     } else {
         da_elems_ =
-            dynarray_create(sizeof(SpmRowElem), nr_elems ? nr_elems : 512, 0);
+            dynarray_create(sizeof(SpmRowElem), nr_elems ? nr_elems : 512);
     }
 
-    da_rowptr_ = dynarray_create(sizeof(uint64_t), nr_rows ? nr_rows : 512, 0);
+    da_rowptr_ = dynarray_create(sizeof(uint64_t), nr_rows ? nr_rows : 512);
     rowptr = (uint64_t *) dynarray_alloc(da_rowptr_);
     *rowptr = 0;
 }

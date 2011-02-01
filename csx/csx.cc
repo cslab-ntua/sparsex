@@ -22,10 +22,10 @@
 #include "csx.h"
 
 #ifdef SPM_NUMA
-#   define USE_NUMA 1
 #   include <numa.h>
+#   define DYNARRAY_CREATE  dynarray_create_numa
 #else
-#   define USE_NUMA 0
+#   define DYNARRAY_CREATE  dynarray_create
 #endif
 
 using namespace csx;
@@ -105,7 +105,7 @@ csx_double_t *CsxManager::MakeCsx()
         exit(1);
     }
 
-    ctl_da_ = dynarray_create(sizeof(uint8_t), 512);
+    ctl_da_ = DYNARRAY_CREATE(sizeof(uint8_t), 512);
     csx->nnz = spm_->nr_nzeros_;
     csx->nrows = spm_->nr_rows_;
     csx->ncols = spm_->nr_cols_;

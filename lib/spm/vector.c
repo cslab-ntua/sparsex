@@ -99,7 +99,7 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
      * Bind parts to specific nodes
      * All parts must be page aligned
      */
-    VECTOR_TYPE *curr_part = v;
+    ELEM_TYPE *curr_part = v->elements;
     int i;
     for (i = 0; i < nr_parts; i++) {
         size_t  part_size = parts[i]*sizeof(ELEM_TYPE);
@@ -116,9 +116,9 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
             perror("mbind");
             exit(1);
         }
-        
-        curr_part += part_size;
+
         parts[i] = part_size / sizeof(ELEM_TYPE);
+        curr_part += parts[i];
     }
 
 #undef PAGE_ALIGN
