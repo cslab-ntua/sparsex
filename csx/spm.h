@@ -184,10 +184,10 @@ class DeltaRLE
 {
 public:
     SpmIterOrder type;
-    
+
 protected:
     uint32_t size_, delta_;
-    
+
 public:
     DeltaRLE(uint32_t _size, uint32_t _delta, SpmIterOrder _type)
         : size_(_size), delta_(_delta)
@@ -199,7 +199,7 @@ public:
     {
         return new DeltaRLE(*this);
     }
-    
+
     virtual ~DeltaRLE() {};
 
     /**
@@ -210,7 +210,7 @@ public:
     {
         return this->size_;
     }
-    
+
     /**
      *  Generates id for patterns.
      *  @return unique id of the type of the selected object of class DeltaRLE.
@@ -230,7 +230,7 @@ public:
     virtual long ColIncrease(SpmIterOrder order) const
     {
         long ret;
-        
+
         ret = (order == this->type) ? (this->size_*this->delta_) : 1;
         return ret;
     }
@@ -245,7 +245,7 @@ public:
     virtual uint64_t ColIncreaseJmp(SpmIterOrder order, uint64_t jmp) const
     {
         long ret;
-        
+
         ret = jmp;
         if (order == this->type)
             ret += ((this->size_-1)*this->delta_);
@@ -269,12 +269,12 @@ public:
     class Generator
     {
     private:
-    	CooElem start_;
-	DeltaRLE *rle_;
-	long nr_;
+        CooElem start_;
+        DeltaRLE *rle_;
+        long nr_;
 
     public:
-        Generator(CooElem _start, DeltaRLE *_rle): 
+        Generator(CooElem _start, DeltaRLE *_rle):
             start_(_start), rle_(_rle), nr_(0) { }
 
         /**
@@ -282,23 +282,23 @@ public:
          *  @return true if the handler is in the last element and false
          *          otherwise
          */
-	virtual bool IsEmpty() const {
-	    return (this->nr_ == this->rle_->size_);
-	}
-	
-	/**
+        virtual bool IsEmpty() const {
+            return (this->nr_ == this->rle_->size_);
+        }
+
+        /**
          *  Finds the next element within pattern.
          *  @return next element
          */
-	virtual CooElem Next() {
-	    CooElem ret(this->start_);
-	    assert(this->nr_ <= this->rle_->size_);
-	    ret.x += (this->nr_)*this->rle_->delta_;
-	    this->nr_ += 1;
-	    return ret;
-	}
+        virtual CooElem Next() {
+            CooElem ret(this->start_);
+            assert(this->nr_ <= this->rle_->size_);
+            ret.x += (this->nr_)*this->rle_->delta_;
+            this->nr_ += 1;
+            return ret;
+        }
     };
-    
+
     /**
      *  Creates an object of Generator class.
      *  @param  start starting element
@@ -341,7 +341,7 @@ public:
             this->npatterns += new_vals.npatterns;
         }
     };
-    
+
     typedef std::map<uint64_t, DeltaRLE::StatsVal> Stats;
 };
 
@@ -351,13 +351,13 @@ public:
 class BlockRLE : public DeltaRLE {
 public:
     uint32_t other_dim;
-    
+
     BlockRLE(uint32_t _size, uint32_t _other_dim, SpmIterOrder _type)
             : DeltaRLE(_size, 1, (assert(IsBlockType(_type)), _type))
     {
         this->other_dim = _other_dim;
     }
-    
+
     /**
      *  Finds the second dimension of blocks (first is revealed from type).
      *  @return the size of second dimension.
@@ -366,12 +366,12 @@ public:
     {
         return this->other_dim;
     }
-    
+
     virtual long GetPatId() const
     {
         return PID_OFFSET*this->type + this->other_dim;
     }
-    
+
     virtual BlockRLE *Clone() const
     {
         return new BlockRLE(*this);
@@ -391,7 +391,7 @@ public:
     SpmPattern(const SpmPattern &spm_p)
     {
         DeltaRLE *p;
-        
+
         this->pattern = ((p = spm_p.pattern) == NULL) ? NULL : p->Clone();
     }
 
@@ -400,7 +400,7 @@ public:
         if (this->pattern != NULL)
             delete this->pattern;
     }
-    
+
     SpmPattern& operator=(const SpmPattern &spm_p)
     {
         if (this == &spm_p)
@@ -410,7 +410,7 @@ public:
             delete this->pattern;
 
         DeltaRLE *p;
-        
+
         this->pattern = ((p = spm_p.pattern) == NULL) ? NULL : p->Clone();
         return *this;
     }
@@ -447,16 +447,16 @@ class SPM
 {
 public:
     uint64_t nrows, ncols, nnz;
-    SpmIterOrder type;    
+    SpmIterOrder type;
     SpmRowElem *elems;
     uint64_t elems_size;
     uint64_t *rowptr;
     uint64_t rowptr_size;
     uint64_t row_start;
-    
+
 private:
     bool elems_mapped_;
-    
+
 public:
     uint64_t GetNrRows()
     {
@@ -507,7 +507,7 @@ public:
      */
     static SPM *LoadMMF(const char *filename);
     static SPM *LoadMMF(std::istream &in=std::cin);
-    
+
     /**
      *  Load matrix from a file specifying the number of threads.
      *  @param filename name of the file that matrix is kept.
@@ -526,7 +526,7 @@ public:
     void PrintStats(std::ostream &out=std::cout);
 
     class PntIter;
-    
+
     PntIter PointsBegin(uint64_t ridx=0);
     PntIter PointsEnd(uint64_t ridx=0);
 
@@ -539,22 +539,22 @@ public:
      *              the end of matrix.
      */
     void Transform(SpmIterOrder type, uint64_t rs=0, uint64_t re=0);
-    
+
     /**
-     *  Find the reverse transform function. Transform from 'type' to 
+     *  Find the reverse transform function. Transform from 'type' to
      *  HORIZONTAL.
      *  @param type type of pattern to transform from.
      *  @return     reverse transform function.
      */
     TransformFn GetRevXformFn(SpmIterOrder type);
-    
+
     /**
      *  Find the transform function. Transform from HORIZONTAL to 'type'.
      *  @param type type of pattern to transform to.
      *  @return     transform function.
      */
     TransformFn GetXformFn(SpmIterOrder type);
-    
+
     /**
      *  Find the complete transform function. Tranform from 'from' to 'to'.
      *  @param from type of pattern to transform from.
@@ -562,7 +562,7 @@ public:
      *  @return     complete transform function.
      */
     TransformFn GetTransformFn(SpmIterOrder from, SpmIterOrder to);
-    
+
     /**
      *  Copy a window (sub-matrix) from matrix.
      *  @param rs     starting line of window.
@@ -571,7 +571,7 @@ public:
      *                selected window.
      */
     SPM *ExtractWindow(uint64_t rs, uint64_t length);
-    
+
     /**
      *  Get a window (sub-matrix) from matrix.
      *  @param rs     starting line of window.
@@ -580,7 +580,7 @@ public:
      *                selected window.
      */
     SPM *GetWindow(uint64_t rs, uint64_t length);
-    
+
     /**
      *  Copy the characteristics of the window (sub-matrix) back to to original
      *  matrix.
@@ -593,7 +593,7 @@ public:
 void TestMMF(SPM *spm, const char *mmf_file);
 
 /**
- *  Handles memory allocations during construction and destruction of spm 
+ *  Handles memory allocations during construction and destruction of spm
  *  object.
  */
 class SPM::Builder
@@ -604,10 +604,10 @@ private:
     dynarray_t *da_rowptr_;
 
 public:
-    Builder(SPM *_spm, uint64_t nr_elems = 0, uint64_t nrows = 0): spm_(_spm)
+    Builder(SPM *spm, uint64_t nr_elems = 0, uint64_t nrows = 0): spm_(spm)
     {
         uint64_t *rowptr;
-    
+
         if (this->spm_->elems_mapped_) {
             this->da_elems_ = dynarray_init_frombuff(sizeof(SpmRowElem),
                                                     this->spm_->elems_size,
@@ -618,12 +618,12 @@ public:
             this->da_elems_ = dynarray_create(sizeof(SpmRowElem),
                                              nr_elems ? nr_elems : 512);
         }
-    
-	this->da_rowptr_ = dynarray_create(sizeof(uint64_t), nrows ? nrows : 512);
-	rowptr = (uint64_t *)dynarray_alloc(this->da_rowptr_);
-	*rowptr = 0;
+
+        this->da_rowptr_ = dynarray_create(sizeof(uint64_t), nrows ? nrows : 512);
+        rowptr = (uint64_t *)dynarray_alloc(this->da_rowptr_);
+        *rowptr = 0;
     }
-    
+
     virtual ~Builder()
     {
         assert(this->da_elems_ == NULL);
@@ -635,26 +635,26 @@ public:
      *  @return pointer to element allocated.
      */
     virtual SpmRowElem *AllocElem();
-    
+
     /**
      *  Allocates many elements in matrix.
      *  @param  nr number of elements allocated.
      *  @return    pointer to elements allocated.
      */
     virtual SpmRowElem *AllocElems(uint64_t nr);
-    
+
     /**
      *  Counts elements allocated in matrix.
      *  @return number of elements allocated.
      */
     virtual uint64_t GetElemsCnt();
-    
+
     /**
      *  Allocate elements for the next row.
      *  @param rdiff difference between the number of current and new line.
      */
     virtual void NewRow(uint64_t rdiff=1);
-    
+
     /**
      *  Responsible to free memory. Checked afterwards by destructor of class
      *  Builder.
@@ -669,18 +669,18 @@ class SPM::PntIter : public std::iterator<std::forward_iterator_tag, CooElem>
 {
 private:
     SPM *spm_;
-    
+
 public:
     uint64_t row_idx;
     uint64_t elm_idx;
-    
+
     PntIter(): spm_(NULL), row_idx(0), elm_idx(0) { }
 
     PntIter(SPM *_spm, uint64_t _row_idx) : spm_(_spm), row_idx(_row_idx)
     {
         uint64_t *rp = this->spm_->rowptr;
         uint64_t rp_size = this->spm_->rowptr_size;
-    
+
         assert(_row_idx < rp_size);
         while (_row_idx+1 < rp_size && rp[_row_idx] == rp[_row_idx+1])
             _row_idx++;
@@ -690,7 +690,7 @@ public:
 
     bool operator==(const PntIter &pi)
     {
-        return (spm_ = pi.spm_) && (row_idx == pi.row_idx) && 
+        return (spm_ = pi.spm_) && (row_idx == pi.row_idx) &&
                (elm_idx == pi.elm_idx);
     }
 
@@ -703,7 +703,7 @@ public:
     {
         uint64_t *rp = this->spm_->rowptr;
         uint64_t rp_size = this->spm_->rowptr_size;
-    
+
         assert(this->elm_idx < this->spm_->elems_size);
         assert(this->row_idx < rp_size);
         this->elm_idx++;
@@ -716,7 +716,7 @@ public:
         SpmCooElem ret;
         SpmRowElem *e;
         DeltaRLE *p;
-    
+
         ret.y = this->row_idx + 1;
         e = this->spm_->elems + this->elm_idx;
         ret.x = e->x;

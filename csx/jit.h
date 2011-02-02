@@ -9,6 +9,7 @@
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Function.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+
 #include "llvm_jit_help.h"
 
 using namespace llvm;
@@ -34,16 +35,18 @@ namespace csx {
 //
 // see also: csx_llvm_tmpl.c
 
+// intialize global state (see jit.c for details)
+void CsxJitInitGlobal(void);
+
 class CsxJit {
 public:
-
     // main state
-    LLVMContext Ctx;
     CsxManager  *CsxMg;
     Module      *M;
     IRBuilder<> *Bld;
     //ModuleProvider *MP;
     //ExecutionEngine *JIT;
+
 
     // Helper functions that are loaded from the template
     Function
@@ -73,6 +76,7 @@ public:
 
 
     CsxJit(CsxManager *CsxMg, unsigned int thread_id=0);
+    LLVMContext &getLLVMCtx(void);
 
     void doPrint(Value *Myx=NULL, Value *Yindx=NULL);
     void doIncV();
@@ -127,6 +131,7 @@ public:
     void BlockColCaseUnrolled(BasicBlock *BB,
                               BasicBlock *BB_exit,
                               int r, int c);
+
 };
 
 } // end csx namespace

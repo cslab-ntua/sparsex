@@ -160,6 +160,7 @@ bool InlineFntoFn(Function *Callee, Function *Caller)
     return false;
 }
 
+// CloneFunction wrapper
 Function *doCloneFunction(Module *M, Function *Fn, const char *newFnName)
 {
     Function *newFn;
@@ -171,6 +172,7 @@ Function *doCloneFunction(Module *M, Function *Fn, const char *newFnName)
     return newFn;
 }
 
+// CloneFunction wrapper
 Function *doCloneFunction(Module *M, const char *FnName, const char *newFnName)
 {
     Function *Fn;
@@ -179,6 +181,49 @@ Function *doCloneFunction(Module *M, const char *FnName, const char *newFnName)
     assert(Fn);
     return doCloneFunction(M, Fn, newFnName);
 
+}
+
+// Get the first call instruction of Fn in CallerFn
+static CallInst *getCallInFn(Function *Fn, Function *CallerFn)
+{
+    CallInst *CI;
+    Value::use_iterator I = Fn->use_begin(), E = Fn->use_end();
+    for ( ; I != E; I++){
+        CI = cast<CallInst>(*I);
+        if (CI->getParent()->getParent() == CallerFn){
+            return CI;
+        }
+    }
+
+    std::cout << "Function not found\n";
+    return NULL;
+}
+
+// clone and replace the call of a function, inside another function (caller)
+Function *CloneAndReplaceFn(Module *M,
+                            Function *CallerFn,
+                            Function *ReplaceFn,
+                            const char *Name,
+                            const char *newFnName)
+{
+    Function *Fn, *newFn;
+
+    // get Function
+    Fn = M->getFunction(Name);
+    assert(Fn);
+
+    //printf("Uses of %s: %u\n", Fn->getNameStart(), Fn->getNumUses());
+    // Clone Caller Function and put it into module
+    newFn = doCloneFunction(M, CallerFn, newFnName);
+
+    // get call instruction to replace in new function
+    //printf("Uses of %s: %u\n", Fn->getNameStart(), Fn->getNumUses());
+    CallInst *CallInstr = getCallInFn(Fn, newFn);
+    CallInstr->setOperand(0, ReplaceFn);
+    //printf("Uses of %s: %u\n", Fn->getNameStart(), Fn->getNumUses());
+    verifyModule(*M, AbortProcessAction, 0);
+
+    return newFn;
 }
 
 /*
@@ -204,23 +249,30 @@ static inline int is_hook_type_ok(const Type *Ty)
 }
 
 
+/* find a hook function, and verify its type and that is used once */
 static Instruction *get_hook(Module *M, const char *name)
 {
-    Function *Fn = M->getFunction(name);
+    Function *Fn;
+    const Type *FnTy;
+    Instruction *Hook;
 
-    const Type *FnTy = Fn->getFunctionType();
+    // get function
+    Fn = M->getFunction(name);
+
+    // verify type
+    FnTy = Fn->getFunctionType();
     if (!is_hook_type_ok(FnTy)){
         std::cout << "Error in Function Type\n";
         return NULL;
     }
 
-    /* get the hook, and verify it is used only once */
+    // get uses, and verify hook is used only once
     Value::use_iterator I = Fn->use_begin(), E = Fn->use_end();
     if (I == E){
         std::cout << "No uses of the hook\n";
         return NULL;
     }
-    Instruction *Hook = cast<Instruction>(*I);
+    Hook = cast<Instruction>(*I);
     if (++I != E) {
         std::cout << "More than one uses of the hook\n";
         return NULL;
@@ -229,6 +281,7 @@ static Instruction *get_hook(Module *M, const char *name)
     return Hook;
 }
 
+// similar to above, +verify that hook is used inside Parent
 static Instruction *get_hook(Module *M, const char *name, Function *Parent)
 {
     Function *Fn;
@@ -261,45 +314,6 @@ static Instruction *get_hook(Module *M, const char *name, Function *Parent)
     return Hook;
 }
 
-// Get the first call instruction of Fn in CallerFn
-CallInst *getCallInFn(Function *Fn, Function *CallerFn)
-{
-    CallInst *CI;
-    Value::use_iterator I = Fn->use_begin(), E = Fn->use_end();
-    for ( ; I != E; I++){
-        CI = cast<CallInst>(*I);
-        if (CI->getParent()->getParent() == CallerFn){
-            return CI;
-        }
-    }
-
-    std::cout << "Function not found\n";
-    return NULL;
-}
-
-Function *CloneAndReplaceHook(Module *M, Function *CallerFn, Function *HookReplaceFn,
-                         const char *HookName, const char *newFnName)
-{
-    Function *HookFn, *newFn;
-
-    // get Hook Function
-    HookFn = M->getFunction(HookName);
-    assert(HookFn);
-
-    //printf("Uses of %s: %u\n", HookFn->getNameStart(), HookFn->getNumUses());
-    // Clone Caller Function and put it into module
-
-    newFn = doCloneFunction(M, CallerFn, newFnName);
-
-    // get call instruction to replace in new function
-    //printf("Uses of %s: %u\n", HookFn->getNameStart(), HookFn->getNumUses());
-    CallInst *CallInstr = getCallInFn(HookFn, newFn);
-    CallInstr->setOperand(0, HookReplaceFn);
-    //printf("Uses of %s: %u\n", HookFn->getNameStart(), HookFn->getNumUses());
-    verifyModule(*M, AbortProcessAction, 0);
-
-    return newFn;
-}
 
 #if 0
 IRBuilder *llvm_hook_builder(Module *M, const char *name)
@@ -324,7 +338,7 @@ static BasicBlock *__llvm_hook_newbb(Module *M, Instruction *Hook, BasicBlock **
     BasicBlock *BB0 = BB->splitBasicBlock(BI, "split_start");
     BasicBlock *BB1 = BB0->splitBasicBlock(BB0->begin(), "split_end");
 
-    /* BB0 should have only one (uncond) branch instruction. remove it */
+    // BB0 should have only one (uncond) branch instruction. remove it
     BB0->getInstList().erase(BB0->begin());
     assert(BB0->begin() == BB0->end());
 
@@ -333,10 +347,6 @@ static BasicBlock *__llvm_hook_newbb(Module *M, Instruction *Hook, BasicBlock **
 }
 
 
-// This function replaces a hook function with two basic blocks,
-// for the purpose of replacing the hook with other instructions.
-// The return basic  block is where the new instructions should be placed,
-// while BBnext, is where control flow should continue
 BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext)
 {
     Instruction *Hook;
@@ -345,7 +355,6 @@ BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext)
     return __llvm_hook_newbb(M, Hook, BBnext);
 }
 
-// same with before only hook should be insinde Parent
 BasicBlock *llvm_hook_newbb(Module *M, const char *name, Function *Parent,
                             BasicBlock **BBnext)
 {
@@ -422,28 +431,6 @@ Value *Annotations::getValue(const char *annotation)
     return am->getValue();
 }
 
-SingleModule::ModMap SingleModule::modules;
-SingleModule::RefMap SingleModule::refs;
-SingleModule::JitMap SingleModule::jits;
-
-Module *SingleModule::getM(const char *mod_name, LLVMContext& Ctx)
-{
-    Module *ret;
-    ModMap::iterator it;
-
-    it = modules.find(mod_name);
-    if (it == modules.end()){
-        ret = ModuleFromFile(mod_name, Ctx);
-        modules.insert(std::make_pair(mod_name, ret));
-        refs.insert(std::make_pair(ret, 1));
-    } else {
-        ret = it->second;
-        refs[ret] += 1;
-    }
-
-    return ret;
-}
-
 ExecutionEngine *mkJIT(Module *M)
 {
     ExecutionEngine *JIT;
@@ -455,87 +442,8 @@ ExecutionEngine *mkJIT(Module *M)
         exit(1);
     }
 
+    std::cout << JIT->getTargetData()->getStringRepresentation() << "\n";
+
     return JIT;
 }
 
-
-ExecutionEngine *SingleModule::getJIT(Module *M)
-{
-    ExecutionEngine *ret;
-    JitMap::iterator it;
-
-    it = jits.find(M);
-    if (it == jits.end()){
-        ret = mkJIT(M);
-        jits.insert(std::make_pair(M, ret));
-    } else {
-        ret = it->second;
-    }
-
-    return ret;
-}
-
-
-#if 0
-/* XXX: Copied from JITEmitter.cpp  */
-
-/// JitSymbolEntry - Each function that is JIT compiled results in one of these
-/// being added to an array of symbols.  This indicates the name of the function
-/// as well as the address range it occupies.  This allows the client to map
-/// from a PC value to the name of the function.
-struct JitSymbolEntry {
-  const char *FnName;   // FnName - a strdup'd string.
-  void *FnStart;
-  intptr_t FnSize;
-};
-
-struct JitSymbolTable {
-  /// NextPtr - This forms a linked list of JitSymbolTable entries.  This
-  /// pointer is not used right now, but might be used in the future.  Consider
-  /// it reserved for future use.
-  JitSymbolTable *NextPtr;
-
-  /// Symbols - This is an array of JitSymbolEntry entries.  Only the first
-  /// 'NumSymbols' symbols are valid.
-  JitSymbolEntry *Symbols;
-
-  /// NumSymbols - This indicates the number entries in the Symbols array that
-  /// are valid.
-  unsigned NumSymbols;
-
-  /// NumAllocated - This indicates the amount of space we have in the Symbols
-  /// array.  This is a private field that should not be read by external tools.
-  unsigned NumAllocated;
-};
-
-extern JitSymbolTable *__jitSymbolTable;
-
-unsigned long getFnSize(const char *FnName)
-{
-    unsigned int i;
-    unsigned long len0 = strlen(FnName);
-    for (i=0; i<__jitSymbolTable->NumSymbols; i++){
-        JitSymbolEntry *entry = &__jitSymbolTable->Symbols[i];
-        unsigned long len1 = strlen(entry->FnName);
-        if (len0 != len1)
-            continue;
-        if ( memcmp(FnName, entry->FnName, len0) == 0 ){
-            return entry->FnSize;
-        }
-    }
-
-    return 0;
-}
-
-void printSymTable()
-{
-    unsigned int i;
-    for (i=0; i<__jitSymbolTable->NumSymbols; i++){
-        JitSymbolEntry *entry = &__jitSymbolTable->Symbols[i];
-        std::cout << entry->FnName << " : " << entry->FnStart << " " << entry->FnSize << "\n";
-    }
-}
-
-#endif
-
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

@@ -6,6 +6,7 @@
 #include "llvm/Module.h"
 #include "llvm/BasicBlock.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Analysis/Verifier.h"
 
 #include <map>
 
@@ -32,6 +33,11 @@ bool InlineFntoFn(Function *Callee, Function *Caller);
 // wrappers for llvm's, CloneFunction()
 Function *doCloneFunction(Module *M, const char *FnName, const char *newFnName);
 Function *doCloneFunction(Module *M, Function *Fn, const char *newFnName);
+Function *CloneAndReplaceFn(Module *M,
+                            Function *CallerFn,
+                            Function *ReplaceFn,
+                            const char *FnName,
+                            const char *newFnName);
 
 /**
  * Hook functions:
@@ -40,11 +46,16 @@ Function *doCloneFunction(Module *M, Function *Fn, const char *newFnName);
  *  hooks) to mark places in these templates.
  */
 
-IRBuilder<> *llvm_hook_builder(Module *M, const char *name);
+// This function replaces a hook function with two basic blocks,
+// for the purpose of replacing the hook with other instructions.
+//  - The returned BB is where the new instructions should be placed,
+//  - BBnext is where control flow should continue, after the new instructions
+//    have finished
 BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext);
+// same as before, but hook should be insinde Parent
 BasicBlock *llvm_hook_newbb(Module *M, const char *name, Function *Parent, BasicBlock **BBnext);
-Function *CloneAndReplaceHook(Module *M, Function *CallerFn, Function *HookReplaceFn,
-                         const char *HookName, const char *newFnName);
+
+ExecutionEngine *mkJIT(Module *M);
 
 
 /**
@@ -64,22 +75,6 @@ public:
     Value *getValue(const char *annotation);
 };
 
-/**
- * SingleModule:
- */
-class SingleModule {
-public:
-    typedef std::map<const char *, Module *> ModMap;
-    typedef std::map<Module *, unsigned int> RefMap;
-    typedef std::map<Module *, ExecutionEngine *> JitMap;
-
-    static ModMap modules;
-    static RefMap refs;
-    static JitMap jits;
-
-    static Module *getM(const char *MName, LLVMContext &ctx);
-    static ExecutionEngine *getJIT(Module *M);
-};
 
 #endif /* LLVM_JIT_HELP_H__ */
 

@@ -104,7 +104,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     // take MT_CONF
     // TODO: In case of MT_CONF=empty a default message is printed by mt_get_options
     mt_get_options(&nr_threads, &threads_cpus);
-    std::cout << "MT_CONF: ";
+    std::cout << "MT_CONF=";
     for (unsigned int i=0; i<nr_threads; i++) {
         if (i != 0)
             std::cout << ",";
@@ -119,7 +119,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         perror("malloc");
         exit(1);
     }
-    if (xform_orig) {
+    if (xform_orig && strlen(xform_orig)) {
         int next = 0;
         int t = atoi(strtok(xform_orig, ","));
         char *token;
@@ -128,7 +128,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         ++next;
         while ( (token = strtok(NULL, ",")) != NULL) {
             t = atoi(token);
-    	    xform_buf[next] = t;
+           xform_buf[next] = t;
             ++next;
         }
         xform_buf[next] = -1;
@@ -292,7 +292,9 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     // Wait for other threads to finish
     for (unsigned int i = 1; i < nr_threads; ++i)
         pthread_join(threads[i-1],NULL);
-    
+
+    CsxJitInitGlobal();
+
     // Init Jits
     Jits = (CsxJit **) malloc(nr_threads*sizeof(CsxJit *));
     if (!Jits){
@@ -311,11 +313,12 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         Jits[i] = new CsxJit(CsxMg, i);
         // Make the generated code
         Jits[i]->doHooks(data[i].buffer);
+        //verifyModule(*(Jits[i]->M), AbortProcessAction, 0);
         delete CsxMg;
         // Print the results of each thread
         std::cout << data[i].buffer.str();
     }
-    
+
     // Optimize generated code and apply it to each thread seperately
     doOptimize(Jits[0]->M);
     for (unsigned int i=0; i < nr_threads; i++){
@@ -328,7 +331,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     free(threads);
     delete[] Spms;
     delete[] data;
-    
+
     // Stop the preprocessing time counter and print it
     timer_pause(&timer);
     std::cout << "Preprocessing time: "
@@ -352,9 +355,9 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz);
     std::cout << "Checking ... " << std::flush;
     spmv_double_check_mt_loop(crs, spm_mt,
-	                      spm_crs32_double_multiply, 1,
-	                      nrows, ncols,
-	                      NULL);
+                         spm_crs32_double_multiply, 1,
+                         nrows, ncols,
+                         NULL);
     spm_crs32_double_destroy(crs);
     std::cout << "Check Passed" << std::endl << std::flush;
 }
@@ -385,7 +388,7 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     secs = spmv_double_bench_mt_loop(spm_mt, loops_nr, nrows, ncols, NULL);
     flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
     printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-	   "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+      "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
 }
 
 int main(int argc, char **argv)
@@ -399,10 +402,13 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         std::cout << basename(argv[i]) << ": " << std::endl;
         spm_mt = getSpmMt(argv[i]);
-     	CheckLoop(spm_mt, argv[i]);
+        CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
         putSpmMt(spm_mt);
     }
     return 0;
 }
+
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

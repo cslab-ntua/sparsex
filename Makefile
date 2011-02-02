@@ -25,7 +25,7 @@ CL_BYTES    ?= $(shell $(cpu_dir)/cl_bytes.sh)
 CACHE_BYTES ?= $(shell $(cpu_dir)/cache_bytes.sh)
 CPU         ?= $(shell $(cpu_dir)/cpu_info.sh)
 GCC         ?= llvm-gcc
-CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC -DCPU_CORE -DSPMV_PRFCNT
+CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC -DCPU_CORE #-DSPMV_PRFCNT
 CFLAGS      += -g
 #CFLAGS      += -funroll-all-loops #-march=nocona
 #DEFS        += -DCACHE_BYTES="$(CACHE_BYTES)" -DCL_BYTES=$(CL_BYTES)
