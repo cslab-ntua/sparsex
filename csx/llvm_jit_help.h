@@ -12,7 +12,9 @@
 
 using namespace llvm;
 
-// Some LLVM  helper functions
+/*
+ * LLVM  helper functions
+ */
 
 /**
  * Utility functions:
@@ -38,6 +40,8 @@ Function *CloneAndReplaceFn(Module *M,
                             Function *ReplaceFn,
                             const char *FnName,
                             const char *newFnName);
+// crete a JIT execution engine from a Module
+ExecutionEngine *mkJIT(Module *M);
 
 /**
  * Hook functions:
@@ -55,24 +59,36 @@ BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext);
 // same as before, but hook should be insinde Parent
 BasicBlock *llvm_hook_newbb(Module *M, const char *name, Function *Parent, BasicBlock **BBnext);
 
-ExecutionEngine *mkJIT(Module *M);
 
 
 /**
  * Annotations:
+ *  Annotations are used in llvm template sto mark variables, so
+ *  that we can detect them later in the bytecode.
  */
-typedef StringMap<Value *> AnnotationMap;
 
-// Class for accessing annotations (llvm.var.annotation)
+/**
+ * Class for managing annotations (llvm.var.annotation)
+ *  - find annotations in a module (annotations map strings to LLVM values)
+ *  - query values, based on strings
+ */
 class Annotations {
-    AnnotationMap *map;
+    typedef StringMap<Value *> AnnotMap;
+    // map from strings to LLVM values
+    AnnotMap *map;
 
 public:
     Annotations() : map(NULL) {}
 
+    // update with annotations from M,
+    // if Parent is set, consider values only inside parent
     void update(Module *M, Function *Parent=NULL);
-    void dump();
+
+    // get a value, for a given annotation (NULL if annotation doesnt exist)
+
     Value *getValue(const char *annotation);
+    // dump annotations to std::cout
+    void dump();
 };
 
 
