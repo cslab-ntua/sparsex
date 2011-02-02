@@ -8,7 +8,9 @@
 
 #include "spmv_loops_mt.h"
 #include "tsc.h"
+#ifdef SPMV_PRFCNT
 #include "prfcnt.h"
+#endif /* SPMV_PRFCNT */
 
 static VECTOR_TYPE *x=NULL, *y=NULL;
 static pthread_barrier_t barrier;
@@ -18,7 +20,9 @@ static float secs = 0.0;
 static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
-    prfcnt_t        *prfcnt = (prfcnt_t *) spm_mt_thread->data;
+        #ifdef SPMV_PRFCNT
+        prfcnt_t        *prfcnt = (prfcnt_t *) spm_mt_thread->data;
+        #endif
 	//printf("Hello I'm thread on cpu:%d\n", spm_mt_thread->cpu);
 	SPMV_NAME(_fn_t) *spmv_mt_fn = spm_mt_thread->spmv_fn;
 	setaffinity_oncpu(spm_mt_thread->cpu);
@@ -52,13 +56,17 @@ static void *do_spmv_thread(void *arg)
 static void *do_spmv_thread_main_swap(void *arg)
 {
 	spm_mt_thread_t  *spm_mt_thread;
-    prfcnt_t         *prfcnt;
+        #ifdef SPMV_PRFCNT
+        prfcnt_t         *prfcnt;
+        #endif
 	SPMV_NAME(_fn_t) *spmv_mt_fn;
 	tsc_t tsc;
 
 	spm_mt_thread = arg;
 	spmv_mt_fn = spm_mt_thread->spmv_fn;
-    prfcnt = (prfcnt_t *) spm_mt_thread->data;
+        #ifdef SPMV_PRFCNT
+        prfcnt = (prfcnt_t *) spm_mt_thread->data;
+        #endif
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);

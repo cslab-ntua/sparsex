@@ -6,7 +6,9 @@
 #include "spmv_method.h"
 
 #include "tsc.h"
+#ifdef SPMV_PRFCNT
 #include "prfcnt.h"
+#endif
 
 //#define SPMV_PRFCNT
 
