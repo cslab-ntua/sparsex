@@ -4,6 +4,7 @@
 
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Target/TargetSelect.h"
 
 #include "spm.h"
 #include "csx.h"
@@ -19,6 +20,14 @@ using namespace csx;
 
 CsxJit::CsxJit(CsxManager *_csxmg, unsigned int tid) : CsxMg(_csxmg)
 {
+    static bool _init = false;
+
+    if (_init == false){
+        std::cout << "One-time initialization" << "\n";
+        InitializeNativeTarget();
+        _init = true;
+    }
+
     this->M   = SingleModule::getM(CSX_TEMPLATE, this->Ctx);
     this->Bld = new IRBuilder<>(this->Ctx);
 
