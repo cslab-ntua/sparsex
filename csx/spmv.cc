@@ -312,7 +312,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         // Init Jits which makes the generation code part
         Jits[i] = new CsxJit(CsxMg, i);
         // Make the generated code
-        Jits[i]->doHooks(data[i].buffer);
+        Jits[i]->genCode(data[i].buffer);
         //verifyModule(*(Jits[i]->M), AbortProcessAction, 0);
         delete CsxMg;
         // Print the results of each thread
@@ -320,9 +320,9 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     }
 
     // Optimize generated code and apply it to each thread seperately
-    doOptimize(Jits[0]->M);
+    CsxJitOptmize();
     for (unsigned int i=0; i < nr_threads; i++){
-        spm_mt->spm_threads[i].spmv_fn = Jits[i]->doJit();
+        spm_mt->spm_threads[i].spmv_fn = Jits[i]->getSpmvFn();
         delete Jits[i];
     }
 

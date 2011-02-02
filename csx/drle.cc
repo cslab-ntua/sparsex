@@ -220,7 +220,7 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
 
             double p = (double)tmp->second.nnz / (double)spm->nnz;
 
-            if (p < this->min_perc || tmp->first >= PID_OFFSET) {
+            if (p < this->min_perc || tmp->first >= CSX_PID_OFFSET) {
                 sp->erase(tmp);
             } else {
                 //std::cout << tmp->first << std::endl;

@@ -179,7 +179,7 @@ static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 /**
  *  Describes pattern of non-zero elements.
  */
-#define PID_OFFSET 10000L
+#define CSX_PID_OFFSET 10000L
 class DeltaRLE
 {
 public:
@@ -218,7 +218,7 @@ public:
     virtual long GetPatId() const
     {
         assert(this->type > NONE && this->type < BLOCK_TYPE_START);
-        return type*PID_OFFSET + this->delta_;
+        return type*CSX_PID_OFFSET + this->delta_;
     }
 
     /**
@@ -369,7 +369,7 @@ public:
 
     virtual long GetPatId() const
     {
-        return PID_OFFSET*this->type + this->other_dim;
+        return CSX_PID_OFFSET*this->type + this->other_dim;
     }
 
     virtual BlockRLE *Clone() const
