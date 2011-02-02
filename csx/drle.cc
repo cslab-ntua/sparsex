@@ -42,7 +42,7 @@ T DeltaEncode(T input)
         *out++ = curr - prev;
         prev = curr;
     }
-    
+
     return output;
 }
 
@@ -67,10 +67,10 @@ RLEncode(T input)
         } else {
             ++rle.freq;
         }
-        
+
         ++in;
     }
-    
+
     output.push_back(rle);
     return output;
 }
@@ -105,9 +105,9 @@ DRLE_Manager::DRLE_Manager(SPM *_spm, long min_limit_, long max_limit_,
         if (sampling_probability == 0) {
             // Automatically adjust probability to uniformly sample the
             // whole matrix
-            double new_sampling_probability = 
+            double new_sampling_probability =
                 std::min(1.0, ((double) samples_max + 1) / sort_splits.size());
-                
+
             sampling_probability = new_sampling_probability;
         }
     }
@@ -122,21 +122,21 @@ DeltaRLE::Stats DRLE_Manager::GenerateStats(SPM *Spm, uint64_t rs, uint64_t re)
 {
     std::vector<uint64_t> xs;
     DeltaRLE::Stats stats;
-    
+
     for (uint64_t i=rs; i < re; ++i) {
-        for (const SpmRowElem *elem = Spm->RowBegin(i); elem != Spm->RowEnd(i); 
+        for (const SpmRowElem *elem = Spm->RowBegin(i); elem != Spm->RowEnd(i);
              ++elem) {
             if (elem->pattern == NULL) {
                 xs.push_back(elem->x);
                 continue;
             }
-            
+
             this->UpdateStats(Spm, xs, stats);
         }
-        
+
         this->UpdateStats(Spm, xs, stats);
     }
-    
+
     return stats;
 }
 
@@ -159,16 +159,16 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
             uint64_t samples_nnz = 0;
             uint64_t samples_cnt = 0;
             sort_split_iterator iter;
-            
+
             for (iter = sort_splits.begin(); iter != sort_splits.end() - 1;
                  ++iter) {
                 DeltaRLE::Stats w_stats;
-                
+
                 if (samples_cnt >= samples_max)
                     break;
                 if (drand48() < 1. - sampling_probability)
                     continue;
-                
+
                 uint64_t window_size = *(iter + 1) - *iter;
                 SPM *window = this->spm->GetWindow(*iter, window_size);
 
@@ -207,19 +207,19 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
         }
 
         sp = &this->stats[type];
-        
+
         uint64_t block_align = IsBlockType(type);
-        
+
         if (block_align && split_blocks) {
             CutMaxLimit(sp, block_align);
             HandleStats(sp, spm->nnz, block_align);
         }
-        
+
         for (iter = sp->begin(); iter != sp->end(); ) {
             tmp = iter++;
-            
-            double p = (double)tmp->second.nnz / (double)spm->nnz;           
-            
+
+            double p = (double)tmp->second.nnz / (double)spm->nnz;
+
             if (p < this->min_perc || tmp->first >= PID_OFFSET) {
                 sp->erase(tmp);
             } else {
@@ -235,7 +235,7 @@ namespace csx {
 void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
 {
     DeltaRLE::Stats::iterator iter;
-    
+
     for (iter=stats.begin(); iter != stats.end(); ++iter) {
         os << "    " << iter->first << "-> " << "np:" << iter->second.npatterns
            << " nnz: " <<  100*((double)iter->second.nnz/(double)spm.nnz) << "%"
@@ -258,7 +258,7 @@ void DRLE_Manager::IgnoreAll()
 void DRLE_Manager::RemoveIgnore(SpmIterOrder type)
 {
     // the following types are always ignored
-    if (type <= NONE || type == BLOCK_TYPE_START || 
+    if (type <= NONE || type == BLOCK_TYPE_START ||
         type == BLOCK_ROW_TYPE_NAME(1) || type == BLOCK_COL_START ||
 	type == BLOCK_COL_TYPE_NAME(1) || type == BLOCK_TYPE_END ||
 	type >= XFORM_MAX)
@@ -277,12 +277,12 @@ SpmIterOrder DRLE_Manager::ChooseType()
     SpmIterOrder ret;
     uint64_t max_out;
     DRLE_Manager::StatsMap::iterator iter;
-    
+
     ret = NONE;
     max_out = 0;
     for (iter=this->stats.begin(); iter != this->stats.end(); ++iter){
         uint64_t out = this->GetTypeScore(iter->first);
-        
+
         if (out == 0) {
             this->AddIgnore(iter->first);
         } else if (out > max_out) {
@@ -290,7 +290,7 @@ SpmIterOrder DRLE_Manager::ChooseType()
             ret = iter->first;
         }
     }
-    
+
     return ret;
 }
 
@@ -299,20 +299,20 @@ uint64_t DRLE_Manager::GetTypeScore(SpmIterOrder type)
     DeltaRLE::Stats *sp;
     DeltaRLE::Stats::iterator iter;
     uint64_t ret;
-    
+
     ret = 0;
     if (this->stats.find(type) == this->stats.end())
         return ret;
     sp = &this->stats[type];
-    
+
     uint64_t nr_nzeros_encoded = 0;
     uint64_t nr_patterns = 0;
-    
+
     for (iter = sp->begin(); iter != sp->end(); ++iter) {
         nr_nzeros_encoded += iter->second.nnz;
         nr_patterns += iter->second.npatterns;
     }
-    
+
     ret = nr_nzeros_encoded - nr_patterns;
     return ret;
 }
@@ -345,11 +345,11 @@ void DRLE_Manager::Encode(SpmIterOrder type, bool split_blocks)
                 MakeRowElem(new_row[i], elems + i);
             }
         }
-        
+
         new_row.clear();
         SpmBld->NewRow();
     }
-    
+
     SpmBld->Finalize();
     delete SpmBld;
 
@@ -366,15 +366,15 @@ void DRLE_Manager::Decode(SpmIterOrder type)
     std::vector<SpmRowElem> new_row;
     uint64_t nr_size;
     SpmRowElem *elems;
-    
+
     Spm = this->spm;
     if (type == NONE)
         return;
-        
+
     // Transform matrix to the desired iteration order
     oldtype = Spm->type;
     Spm->Transform(type);
-    
+
     // Do the decoding
     SpmBld = new SPM::Builder(Spm);
     for (uint64_t i=0; i < Spm->GetNrRows(); ++i) {
@@ -385,14 +385,14 @@ void DRLE_Manager::Decode(SpmIterOrder type)
             for (uint64_t i=0; i < nr_size; ++i)
                 MakeRowElem(new_row[i], elems + i);
 	}
-	
+
 	new_row.clear();
         SpmBld->NewRow();
     }
-    
+
     SpmBld->Finalize();
     delete SpmBld;
-    
+
     // Transform matrix to the original iteration order
     Spm->Transform(oldtype);
     this->RemoveIgnore(type);
@@ -402,7 +402,7 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
 {
     SpmIterOrder type = NONE;
     StatsMap::iterator iter;
-    
+
     for (;;) {
         this->GenAllStats(split_blocks);
         this->OutStats(os);
@@ -428,7 +428,7 @@ void DRLE_Manager::MakeEncodeTree(bool split_blocks)
             this->AddIgnore(nodes[0].type_ignore[i]);
         this->GenAllStats(split_blocks);
         //this->OutStats(std::cout);
-        for (i=0; nodes[0].type_ignore[i]!=NONE; ++i)	
+        for (i=0; nodes[0].type_ignore[i]!=NONE; ++i)
             this->RemoveIgnore(nodes[0].type_ignore[i]);
         for (iter=this->stats.begin(); iter != this->stats.end(); ++iter)
             if (this->GetTypeScore(iter->first) == 0)
@@ -437,11 +437,11 @@ void DRLE_Manager::MakeEncodeTree(bool split_blocks)
         for (iter=this->stats.begin(); iter != this->stats.end(); ++iter) {
             if (this->GetTypeScore(iter->first) > 0) {
                 ++it;
-                it = nodes.insert(it, nodes[0].MakeChild(iter->first, 
+                it = nodes.insert(it, nodes[0].MakeChild(iter->first,
                                           this->deltas_to_encode[iter->first]));
             }
         }
-        
+
         if (it != nodes.begin()) {
             this->Encode(nodes[1].type_path[nodes[1].depth-1], split_blocks);
         } else {
@@ -462,12 +462,12 @@ void DRLE_Manager::MakeEncodeTree(bool split_blocks)
                     this->Decode(nodes[0].type_path[nodes[0].depth-j]);
             }
         }
-        
+
         delete nodes[0].type_path;
         delete nodes[0].type_ignore;
         nodes.erase(nodes.begin());
     }
-    
+
     std::cout << "Tree has " << count << " possible paths" << std::endl;
     exit(0);
 }
@@ -479,7 +479,7 @@ void DRLE_Manager::EncodeSerial(int *xform_buf, int **deltas, bool split_blocks)
 
     for (int i = 0; xform_buf[i] != -1; ++i) {
         SpmIterOrder t = static_cast<SpmIterOrder>(xform_buf[i]);
-        
+
         this->RemoveIgnore(t);
         for (int j=0; deltas[i][j] != -1; ++j)
             this->deltas_to_encode[t].insert(deltas[i][j]);
@@ -495,8 +495,8 @@ void DRLE_Manager::OutputSortSplits(std::ostream& out)
         uint64_t rs = *iter;
         uint64_t re = *(iter + 1);
         uint64_t nnz = spm->rowptr[re] - spm->rowptr[rs];
-        
-        out << "(rs, re, nnz) = (" << rs << ", " << re << ", " << nnz << ")" 
+
+        out << "(rs, re, nnz) = (" << rs << ", " << re << ", " << nnz << ")"
             << std::endl;
     }
 }
@@ -509,7 +509,7 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
     std::set<uint64_t> *deltas_set;
     std::vector<double>::iterator vi = vs.begin();
     SpmRowElem elem;
-    
+
     if (IsBlockType(this->spm->type)) {
         if (!split_blocks)
             DoEncodeBlock(xs, vs, encoded);
@@ -556,7 +556,7 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
             encoded.push_back(elem);
         }
     }
-    
+
     assert(vi == vs.end());
     xs.clear();
     vs.clear();
@@ -573,24 +573,24 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
     std::vector<double>::iterator vi = vs.begin();
     SpmRowElem elem;
     SpmRowElem *last_elem;
-    
+
     // do a delta run-length encoding of the x values
     rles = RLEncode(DeltaEncode(xs));
-    
+
     // Not all delta rles are to be encoded, only those
     // that are in the ->deltas_to_encode set
     deltas_set = &this->deltas_to_encode[this->spm->type];
 
     int block_align = IsBlockType(this->spm->type);
     assert(block_align);
-    
+
     col = 0;
     elem.pattern = NULL;
     FOREACH(RLE<uint64_t> rle, rles) {
         col += rle.val;
-        
+
         uint64_t skip_front, skip_back, nr_elem;
-        
+
         if (col == 1) {
             skip_front = 0;
             nr_elem = rle.freq;
@@ -600,7 +600,7 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
                 skip_front  = block_align - skip_front;
             nr_elem = rle.freq + 1;
         }
-        
+
         if (nr_elem > skip_front)
             nr_elem -= skip_front;
         else
@@ -610,12 +610,12 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
             nr_elem -= skip_back;
         else
             nr_elem = 0;
-        if (rle.val == 1 && 
+        if (rle.val == 1 &&
             deltas_set->find(nr_elem / block_align) != deltas_set->end() &&
             nr_elem >= (uint64_t) 2 * block_align) {
 
             uint64_t    rle_start;
-            
+
             if (col != 1) {
                 rle_start = col - 1;
                 encoded.pop_back();
@@ -631,8 +631,8 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
                 encoded.push_back(elem);
             }
 
-            // Align max_limit 
-            uint64_t max_limit = 
+            // Align max_limit
+            uint64_t max_limit =
                 (this->max_limit / (2*block_align))*(2*block_align);
             uint64_t nr_blocks = nr_elem / max_limit;
             uint64_t nr_elem_block = std::min(max_limit, nr_elem);
@@ -642,13 +642,13 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
             else
                 // Adjust skip_back with leftover items from max_limit alignment
                 skip_back += nr_elem - nr_elem_block*nr_blocks;
-            
+
             for (uint64_t i = 0; i < nr_blocks; ++i) {
                 // Add the blocks
                 elem.x = rle_start + skip_front + i*nr_elem_block;
                 encoded.push_back(elem);
                 last_elem = &encoded.back();
-                last_elem->pattern = new BlockRLE(nr_elem_block, 
+                last_elem->pattern = new BlockRLE(nr_elem_block,
                                                   nr_elem_block / block_align,
                                                   this->spm->type);
                 last_elem->vals = new double[nr_elem_block];
@@ -674,7 +674,7 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
 
         col += rle.val * (rle.freq - 1);
     }
-    
+
     assert(vi == vs.end());
     xs.clear();
     vs.clear();
@@ -690,7 +690,7 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
     std::vector<double>::iterator vi = vs.begin();
     SpmRowElem elem;
     SpmRowElem *last_elem;
-    
+
     // do a delta run-length encoding of the x values
     rles = RLEncode(DeltaEncode(xs));
 
@@ -704,9 +704,9 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
     elem.pattern = NULL;
     FOREACH(RLE<uint64_t> rle, rles) {
         col += rle.val;
-        
+
         uint64_t skip_front, skip_back, nr_elem;
-        
+
         if (col == 1) {
             skip_front = 0;
             nr_elem = rle.freq;
@@ -716,7 +716,7 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
                 skip_front  = block_align - skip_front;
             nr_elem = rle.freq + 1;
         }
-        
+
         if (nr_elem > skip_front)
             nr_elem -= skip_front;
         else
@@ -743,8 +743,8 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
 
             // Split Blocks to Match the Appropriate Sizes for Encode
             uint64_t other_dim = nr_elem/block_align;
-            
-            for (std::set<uint64_t>::iterator i = deltas_set->end(); 
+
+            for (std::set<uint64_t>::iterator i = deltas_set->end();
                                               i != deltas_set->begin(); ) {
                 i--;
                 while (other_dim >= (*i)) {
@@ -754,7 +754,7 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
                     rle_start += nr_elem_block;
                     encoded.push_back(elem);
                     last_elem = &encoded.back();
-                    last_elem->pattern = new BlockRLE(nr_elem_block,(*i), 
+                    last_elem->pattern = new BlockRLE(nr_elem_block,(*i),
                                                       this->spm->type);
                     last_elem->vals = new double[nr_elem_block];
                     std::copy(vi, vi + nr_elem_block, last_elem->vals);
@@ -779,10 +779,10 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
                 encoded.push_back(elem);
             }
         }
-        
+
         col += rle.val * (rle.freq - 1);
     }
-    
+
     assert(vi == vs.end());
     xs.clear();
     vs.clear();
@@ -793,7 +793,7 @@ void DRLE_Manager::DoDecode(const SpmRowElem *elem, std::vector<SpmRowElem> &new
     long int i;
     uint64_t cur_x;
     SpmRowElem new_elem;
-    
+
     new_elem.pattern = NULL;
     cur_x = elem->x;
     for (i=0; i<elem->pattern->GetSize(); ++i) {
@@ -802,7 +802,7 @@ void DRLE_Manager::DoDecode(const SpmRowElem *elem, std::vector<SpmRowElem> &new
         newrow.push_back(new_elem);
         cur_x = elem->pattern->GetNextCol(cur_x);
     }
-    
+
     delete elem->pattern;
     delete elem->vals;
 }
@@ -821,7 +821,7 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
             vs.push_back(e->val);
             continue;
         }
-        
+
         if (xs.size() != 0)
             DoEncode(xs, vs, newrow, split_blocks);
         newrow.push_back(*e);
@@ -880,12 +880,12 @@ void DRLE_Manager::CutMaxLimit(DeltaRLE::Stats *sp, uint64_t block_align)
                 }
             }
         }
-        
+
         for (iter = sp->begin(); iter != sp->end(); ++iter)
             sp->erase(iter);
 
         for (iter = temp.begin(); iter != temp.end(); ++iter)
-            sp->insert(std::pair<const long unsigned int, 
+            sp->insert(std::pair<const long unsigned int,
                        csx::DeltaRLE::StatsVal>(iter->first,iter->second));
     }
 }
@@ -899,7 +899,7 @@ void DRLE_Manager::HandleStats(DeltaRLE::Stats *sp, uint64_t size,
     not_passed = sp->end();
     for (iter = sp->end(); iter != sp->begin(); ) {
         double p = 0;
- 
+
         iter--;
         if (iter->first*block_align <= (unsigned) this->max_limit) {
             for (tmp = iter; tmp != not_passed; ++tmp)
@@ -931,12 +931,12 @@ void DRLE_Manager::HandleStats(DeltaRLE::Stats *sp, uint64_t size,
                         }
                     }
                 }
-                
+
                 not_passed = iter;
             }
         }
     }
-    
+
     for (iter=sp->begin(); iter!=sp->end(); ++iter)
         sp->erase(iter);
     for (iter=temp.begin(); iter!=temp.end(); ++iter)
@@ -967,12 +967,12 @@ void DRLE_Manager::UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
 {
     std::vector< RLE<uint64_t> > rles;
     uint64_t block_align = IsBlockType(spm->type);
-    
+
     if (block_align) {
         DRLE_Manager::UpdateStatsBlock(xs, stats, block_align);
         return;
     }
-    
+
     if (xs.size() == 0)
         return;
 
@@ -983,7 +983,7 @@ void DRLE_Manager::UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
             stats[rle.val].npatterns++;
         }
     }
-    
+
     xs.clear();
 }
 
@@ -997,9 +997,9 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
     if (xs.size() == 0)
         return;
     rles = RLEncode(DeltaEncode(xs));
-    
+
     uint64_t unit_start = 0;
-    
+
     FOREACH(RLE<uint64_t> &rle, rles){
         unit_start += rle.val;
         if (rle.val == 1) {
@@ -1008,7 +1008,7 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
             // zero-based indexing.
             uint64_t nr_elem;
             uint64_t skip_front;
-            
+
             if (unit_start == 1) {
                 nr_elem = rle.freq;
                 if (nr_elem >= block_align)
@@ -1024,18 +1024,18 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
                 nr_elem -= skip_front;
             else
                 nr_elem = 0;
-           
+
             uint64_t other_dim = nr_elem / (uint64_t) block_align;
-            
+
             if (other_dim >= 2) {
                 stats[other_dim].nnz += other_dim * block_align;
                 stats[other_dim].npatterns++;
             }
         }
-        
+
         unit_start += rle.val*(rle.freq - 1);
     }
-    
+
     xs.clear();
 }
 
@@ -1043,10 +1043,10 @@ void DRLE_Manager::CorrectStats(SpmIterOrder type, double factor)
 {
     if (stats.find(type) == stats.end())
         return;
-        
+
     DeltaRLE::Stats *l_stats = &stats[type];
     DeltaRLE::Stats::iterator iter;
-    
+
     for (iter = l_stats->begin(); iter != l_stats->end(); ++iter) {
         iter->second.nnz = (uint64_t) (iter->second.nnz*factor);
         iter->second.npatterns = (long) (iter->second.npatterns*factor);
@@ -1086,7 +1086,7 @@ void DRLE_Manager::DoComputeSortSplitsByRows()
 {
     uint64_t nr_rows = spm->GetNrRows();
     uint64_t i;
-    
+
     for (i = 0; i <= nr_rows; i += sort_window_size)
         sort_splits.push_back(i);
     if (i > nr_rows && i - nr_rows < sort_window_size / 2) {
@@ -1105,7 +1105,7 @@ void DRLE_Manager::DoComputeSortSplitsByNNZ()
     nzeros_cnt = 0;
     sort_splits.push_back(0);
     for (uint64_t i = 0; i < nr_rows; ++i) {
-        uint64_t new_nzeros_cnt = 
+        uint64_t new_nzeros_cnt =
             nzeros_cnt + spm->rowptr[i+1] - spm->rowptr[i];
         if (new_nzeros_cnt < sort_window_size) {
             nzeros_cnt = new_nzeros_cnt;
@@ -1121,7 +1121,7 @@ void DRLE_Manager::DoComputeSortSplitsByNNZ()
         } else {
             sort_splits.pop_back();
             sort_splits.push_back(nr_rows);
-        }    
+        }
     }
 }
 
@@ -1164,7 +1164,7 @@ void Node::PrintNode()
             std::cout << ",";
         std::cout << this->type_path[i];
     }
-    
+
     std::cout << std::endl;
     for (uint32_t i = 0; i < depth; ++i) {
         SpmIterOrder temp_type = this->type_path[i];
@@ -1179,10 +1179,10 @@ void Node::PrintNode()
             std::cout << *it << ",";
             ++it;
         }
-        
+
         std::cout << *it << "}";
     }
-    
+
     std::cout << std::endl;
 }
 
@@ -1191,9 +1191,9 @@ void Node::Ignore(SpmIterOrder type)
 	uint32_t i = 0;
 	while (this->type_ignore[i] != NONE) {
 		assert(this->type_ignore[i] != type);
-		++i;	
+		++i;
 	}
-	
+
 	this->type_ignore[i] = type;
 }
 
@@ -1209,7 +1209,7 @@ Node Node::MakeChild(SpmIterOrder type, std::set<uint64_t> deltas)
         new_node.type_path[i] = temp_type;
         new_node.deltas_path[temp_type] = this->deltas_path[temp_type];
     }
-    
+
     new_node.type_path[this->depth] = type;
     new_node.deltas_path[type] = deltas;
     return new_node;
