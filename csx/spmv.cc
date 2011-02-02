@@ -104,7 +104,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     // take MT_CONF
     // TODO: In case of MT_CONF=empty a default message is printed by mt_get_options
     mt_get_options(&nr_threads, &threads_cpus);
-    std::cout << "MT_CONF: ";
+    std::cout << "MT_CONF=";
     for (unsigned int i=0; i<nr_threads; i++) {
         if (i != 0)
             std::cout << ",";
@@ -119,7 +119,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
         perror("malloc");
         exit(1);
     }
-    if (xform_orig) {
+    if (xform_orig && strlen(xform_orig)) {
         int next = 0;
         int t = atoi(strtok(xform_orig, ","));
         char *token;
