@@ -16,7 +16,6 @@
 #include <limits>
 #include <cassert>
 #include <cstdlib>
-#include <stdexcept>
 
 #include "spm.h"
 

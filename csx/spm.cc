@@ -62,7 +62,7 @@ std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
     } else {
         out << "v: " << e.val;
     }
-    
+
     return out;
 }
 
@@ -78,7 +78,7 @@ std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
     } else {
         out << " v:" << elem.val;
     }
-    
+
     return out;
 }
 
@@ -136,7 +136,7 @@ static inline void pnt_map_V(const CooElem &src, CooElem &dst)
 {
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
-    
+
     dst.x = src_y;
     dst.y = src_x;
 }
@@ -150,7 +150,7 @@ static inline void pnt_map_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
-    
+
     assert(nrows + src_x - src_y > 0);
     dst.y = nrows + src_x - src_y;
     dst.x = (src_x < src_y) ? src_x : src_y;
@@ -160,7 +160,7 @@ static inline void pnt_rmap_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
-    
+
     if (src_y < nrows) {
         dst.x = src_x;
         dst.y = nrows + src_x - src_y;
@@ -175,7 +175,7 @@ static inline void pnt_map_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
     uint64_t dst_y;
-    
+
     dst.y = dst_y = src_x + src_y - 1;
     dst.x = (dst_y <= ncols) ? src_y : ncols + 1 - src_x;
 }
@@ -184,7 +184,7 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 {
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
-    
+
     if (src_y <= ncols) {
         dst.y = src_x;
         dst.x = src_y + 1 - src_x;
@@ -192,7 +192,7 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
         dst.y = src_x + src_y - ncols;
         dst.x = ncols + 1 - src_x;
     }
-    
+
     dst.y = src_y - dst.x + 1;
 }
 
@@ -270,7 +270,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
 {
     SpmRowElem *elem;
     uint64_t row_prev, row;
-    
+
     row_prev = first_row;
     for (; pi != pnts_end; ++pi) {
         row = (*pi).y;
@@ -281,11 +281,11 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
             SpmBld->NewRow(row - row_prev);
             row_prev = row;
         }
-        
+
         elem = SpmBld->AllocElem();
         MakeRowElem(*pi, elem);
     }
-    
+
     return this->elems_size;
 }
 
@@ -294,7 +294,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
                        unsigned long limit, uint64_t nr_elems, uint64_t nrows)
 {
     SPM::Builder *SpmBld = new SPM::Builder(this, nr_elems, nrows);
-    
+
     SetElems(pi, pnts_end, first_row, limit, nr_elems, nrows, SpmBld);
     SpmBld->Finalize();
     delete SpmBld;
@@ -324,7 +324,7 @@ SPM *SPM::LoadMMF_mt(MMF &mmf, const long nr)
     long limit, cnt, row_start;
     MMF::iterator iter = mmf.begin();
     MMF::iterator iter_end = mmf.end();
-    
+
     ret = new SPM[nr];
     row_start = limit = cnt = 0;
     for (long i=0; i<nr; i++) {
@@ -338,8 +338,8 @@ SPM *SPM::LoadMMF_mt(MMF &mmf, const long nr)
         spm->type = HORIZONTAL;
         cnt += spm->nnz;
     }
-    
-    assert((uint64_t)cnt == mmf.nnz);    
+
+    assert((uint64_t)cnt == mmf.nnz);
     return ret;
 }
 
@@ -352,7 +352,7 @@ SPM *SPM::LoadMMF(const char *mmf_file)
 {
     SPM *ret;
     std::ifstream mmf;
-    
+
     mmf.open(mmf_file);
     ret = LoadMMF(mmf);
     mmf.close();
@@ -362,7 +362,7 @@ SPM *SPM::LoadMMF(const char *mmf_file)
 void SPM::Print(std::ostream &out)
 {
     SPM::PntIter p, p_start, p_end;
-    
+
     p_start = this->PointsBegin();
     p_end = this->PointsEnd();
     for (p = p_start; p != p_end; ++p)
@@ -375,7 +375,7 @@ void SPM::PrintElems(std::ostream &out)
     SPM::PntIter p, p_start, p_end;
     uint64_t y0;
     static int cnt = 1;
-    
+
     y0 = this->row_start;
     p_start = this->PointsBegin();
     p_end = this->PointsEnd();
@@ -385,13 +385,13 @@ void SPM::PrintElems(std::ostream &out)
                 << " " << (*p).x << " " << (*p).val << " cnt:" << cnt++ << "\n";
             continue;
         }
-        
+
         boost::function<void (CooElem &p)> xform_fn, rxform_fn;
-        
+
         DeltaRLE *pat;
         CooElem start;
         double *vals;
-        
+
         pat = (*p).pattern;
         start = static_cast<CooElem>(*p);
         vals = start.vals;
@@ -400,9 +400,9 @@ void SPM::PrintElems(std::ostream &out)
         rxform_fn = GetTransformFn(pat->type, this->type);
         if (xform_fn)
             xform_fn(start);
-            
+
         DeltaRLE::Generator *g = (*p).pattern->generator(start);
-        
+
         while (!g->IsEmpty()) {
             CooElem e = g->Next();
             if (rxform_fn)
@@ -410,7 +410,7 @@ void SPM::PrintElems(std::ostream &out)
             out << std::setiosflags(std::ios::scientific) << row_start + e.y
                 << " " << e.x << " " << *vals++ << " cnt:" << cnt++ << "\n";
         }
-        
+
         out << "=== END OF PATTERN ===" << std::endl;
     }
 }
@@ -431,11 +431,11 @@ void SPM::PrintStats(std::ostream& out)
     for (uint64_t i = 0; i < this->GetNrRows(); i++) {
         uint64_t pt_size, pt_size_before;
         SpmIterOrder pt_type, pt_type_before;
-        
+
         nr_patterns_before = nr_patterns;
-        
+
         const SpmRowElem *elem = this->RowBegin(i);
-        
+
         if (elem->pattern) {
             pt_size_before = pt_size = elem->pattern->GetSize();
             pt_type_before = pt_type = elem->pattern->type;
@@ -470,7 +470,7 @@ void SPM::PrintStats(std::ostream& out)
     }
 
     int nr_encoded_types = 0;
-    
+
     for (int i = 1; i < XFORM_MAX; i++)
         if (nr_xform_patterns[i]) {
             ++nr_encoded_types;
@@ -478,11 +478,11 @@ void SPM::PrintStats(std::ostream& out)
             << nr_xform_patterns[i] << std::endl;
         }
 
-    out << "Encoded types = " << nr_encoded_types << ", " 
-        << "Avg patterns/row = " 
-        << nr_patterns / (double) nr_rows_with_patterns << ", " 
+    out << "Encoded types = " << nr_encoded_types << ", "
+        << "Avg patterns/row = "
+        << nr_patterns / (double) nr_rows_with_patterns << ", "
         << "Avg nonzeros/pattern = "
-        << nr_nzeros_block / (double) nr_patterns << ", " 
+        << nr_nzeros_block / (double) nr_patterns << ", "
         << " Avg pattern transitions/row = "
         << nr_transitions / (double) nr_rows_with_patterns
         << std::endl;
@@ -503,7 +503,7 @@ SPM::PntIter SPM::PointsEnd(uint64_t ridx)
 static inline bool elem_cmp_less(const SpmCooElem &e0, const SpmCooElem &e1)
 {
     int ret;
-    
+
     ret = CooCmp(static_cast<CooElem>(e0), static_cast<CooElem>(e1));
     return (ret < 0);
 }
@@ -526,7 +526,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
         xform_fn(p_new);
         elems.push_back(p_new);
     }
-    
+
     e0 = elems.begin();
     ee = elems.end();
     sort(e0, ee, elem_cmp_less);
@@ -538,7 +538,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
 {
     boost::function<void (CooElem &p)> ret;
-    
+
     switch(type) {
         case HORIZONTAL:
             break;
@@ -597,14 +597,14 @@ inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
             std::cerr << "Unknown type: " << type << std::endl;
             assert(false);
     }
-    
+
     return ret;
 }
 
 inline TransformFn SPM::GetXformFn(SpmIterOrder type)
 {
     boost::function<void (CooElem &p)> ret;
-    
+
     switch(type) {
         case HORIZONTAL:
             ret = NULL;
@@ -664,7 +664,7 @@ inline TransformFn SPM::GetXformFn(SpmIterOrder type)
             std::cerr << "Unknown type: " << type << std::endl;
             assert(false);
     }
-    
+
     return ret;
 }
 
@@ -713,14 +713,14 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
     std::vector<SpmCooElem>::iterator elem_begin, elem_end;
     PntIter p0, pe, p;
     SPM *ret = new SPM();
-    
+
     if (rs + length > this->rowptr_size - 1)
         length = this->rowptr_size - rs - 1;
-    
+
     uint64_t es = this->rowptr[rs];
     uint64_t ee = this->rowptr[rs+length];
-    
-    assert(es <= ee);  
+
+    assert(es <= ee);
     elems.reserve(ee - es);
     p0 = PointsBegin(rs);
     pe = PointsEnd(rs + length - 1);
@@ -735,7 +735,7 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
     ret->nnz = ret->elems_size;
     ret->row_start = this->row_start + rs;
     ret->type = this->type;
-    ret->elems_mapped_ = true;   
+    ret->elems_mapped_ = true;
     assert(ret->rowptr[ret->rowptr_size-1] == ret->elems_size);
     return ret;
 }
@@ -779,7 +779,7 @@ void SPM::Builder::NewRow(uint64_t rdiff)
 {
     uint64_t *rowptr;
     uint64_t elems_cnt;
-    
+
     elems_cnt = GetElemsCnt();
     rowptr = (uint64_t *)dynarray_alloc_nr(this->da_rowptr_, rdiff);
     for (uint64_t i=0; i < rdiff; i++)
@@ -789,7 +789,7 @@ void SPM::Builder::NewRow(uint64_t rdiff)
 void SPM::Builder::Finalize()
 {
     uint64_t *last_rowptr;
-    
+
     last_rowptr = (uint64_t *)dynarray_get_last(this->da_rowptr_);
     if (*last_rowptr != dynarray_size(this->da_elems_))
         NewRow();
@@ -804,7 +804,7 @@ void SPM::Builder::Finalize()
         free(this->da_elems_);
     else
         spm_->elems = (SpmRowElem *)dynarray_destroy(da_elems_);
-    
+
     spm_->rowptr_size = dynarray_size(da_rowptr_);
     spm_->rowptr = (uint64_t *)dynarray_destroy(da_rowptr_);
     this->da_elems_ = this->da_rowptr_ = NULL;
@@ -817,7 +817,7 @@ void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
 {
     uint64_t i,j;
     CooElem p;
-    
+
     for (i=1; i <= y; i++) {
         for (j=1; j <= x;  j++) {
             p.y = i;
@@ -825,7 +825,7 @@ void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
             xform_fn(p);
             out << p << " ";
         }
-        
+
         out << std::endl;
     }
 }
@@ -833,7 +833,7 @@ void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
 void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 {
     boost::function<void (CooElem &p)> xform_fn;
-    
+
     xform_fn = bll::bind(pnt_map_D, bll::_1, bll::_1, y);
     PrintTransform(y, x, xform_fn, out);
 }
@@ -841,7 +841,7 @@ void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 void PrintRDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 {
     boost::function<void (CooElem &p)> xform_fn;
-    
+
     xform_fn = bll::bind(pnt_map_rD, bll::_1, bll::_1, x);
     PrintTransform(y, x, xform_fn, out);
 }
