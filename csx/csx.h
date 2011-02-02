@@ -19,7 +19,6 @@ extern "C" {
 
 namespace csx {
 
-
 class CsxManager
 {
 public:

@@ -73,45 +73,7 @@ RLEncode(T input)
     
     output.push_back(rle);
     return output;
-}
-
-DRLE_Manager::DRLE_Manager(SPM *_spm, long min_limit_, long max_limit_,
-                           double min_perc_, uint64_t sort_window_size_,
-                           split_alg_t split_type_, double probability,
-                           uint64_t samples_max_)
-	                  :spm(_spm), min_limit(min_limit_),
-	                   max_limit(max_limit_), min_perc(min_perc_),
-	                   sort_window_size(sort_window_size_),
-	                   split_type(split_type_),
-	                   sampling_probability(probability),
-	                   samples_max(samples_max_)
-{
-    // These are delimiters, ignore them by default.
-    AddIgnore(BLOCK_TYPE_START);
-    AddIgnore(BLOCK_COL_START);
-    AddIgnore(BLOCK_TYPE_END);
-    AddIgnore(BLOCK_ROW_TYPE_NAME(1));
-    AddIgnore(BLOCK_COL_TYPE_NAME(1));
-
-    CheckAndSetSorting();
-    if (sort_windows) {
-        ComputeSortSplits();
-
-        // Initialize sampling stuff
-        CheckPropability(sampling_probability);
-        srand48(0);
-        if (samples_max > sort_splits.size())
-            samples_max = sort_splits.size();
-        if (sampling_probability == 0) {
-            // Automatically adjust probability to uniformly sample the
-            // whole matrix
-            double new_sampling_probability = 
-                std::min(1.0, ((double) samples_max + 1) / sort_splits.size());
-                
-            sampling_probability = new_sampling_probability;
-        }
-    }
-}
+}	                  
 
 DeltaRLE::Stats DRLE_Manager::GenerateStats(uint64_t rs, uint64_t re)
 {
@@ -153,20 +115,20 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
         SpmIterOrder type = SpmTypes[t];
 
         //std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
-	if (sort_windows) {
+	if (sort_windows_) {
             uint64_t sampling_failures = 0;
         again:
             uint64_t samples_nnz = 0;
             uint64_t samples_cnt = 0;
             sort_split_iterator iter;
             
-            for (iter = sort_splits.begin(); iter != sort_splits.end() - 1;
+            for (iter = sort_splits_.begin(); iter != sort_splits_.end() - 1;
                  ++iter) {
                 DeltaRLE::Stats w_stats;
                 
-                if (samples_cnt >= samples_max)
+                if (samples_cnt >= samples_max_)
                     break;
-                if (drand48() < 1. - sampling_probability)
+                if (drand48() < 1. - sampling_probability_)
                     continue;
                 
                 uint64_t window_size = *(iter + 1) - *iter;
@@ -191,7 +153,7 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
                 CorrectStats(type, (spm->nnz) / ((double) samples_nnz));
             } else {
                 ++sampling_failures;
-                if (sampling_failures < max_sampling_tries) {
+                if (sampling_failures < max_sampling_tries_) {
                     // couldn't sample the matrix, try again
                     goto again;
                 } else {
@@ -491,7 +453,7 @@ void DRLE_Manager::EncodeSerial(int *xform_buf, int **deltas, bool split_blocks)
 void DRLE_Manager::PrintSortSplits(std::ostream& out)
 {
     sort_split_iterator iter;
-    for (iter = sort_splits.begin(); iter != sort_splits.end() - 1; ++iter) {
+    for (iter = sort_splits_.begin(); iter != sort_splits_.end() - 1; ++iter) {
         uint64_t rs = *iter;
         uint64_t re = *(iter + 1);
         uint64_t nnz = spm->rowptr[re] - spm->rowptr[rs];
@@ -1048,7 +1010,7 @@ void DRLE_Manager::CorrectStats(SpmIterOrder type, double factor)
 
 void DRLE_Manager::ComputeSortSplits()
 {
-    switch (split_type) {
+    switch (split_type_) {
     case DRLE_Manager::SPLIT_BY_ROWS:
         DoComputeSortSplitsByRows();
         break;
@@ -1062,7 +1024,7 @@ void DRLE_Manager::ComputeSortSplits()
 
 void DRLE_Manager::CheckAndSetSorting()
 {
-    switch (split_type) {
+    switch (split_type_) {
     case DRLE_Manager::SPLIT_BY_ROWS:
         DoCheckSortByRows();
         break;
@@ -1080,12 +1042,12 @@ void DRLE_Manager::DoComputeSortSplitsByRows()
     uint64_t i;
     
     for (i = 0; i <= nr_rows; i += sort_window_size)
-        sort_splits.push_back(i);
+        sort_splits_.push_back(i);
     if (i > nr_rows && i - nr_rows < sort_window_size / 2) {
-        sort_splits.push_back(nr_rows);
+        sort_splits_.push_back(nr_rows);
     } else {
-        sort_splits.pop_back();
-        sort_splits.push_back(nr_rows);
+        sort_splits_.pop_back();
+        sort_splits_.push_back(nr_rows);
     }
 }
 
@@ -1095,24 +1057,24 @@ void DRLE_Manager::DoComputeSortSplitsByNNZ()
     uint64_t nr_rows = spm->GetNrRows();
 
     nzeros_cnt = 0;
-    sort_splits.push_back(0);
+    sort_splits_.push_back(0);
     for (uint64_t i = 0; i < nr_rows; ++i) {
         uint64_t new_nzeros_cnt = 
             nzeros_cnt + spm->rowptr[i+1] - spm->rowptr[i];
         if (new_nzeros_cnt < sort_window_size) {
             nzeros_cnt = new_nzeros_cnt;
         } else {
-            sort_splits.push_back(i+1);
+            sort_splits_.push_back(i+1);
             nzeros_cnt = 0;
         }
     }
 
     if (nzeros_cnt) {
         if (nzeros_cnt > sort_window_size / 2) {
-            sort_splits.push_back(nr_rows);
+            sort_splits_.push_back(nr_rows);
         } else {
-            sort_splits.pop_back();
-            sort_splits.push_back(nr_rows);
+            sort_splits_.pop_back();
+            sort_splits_.push_back(nr_rows);
         }    
     }
 }
@@ -1122,9 +1084,9 @@ void DRLE_Manager::DoCheckSortByRows()
     if (sort_window_size > spm->GetNrRows())
         assert(false && "Invalid sort window");
     if (sort_window_size == 0 || sort_window_size == spm->GetNrRows())
-        sort_windows = false;
+        sort_windows_ = false;
     else
-        sort_windows = true;
+        sort_windows_ = true;
 }
 
 void DRLE_Manager::DoCheckSortByNNZ()
@@ -1133,9 +1095,9 @@ void DRLE_Manager::DoCheckSortByNNZ()
         assert(false && "Invalid sort window");
     if (sort_window_size == 0 ||
         sort_window_size == spm->elems_size)
-        sort_windows = false;
+        sort_windows_ = false;
     else
-        sort_windows = true;
+        sort_windows_ = true;
 }
 
 

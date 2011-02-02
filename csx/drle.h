@@ -30,12 +30,57 @@ public:
         SPLIT_BY_NNZ,
     } split_alg_t;
     
+    typedef std::vector<uint64_t>::iterator sort_split_iterator;
+    
+private:
+    bool sort_windows_;
+    uint64_t sort_window_size_;
+    split_alg_t split_type_;
+    std::vector<uint64_t> sort_splits_;
+    double sampling_probability_;
+    uint64_t samples_max_;
+    static const uint64_t max_sampling_tries_ = 3;
+
+public:    
     DRLE_Manager(SPM *_spm, long min_limit_=4, 
                  long max_limit_ = std::numeric_limits<long>::max(),
-	         double min_perc_=.1, uint64_t sort_window_size_ = 0,
-	         split_alg_t split_type_ = SPLIT_BY_ROWS,
+	         double min_perc_=.1, uint64_t _sort_window_size = 0,
+	         split_alg_t _split_type = SPLIT_BY_ROWS,
 	         double probability = 1.0,
-	         uint64_t samples_max_ = std::numeric_limits<uint64_t>::max());
+	         uint64_t _samples_max = std::numeric_limits<uint64_t>::max()):
+	         spm(_spm), min_limit(min_limit_),
+	         max_limit(max_limit_), min_perc(min_perc_),
+	         sort_window_size_(_sort_window_size),
+	         split_type_(_split_type), sampling_probability_(probability),
+	         samples_max_(_samples_max)
+    {
+        // These are delimiters, ignore them by default.
+        AddIgnore(BLOCK_TYPE_START);
+        AddIgnore(BLOCK_COL_START);
+        AddIgnore(BLOCK_TYPE_END);
+        AddIgnore(BLOCK_ROW_TYPE_NAME(1));
+        AddIgnore(BLOCK_COL_TYPE_NAME(1));
+
+        CheckAndSetSorting();
+        if (sort_windows_) {
+            ComputeSortSplits();
+
+            // Initialize sampling stuff
+            CheckPropability(sampling_probability_);
+            srand48(0);
+            if (samples_max_ > sort_splits_.size())
+                samples_max_ = sort_splits_.size();
+            if (sampling_probability_ == 0) {
+                // Automatically adjust probability to uniformly sample the
+                // whole matrix
+                double new_sampling_probability = 
+                    std::min(1.0, ((double) samples_max_ + 1) / 
+                                                sort_splits_.size());
+                    
+                sampling_probability_ = new_sampling_probability;
+            }
+        }   
+    }
 
     /**
      *  Generate stats for sub-matrix.
@@ -148,15 +193,6 @@ public:
     void PrintSortSplits(std::ostream& out);
 
 private:
-    bool sort_windows;
-    uint64_t sort_window_size;
-    split_alg_t split_type;
-    std::vector<uint64_t> sort_splits;
-    typedef std::vector<uint64_t>::iterator sort_split_iterator;
-    double sampling_probability;
-    uint64_t samples_max;
-    static const uint64_t max_sampling_tries = 3;
-
     /**
      *  Encode some elements from the same row.
      *  @param xs           deltas of elements that are going to be encoded.
