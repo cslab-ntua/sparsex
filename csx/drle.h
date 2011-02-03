@@ -164,6 +164,7 @@ public:
      *  Choose a pattern type for encoding the matrix. This function chooses the
      *  type with the highest score.
      *
+     *  @return the type chosen.
      *  @see GetTypeScore()
      */
     SpmIterOrder ChooseType();
@@ -361,6 +362,7 @@ private:
 
     /**
      *  Used when windows mode is enabled to adapt the stats.
+     *
      *  @param type   type which stats are being updated.
      *  @param factor weight of the specific type.
      */

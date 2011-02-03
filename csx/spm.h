@@ -119,6 +119,7 @@ const char *SpmTypesNames[] =
 
 /**
  * Determines if the input is a block type or not.
+ *
  * @param t a type of pattern.
  * @return  block alignment if 't' is a block type, 0 otherwise.
  */
@@ -155,6 +156,7 @@ struct CooElem : public RowElem
 
 /**
  * Compare column of two elements.
+ *
  * @param p0 an element with row, column and value or values.
  * @param p1 an element with row, column and value or values.
  * @return   1 if 'p0' points to an element after the element that 'p1' points,
@@ -204,7 +206,8 @@ public:
 
     /**
      *  Calculates the size of patterns in bytes.
-     *  @return size_ of the selected object of class DeltaRLE.
+     *
+     *  @return size of the selected object of class DeltaRLE.
      */
     virtual long GetSize() const
     {
@@ -213,6 +216,7 @@ public:
 
     /**
      *  Generates id for patterns.
+     *
      *  @return unique id of the type of the selected object of class DeltaRLE.
      */
     virtual long GetPatId() const
@@ -223,6 +227,7 @@ public:
 
     /**
      *  Calculates the difference between the current and the next element.
+     *
      *  @param  order a type of pattern.
      *  @return       number of columns to procceed in order to go to the next
      *                CSX element.
@@ -237,6 +242,7 @@ public:
 
     /**
      *  Calculates the difference between the current and the next element.
+     *
      *  @param order a type of pattern.
      *  @param jmp   a number of columns to jump.
      *  @return       number of columns to procceed in order to go to the next
@@ -254,6 +260,7 @@ public:
 
     /**
      *  Prints the data of a pattern.
+     *
      *  @param out output channel.
      */
     virtual std::ostream &PrintOn(std::ostream &out) const
@@ -279,7 +286,8 @@ public:
 
         /**
          *  Checks if the handler is in the last element of the pattern.
-         *  @return true if the handler is in the last element and false
+         *
+	 *  @return true if the handler is in the last element and false
          *          otherwise
          */
         virtual bool IsEmpty() const {
@@ -288,7 +296,8 @@ public:
 
         /**
          *  Finds the next element within pattern.
-         *  @return next element
+         *
+	 *  @return next element
          */
         virtual CooElem Next() {
             CooElem ret(this->start_);
@@ -301,6 +310,7 @@ public:
 
     /**
      *  Creates an object of Generator class.
+     *
      *  @param  start starting element
      *  @return an object of Generator class.
      */
@@ -313,6 +323,7 @@ public:
 
     /**
      *  Find the column of the next non-zero element within pattern.
+     *
      *  @return column of the next element of pattern.
      */
     virtual uint64_t GetNextCol(uint64_t x0) const
@@ -333,7 +344,8 @@ public:
 
         /**
          *  Update the stats for every new instance of this type of pattern.
-         *  @param new_vals stats of an instance of a pattern.
+         *
+	 *  @param new_vals stats of an instance of a pattern.
          */
         void Update(const StatsVal& new_vals)
         {
@@ -360,6 +372,7 @@ public:
 
     /**
      *  Finds the second dimension of blocks (first is revealed from type).
+     *
      *  @return the size of second dimension.
      */
     virtual uint32_t getOtherDim() const
@@ -428,6 +441,7 @@ class SpmRowElem: public RowElem, public SpmPattern {};
 
 /**
  *  Copies elements.
+ *
  *  @param p    element of struct CooElem, SpmCooElem or SpmRowElem used to
  *              copy from.
  *  @param ret  element of struct SpmRowElem used to write to.
@@ -480,6 +494,7 @@ public:
 
     /**
      *  Function for filling the matrix using point iterators
+     *
      *  @param pnts_start point iterators start.
      *  @param pnts_end   point iterators end.
      *  @param first_row  first row of the matrix.
@@ -501,6 +516,7 @@ public:
 
     /**
      *  Load matrix from a file.
+     *
      *  @param filename name of the file that matrix is kept.
      *  @param in       buffer from which the matrix is taken.
      *  @return         spm class object with the characteristics of the matrix.
@@ -510,6 +526,7 @@ public:
 
     /**
      *  Load matrix from a file specifying the number of threads.
+     *
      *  @param filename name of the file that matrix is kept.
      *  @param in       buffer from which the matrix is taken.
      *  @param mmf      handler of MMF class.
@@ -532,6 +549,7 @@ public:
 
     /**
      *  Transform matrix to specific type.
+     *
      *  @param type type of pattern to transform to.
      *  @param rs   line to start the transformation. If it is zero, it is the
      *              the beggining of matrix.
@@ -543,6 +561,7 @@ public:
     /**
      *  Find the reverse transform function. Transform from 'type' to
      *  HORIZONTAL.
+     *
      *  @param type type of pattern to transform from.
      *  @return     reverse transform function.
      */
@@ -550,6 +569,7 @@ public:
 
     /**
      *  Find the transform function. Transform from HORIZONTAL to 'type'.
+     *
      *  @param type type of pattern to transform to.
      *  @return     transform function.
      */
@@ -557,6 +577,7 @@ public:
 
     /**
      *  Find the complete transform function. Tranform from 'from' to 'to'.
+     *
      *  @param from type of pattern to transform from.
      *  @param to   type of pattern to transform to.
      *  @return     complete transform function.
@@ -565,6 +586,7 @@ public:
 
     /**
      *  Copy a window (sub-matrix) from matrix.
+     *
      *  @param rs     starting line of window.
      *  @param length number of lines to include in window.
      *  @return       spm object that includes the characteristics of the
@@ -574,6 +596,7 @@ public:
 
     /**
      *  Get a window (sub-matrix) from matrix.
+     *
      *  @param rs     starting line of window.
      *  @param length number of lines to include in window.
      *  @return       spm object that includes the characteristics of the
@@ -584,6 +607,7 @@ public:
     /**
      *  Copy the characteristics of the window (sub-matrix) back to to original
      *  matrix.
+     *
      *  @param window spm object that includes the characteristics of the
      *                window.
      */
@@ -632,12 +656,14 @@ public:
 
     /**
      *  Allocates an element in matrix.
+     *
      *  @return pointer to element allocated.
      */
     virtual SpmRowElem *AllocElem();
 
     /**
      *  Allocates many elements in matrix.
+     *
      *  @param  nr number of elements allocated.
      *  @return    pointer to elements allocated.
      */
@@ -645,12 +671,14 @@ public:
 
     /**
      *  Counts elements allocated in matrix.
+     *
      *  @return number of elements allocated.
      */
     virtual uint64_t GetElemsCnt();
 
     /**
      *  Allocate elements for the next row.
+     *
      *  @param rdiff difference between the number of current and new line.
      */
     virtual void NewRow(uint64_t rdiff=1);
