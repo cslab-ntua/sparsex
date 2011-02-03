@@ -40,7 +40,7 @@ std::ostream &operator<<(std::ostream &os, const DeltaRLE &p)
 {
     os << " (";
     p.PrintOn(os);
-    os << " type:" << p.type << ") ";
+    os << " type:" << p.GetType() << ") ";
     return os;
 }
 
@@ -253,14 +253,14 @@ void MakeRowElem(const SpmRowElem &p, SpmRowElem *ret)
 
 SpmRowElem *SPM::RowBegin(uint64_t ridx)
 {
-    assert(ridx < this->rowptr_size - 1);
-    return &this->elems[this->rowptr[ridx]];
+    assert(ridx < rowptr_size_ - 1);
+    return &elems_[rowptr_[ridx]];
 }
 
 SpmRowElem *SPM::RowEnd(uint64_t ridx)
 {
-    assert(ridx < this->rowptr_size - 1);
-    return &this->elems[this->rowptr[ridx + 1]];
+    assert(ridx < rowptr_size_ - 1);
+    return &elems_[rowptr_[ridx + 1]];
 }
 
 template <typename IterT>
@@ -286,7 +286,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
         MakeRowElem(*pi, elem);
     }
 
-    return this->elems_size;
+    return elems_size_;
 }
 
 template <typename IterT>
@@ -298,7 +298,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
     SetElems(pi, pnts_end, first_row, limit, nr_elems, nrows, SpmBld);
     SpmBld->Finalize();
     delete SpmBld;
-    return this->elems_size;
+    return elems_size_;
 }
 
 SPM *SPM::LoadMMF_mt(const char *mmf_file, const long nr)
@@ -330,13 +330,13 @@ SPM *SPM::LoadMMF_mt(MMF &mmf, const long nr)
     for (long i=0; i<nr; i++) {
         spm = ret + i;
         limit = (mmf.nnz - cnt) / (nr - i);
-        spm->nnz = spm->SetElems(iter, iter_end, row_start + 1, limit);
-        spm->nrows = spm->rowptr_size - 1;
-        spm->ncols = mmf.ncols;
-        spm->row_start = row_start;
-        row_start += spm->nrows;
-        spm->type = HORIZONTAL;
-        cnt += spm->nnz;
+        spm->nr_nzeros_ = spm->SetElems(iter, iter_end, row_start + 1, limit);
+        spm->nr_rows_ = spm->rowptr_size_ - 1;
+        spm->nr_cols_ = mmf.ncols;
+        spm->row_start_ = row_start;
+        row_start += spm->nr_rows_;
+        spm->type_ = HORIZONTAL;
+        cnt += spm->nr_nzeros_;
     }
 
     assert((uint64_t)cnt == mmf.nnz);
@@ -376,13 +376,14 @@ void SPM::PrintElems(std::ostream &out)
     uint64_t y0;
     static int cnt = 1;
 
-    y0 = this->row_start;
+    y0 = row_start_;
     p_start = this->PointsBegin();
     p_end = this->PointsEnd();
-    for (p=p_start; p != p_end; ++p) {
+    for (p = p_start; p != p_end; ++p) {
         if ((*p).pattern == NULL) {
-            out << std::setiosflags(std::ios::scientific) << row_start + (*p).y
-                << " " << (*p).x << " " << (*p).val << " cnt:" << cnt++ << "\n";
+            out << std::setiosflags(std::ios::scientific)
+                << row_start_ + (*p).y << " "
+                << (*p).x << " " << (*p).val << " cnt:" << cnt++ << "\n";
             continue;
         }
 
@@ -395,9 +396,9 @@ void SPM::PrintElems(std::ostream &out)
         pat = (*p).pattern;
         start = static_cast<CooElem>(*p);
         vals = start.vals;
-        std::cout << SpmTypesNames[pat->type] << std::endl;
-        xform_fn = GetTransformFn(this->type, pat->type);
-        rxform_fn = GetTransformFn(pat->type, this->type);
+        std::cout << SpmTypesNames[pat->GetType()] << std::endl;
+        xform_fn = GetTransformFn(type_, pat->GetType());
+        rxform_fn = GetTransformFn(pat->GetType(), type_);
         if (xform_fn)
             xform_fn(start);
 
@@ -407,7 +408,7 @@ void SPM::PrintElems(std::ostream &out)
             CooElem e = g->Next();
             if (rxform_fn)
                 rxform_fn(e);
-            out << std::setiosflags(std::ios::scientific) << row_start + e.y
+            out << std::setiosflags(std::ios::scientific) << row_start_ + e.y
                 << " " << e.x << " " << *vals++ << " cnt:" << cnt++ << "\n";
         }
 
@@ -438,7 +439,7 @@ void SPM::PrintStats(std::ostream& out)
 
         if (elem->pattern) {
             pt_size_before = pt_size = elem->pattern->GetSize();
-            pt_type_before = pt_type = elem->pattern->type;
+            pt_type_before = pt_type = elem->pattern->GetType();
         } else {
             pt_size_before = pt_size = 0;
             pt_type_before = pt_type = NONE;
@@ -448,12 +449,12 @@ void SPM::PrintStats(std::ostream& out)
             if (elem->pattern) {
                 ++nr_patterns;
                 pt_size = elem->pattern->GetSize();
-                pt_type = elem->pattern->type;
+                pt_type = elem->pattern->GetType();
                 nr_nzeros_block += pt_size;
                 if ((pt_type != pt_type_before) ||
                     (pt_size_before && pt_size != pt_size_before))
                     ++nr_transitions;
-                ++nr_xform_patterns[elem->pattern->type];
+                ++nr_xform_patterns[elem->pattern->GetType()];
                 pt_size_before = pt_size;
             } else {
                 pt_type = NONE;
@@ -515,10 +516,11 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
     std::vector<SpmCooElem>::iterator e0, ee;
     boost::function<void (CooElem &p)> xform_fn;
 
-    if (this->type == t)
+    if (type_ == t)
         return;
-    xform_fn = this->GetTransformFn(this->type, t);
-    elems.reserve(this->elems_size);
+
+    xform_fn = this->GetTransformFn(type_, t);
+    elems.reserve(elems_size_);
     p0 = PointsBegin(rs);
     pe = PointsEnd(re);
     for(p=p0; p != pe; ++p) {
@@ -532,7 +534,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
     sort(e0, ee, elem_cmp_less);
     SetElems(e0, ee, rs + 1);
     elems.clear();
-    this->type = t;
+    type_ = t;
 }
 
 inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
@@ -546,10 +548,10 @@ inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
             ret = bll::bind(pnt_rmap_V, bll::_1, bll::_1);
             break;
         case DIAGONAL:
-            ret = bll::bind(pnt_rmap_D, bll::_1, bll::_1, this->nrows);
+            ret = bll::bind(pnt_rmap_D, bll::_1, bll::_1, nr_rows_);
             break;
         case REV_DIAGONAL:
-            ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, this->ncols);
+            ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, nr_cols_);
             break;
         case BLOCK_ROW_TYPE_NAME(2):
             ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
@@ -613,10 +615,10 @@ inline TransformFn SPM::GetXformFn(SpmIterOrder type)
             ret = bll::bind(pnt_map_V, bll::_1, bll::_1);
             break;
         case DIAGONAL:
-            ret = bll::bind(pnt_map_D, bll::_1, bll::_1, this->nrows);
+            ret = bll::bind(pnt_map_D, bll::_1, bll::_1, nr_rows_);
             break;
         case REV_DIAGONAL:
-            ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->ncols);
+            ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, nr_cols_);
             break;
         case BLOCK_ROW_TYPE_NAME(2):
             ret = bll::bind(BLOCK_ROW_MAP_NAME(2), bll::_1, bll::_1);
@@ -684,26 +686,27 @@ inline TransformFn SPM::GetTransformFn(SpmIterOrder from_type,
 
 SPM *SPM::GetWindow(uint64_t rs, uint64_t length)
 {
-    if (rs + length > this->rowptr_size - 1)
-        length = this->rowptr_size - rs - 1;
+    if (rs + length > rowptr_size_ - 1)
+        length = rowptr_size_ - rs - 1;
 
     SPM *ret = new SPM();
-    uint64_t es = this->rowptr[rs];
-    uint64_t ee = this->rowptr[rs+length];
+    uint64_t es = rowptr_[rs];
+    uint64_t ee = rowptr_[rs+length];
 
-    ret->rowptr = new uint64_t[length+1];
-    ret->rowptr_size = length + 1;
-    for (uint64_t i = 0; i < ret->rowptr_size; i++)
-        ret->rowptr[i] = this->rowptr[rs+i] - es;
-    ret->elems = &this->elems[es];
-    ret->elems_size = ee - es;
-    ret->nrows = ret->rowptr_size - 1;
-    ret->ncols = this->ncols;
-    ret->nnz = ret->elems_size;
-    ret->row_start = this->row_start + rs;
-    ret->type = this->type;
+    ret->rowptr_ = new uint64_t[length+1];
+    ret->rowptr_size_ = length + 1;
+    for (uint64_t i = 0; i < ret->rowptr_size_; i++)
+        ret->rowptr_[i] = rowptr_[rs+i] - es;
+
+    ret->elems_ = &elems_[es];
+    ret->elems_size_ = ee - es;
+    ret->nr_rows_ = ret->rowptr_size_ - 1;
+    ret->nr_cols_ = nr_cols_;
+    ret->nr_nzeros_ = ret->elems_size_;
+    ret->row_start_ = row_start_ + rs;
+    ret->type_ = type_;
     ret->elems_mapped_ = true;
-    assert(ret->rowptr[ret->rowptr_size-1] == ret->elems_size);
+    assert(ret->rowptr_[ret->rowptr_size_ - 1] == ret->elems_size_);
     return ret;
 }
 
@@ -714,11 +717,11 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
     PntIter p0, pe, p;
     SPM *ret = new SPM();
 
-    if (rs + length > this->rowptr_size - 1)
-        length = this->rowptr_size - rs - 1;
+    if (rs + length > rowptr_size_ - 1)
+        length = rowptr_size_ - rs - 1;
 
-    uint64_t es = this->rowptr[rs];
-    uint64_t ee = this->rowptr[rs+length];
+    uint64_t es = rowptr_[rs];
+    uint64_t ee = rowptr_[rs+length];
 
     assert(es <= ee);
     elems.reserve(ee - es);
@@ -726,47 +729,50 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
     pe = PointsEnd(rs + length - 1);
     for (p = p0; p != pe; ++p)
         elems.push_back(*p);
+
     elem_begin = elems.begin();
     elem_end = elems.end();
     ret->SetElems(elem_begin, elem_end, rs+1);
     elems.clear();
-    ret->nrows = ret->rowptr_size - 1;
-    ret->ncols = this->ncols;
-    ret->nnz = ret->elems_size;
-    ret->row_start = this->row_start + rs;
-    ret->type = this->type;
+    ret->nr_rows_ = ret->rowptr_size_ - 1;
+    ret->nr_cols_ = nr_cols_;
+    ret->nr_nzeros_ = ret->elems_size_;
+    ret->row_start_ = row_start_ + rs;
+    ret->type_ = type_;
     ret->elems_mapped_ = true;
-    assert(ret->rowptr[ret->rowptr_size-1] == ret->elems_size);
+    assert(ret->rowptr_[ret->rowptr_size_ - 1] == ret->elems_size_);
     return ret;
 }
 
 void SPM::PutWindow(const SPM *window)
 {
     assert(window);
-    assert(this->type == window->type);
+    assert(type_ == window->type_);
 
-    uint64_t rs = window->row_start - this->row_start;
-    uint64_t es = this->rowptr[rs];
+    uint64_t rs = window->row_start_ - this->row_start_;
+    uint64_t es = this->rowptr_[rs];
 
-    for (uint64_t i = 0; i < window->rowptr_size; i++)
-        this->rowptr[rs+i] = es + window->rowptr[i];
+    for (uint64_t i = 0; i < window->rowptr_size_; i++)
+        this->rowptr_[rs+i] = es + window->rowptr_[i];
 
     if (!window->elems_mapped_)
-        memcpy(&this->elems[es], window->elems,
-               window->elems_size*sizeof(SpmRowElem));
+        memcpy(&elems_[es], window->elems_,
+               window->elems_size_*sizeof(SpmRowElem));
 }
 
 SpmRowElem *SPM::Builder::AllocElem()
 {
     if (this->spm_->elems_mapped_)
-        assert(dynarray_size(this->da_elems_) < this->spm_->elems_size);
+        assert(dynarray_size(da_elems_) < spm_->elems_size_);
+
     return (SpmRowElem *) dynarray_alloc(this->da_elems_);
 }
 
 SpmRowElem *SPM::Builder::AllocElems(uint64_t nr)
 {
     if (this->spm_->elems_mapped_)
-        assert(dynarray_size(this->da_elems_) + nr < this->spm_->elems_size);
+        assert(dynarray_size(da_elems_) + nr < spm_->elems_size_);
+
     return (SpmRowElem *)dynarray_alloc_nr(this->da_elems_, nr);
 }
 
@@ -790,23 +796,28 @@ void SPM::Builder::Finalize()
 {
     uint64_t *last_rowptr;
 
-    last_rowptr = (uint64_t *)dynarray_get_last(this->da_rowptr_);
+    last_rowptr = (uint64_t *) dynarray_get_last(this->da_rowptr_);
     if (*last_rowptr != dynarray_size(this->da_elems_))
         NewRow();
-    if (!spm_->elems_mapped_ && spm_->elems)
-	free(spm_->elems);
-    if (spm_->rowptr)
-	free(spm_->rowptr);
+
+    if (!spm_->elems_mapped_ && spm_->elems_)
+        free(spm_->elems_);
+
+    if (spm_->rowptr_)
+        free(spm_->rowptr_);
+
     if (spm_->elems_mapped_)
-        assert(spm_->elems_size == dynarray_size(da_elems_));
-	spm_->elems_size = dynarray_size(da_elems_);
+        assert(spm_->elems_size_ == dynarray_size(da_elems_));
+
+	spm_->elems_size_ = dynarray_size(da_elems_);
+
     if (spm_->elems_mapped_)
         free(this->da_elems_);
     else
-        spm_->elems = (SpmRowElem *)dynarray_destroy(da_elems_);
+        spm_->elems_ = (SpmRowElem *) dynarray_destroy(da_elems_);
 
-    spm_->rowptr_size = dynarray_size(da_rowptr_);
-    spm_->rowptr = (uint64_t *)dynarray_destroy(da_rowptr_);
+    spm_->rowptr_size_ = dynarray_size(da_rowptr_);
+    spm_->rowptr_ = (uint64_t *) dynarray_destroy(da_rowptr_);
     this->da_elems_ = this->da_rowptr_ = NULL;
 }
 

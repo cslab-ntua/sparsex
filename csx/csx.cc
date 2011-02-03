@@ -135,17 +135,17 @@ csx_double_t *CsxManager::mkCsx()
 
     Spm = this->spm;
     csx = (csx_double_t *)malloc(sizeof(csx_double_t));
-    this->values = (double *)malloc(sizeof(double)*Spm->nnz);
+    this->values = (double *)malloc(sizeof(double)*Spm->nr_nzeros_);
     if (!csx || !this->values){
         perror("malloc");
         exit(1);
     }
     this->ctl_da = dynarray_create(sizeof(uint8_t), 512);
 
-    csx->nnz = Spm->nnz;
-    csx->nrows = Spm->nrows;
-    csx->ncols = Spm->ncols;
-    csx->row_start = Spm->row_start;
+    csx->nnz = Spm->nr_nzeros_;
+    csx->nrows = Spm->nr_rows_;
+    csx->ncols = Spm->nr_cols_;
+    csx->row_start = Spm->row_start_;
 
     this->values_idx = 0;
     this->new_row = false;		// do not mark first row
@@ -174,7 +174,7 @@ csx_double_t *CsxManager::mkCsx()
     csx->ctl = (uint8_t *)dynarray_destroy(this->ctl_da);
     //std::cerr << "csx->ctl=" << (unsigned long)csx->ctl << "\n";
     this->ctl_da = NULL;
-    assert(this->values_idx == Spm->nnz);
+    assert(this->values_idx == Spm->nr_nzeros_);
     csx->values = this->values;
     this->values = NULL;
     this->values_idx = 0;
@@ -280,7 +280,7 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     if (debug)
         std::cerr << "AddPattern ujmp " << ujmp << "\n";
     da_put_ul(this->ctl_da, ujmp);
-    this->last_col = elem.pattern->ColIncreaseJmp(this->spm->type, elem.x);
+    this->last_col = elem.pattern->ColIncreaseJmp(this->spm->type_, elem.x);
     if (debug)
         std::cerr << "last_col:" << this->last_col << "\n";
 }

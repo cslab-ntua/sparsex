@@ -27,9 +27,7 @@ class MMF;
 #define BLOCK_ROW_TYPE_NAME(r)  BLOCK_R ## r
 #define BLOCK_COL_TYPE_NAME(c)  BLOCK_C ## c
 
-/**.
- *  Order patterns used in CSX and match them with numbers.
- */
+///< Supported encoding patterns for CSX.
 typedef enum
 {
     NONE = 0,
@@ -88,6 +86,7 @@ const SpmIterOrder SpmTypes[] =
     XFORM_MAX
 };
 
+///< Names of the encoding types
 const char *SpmTypesNames[] =
 {
     "__NONE__",
@@ -118,16 +117,17 @@ const char *SpmTypesNames[] =
 };
 
 /**
- * Determines if the input is a block type or not.
+ * Check if a pattern type is a block type.
+ * 
  * @param t a type of pattern.
- * @return  block alignment if 't' is a block type, 0 otherwise.
+ * @return  block alignment if <tt>t</tt> is a block type, 0 otherwise.
  */
 static inline int IsBlockType(SpmIterOrder t)
 {
     if (t > BLOCK_TYPE_START && t < BLOCK_COL_START)
         return t - BLOCK_TYPE_START;
     else if (t > BLOCK_COL_START && t < BLOCK_TYPE_END)
-        return t-BLOCK_COL_START;
+        return t - BLOCK_COL_START;
     else
         return 0;
 }
@@ -137,29 +137,33 @@ static inline int IsBlockType(SpmIterOrder t)
  */
 struct RowElem
 {
-    uint64_t x;
+    uint64_t x;     ///< the column index
     union
     {
-        double val;
-        double *vals;
+        double val;     ///< the value of the element
+        double *vals;   ///< the value of the elements, if RowElem refers to
+                        ///  an encoded pattern
     };
 };
 
 /**
- *  Expansion of RowElem struct which additionally holds row of CSX elements.
+ *  Coordinate element, i.e., holds row and column information.
  */
 struct CooElem : public RowElem
 {
-    uint64_t y;
+    uint64_t y; ///< the row of the element
 };
 
 /**
- * Compare column of two elements.
- * @param p0 an element with row, column and value or values.
- * @param p1 an element with row, column and value or values.
- * @return   1 if 'p0' points to an element after the element that 'p1' points,
- *          -1 if 'p0' points to an element before the element that 'p1' points,
- *           0 if 'p0' and 'p1' point to the same element.
+ * Compares two coordinate elements. This function imposes a lexicographical
+ * order in the elements of the matrix.
+ * 
+ * @param p0 the first CooElem to compare
+ * @param p1 the second CooElem to compare
+ * @return   1 if <tt>p0</tt> succeeds <tt>p1</tt> in lexicographical order,
+ *          -1 if <tt>p0</tt> preceeds <tt>p1</tt> in lexicographical order,
+ *           0 if 'p0' and 'p1' refer to the same matrix element.
+ *  @see CooElem
  */
 static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 {
@@ -183,16 +187,10 @@ static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 class DeltaRLE
 {
 public:
-    SpmIterOrder type;
-
-protected:
-    uint32_t size_, delta_;
-
-public:
-    DeltaRLE(uint32_t _size, uint32_t _delta, SpmIterOrder _type)
-        : size_(_size), delta_(_delta)
+    DeltaRLE(uint32_t size, uint32_t delta, SpmIterOrder type)
+        : size_(size), delta_(delta)
     {
-        this->type = _type;
+        type_ = type;
     }
 
     virtual DeltaRLE *Clone() const
@@ -208,7 +206,17 @@ public:
      */
     virtual long GetSize() const
     {
-        return this->size_;
+        return size_;
+    }
+
+    /**
+     *  Get the type of this RLE pattern.
+     *
+     *  @return the type of this RLE pattern.
+     */
+    virtual SpmIterOrder GetType() const
+    {
+        return type_;
     }
 
     /**
@@ -217,8 +225,8 @@ public:
      */
     virtual long GetPatId() const
     {
-        assert(this->type > NONE && this->type < BLOCK_TYPE_START);
-        return type*CSX_PID_OFFSET + this->delta_;
+        assert(type_ > NONE && type_ < BLOCK_TYPE_START);
+        return type_*CSX_PID_OFFSET + delta_;
     }
 
     /**
@@ -231,7 +239,7 @@ public:
     {
         long ret;
 
-        ret = (order == this->type) ? (this->size_*this->delta_) : 1;
+        ret = (order == type_) ? (size_ * delta_) : 1;
         return ret;
     }
 
@@ -247,8 +255,8 @@ public:
         long ret;
 
         ret = jmp;
-        if (order == this->type)
-            ret += ((this->size_-1)*this->delta_);
+        if (order == type_)
+            ret += ((size_ - 1)*delta_);
         return ret;
     }
 
@@ -258,8 +266,8 @@ public:
      */
     virtual std::ostream &PrintOn(std::ostream &out) const
     {
-        out << "drle: size=" << this->size_ << " len=" << this->delta_ << " type="
-            << this->type;
+        out << "drle: size=" << size_ << " len=" << delta_
+            << " type=" << type_;
         return out;
     }
 
@@ -283,7 +291,7 @@ public:
          *          otherwise
          */
         virtual bool IsEmpty() const {
-            return (this->nr_ == this->rle_->size_);
+            return (nr_ == rle_->size_);
         }
 
         /**
@@ -291,10 +299,10 @@ public:
          *  @return next element
          */
         virtual CooElem Next() {
-            CooElem ret(this->start_);
-            assert(this->nr_ <= this->rle_->size_);
-            ret.x += (this->nr_)*this->rle_->delta_;
-            this->nr_ += 1;
+            CooElem ret(start_);
+            assert(nr_ <= rle_->size_);
+            ret.x += (nr_)*rle_->delta_;
+            nr_ += 1;
             return ret;
         }
     };
@@ -317,7 +325,7 @@ public:
      */
     virtual uint64_t GetNextCol(uint64_t x0) const
     {
-        return (x0 + this->delta_);
+        return (x0 + delta_);
     }
 
     /**
@@ -343,6 +351,12 @@ public:
     };
 
     typedef std::map<uint64_t, DeltaRLE::StatsVal> Stats;
+
+protected:
+    uint32_t size_, delta_;
+
+private:
+    SpmIterOrder type_;
 };
 
 /**
@@ -350,12 +364,10 @@ public:
  */
 class BlockRLE : public DeltaRLE {
 public:
-    uint32_t other_dim;
-
-    BlockRLE(uint32_t _size, uint32_t _other_dim, SpmIterOrder _type)
-            : DeltaRLE(_size, 1, (assert(IsBlockType(_type)), _type))
+    BlockRLE(uint32_t size, uint32_t other_dim, SpmIterOrder type)
+            : DeltaRLE(size, 1, (assert(IsBlockType(type)), type))
     {
-        this->other_dim = _other_dim;
+        other_dim_ = other_dim;
     }
 
     /**
@@ -364,18 +376,21 @@ public:
      */
     virtual uint32_t getOtherDim() const
     {
-        return this->other_dim;
+        return other_dim_;
     }
 
     virtual long GetPatId() const
     {
-        return CSX_PID_OFFSET*this->type + this->other_dim;
+        return CSX_PID_OFFSET*GetType() + other_dim_;
     }
 
     virtual BlockRLE *Clone() const
     {
         return new BlockRLE(*this);
     }
+
+private:
+    uint32_t other_dim_;
 };
 
 /**
@@ -445,34 +460,48 @@ typedef boost::function<void (CooElem &p)> TransformFn;
  */
 class SPM
 {
-public:
-    uint64_t nrows, ncols, nnz;
-    SpmIterOrder type;
-    SpmRowElem *elems;
-    uint64_t elems_size;
-    uint64_t *rowptr;
-    uint64_t rowptr_size;
-    uint64_t row_start;
-
 private:
+    uint64_t nr_rows_, nr_cols_, nr_nzeros_;
+    SpmIterOrder type_;
+    SpmRowElem *elems_;
+    uint64_t elems_size_;
+    uint64_t *rowptr_;
+    uint64_t rowptr_size_;
+    uint64_t row_start_;
     bool elems_mapped_;
+
+    // These are mainly construction classes, so make them friends
+    friend class Builder;
+    friend class VirtualBuilder;
+    friend class CsxManager;
+    friend class DRLE_Manager;
 
 public:
     uint64_t GetNrRows()
     {
-        return this->rowptr_size - 1;
+        return rowptr_size_ - 1;
+    }
+
+    uint64_t GetNrNonzeros()
+    {
+        return nr_nzeros_;
+    }
+
+    SpmIterOrder GetType()
+    {
+        return type_;
     }
 
     SpmRowElem *RowBegin(uint64_t ridx=0);
     SpmRowElem *RowEnd(uint64_t ridx=0);
 
-    SPM() : type(NONE), elems(NULL), rowptr(NULL) {}
+    SPM() : type_(NONE), elems_(NULL), rowptr_(NULL) {}
     ~SPM()
     {
-        if (!elems_mapped_ && this->elems)
-            free(this->elems);
-        if (this->rowptr)
-            free(this->rowptr);
+        if (!elems_mapped_ && elems_)
+            free(elems_);
+        if (rowptr_)
+            free(rowptr_);
     };
 
     class Builder;
@@ -604,22 +633,23 @@ private:
     dynarray_t *da_rowptr_;
 
 public:
-    Builder(SPM *spm, uint64_t nr_elems = 0, uint64_t nrows = 0): spm_(spm)
+    Builder(SPM *spm, uint64_t nr_elems = 0, uint64_t nr_rows = 0): spm_(spm)
     {
         uint64_t *rowptr;
 
-        if (this->spm_->elems_mapped_) {
+        if (spm_->elems_mapped_) {
             this->da_elems_ = dynarray_init_frombuff(sizeof(SpmRowElem),
-                                                    this->spm_->elems_size,
-                                                    this->spm_->elems,
-                                                    this->spm_->elems_size);
+                                                     spm_->elems_size_,
+                                                     spm_->elems_,
+                                                     spm_->elems_size_);
             dynarray_seek(this->da_elems_, 0);
         } else {
             this->da_elems_ = dynarray_create(sizeof(SpmRowElem),
                                              nr_elems ? nr_elems : 512);
         }
 
-        this->da_rowptr_ = dynarray_create(sizeof(uint64_t), nrows ? nrows : 512);
+        this->da_rowptr_ = dynarray_create(sizeof(uint64_t),
+                                           nr_rows ? nr_rows : 512);
         rowptr = (uint64_t *)dynarray_alloc(this->da_rowptr_);
         *rowptr = 0;
     }
@@ -678,8 +708,8 @@ public:
 
     PntIter(SPM *_spm, uint64_t _row_idx) : spm_(_spm), row_idx(_row_idx)
     {
-        uint64_t *rp = this->spm_->rowptr;
-        uint64_t rp_size = this->spm_->rowptr_size;
+        uint64_t *rp = spm_->rowptr_;
+        uint64_t rp_size = spm_->rowptr_size_;
 
         assert(_row_idx < rp_size);
         while (_row_idx+1 < rp_size && rp[_row_idx] == rp[_row_idx+1])
@@ -701,10 +731,10 @@ public:
 
     void operator++()
     {
-        uint64_t *rp = this->spm_->rowptr;
-        uint64_t rp_size = this->spm_->rowptr_size;
+        uint64_t *rp = spm_->rowptr_;
+        uint64_t rp_size = spm_->rowptr_size_;
 
-        assert(this->elm_idx < this->spm_->elems_size);
+        assert(this->elm_idx < spm_->elems_size_);
         assert(this->row_idx < rp_size);
         this->elm_idx++;
         while (this->row_idx+1 < rp_size && rp[this->row_idx+1] == this->elm_idx)
@@ -718,7 +748,7 @@ public:
         DeltaRLE *p;
 
         ret.y = this->row_idx + 1;
-        e = this->spm_->elems + this->elm_idx;
+        e = spm_->elems_ + this->elm_idx;
         ret.x = e->x;
         ret.val = e->val;
         p = e-> pattern;
@@ -737,8 +767,7 @@ std::ostream &operator<<(std::ostream &os, const DeltaRLE &p);
 std::ostream &operator<<(std::ostream &out, CooElem p);
 std::ostream &operator<<(std::ostream &out, const SpmCooElem e);
 std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
-
-}
+}   // end of csx namespace
 
 #endif
 

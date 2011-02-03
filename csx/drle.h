@@ -64,7 +64,7 @@ public:
     DeltaRLE::Stats GenerateStats(SPM *spm, uint64_t rs, uint64_t re);
     DeltaRLE::Stats GenerateStats(uint64_t rs, uint64_t re);
 
-    typedef std::map <SpmIterOrder, DeltaRLE::Stats> StatsMap;
+    typedef std::map<SpmIterOrder, DeltaRLE::Stats> StatsMap;
     StatsMap stats;
 
     /**
@@ -83,7 +83,7 @@ public:
      */
     void OutStats(std::ostream &os=std::cout);
 
-    std::map <SpmIterOrder, std::set<uint64_t> > deltas_to_encode;
+    std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode;
     std::bitset<XFORM_MAX> xforms_ignore;
 
     /**
@@ -357,7 +357,8 @@ private:
     void CheckAndSetSorting();
     void DoCheckSortByRows();
     void DoCheckSortByNNZ();
-    void CheckPropability(double probability) {
+    void CheckPropability(double probability)
+    {
         assert((probability >= 0.0 && probability <= 1.0) &&
                "invalid sampling probability");
     }
@@ -378,13 +379,12 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os);
 class Node {
 public:
     uint32_t depth;
-    std::map <SpmIterOrder, std::set<uint64_t> > deltas_path;
+    std::map<SpmIterOrder, std::set<uint64_t> > deltas_path;
     SpmIterOrder *type_path;
     SpmIterOrder *type_ignore;
 
     Node(uint32_t depth_) : depth(depth_) {
         uint32_t i;
-
         this->type_path = new SpmIterOrder[depth];
         this->type_ignore = new SpmIterOrder[XFORM_MAX];
         for (i=0; i<((uint32_t) XFORM_MAX); i++)
@@ -395,6 +395,7 @@ public:
 
     /**
      *  Ignore the type for the encoding sequence examined.
+     *  
      *  @param type type which is ignored.
      */
     void Ignore(SpmIterOrder type);
@@ -402,6 +403,7 @@ public:
     /**
      *  Copies a node to a new one and inserts an extra type in the end of the
      *  encoding sequence.
+     *  
      *  @param type   type which is inserted in the end.
      *  @param deltas deltas corresponding to type inserted.
      */

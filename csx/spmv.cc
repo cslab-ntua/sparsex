@@ -400,7 +400,6 @@ int main(int argc, char **argv)
     }
 
     for (int i = 1; i < argc; i++) {
-        std::cout << basename(argv[i]) << ": " << std::endl;
         spm_mt = getSpmMt(argv[i]);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
