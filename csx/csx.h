@@ -1,6 +1,7 @@
 /* -*- C++ -*-
  *
- * csx.h -- CSX Manager
+ * csx.h -- Implements the CSX manager class, which responsible for creating
+ *          the final CSX matrix.
  *
  * Copyright (C) 2010, Computing Systems Laboratory (CSLab), NTUA.
  * All rights reserved.
@@ -12,79 +13,80 @@
 
 #include "ctl_ll.h"
 
+///< CSX matrix format
 typedef struct {
     uint64_t nnz, ncols, nrows, ctl_size, row_start;
     double *values;
     uint8_t *ctl;
 } csx_double_t;
 
-#ifdef __cplusplus
-
-#include "spm.h"
-
-extern "C" {
-    #include "dynarray.h"
-}
+#include "dynarray.h"
 
 #define PID_DELTA_BASE 0
 
+#ifdef __cplusplus  // This file is also included from csx_llvm_tmpl.c.
+
+#include "spm.h"
 namespace csx {
 
 /**
- *  Responsible for transforming the matrix from Spm object to its final CSX 
- *  form.
+ *  This class is responsible for transforming the matrix from our internal
+ *  representation (SPM object) to the final CSX form.
+ *
+ *  @see SPM
  */
 class CsxManager
 {
 public:
-    SPM *spm;
- 
     /**
-     *  Keeps pattern info.
+     *  Pattern information that is essential for the construction of CSX.
      */
-    class PatInfo {
-    public:
-        uint8_t flag; 	///< Flag allocated for this pattern.
-        uint64_t nr;  	///< Number of non-zero elemenets for this pattern.
-        
+    struct PatInfo {
         PatInfo(uint8_t flag_, uint64_t nr_): flag(flag_), nr(nr_) {}
         PatInfo(): flag(0), nr(0) {}
+
+        uint8_t flag; 	///< A unique CSX ID assigned to this pattern.
+        uint64_t nr;  	///< Number of non-zero elements of this pattern.
     };
     
     typedef std::map<long,PatInfo> PatMap;
-    
     PatMap patterns;    ///< Patterns found in matrix.
     
-    uint8_t flag_avail; ///< Current available flags for pattern id mapping.
-    bool row_jmps;	///< Whether or not row jumps included.
-    
-    double *values;
-    uint64_t values_idx;
-    
-    dynarray_t *ctl_da;
-    uint64_t last_col;
-    bool new_row;           ///< Marker of new_row.
-    uint64_t empty_rows;    ///< Number of empty rows since last non-empty row.
-    
-    CsxManager(SPM *spm_) : spm(spm_), flag_avail(0), row_jmps(false), 
-                            ctl_da(NULL), last_col(0), empty_rows(0) {}
+    CsxManager(SPM *spm)
+        : spm_(spm),
+          flag_avail_(0),
+          row_jmps_(false),
+          ctl_da_(NULL),
+          last_col_(0), empty_rows_(0) {}
     
     /**
-     *  Finds pattern info, update its values and return its flag.
+     *  Get a unique CSX ID for the pattern with SPM ID <tt>pattern_id</tt> and
+     *  updates statistics for this pattern.
      *  
-     *  @param pattern_id unique number for every type of pattern.
+     *  @param pattern_id the pattern ID in the SPM format.
      *  @param nnz        number of elements included in the specific pattern.
-     *  @return           flag used for the specific type of pattern.
+     *  @return           the CSX pattern ID for the specified SPM pattern.
+     *  @see SPM
      */
     uint8_t GetFlag(long pattern_id, uint64_t nnz);
     
     /**
-     *  Transform the matrix into CSX form.
+     *  Transform the matrix owned by this manager into CSX form.
      *
-     *  @return characteristics of matrix in CSX form.
+     *  @return a handle to the newly created CSX matrix.
      */
     csx_double_t *MakeCsx();
 	
+    /**
+     *  Checks whether row jumps exist in the matrix to be encoded in CSX
+     *  format.
+     *
+     *  @return <tt>true</tt> if row jumps exist.
+     */
+    bool HasRowJmps()
+    {
+        return row_jmps_;
+    }
 private:
     /**
      *  Transform a row of the matrix into CSX form.
@@ -122,12 +124,22 @@ private:
      *  ???????????????????
      */
     uint64_t PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem);
+
+    SPM *spm_;
+    uint8_t flag_avail_;    ///< Current available flags for pattern id mapping.
+    bool row_jmps_;	        ///< Whether or not row jumps included.
+    
+    double *values_;
+    uint64_t values_idx_;
+    
+    dynarray_t *ctl_da_;
+    uint64_t last_col_;
+    bool new_row_;          ///< Marker of new_row.
+    uint64_t empty_rows_;   ///< Number of empty rows since last non-empty row.
 };
+}   // end of csx namespace
 
-}
-
-#endif
-
-#endif
+#endif  // __cplusplus
+#endif  // CSX_H__
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

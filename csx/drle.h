@@ -29,12 +29,7 @@ namespace csx {
  */
 class DRLE_Manager
 {
-public:
-    SPM *spm;
-    long min_limit;
-    long max_limit;
-    double min_perc;
-
+public:    
     /**
      *  Algorithm for spliting the input matrix into sorting windows.
      */
@@ -46,23 +41,16 @@ public:
     } split_alg_t;
     
     typedef std::vector<uint64_t>::iterator sort_split_iterator;
+    typedef std::map<SpmIterOrder, DeltaRLE::Stats> StatsMap;
     
-private:
-    bool sort_windows_;
-    uint64_t sort_window_size_;
-    split_alg_t split_type_;
-    std::vector<uint64_t> sort_splits_;
-    double sampling_probability_;
-    uint64_t samples_max_;
-    static const uint64_t max_sampling_tries_ = 3;
-
-public:    
-    DRLE_Manager(SPM *_spm, long min_limit_=4, 
-                 long max_limit_ = std::numeric_limits<long>::max(),
-	         double min_perc_=.1, uint64_t sort_window_size = 0,
-	         split_alg_t split_type = SPLIT_BY_ROWS,
-	         double sampling_probability = 1.0,
-	         uint64_t samples_max = std::numeric_limits<uint64_t>::max());
+    DRLE_Manager(SPM *spm,
+                 long min_limit = 4, 
+                 long max_limit = std::numeric_limits<long>::max(),
+                 double min_perc = .1,
+                 uint64_t sort_window_size = 0,
+                 split_alg_t split_type = SPLIT_BY_ROWS,
+                 double sampling_probability = 1.0,
+                 uint64_t samples_max = std::numeric_limits<uint64_t>::max());
 
     /**
      *  Generate pattern statistics for a sub-matrix of spm.
@@ -73,9 +61,6 @@ public:
      */
     DeltaRLE::Stats GenerateStats(SPM *spm, uint64_t rs, uint64_t re);
     DeltaRLE::Stats GenerateStats(uint64_t rs, uint64_t re);
-
-    typedef std::map<SpmIterOrder, DeltaRLE::Stats> StatsMap;
-    StatsMap stats;
 
     /**
      *  Generate statistics for all available patterns for the matrix owned by
@@ -92,9 +77,6 @@ public:
      *  @param os the output stream where the statistics will be outputed.
      */
     void OutStats(std::ostream &os=std::cout);
-
-    std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode;
-    std::bitset<XFORM_MAX> xforms_ignore;
 
     /**
      *  Instruct DRLE_Manager to ignore a specific type of pattern. Patterns of
@@ -365,6 +347,22 @@ private:
         assert((probability >= 0.0 && probability <= 1.0) &&
                "invalid sampling probability");
     }
+
+private:
+    SPM *spm_;
+    long min_limit_;
+    long max_limit_;
+    double min_perc_;
+    bool sort_windows_;
+    uint64_t sort_window_size_;
+    split_alg_t split_type_;
+    std::vector<uint64_t> sort_splits_;
+    double sampling_probability_;
+    uint64_t samples_max_;
+    static const uint64_t max_sampling_tries_ = 3;
+    StatsMap stats_;
+    std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
+    std::bitset<XFORM_MAX> xforms_ignore_;
 };
 
 /**
@@ -381,12 +379,7 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os);
  */
 class Node {
 public:
-    uint32_t depth;
-    std::map<SpmIterOrder, std::set<uint64_t> > deltas_path;
-    SpmIterOrder *type_path;
-    SpmIterOrder *type_ignore;
-
-    Node(uint32_t depth_);
+    Node(uint32_t depth);
     ~Node() {}
     
     void PrintNode();
@@ -406,6 +399,13 @@ public:
      *  @param deltas deltas corresponding to type inserted.
      */
     Node MakeChild(SpmIterOrder type, std::set<uint64_t> deltas);
+
+private:
+    uint32_t depth_;
+    std::map<SpmIterOrder, std::set<uint64_t> > deltas_path_;
+    SpmIterOrder *type_path_;
+    SpmIterOrder *type_ignore_;
+    friend class DRLE_Manager;
 };
 
 }

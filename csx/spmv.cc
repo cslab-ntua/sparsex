@@ -99,7 +99,7 @@ void *thread_function(void *initial_data)
     else
         DrleMg->EncodeAll(data->buffer, data->split_blocks);
         
-    //DrleMg->MakeEncodeTree(data->split_blocks);
+    // DrleMg->MakeEncodeTree(data->split_blocks);
     delete DrleMg;
     return 0;
 }

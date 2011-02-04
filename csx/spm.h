@@ -1,3 +1,12 @@
+/* -*- C++ -*-
+ *
+ * spm.h --  Internal representation of sparse matrices.
+ *
+ * Copyright (C) 2010, Computing Systems Laboratory (CSLab), NTUA.
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef CSX_SPM_H__
 #define CSX_SPM_H__
 
@@ -13,9 +22,7 @@
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
 
-extern "C" {
-    #include "dynarray.h"
-}
+#include "dynarray.h"
 
 namespace csx
 {
@@ -135,11 +142,9 @@ static inline int IsBlockType(SpmIterOrder t)
 /**
  *  Holds column and value or values of CSX elements.
  */
-struct RowElem
-{
+struct RowElem {
     uint64_t x;     ///< the column index
-    union
-    {
+    union {
         double val;     ///< the value of the element
         double *vals;   ///< the value of the elements, if RowElem refers to
                         ///  an encoded pattern
@@ -149,8 +154,7 @@ struct RowElem
 /**
  *  Coordinate element, i.e., holds row and column information.
  */
-struct CooElem : public RowElem
-{
+struct CooElem : public RowElem {
     uint64_t y; ///< the row of the element
 };
 
@@ -182,7 +186,9 @@ static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 }
 
 /**
- *  Describes pattern of non-zero elements.
+ *  The CSX pattern id, which will be encoded in uflags.
+ *
+ *  @see ctl_ll.h
  */
 #define CSX_PID_OFFSET 10000L
 class DeltaRLE
@@ -212,7 +218,7 @@ public:
     }
 
     /**
-     *  Get the type of this RLE pattern.
+     *  Gets the type of this RLE pattern.
      *
      *  @return the type of this RLE pattern.
      */
@@ -222,13 +228,14 @@ public:
     }
 
     /**
-     *  Generates id for patterns.
+     *  Retrieves the id of this pattern.
      *
-     *  @return unique id of the type of the selected object of class DeltaRLE.
+     *  @return the id of this pattern.
      */
-    virtual long GetPatId() const
+    virtual long GetPatternId() const
     {
-        assert(type_ > NONE && type_ < BLOCK_TYPE_START);
+        assert(type_ > NONE && type_ < BLOCK_TYPE_START &&
+               "not a drle type");
         return type_ * CSX_PID_OFFSET + delta_;
     }
 
@@ -241,9 +248,7 @@ public:
      */
     virtual long ColIncrease(SpmIterOrder order) const
     {
-        long ret;
-
-        ret = (order == type_) ? (size_ * delta_) : 1;
+        long ret = (order == type_) ? (size_ * delta_) : 1;
         return ret;
     }
 
@@ -252,14 +257,12 @@ public:
      *
      *  @param order a type of pattern.
      *  @param jmp   a number of columns to jump.
-     *  @return       number of columns to procceed in order to go to the next
-     *                CSX element.
+     *  @return      number of columns to procceed in order to go to the next
+     *               CSX element.
      */
     virtual uint64_t ColIncreaseJmp(SpmIterOrder order, uint64_t jmp) const
     {
-        long ret;
-
-        ret = jmp;
+        long ret = jmp;
         if (order == type_)
             ret += ((size_ - 1) * delta_);
             
@@ -267,9 +270,9 @@ public:
     }
 
     /**
-     *  Prints the data of a pattern.
+     *  Prints the data of this pattern on the specified output stream.
      *
-     *  @param out output channel.
+     *  @param out the output stream.
      */
     virtual std::ostream &PrintOn(std::ostream &out) const
     {
@@ -279,15 +282,10 @@ public:
     }
 
     /**
-     *  Handles the elements within pattern. Useful class for debugging.
+     *  Handles the elements within pattern. Useful for debugging.
      */
     class Generator
     {
-    private:
-        CooElem start_;
-        DeltaRLE *rle_;
-        uint64_t nr_;
-        
     public:
         Generator(CooElem start, DeltaRLE *rle)
             : start_(start), rle_(rle), nr_(0) { }
@@ -295,7 +293,7 @@ public:
         /**
          *  Checks if the handler is in the last element of the pattern.
          *
-	 *  @return true if the handler is in the last element and false
+         *  @return true if the handler is in the last element and false
          *          otherwise
          */
         virtual bool IsEmpty() const {
@@ -305,15 +303,20 @@ public:
         /**
          *  Finds the next element within pattern.
          *
-	 *  @return next element
+         *  @return next element
          */
         virtual CooElem Next() {
             CooElem ret(start_);
-            assert(nr_ <= rle_->size_);
+            assert(nr_ <= rle_->size_ && "out of pattern");
             ret.x += nr_ * rle_->delta_;
             nr_ += 1;
             return ret;
         }
+
+    private:
+        CooElem start_;
+        DeltaRLE *rle_;
+        uint64_t nr_;
     };
 
     /**
@@ -324,19 +327,18 @@ public:
      */
     virtual Generator *generator(CooElem start)
     {
-        Generator *g;
-        g = new DeltaRLE::Generator(start, this);
+        Generator *g = new DeltaRLE::Generator(start, this);
         return g;
     }
 
     /**
-     *  Find the column of the next non-zero element within pattern.
+     *  Finds the column of the next non-zero element within pattern.
      *
      *  @return column of the next element of pattern.
      */
     virtual uint64_t GetNextCol(uint64_t x0) const
     {
-        return (x0 + delta_);
+        return x0 + delta_;
     }
 
     /**
@@ -344,16 +346,15 @@ public:
      *  specifically, it just holds the number of non-zero elements and
      *  patterns that adhere to this specific type of pattern.
      */
-    class StatsVal
+    struct StatsVal
     {
-    public:
         uint64_t nnz;
         long npatterns;
 
         /**
          *  Update the stats for every new instance of this type of pattern.
          *
-	 *  @param new_vals stats of an instance of a pattern.
+         *  @param new_vals stats of an instance of a pattern.
          */
         void Update(const StatsVal& new_vals)
         {
@@ -372,7 +373,9 @@ private:
 };
 
 /**
- *  Expansion of DeltaRLE to support block patterns.
+ *  A block RLE pattern. It is essentially a DeltaRLE pattern with
+ *  <tt>delta=1</tt> augmented with one more field for the second dimension
+ *  of the block pattern.
  */
 class BlockRLE : public DeltaRLE {
 public:
@@ -387,12 +390,12 @@ public:
      *
      *  @return the size of second dimension.
      */
-    virtual uint32_t getOtherDim() const
+    virtual uint32_t GetOtherDim() const
     {
         return other_dim_;
     }
 
-    virtual long GetPatId() const
+    virtual long GetPatternId() const
     {
         return CSX_PID_OFFSET * GetType() + other_dim_;
     }
@@ -407,8 +410,7 @@ private:
 };
 
 /**
- *  Update of DeltaRLE class with two constructors, a destructor and pointer
- *  operator.
+ *  A generic sparse matrix pattern.
  */
 class SpmPattern
 {
@@ -445,32 +447,33 @@ public:
 };
 
 /**
- *  Expansion of CooElem which holds pattern info about the CSX elements.
+ *  A generic sparse matrix coordinate element that can also be a pattern.
  */
 class SpmCooElem: public CooElem, public SpmPattern {};
 
 /**
- *  Expansion of RowElem which holds pattern info about the CSX elements.
+ *  A generic sparse matrix row element that can also be a pattern.
  */
 class SpmRowElem: public RowElem, public SpmPattern {};
 
 /**
- *  Copies elements.
+ *  Fills a sparse matrix row element (<tt>dst</tt>) from a source element
+ *  (<tt>src</tt>) element.
  *
- *  @param p    element of struct CooElem, SpmCooElem or SpmRowElem used to
- *              copy from.
- *  @param ret  element of struct SpmRowElem used to write to.
+ *  @param src  element to copy from.
+ *  @param dst  element to fill.
  */
-void MakeRowElem(const CooElem &p, SpmRowElem *ret);
-void MakeRowElem(const SpmCooElem &p, SpmRowElem *ret);
-void MakeRowElem(const SpmRowElem &p, SpmRowElem *ret);
+void MakeRowElem(const CooElem &src, SpmRowElem *dst);
+void MakeRowElem(const SpmCooElem &src, SpmRowElem *dst);
+void MakeRowElem(const SpmRowElem &src, SpmRowElem *dst);
 
 typedef std::iterator<std::forward_iterator_tag, CooElem> SpmPointIter;
 typedef boost::function<void (CooElem &p)> TransformFn;
 
 /**
- *  Sparse Matrix's sub-matrix characteristics. Each thread handles one
- *  sub-matrix (one object of the SPM class).
+ *  Internal representation of a sparse matrix. This class can also represent a
+ *  sub-matrix of a larger one, starting at a specific row of the original
+ *  matrix.
  */
 class SPM
 {
@@ -481,10 +484,11 @@ private:
     uint64_t elems_size_;
     uint64_t *rowptr_;
     uint64_t rowptr_size_;
-    uint64_t row_start_;
+    uint64_t row_start_;    ///< Row of the original matrix, where this
+                            ///  sub-matrix starts.
     bool elems_mapped_;
 
-    // These are mainly construction classes, so make them friends
+    // These are mainly SPM construction classes, so make them friends
     friend class Builder;
     friend class VirtualBuilder;
     friend class CsxManager;
@@ -517,8 +521,8 @@ public:
         return type_;
     }
 
-    SpmRowElem *RowBegin(uint64_t ridx=0);
-    SpmRowElem *RowEnd(uint64_t ridx=0);
+    SpmRowElem *RowBegin(uint64_t ridx = 0);
+    SpmRowElem *RowEnd(uint64_t ridx = 0);
 
     class Builder;
     class VirtualBuilder;
@@ -546,7 +550,7 @@ public:
                       SPM::Builder *SpmBld);
 
     /**
-     *  Load matrix from a file.
+     *  Loads a matrix from file.
      *
      *  @param filename name of the file that matrix is kept.
      *  @param in       buffer from which the matrix is taken.
@@ -556,7 +560,7 @@ public:
     static SPM *LoadMMF(std::istream &in=std::cin);
 
     /**
-     *  Load matrix from a file specifying the number of threads.
+     *  Loads matrix from a file specifying the number of threads.
      *
      *  @param filename name of the file that matrix is kept.
      *  @param in       buffer from which the matrix is taken.
@@ -568,18 +572,21 @@ public:
     static SPM *LoadMMF_mt(std::istream &in, const long nr);
     static SPM *LoadMMF_mt(MMF &mmf, const long nr);
 
-    void Print(std::ostream &out=std::cout);
-    void PrintElems(std::ostream &out=std::cout);
-    void PrintRows(std::ostream &out=std::cout);
-    void PrintStats(std::ostream &out=std::cout);
+    /**
+     *  Printing methods. 
+     */ 
+    void Print(std::ostream &out = std::cout);
+    void PrintElems(std::ostream &out = std::cout);
+    void PrintRows(std::ostream &out = std::cout);
+    void PrintStats(std::ostream &out = std::cout);
 
     class PntIter;
 
-    PntIter PointsBegin(uint64_t ridx=0);
-    PntIter PointsEnd(uint64_t ridx=0);
+    PntIter PointsBegin(uint64_t ridx = 0);
+    PntIter PointsEnd(uint64_t ridx = 0);
 
     /**
-     *  Transform matrix to specific type.
+     *  Transforms matrix to specific type.
      *
      *  @param type type of pattern to transform to.
      *  @param rs   line to start the transformation. If it is zero, it is the
@@ -587,11 +594,11 @@ public:
      *  @param re   line to end the transformation. If it is zero, it is the
      *              the end of matrix.
      */
-    void Transform(SpmIterOrder type, uint64_t rs=0, uint64_t re=0);
+    void Transform(SpmIterOrder type, uint64_t rs = 0, uint64_t re = 0);
 
     /**
-     *  Find the reverse transform function. Transform from 'type' to
-     *  HORIZONTAL.
+     *  Finds the reverse transform function. Transforms from <tt>type</tt> to
+     *  <tt>HORIZONTAL</tt>.
      *
      *  @param type type of pattern to transform from.
      *  @return     reverse transform function.
@@ -599,7 +606,8 @@ public:
     TransformFn GetRevXformFn(SpmIterOrder type);
 
     /**
-     *  Find the transform function. Transform from HORIZONTAL to 'type'.
+     *  Finds the transform function. Transforms from HORIZONTAL to
+     *  <tt>type</tt>.
      *
      *  @param type type of pattern to transform to.
      *  @return     transform function.
@@ -607,7 +615,8 @@ public:
     TransformFn GetXformFn(SpmIterOrder type);
 
     /**
-     *  Find the complete transform function. Tranform from 'from' to 'to'.
+     *  Finds the complete transform function. Tranforms from <tt>from</tt> to
+     *  <tt>to</tt>.
      *
      *  @param from type of pattern to transform from.
      *  @param to   type of pattern to transform to.
@@ -616,31 +625,34 @@ public:
     TransformFn GetTransformFn(SpmIterOrder from, SpmIterOrder to);
 
     /**
-     *  Copy a window (sub-matrix) from matrix.
+     *  Extracts a window (sub-matrix) from this matrix. This methods copies the
+     *  nonzero elements of the original matrix to the window.
      *
-     *  @param rs     starting line of window.
-     *  @param length number of lines to include in window.
-     *  @return       spm object that includes the characteristics of the
-     *                selected window.
+     *  @param rs     the row in this matrix, from where the window will be
+     *                extracted.
+     *  @param length number of rows to include in the window.
+     *  @return       the selected window.
+     *  @see GetWindow()
      */
     SPM *ExtractWindow(uint64_t rs, uint64_t length);
 
     /**
-     *  Get a window (sub-matrix) from matrix.
+     *  Extracts a window (sub-matrix) from this matrix using a backing
+     *  store. This method uses the nonzero elements of this matrix without
+     *  performing any copy.
      *
-     *  @param rs     starting line of window.
-     *  @param length number of lines to include in window.
-     *  @return       spm object that includes the characteristics of the
-     *                selected window.
+     *  @param rs     the row in this matrix, from where the window will be
+     *                extracted.
+     *  @param length number of rows to include in the window.
+     *  @return       the selected window.
+     *  @see ExtractWindow()
      */
     SPM *GetWindow(uint64_t rs, uint64_t length);
 
     /**
-     *  Copy the characteristics of the window (sub-matrix) back to to original
-     *  matrix.
+     *  Puts a (possibly processed) window of the matrix back to this matrix.
      *
-     *  @param window spm object that includes the characteristics of the
-     *                window.
+     *  @param window the (possibly processed) window.
      */
     void PutWindow(const SPM *window);
 };
@@ -648,37 +660,38 @@ public:
 void TestMMF(SPM *spm, const char *mmf_file);
 
 /**
- *  Handles memory allocations during construction and destruction of spm
- *  object.
+ *  Utility class for building an SPM.
  */
 class SPM::Builder
 {
-private:
-    SPM *spm_;
-    dynarray_t *da_elems_;
-    dynarray_t *da_rowptr_;
-
 public:
+    /**
+     *  Constructs a Builder object.
+     *
+     *  @param spm      the matrix to be built.
+     *  @param nr_elems an initial guess of the nonzero elements.
+     *  @param nr_rows  an initial guess of the number of rows.
+     */
     Builder(SPM *spm, uint64_t nr_elems = 0, uint64_t nr_rows = 0);
     virtual ~Builder();
 
     /**
-     *  Allocates an element in matrix.
+     *  Allocates a new element in the new matrix.
      *
      *  @return pointer to element allocated.
      */
     virtual SpmRowElem *AllocElem();
 
     /**
-     *  Allocates many elements in matrix.
+     *  Allocates a number of elements in the new matrix.
      *
-     *  @param  nr number of elements allocated.
-     *  @return    pointer to elements allocated.
+     *  @param  nr number of elements to be allocated.
+     *  @return    pointer to the first allocated element.
      */
     virtual SpmRowElem *AllocElems(uint64_t nr);
 
     /**
-     *  Counts elements allocated in matrix.
+     *  Counts elements already allocated in the matrix.
      *
      *  @return number of elements allocated.
      */
@@ -687,36 +700,40 @@ public:
     /**
      *  Allocate elements for the next row.
      *
-     *  @param rdiff difference between the number of current and new line.
+     *  @param rdiff number of empty rows between the current and the new row.
      */
-    virtual void NewRow(uint64_t rdiff=1);
+    virtual void NewRow(uint64_t rdiff = 1);
 
     /**
-     *  Responsible to free memory. Checked afterwards by destructor of class
-     *  Builder.
+     *  Finalizes the construction of the new matrix.
      */
     virtual void Finalize();
+
+private:
+    SPM *spm_;
+    dynarray_t *da_elems_;
+    dynarray_t *da_rowptr_;
 };
 
 /**
- *  Handles iterators that help in processing of the matrix.
+ *  Iterators for moving between elements inside the matrix.
  */
 class SPM::PntIter : public std::iterator<std::forward_iterator_tag, CooElem>
 {
-private:
-    SPM *spm_;
-
 public:
-    uint64_t row_idx;
-    uint64_t elm_idx;
-
-    PntIter(): spm_(NULL), row_idx(0), elm_idx(0) { }
-    PntIter(SPM *spm, uint64_t r_idx);
+    PntIter(): spm_(NULL), row_idx_(0), elem_idx_(0) { }
+    PntIter(SPM *spm, uint64_t row_idx);
     
     bool operator==(const PntIter &pi);
     bool operator!=(const PntIter &pi);
     void operator++();
     SpmCooElem operator*();
+    std::ostream &operator<<(std::ostream &out);
+
+private:
+    SPM *spm_;
+    uint64_t row_idx_;
+    uint64_t elem_idx_;
 };
 
 /**

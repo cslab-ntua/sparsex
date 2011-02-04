@@ -30,6 +30,7 @@ extern "C" {
 //        (if enabled)
 #define CTL_NR_BIT 7
 #define CTL_RJMP_BIT 6
+#define CTL_PATTERNS_MAX    ((1 << CTL_RJMP_BIT) - 1)
 
 static inline void set_bit(uint8_t *byte, int bit)
 {

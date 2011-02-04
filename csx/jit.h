@@ -1,3 +1,12 @@
+/* -*- C++ -*-
+ *
+ * jit.h -- Just In Time compilation routines.
+ *
+ * Copyright (C) 2010, Computing Systems Laboratory (CSLab), NTUA.
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef CSX_JIT_H__
 #define CSX_JIT_H__
 
@@ -48,22 +57,22 @@ using namespace llvm;
 namespace csx {
 
 /**
-* CsxJIT: Code generator for a CSX matrix (one-per-thread)
-*/
+ *  Code generator for a CSX matrix (one-per-thread)
+ */
 class CsxJit {
 
 private:
-    // main state
+    ///< Main state.
     CsxManager  *CsxMg;
     Module      *M;
     IRBuilder<> *Bld;
 
-    // Helper functions that are loaded from the template
+    ///< Helper functions that are loaded from the template
     Function
-      *UlGet,    // extract a variable-length unsigned long from encoded data
-      *FailF,    // a function to indicate that something went wrong
-      *PrintYXV, // print a triplet of Y, X, Value
-      *AlignF,   // align a pointer to a specific boundary
+      *UlGet,    ///< Extract a variable-length unsigned long from encoded data.
+      *FailF,    ///< A function to indicate that something went wrong.
+      *PrintYXV, ///< Print a triplet of Y, X, Value.
+      *AlignF,   ///< Align a pointer to a specific boundary
       *TestBitF, // test if a bit is set
       *SpmvF;    // a copied instance of the template's spmv function
 
@@ -104,15 +113,15 @@ private:
 
     void doDeltaAddMyx(int delta_bytes);
 
-    void DeltaCase(BasicBlock *BB,    // case
-               BasicBlock *BB_lentry, // loop entry
-               BasicBlock *BB_lbody,  // loop body
-               BasicBlock *BB_exit,   // final exit
-               int delta_bytes);
+    void DeltaCase(BasicBlock *BB,          // case
+                   BasicBlock *BB_lentry,   // loop entry
+                   BasicBlock *BB_lbody,    // loop body
+                   BasicBlock *BB_exit,     // final exit
+                   int delta_bytes);
 
     void HorizCase(BasicBlock *BB,
-               BasicBlock *BB_lbody,
-               BasicBlock *BB_lexit,
+                   BasicBlock *BB_lbody,
+                   BasicBlock *BB_lexit,
                    BasicBlock *BB_exit,
                    int delta_size);
 
@@ -128,12 +137,12 @@ private:
                   bool reversed);
 
     void BlockRowCaseRolled(BasicBlock *BB,
-                        BasicBlock *BB_lbody,
+                            BasicBlock *BB_lbody,
                             BasicBlock *BB_exit,
                             int r, int c);
 
     void BlockColCaseRolled(BasicBlock *BB,
-                        BasicBlock *BB_lbody,
+                            BasicBlock *BB_lbody,
                             BasicBlock *BB_exit,
                             int r, int c);
 

@@ -3,7 +3,8 @@
 all: spmv windows-sort csx_llvm_tmpl.llvm.bc
 
 ## Configuration
-dynarray_dir = ../lib/dynarray
+libdir	     = ../lib
+dynarray_dir = $(libdir)/dynarray
 protodir     = ./proto
 llvmconf     = llvm-config-2.7
 
@@ -26,7 +27,7 @@ LLVM_CXXFLAGS   = $(shell $(llvmconf) --cxxflags)
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 
 dynarray_dep    = $(dynarray_dir)/dynarray.o
-INC            += -I$(dynarray_dir)
+INC            += -I$(libdir) -I$(dynarray_dir)
 
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
