@@ -40,7 +40,7 @@ std::ostream &operator<<(std::ostream &os, const DeltaRLE &p)
 {
     os << " (";
     p.PrintOn(os);
-    os << " type:" << p.type << ") ";
+    os << " type:" << p.GetType() << ") ";
     return os;
 }
 
@@ -56,13 +56,14 @@ std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
     if (e.pattern != NULL) {
         out << "->[" << *(e.pattern) << "]";
         out << " vals:{ ";
-        for (int i=0; i<e.pattern->GetSize(); i++)
+        for (int i = 0; i < e.pattern->GetSize(); i++)
             out << e.vals[i] << " ";
+            
         out << "}";
     } else {
         out << "v: " << e.val;
     }
-    
+
     return out;
 }
 
@@ -72,13 +73,14 @@ std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
     if (elem.pattern) {
         out << *(elem.pattern);
         out << " vals:{ ";
-        for (int i=0; i<elem.pattern->GetSize(); i++)
+        for (int i = 0; i < elem.pattern->GetSize(); i++)
             out << elem.vals[i] << " ";
+            
         out << "}";
     } else {
         out << " v:" << elem.val;
     }
-    
+
     return out;
 }
 
@@ -136,7 +138,7 @@ static inline void pnt_map_V(const CooElem &src, CooElem &dst)
 {
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
-    
+
     dst.x = src_y;
     dst.y = src_x;
 }
@@ -150,7 +152,7 @@ static inline void pnt_map_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
-    
+
     assert(nrows + src_x - src_y > 0);
     dst.y = nrows + src_x - src_y;
     dst.x = (src_x < src_y) ? src_x : src_y;
@@ -160,7 +162,7 @@ static inline void pnt_rmap_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
-    
+
     if (src_y < nrows) {
         dst.x = src_x;
         dst.y = nrows + src_x - src_y;
@@ -175,7 +177,7 @@ static inline void pnt_map_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
     uint64_t dst_y;
-    
+
     dst.y = dst_y = src_x + src_y - 1;
     dst.x = (dst_y <= ncols) ? src_y : ncols + 1 - src_x;
 }
@@ -184,7 +186,7 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 {
     uint64_t src_x = src.x;
     uint64_t src_y = src.y;
-    
+
     if (src_y <= ncols) {
         dst.y = src_x;
         dst.x = src_y + 1 - src_x;
@@ -192,7 +194,7 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
         dst.y = src_x + src_y - ncols;
         dst.x = ncols + 1 - src_x;
     }
-    
+
     dst.y = src_y - dst.x + 1;
 }
 
@@ -253,14 +255,14 @@ void MakeRowElem(const SpmRowElem &p, SpmRowElem *ret)
 
 SpmRowElem *SPM::RowBegin(uint64_t ridx)
 {
-    assert(ridx < this->rowptr_size - 1);
-    return &this->elems[this->rowptr[ridx]];
+    assert(ridx < rowptr_size_ - 1);
+    return &elems_[rowptr_[ridx]];
 }
 
 SpmRowElem *SPM::RowEnd(uint64_t ridx)
 {
-    assert(ridx < this->rowptr_size - 1);
-    return &this->elems[this->rowptr[ridx + 1]];
+    assert(ridx < rowptr_size_ - 1);
+    return &elems_[rowptr_[ridx+1]];
 }
 
 template <typename IterT>
@@ -270,7 +272,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
 {
     SpmRowElem *elem;
     uint64_t row_prev, row;
-    
+
     row_prev = first_row;
     for (; pi != pnts_end; ++pi) {
         row = (*pi).y;
@@ -281,12 +283,12 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
             SpmBld->NewRow(row - row_prev);
             row_prev = row;
         }
-        
+
         elem = SpmBld->AllocElem();
         MakeRowElem(*pi, elem);
     }
-    
-    return this->elems_size;
+
+    return elems_size_;
 }
 
 template <typename IterT>
@@ -294,11 +296,11 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
                        unsigned long limit, uint64_t nr_elems, uint64_t nrows)
 {
     SPM::Builder *SpmBld = new SPM::Builder(this, nr_elems, nrows);
-    
+
     SetElems(pi, pnts_end, first_row, limit, nr_elems, nrows, SpmBld);
     SpmBld->Finalize();
     delete SpmBld;
-    return this->elems_size;
+    return elems_size_;
 }
 
 SPM *SPM::LoadMMF_mt(const char *mmf_file, const long nr)
@@ -324,22 +326,22 @@ SPM *SPM::LoadMMF_mt(MMF &mmf, const long nr)
     long limit, cnt, row_start;
     MMF::iterator iter = mmf.begin();
     MMF::iterator iter_end = mmf.end();
-    
+
     ret = new SPM[nr];
     row_start = limit = cnt = 0;
-    for (long i=0; i<nr; i++) {
+    for (long i = 0; i < nr; i++) {
         spm = ret + i;
         limit = (mmf.nnz - cnt) / (nr - i);
-        spm->nnz = spm->SetElems(iter, iter_end, row_start + 1, limit);
-        spm->nrows = spm->rowptr_size - 1;
-        spm->ncols = mmf.ncols;
-        spm->row_start = row_start;
-        row_start += spm->nrows;
-        spm->type = HORIZONTAL;
-        cnt += spm->nnz;
+        spm->nr_nzeros_ = spm->SetElems(iter, iter_end, row_start + 1, limit);
+        spm->nr_rows_ = spm->rowptr_size_ - 1;
+        spm->nr_cols_ = mmf.ncols;
+        spm->row_start_ = row_start;
+        row_start += spm->nr_rows_;
+        spm->type_ = HORIZONTAL;
+        cnt += spm->nr_nzeros_;
     }
-    
-    assert((uint64_t)cnt == mmf.nnz);    
+
+    assert((uint64_t)cnt == mmf.nnz);
     return ret;
 }
 
@@ -352,7 +354,7 @@ SPM *SPM::LoadMMF(const char *mmf_file)
 {
     SPM *ret;
     std::ifstream mmf;
-    
+
     mmf.open(mmf_file);
     ret = LoadMMF(mmf);
     mmf.close();
@@ -362,11 +364,12 @@ SPM *SPM::LoadMMF(const char *mmf_file)
 void SPM::Print(std::ostream &out)
 {
     SPM::PntIter p, p_start, p_end;
-    
+
     p_start = this->PointsBegin();
     p_end = this->PointsEnd();
     for (p = p_start; p != p_end; ++p)
         out << " " << (*p);
+        
     out << std::endl;
 }
 
@@ -375,42 +378,44 @@ void SPM::PrintElems(std::ostream &out)
     SPM::PntIter p, p_start, p_end;
     uint64_t y0;
     static int cnt = 1;
-    
-    y0 = this->row_start;
+
+    y0 = row_start_;
     p_start = this->PointsBegin();
     p_end = this->PointsEnd();
-    for (p=p_start; p != p_end; ++p) {
+    for (p = p_start; p != p_end; ++p) {
         if ((*p).pattern == NULL) {
-            out << std::setiosflags(std::ios::scientific) << row_start + (*p).y
-                << " " << (*p).x << " " << (*p).val << " cnt:" << cnt++ << "\n";
+            out << std::setiosflags(std::ios::scientific)
+                << row_start_ + (*p).y << " "
+                << (*p).x << " " << (*p).val << " cnt:" << cnt++ << "\n";
             continue;
         }
-        
+
         boost::function<void (CooElem &p)> xform_fn, rxform_fn;
-        
+
         DeltaRLE *pat;
         CooElem start;
         double *vals;
-        
+
         pat = (*p).pattern;
         start = static_cast<CooElem>(*p);
         vals = start.vals;
-        std::cout << SpmTypesNames[pat->type] << std::endl;
-        xform_fn = GetTransformFn(this->type, pat->type);
-        rxform_fn = GetTransformFn(pat->type, this->type);
+        std::cout << SpmTypesNames[pat->GetType()] << std::endl;
+        xform_fn = GetTransformFn(type_, pat->GetType());
+        rxform_fn = GetTransformFn(pat->GetType(), type_);
         if (xform_fn)
             xform_fn(start);
-            
+
         DeltaRLE::Generator *g = (*p).pattern->generator(start);
-        
+
         while (!g->IsEmpty()) {
             CooElem e = g->Next();
             if (rxform_fn)
                 rxform_fn(e);
-            out << std::setiosflags(std::ios::scientific) << row_start + e.y
+                
+            out << std::setiosflags(std::ios::scientific) << row_start_ + e.y
                 << " " << e.x << " " << *vals++ << " cnt:" << cnt++ << "\n";
         }
-        
+
         out << "=== END OF PATTERN ===" << std::endl;
     }
 }
@@ -431,29 +436,30 @@ void SPM::PrintStats(std::ostream& out)
     for (uint64_t i = 0; i < this->GetNrRows(); i++) {
         uint64_t pt_size, pt_size_before;
         SpmIterOrder pt_type, pt_type_before;
-        
+
         nr_patterns_before = nr_patterns;
-        
+
         const SpmRowElem *elem = this->RowBegin(i);
-        
+
         if (elem->pattern) {
             pt_size_before = pt_size = elem->pattern->GetSize();
-            pt_type_before = pt_type = elem->pattern->type;
+            pt_type_before = pt_type = elem->pattern->GetType();
         } else {
             pt_size_before = pt_size = 0;
             pt_type_before = pt_type = NONE;
         }
 
-        for ( ; elem != this->RowEnd(i); elem++) {
+        for (; elem != this->RowEnd(i); elem++) {
             if (elem->pattern) {
                 ++nr_patterns;
                 pt_size = elem->pattern->GetSize();
-                pt_type = elem->pattern->type;
+                pt_type = elem->pattern->GetType();
                 nr_nzeros_block += pt_size;
-                if ((pt_type != pt_type_before) ||
-                    (pt_size_before && pt_size != pt_size_before))
+                if (pt_type != pt_type_before ||
+                    pt_size_before && pt_size != pt_size_before)
                     ++nr_transitions;
-                ++nr_xform_patterns[elem->pattern->type];
+                    
+                ++nr_xform_patterns[elem->pattern->GetType()];
                 pt_size_before = pt_size;
             } else {
                 pt_type = NONE;
@@ -470,7 +476,7 @@ void SPM::PrintStats(std::ostream& out)
     }
 
     int nr_encoded_types = 0;
-    
+
     for (int i = 1; i < XFORM_MAX; i++)
         if (nr_xform_patterns[i]) {
             ++nr_encoded_types;
@@ -478,11 +484,11 @@ void SPM::PrintStats(std::ostream& out)
             << nr_xform_patterns[i] << std::endl;
         }
 
-    out << "Encoded types = " << nr_encoded_types << ", " 
-        << "Avg patterns/row = " 
-        << nr_patterns / (double) nr_rows_with_patterns << ", " 
+    out << "Encoded types = " << nr_encoded_types << ", "
+        << "Avg patterns/row = "
+        << nr_patterns / (double) nr_rows_with_patterns << ", "
         << "Avg nonzeros/pattern = "
-        << nr_nzeros_block / (double) nr_patterns << ", " 
+        << nr_nzeros_block / (double) nr_patterns << ", "
         << " Avg pattern transitions/row = "
         << nr_transitions / (double) nr_rows_with_patterns
         << std::endl;
@@ -497,13 +503,14 @@ SPM::PntIter SPM::PointsEnd(uint64_t ridx)
 {
     if (ridx == 0)
         ridx = this->GetNrRows();
+        
     return PntIter(this, ridx);
 }
 
 static inline bool elem_cmp_less(const SpmCooElem &e0, const SpmCooElem &e1)
 {
     int ret;
-    
+
     ret = CooCmp(static_cast<CooElem>(e0), static_cast<CooElem>(e1));
     return (ret < 0);
 }
@@ -515,156 +522,157 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
     std::vector<SpmCooElem>::iterator e0, ee;
     boost::function<void (CooElem &p)> xform_fn;
 
-    if (this->type == t)
+    if (type_ == t)
         return;
-    xform_fn = this->GetTransformFn(this->type, t);
-    elems.reserve(this->elems_size);
+
+    xform_fn = this->GetTransformFn(type_, t);
+    elems.reserve(elems_size_);
     p0 = PointsBegin(rs);
     pe = PointsEnd(re);
-    for(p=p0; p != pe; ++p) {
+    for(p = p0; p != pe; ++p) {
         SpmCooElem p_new = SpmCooElem(*p);
         xform_fn(p_new);
         elems.push_back(p_new);
     }
-    
+
     e0 = elems.begin();
     ee = elems.end();
     sort(e0, ee, elem_cmp_less);
     SetElems(e0, ee, rs + 1);
     elems.clear();
-    this->type = t;
+    type_ = t;
 }
 
 inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
 {
     boost::function<void (CooElem &p)> ret;
-    
+
     switch(type) {
-        case HORIZONTAL:
-            break;
-        case VERTICAL:
-            ret = bll::bind(pnt_rmap_V, bll::_1, bll::_1);
-            break;
-        case DIAGONAL:
-            ret = bll::bind(pnt_rmap_D, bll::_1, bll::_1, this->nrows);
-            break;
-        case REV_DIAGONAL:
-            ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, this->ncols);
-            break;
-        case BLOCK_ROW_TYPE_NAME(2):
-            ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(3):
-            ret = bll::bind(BLOCK_ROW_RMAP_NAME(3), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(4):
-            ret = bll::bind(BLOCK_ROW_RMAP_NAME(4), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(5):
-            ret = bll::bind(BLOCK_ROW_RMAP_NAME(5), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(6):
-            ret = bll::bind(BLOCK_ROW_RMAP_NAME(6), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(7):
-            ret = bll::bind(BLOCK_ROW_RMAP_NAME(7), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(8):
-            ret = bll::bind(BLOCK_ROW_RMAP_NAME(8), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(2):
-            ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(3):
-            ret = bll::bind(BLOCK_COL_RMAP_NAME(3), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(4):
-            ret = bll::bind(BLOCK_COL_RMAP_NAME(4), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(5):
-            ret = bll::bind(BLOCK_COL_RMAP_NAME(5), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(6):
-            ret = bll::bind(BLOCK_COL_RMAP_NAME(6), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(7):
-            ret = bll::bind(BLOCK_COL_RMAP_NAME(7), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(8):
-            ret = bll::bind(BLOCK_COL_RMAP_NAME(8), bll::_1, bll::_1);
-            break;
-        default:
-            std::cerr << "Unknown type: " << type << std::endl;
-            assert(false);
-    }
-    
+    case HORIZONTAL:
+        break;
+    case VERTICAL:
+        ret = bll::bind(pnt_rmap_V, bll::_1, bll::_1);
+        break;
+    case DIAGONAL:
+        ret = bll::bind(pnt_rmap_D, bll::_1, bll::_1, nr_rows_);
+        break;
+    case REV_DIAGONAL:
+        ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, nr_cols_);
+        break;
+    case BLOCK_ROW_TYPE_NAME(2):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(3):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(3), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(4):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(4), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(5):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(5), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(6):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(6), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(7):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(7), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(8):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(8), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(2):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(3):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(3), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(4):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(4), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(5):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(5), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(6):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(6), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(7):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(7), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(8):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(8), bll::_1, bll::_1);
+        break;
+    default:
+        std::cerr << "Unknown type: " << type << std::endl;
+        assert(false);
+    }    
+
     return ret;
 }
 
 inline TransformFn SPM::GetXformFn(SpmIterOrder type)
 {
     boost::function<void (CooElem &p)> ret;
-    
+
     switch(type) {
-        case HORIZONTAL:
-            ret = NULL;
-            break;
-        case VERTICAL:
-            ret = bll::bind(pnt_map_V, bll::_1, bll::_1);
-            break;
-        case DIAGONAL:
-            ret = bll::bind(pnt_map_D, bll::_1, bll::_1, this->nrows);
-            break;
-        case REV_DIAGONAL:
-            ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, this->ncols);
-            break;
-        case BLOCK_ROW_TYPE_NAME(2):
-            ret = bll::bind(BLOCK_ROW_MAP_NAME(2), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(3):
-            ret = bll::bind(BLOCK_ROW_MAP_NAME(3), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(4):
-            ret = bll::bind(BLOCK_ROW_MAP_NAME(4), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(5):
-            ret = bll::bind(BLOCK_ROW_MAP_NAME(5), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(6):
-            ret = bll::bind(BLOCK_ROW_MAP_NAME(6), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(7):
-            ret = bll::bind(BLOCK_ROW_MAP_NAME(7), bll::_1, bll::_1);
-            break;
-        case BLOCK_ROW_TYPE_NAME(8):
-            ret = bll::bind(BLOCK_ROW_MAP_NAME(8), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(2):
-            ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(3):
-            ret = bll::bind(BLOCK_COL_MAP_NAME(3), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(4):
-            ret = bll::bind(BLOCK_COL_MAP_NAME(4), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(5):
-            ret = bll::bind(BLOCK_COL_MAP_NAME(5), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(6):
-            ret = bll::bind(BLOCK_COL_MAP_NAME(6), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(7):
-            ret = bll::bind(BLOCK_COL_MAP_NAME(7), bll::_1, bll::_1);
-            break;
-        case BLOCK_COL_TYPE_NAME(8):
-            ret = bll::bind(BLOCK_COL_MAP_NAME(8), bll::_1, bll::_1);
-            break;
-        default:
-            std::cerr << "Unknown type: " << type << std::endl;
-            assert(false);
+    case HORIZONTAL:
+        ret = NULL;
+        break;
+    case VERTICAL:
+        ret = bll::bind(pnt_map_V, bll::_1, bll::_1);
+        break;
+    case DIAGONAL:
+        ret = bll::bind(pnt_map_D, bll::_1, bll::_1, nr_rows_);
+        break;
+    case REV_DIAGONAL:
+        ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, nr_cols_);
+        break;
+    case BLOCK_ROW_TYPE_NAME(2):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(3):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(3), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(4):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(4), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(5):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(5), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(6):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(6), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(7):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(7), bll::_1, bll::_1);
+        break;
+    case BLOCK_ROW_TYPE_NAME(8):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(8), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(2):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(3):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(3), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(4):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(4), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(5):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(5), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(6):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(6), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(7):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(7), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(8):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(8), bll::_1, bll::_1);
+        break;
+    default:
+        std::cerr << "Unknown type: " << type << std::endl;
+        assert(false);
     }
-    
+
     return ret;
 }
 
@@ -677,33 +685,36 @@ inline TransformFn SPM::GetTransformFn(SpmIterOrder from_type,
     xform_fn = GetXformFn(to_type);
     if (xform_fn == NULL)
         return rxform_fn;
+        
     if (rxform_fn != NULL)
         xform_fn = bll::bind(xform_fn,(bll::bind(rxform_fn, bll::_1), bll::_1));
+        
     return xform_fn;
 }
 
 SPM *SPM::GetWindow(uint64_t rs, uint64_t length)
 {
-    if (rs + length > this->rowptr_size - 1)
-        length = this->rowptr_size - rs - 1;
+    if (rs + length > rowptr_size_ - 1)
+        length = rowptr_size_ - rs - 1;
 
     SPM *ret = new SPM();
-    uint64_t es = this->rowptr[rs];
-    uint64_t ee = this->rowptr[rs+length];
+    uint64_t es = rowptr_[rs];
+    uint64_t ee = rowptr_[rs+length];
 
-    ret->rowptr = new uint64_t[length+1];
-    ret->rowptr_size = length + 1;
-    for (uint64_t i = 0; i < ret->rowptr_size; i++)
-        ret->rowptr[i] = this->rowptr[rs+i] - es;
-    ret->elems = &this->elems[es];
-    ret->elems_size = ee - es;
-    ret->nrows = ret->rowptr_size - 1;
-    ret->ncols = this->ncols;
-    ret->nnz = ret->elems_size;
-    ret->row_start = this->row_start + rs;
-    ret->type = this->type;
+    ret->rowptr_ = new uint64_t[length+1];
+    ret->rowptr_size_ = length + 1;
+    for (uint64_t i = 0; i < ret->rowptr_size_; i++)
+        ret->rowptr_[i] = rowptr_[rs+i] - es;
+
+    ret->elems_ = &elems_[es];
+    ret->elems_size_ = ee - es;
+    ret->nr_rows_ = ret->rowptr_size_ - 1;
+    ret->nr_cols_ = nr_cols_;
+    ret->nr_nzeros_ = ret->elems_size_;
+    ret->row_start_ = row_start_ + rs;
+    ret->type_ = type_;
     ret->elems_mapped_ = true;
-    assert(ret->rowptr[ret->rowptr_size-1] == ret->elems_size);
+    assert(ret->rowptr_[ret->rowptr_size_-1] == ret->elems_size_);
     return ret;
 }
 
@@ -713,60 +724,90 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
     std::vector<SpmCooElem>::iterator elem_begin, elem_end;
     PntIter p0, pe, p;
     SPM *ret = new SPM();
-    
-    if (rs + length > this->rowptr_size - 1)
-        length = this->rowptr_size - rs - 1;
-    
-    uint64_t es = this->rowptr[rs];
-    uint64_t ee = this->rowptr[rs+length];
-    
-    assert(es <= ee);  
+
+    if (rs + length > rowptr_size_ - 1)
+        length = rowptr_size_ - rs - 1;
+
+    uint64_t es = rowptr_[rs];
+    uint64_t ee = rowptr_[rs+length];
+
+    assert(es <= ee);
     elems.reserve(ee - es);
     p0 = PointsBegin(rs);
     pe = PointsEnd(rs + length - 1);
     for (p = p0; p != pe; ++p)
         elems.push_back(*p);
+
     elem_begin = elems.begin();
     elem_end = elems.end();
-    ret->SetElems(elem_begin, elem_end, rs+1);
+    ret->SetElems(elem_begin, elem_end, rs + 1);
     elems.clear();
-    ret->nrows = ret->rowptr_size - 1;
-    ret->ncols = this->ncols;
-    ret->nnz = ret->elems_size;
-    ret->row_start = this->row_start + rs;
-    ret->type = this->type;
-    ret->elems_mapped_ = true;   
-    assert(ret->rowptr[ret->rowptr_size-1] == ret->elems_size);
+    ret->nr_rows_ = ret->rowptr_size_ - 1;
+    ret->nr_cols_ = nr_cols_;
+    ret->nr_nzeros_ = ret->elems_size_;
+    ret->row_start_ = row_start_ + rs;
+    ret->type_ = type_;
+    ret->elems_mapped_ = true;
+    assert(ret->rowptr_[ret->rowptr_size_-1] == ret->elems_size_);
     return ret;
 }
 
 void SPM::PutWindow(const SPM *window)
 {
     assert(window);
-    assert(this->type == window->type);
+    assert(type_ == window->type_);
 
-    uint64_t rs = window->row_start - this->row_start;
-    uint64_t es = this->rowptr[rs];
+    uint64_t rs = window->row_start_ - this->row_start_;
+    uint64_t es = this->rowptr_[rs];
 
-    for (uint64_t i = 0; i < window->rowptr_size; i++)
-        this->rowptr[rs+i] = es + window->rowptr[i];
+    for (uint64_t i = 0; i < window->rowptr_size_; i++)
+        this->rowptr_[rs+i] = es + window->rowptr_[i];
 
     if (!window->elems_mapped_)
-        memcpy(&this->elems[es], window->elems,
-               window->elems_size*sizeof(SpmRowElem));
+        memcpy(&elems_[es], window->elems_,
+               window->elems_size_*sizeof(SpmRowElem));
+}
+
+SPM::Builder::Builder(SPM *spm, uint64_t nr_elems, uint64_t nr_rows) : spm_(spm)
+{
+    uint64_t *rowptr;
+
+    if (spm_->elems_mapped_) {
+        this->da_elems_ = dynarray_init_frombuff(sizeof(SpmRowElem),
+                                                 spm_->elems_size_,
+                                                 spm_->elems_,
+                                                 spm_->elems_size_);
+        dynarray_seek(this->da_elems_, 0);
+    } else {
+        this->da_elems_ =
+            dynarray_create(sizeof(SpmRowElem), nr_elems ? nr_elems : 512);
+    }
+
+    this->da_rowptr_ =
+        dynarray_create(sizeof(uint64_t), nr_rows ? nr_rows : 512);
+    rowptr = (uint64_t *)dynarray_alloc(this->da_rowptr_);
+    *rowptr = 0;
+}
+
+SPM::Builder::~Builder()
+{
+    assert(this->da_elems_ == NULL);
+    assert(this->da_rowptr_ == NULL);
 }
 
 SpmRowElem *SPM::Builder::AllocElem()
 {
     if (this->spm_->elems_mapped_)
-        assert(dynarray_size(this->da_elems_) < this->spm_->elems_size);
+        assert(dynarray_size(da_elems_) < spm_->elems_size_);
+        
     return (SpmRowElem *) dynarray_alloc(this->da_elems_);
 }
 
 SpmRowElem *SPM::Builder::AllocElems(uint64_t nr)
 {
     if (this->spm_->elems_mapped_)
-        assert(dynarray_size(this->da_elems_) + nr < this->spm_->elems_size);
+        assert(dynarray_size(da_elems_) + nr < spm_->elems_size_);
+        
     return (SpmRowElem *)dynarray_alloc_nr(this->da_elems_, nr);
 }
 
@@ -779,35 +820,94 @@ void SPM::Builder::NewRow(uint64_t rdiff)
 {
     uint64_t *rowptr;
     uint64_t elems_cnt;
-    
+
     elems_cnt = GetElemsCnt();
     rowptr = (uint64_t *)dynarray_alloc_nr(this->da_rowptr_, rdiff);
-    for (uint64_t i=0; i < rdiff; i++)
+    for (uint64_t i = 0; i < rdiff; i++)
         rowptr[i] = elems_cnt;
 }
 
 void SPM::Builder::Finalize()
 {
     uint64_t *last_rowptr;
-    
-    last_rowptr = (uint64_t *)dynarray_get_last(this->da_rowptr_);
+
+    last_rowptr = (uint64_t *) dynarray_get_last(this->da_rowptr_);
     if (*last_rowptr != dynarray_size(this->da_elems_))
         NewRow();
-    if (!spm_->elems_mapped_ && spm_->elems)
-	free(spm_->elems);
-    if (spm_->rowptr)
-	free(spm_->rowptr);
+
+    if (!spm_->elems_mapped_ && spm_->elems_)
+        free(spm_->elems_);
+
+    if (spm_->rowptr_)
+        free(spm_->rowptr_);
+
     if (spm_->elems_mapped_)
-        assert(spm_->elems_size == dynarray_size(da_elems_));
-	spm_->elems_size = dynarray_size(da_elems_);
+        assert(spm_->elems_size_ == dynarray_size(da_elems_));
+
+    spm_->elems_size_ = dynarray_size(da_elems_);
+
     if (spm_->elems_mapped_)
         free(this->da_elems_);
     else
-        spm_->elems = (SpmRowElem *)dynarray_destroy(da_elems_);
-    
-    spm_->rowptr_size = dynarray_size(da_rowptr_);
-    spm_->rowptr = (uint64_t *)dynarray_destroy(da_rowptr_);
+        spm_->elems_ = (SpmRowElem *) dynarray_destroy(da_elems_);
+
+    spm_->rowptr_size_ = dynarray_size(da_rowptr_);
+    spm_->rowptr_ = (uint64_t *) dynarray_destroy(da_rowptr_);
     this->da_elems_ = this->da_rowptr_ = NULL;
+}
+
+SPM::PntIter::PntIter(SPM *spm, uint64_t r_idx) : spm_(spm), row_idx(r_idx)
+{
+    uint64_t *rp = spm_->rowptr_;
+    uint64_t rp_size = spm_->rowptr_size_;
+    
+    assert(r_idx < rp_size);
+    while (r_idx + 1 < rp_size && rp[r_idx] == rp[r_idx+1])
+        r_idx++;
+        
+    this->row_idx = r_idx;
+    this->elm_idx = rp[r_idx];
+}
+
+bool SPM::PntIter::operator==(const PntIter &pi)
+{
+    return (spm_ = pi.spm_) && (row_idx == pi.row_idx) &&
+           (elm_idx == pi.elm_idx);
+}
+
+bool SPM::PntIter::operator!=(const PntIter &pi)
+{
+    return !(*this == pi);
+}
+
+void SPM::PntIter::operator++()
+{
+    uint64_t *rp = spm_->rowptr_;
+    uint64_t rp_size = spm_->rowptr_size_;
+    
+    assert(this->elm_idx < spm_->elems_size_);
+    assert(this->row_idx < rp_size);
+    this->elm_idx++;
+    while (this->row_idx + 1 < rp_size && rp[this->row_idx+1] == this->elm_idx)
+        this->row_idx++;
+}
+
+SpmCooElem SPM::PntIter::operator*()
+{
+    SpmCooElem ret;
+    SpmRowElem *e;
+    DeltaRLE *p;
+    
+    ret.y = this->row_idx + 1;
+    e = spm_->elems_ + this->elm_idx;
+    ret.x = e->x;
+    ret.val = e->val;
+    p = e-> pattern;
+    ret.pattern = (p == NULL) ? NULL : p->Clone();
+    if (p != NULL)
+        delete p;
+        
+    return ret;
 }
 
 //*** Do I keep the code from now on;
@@ -817,15 +917,15 @@ void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
 {
     uint64_t i,j;
     CooElem p;
-    
-    for (i=1; i <= y; i++) {
-        for (j=1; j <= x;  j++) {
+
+    for (i = 1; i <= y; i++) {
+        for (j = 1; j <= x;  j++) {
             p.y = i;
             p.x = j;
             xform_fn(p);
             out << p << " ";
         }
-        
+
         out << std::endl;
     }
 }
@@ -833,7 +933,7 @@ void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
 void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 {
     boost::function<void (CooElem &p)> xform_fn;
-    
+
     xform_fn = bll::bind(pnt_map_D, bll::_1, bll::_1, y);
     PrintTransform(y, x, xform_fn, out);
 }
@@ -841,39 +941,44 @@ void PrintDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 void PrintRDiagTransform(uint64_t y, uint64_t x, std::ostream &out)
 {
     boost::function<void (CooElem &p)> xform_fn;
-    
+
     xform_fn = bll::bind(pnt_map_rD, bll::_1, bll::_1, x);
     PrintTransform(y, x, xform_fn, out);
 }
 
-void TestTransform(uint64_t y, uint64_t x, TransformFn xform_fn, TransformFn rxform_fn)
+void TestTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
+                   TransformFn rxform_fn)
 {
-	uint64_t i,j;
-	CooElem p0, p1;
-	for (i=1; i <= y; i++){
-		for (j=1; j <= x;  j++){
-			p0.y = i;
-			p0.x = j;
-			xform_fn(p0);
-			p1.y = p0.y;
-			p1.x = p0.x;
-			rxform_fn(p1);
-			if ( (p1.y != i) || (p1.x != j) ){
-				std::cout << "Error for " << i << "," << j << std::endl;
-				std::cout << "Transformed: " << p0.y << "," << p0.x << std::endl;
-				std::cout << "rTransformed:" << p1.y << "," << p1.x << std::endl;
-				exit(1);
-			}
-		}
-	}
+    uint64_t i,j;
+    CooElem p0, p1;
+    
+    for (i = 1; i <= y; i++) {
+        for (j = 1; j <= x;  j++){
+            p0.y = i;
+            p0.x = j;
+            xform_fn(p0);
+            p1.y = p0.y;
+            p1.x = p0.x;
+            rxform_fn(p1);
+            if (p1.y != i || p1.x != j) {
+                std::cout << "Error for " << i << "," << j << std::endl;
+                std::cout << "Transformed: " << p0.y << "," << p0.x
+                          << std::endl;
+                std::cout << "rTransformed:" << p1.y << "," << p1.x
+                          << std::endl;
+                exit(1);
+            }
+        }
+    }
 }
 
 void TestRDiagTransform(uint64_t y, uint64_t x)
 {
-	boost::function<void (CooElem &p)> xform_fn, rxform_fn;
-	xform_fn = bll::bind(pnt_map_rD, bll::_1, bll::_1, x);
-	rxform_fn = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, x);
-	TestTransform(y, x, xform_fn, rxform_fn);
+    boost::function<void (CooElem &p)> xform_fn, rxform_fn;
+    
+    xform_fn = bll::bind(pnt_map_rD, bll::_1, bll::_1, x);
+    rxform_fn = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, x);
+    TestTransform(y, x, xform_fn, rxform_fn);
 }
 
 

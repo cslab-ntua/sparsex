@@ -19,13 +19,10 @@ using namespace csx;
 #define CSX_TEMPLATE "csx_llvm_tmpl.llvm.bc"
 
 // state shared between all CsxJits
-// (CsxJits are one-per-spmv-thread)
 // We maintain a single Module and Context for LLVM.
-// This saves memory, but forces serialization of JITing spmv versions
-// for each thread
 static LLVMContext Ctx_;
 static Module     *Mod_ = NULL;
-namespace csx {
+
 void CsxJitInitGlobal(void)
 {
     static bool init = false;
@@ -36,7 +33,12 @@ void CsxJitInitGlobal(void)
     Mod_ = ModuleFromFile(CSX_TEMPLATE, Ctx_);
     init = true;
 }
-} /* end csx namespace */
+
+void CsxJitOptmize(void)
+{
+    assert(Mod_);
+    doOptimize(Mod_);
+}
 
 // Since LLVM Module is shared, Use a common JIT
 static ExecutionEngine *doJIT(void)
@@ -48,8 +50,6 @@ static ExecutionEngine *doJIT(void)
 
     return EE;
 }
-
-
 
 LLVMContext &CsxJit::getLLVMCtx()
 {
@@ -414,7 +414,7 @@ void CsxJit::BlockColCaseUnrolled(BasicBlock *BB,
     }
 #endif
 
-//    Bld->CreateStore(Myx[c-1], MyxPtr);
+    // Bld->CreateStore(Myx[c-1], MyxPtr);
     Bld->CreateBr(BB_exit);
 }
 
@@ -475,7 +475,7 @@ void CsxJit::doIncV()
 
 void CsxJit::doOp(Value *Myx, Value *Yindx)
 {
-//    doPrint(Myx, Yindx);
+    // doPrint(Myx, Yindx);
     doMul(Myx, Yindx);
     doIncV();
 }
@@ -588,8 +588,8 @@ void CsxJit::doBodyHook(std::ostream &os)
         // Alocate case + loop BBs
         BB_case = BasicBlock::Create(getLLVMCtx(), "case", BB->getParent(), BB_default);
 
-        type  = static_cast<SpmIterOrder>(pat_i->first / PID_OFFSET);
-        delta = pat_i->first % PID_OFFSET;
+        type  = static_cast<SpmIterOrder>(pat_i->first / CSX_PID_OFFSET);
+        delta = pat_i->first % CSX_PID_OFFSET;
         switch (type){
             // Deltas
         case 0:
@@ -686,13 +686,13 @@ void CsxJit::doBodyHook(std::ostream &os)
     }
 }
 
-void CsxJit::doHooks(std::ostream &os)
+void CsxJit::genCode(std::ostream &os)
 {
     doNewRowHook();
     doBodyHook(os);
 }
 
-void *CsxJit::doJit()
+void *CsxJit::getSpmvFn()
 {
     ExecutionEngine *JIT;
 

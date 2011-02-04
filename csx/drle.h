@@ -16,7 +16,6 @@
 #include <limits>
 #include <cassert>
 #include <cstdlib>
-#include <stdexcept>
 
 #include "spm.h"
 
@@ -60,43 +59,10 @@ private:
 public:    
     DRLE_Manager(SPM *_spm, long min_limit_=4, 
                  long max_limit_ = std::numeric_limits<long>::max(),
-	         double min_perc_=.1, uint64_t _sort_window_size = 0,
-	         split_alg_t _split_type = SPLIT_BY_ROWS,
-	         double probability = 1.0,
-	         uint64_t _samples_max = std::numeric_limits<uint64_t>::max()):
-	         spm(_spm), min_limit(min_limit_),
-	         max_limit(max_limit_), min_perc(min_perc_),
-	         sort_window_size_(_sort_window_size),
-	         split_type_(_split_type), sampling_probability_(probability),
-	         samples_max_(_samples_max)
-    {
-        // These are delimiters, ignore them by default.
-        AddIgnore(BLOCK_TYPE_START);
-        AddIgnore(BLOCK_COL_START);
-        AddIgnore(BLOCK_TYPE_END);
-        AddIgnore(BLOCK_ROW_TYPE_NAME(1));
-        AddIgnore(BLOCK_COL_TYPE_NAME(1));
-
-        CheckAndSetSorting();
-        if (sort_windows_) {
-            ComputeSortSplits();
-
-            // Initialize sampling stuff
-            CheckPropability(sampling_probability_);
-            srand48(0);
-            if (samples_max_ > sort_splits_.size())
-                samples_max_ = sort_splits_.size();
-            if (sampling_probability_ == 0) {
-                // Automatically adjust probability to uniformly sample the
-                // whole matrix
-                double new_sampling_probability = 
-                    std::min(1.0, ((double) samples_max_ + 1) / 
-                                                sort_splits_.size());
-                    
-                sampling_probability_ = new_sampling_probability;
-            }
-        }   
-    }
+	         double min_perc_=.1, uint64_t sort_window_size = 0,
+	         split_alg_t split_type = SPLIT_BY_ROWS,
+	         double sampling_probability = 1.0,
+	         uint64_t samples_max = std::numeric_limits<uint64_t>::max());
 
     /**
      *  Generate pattern statistics for a sub-matrix of spm.
@@ -108,7 +74,7 @@ public:
     DeltaRLE::Stats GenerateStats(SPM *spm, uint64_t rs, uint64_t re);
     DeltaRLE::Stats GenerateStats(uint64_t rs, uint64_t re);
 
-    typedef std::map <SpmIterOrder, DeltaRLE::Stats> StatsMap;
+    typedef std::map<SpmIterOrder, DeltaRLE::Stats> StatsMap;
     StatsMap stats;
 
     /**
@@ -127,7 +93,7 @@ public:
      */
     void OutStats(std::ostream &os=std::cout);
 
-    std::map <SpmIterOrder, std::set<uint64_t> > deltas_to_encode;
+    std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode;
     std::bitset<XFORM_MAX> xforms_ignore;
 
     /**
@@ -394,7 +360,8 @@ private:
     void CheckAndSetSorting();
     void DoCheckSortByRows();
     void DoCheckSortByNNZ();
-    void CheckPropability(double probability) {
+    void CheckPropability(double probability)
+    {
         assert((probability >= 0.0 && probability <= 1.0) &&
                "invalid sampling probability");
     }
@@ -415,19 +382,13 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os);
 class Node {
 public:
     uint32_t depth;
-    std::map <SpmIterOrder, std::set<uint64_t> > deltas_path;
+    std::map<SpmIterOrder, std::set<uint64_t> > deltas_path;
     SpmIterOrder *type_path;
     SpmIterOrder *type_ignore;
 
-    Node(uint32_t depth_) : depth(depth_) {
-        uint32_t i;
-
-        this->type_path = new SpmIterOrder[depth];
-        this->type_ignore = new SpmIterOrder[XFORM_MAX];
-        for (i=0; i<((uint32_t) XFORM_MAX); i++)
-            this->type_ignore[i] = NONE;
-    }
+    Node(uint32_t depth_);
     ~Node() {}
+    
     void PrintNode();
 
     /**
@@ -440,7 +401,7 @@ public:
     /**
      *  Copies a node to a new one and inserts an extra type in the end of the
      *  encoding sequence.
-     *
+     *  
      *  @param type   type which is inserted in the end.
      *  @param deltas deltas corresponding to type inserted.
      */

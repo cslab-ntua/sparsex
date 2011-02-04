@@ -5,32 +5,29 @@
 #include "llvm/Module.h"
 #include "llvm/Type.h"
 #include "llvm/Function.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/ValueSymbolTable.h"
-#include "llvm/TypeSymbolTable.h"
 #include "llvm/Constant.h"
 #include "llvm/Instruction.h"
-#include "llvm/Support/IRBuilder.h"
+#include "llvm/LLVMContext.h"
 #include "llvm/BasicBlock.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Linker.h"
-#include "llvm/Target/TargetData.h"
 #include "llvm/GlobalValue.h" /* Linkage */
 #include "llvm/PassManager.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Target/TargetData.h"
+#include "llvm/Transforms/Utils/Cloning.h" /* InlineFunction */
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/Verifier.h"
-#include "llvm/Transforms/Utils/Cloning.h" /* InlineFunction */
+#include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StandardPasses.h"
-#include "llvm/LLVMContext.h"
 
 #include "llvm_jit_help.h"
 
-using namespace llvm;
+/*
+ * LLVM (v2.7) helpers for JIT compilation
+ */
 
-/////////// Utility Functions ///////////
+using namespace llvm;
 
 Module *ModuleFromFile(const char *file, LLVMContext &Ctx)
 {
@@ -226,19 +223,21 @@ Function *CloneAndReplaceFn(Module *M,
     return newFn;
 }
 
-/*
-void PrintAllocas(Value *V)
+// wrapper for returning a JIT execution engine
+ExecutionEngine *mkJIT(Module *M)
 {
-    Value::use_iterator I;
-    for (I = V->use_begin(); I != V->use_end(); ++I){
-        I->dump();
-        AllocaInst *AI = dyn_cast<AllocaInst>(I);
-        if (AI){
-            std::cout  << "Alloca instruction\n";
-        }
+    ExecutionEngine *JIT;
+    std::string Error;
+
+    JIT = ExecutionEngine::createJIT(M, &Error);
+    if (!JIT){
+        std::cerr << "ExectionEngine::createJIT:" << Error << "\n";
+        exit(1);
     }
+    //std::cout << JIT->getTargetData()->getStringRepresentation() << "\n";
+
+    return JIT;
 }
-*/
 
 /* check that the function is void fn(void) */
 static inline int is_hook_type_ok(const Type *Ty)
@@ -247,7 +246,6 @@ static inline int is_hook_type_ok(const Type *Ty)
     return (FnTy->getNumParams() == 0)
            && (FnTy->getReturnType()->isVoidTy());
 }
-
 
 /* find a hook function, and verify its type and that is used once */
 static Instruction *get_hook(Module *M, const char *name)
@@ -314,21 +312,7 @@ static Instruction *get_hook(Module *M, const char *name, Function *Parent)
     return Hook;
 }
 
-
-#if 0
-IRBuilder *llvm_hook_builder(Module *M, const char *name)
-{
-    Instruction *Hook = get_hook(M,name);
-
-    /* remove the hook and create an IRBuilder in the proper place */
-    BasicBlock *BB = Hook->getParent();
-    BasicBlock::iterator BI(Hook);
-    BI = BB->getInstList().erase(BI);
-    IRBuilder *ret = new IRBuilder(BB, BI);
-    return ret;
-}
-#endif
-
+// core function for replacing a hook with thow basic-blocks
 static BasicBlock *__llvm_hook_newbb(Module *M, Instruction *Hook, BasicBlock **BBnext)
 {
     BasicBlock *BB = Hook->getParent();
@@ -365,32 +349,38 @@ BasicBlock *llvm_hook_newbb(Module *M, const char *name, Function *Parent,
 }
 
 
-// update map, with annotations from Module M
+// update the map with annotations from Module M
 // If F is !NULL, then consider only annotations inside F
 void Annotations::update(Module *M, Function *Parent)
 {
     Function *Fn;
     Value::use_iterator ui;
 
+	// find the annotation function
     Fn = M->getFunction("llvm.var.annotation");
     if (!Fn){
         std::cerr << "no annotations found" << std::endl;
         return;
     }
 
+	// initialize map, if needed
     if (this->map == NULL)
-        this->map = new AnnotationMap();
+        this->map = new AnnotMap();
 
+	// iterate over uses of the annotation function
     for (ui = Fn->use_begin(); ui != Fn->use_end(); ui++){
         CallInst *CI;
         Value *val;
         GlobalVariable *ptr;
         std::string str;
-        // jump trough the hoops
+
+        // jump trough C++'s hoops
         CI = cast<CallInst>(*ui);
         // if a Parent is included, filter instructions
         if (Parent && CI->getParent()->getParent() != Parent)
             continue;
+
+		// update map
         val = CI->getOperand(1)->stripPointerCasts();
         ptr = cast<GlobalVariable>(CI->getOperand(2)->stripPointerCasts());
         str = cast<ConstantArray>(ptr->getInitializer())->getAsString();
@@ -398,52 +388,44 @@ void Annotations::update(Module *M, Function *Parent)
         (*this->map)[str.c_str()] = val;
     }
 
-    // please, pretty please fix-me
+	// iterate in all annotation uses, and remove iterations
+	// continue, until no annotation is left
+    // please, pretty please, fix-me!
     for (;;){
-        bool erased = false;
+        bool again = false;
         for (ui = Fn->use_begin(); ui != Fn->use_end(); ++ui){
             CallInst *CI;
             CI = cast<CallInst>(*ui);
             if (Parent && CI->getParent()->getParent() != Parent)
                 continue;
             CI->eraseFromParent();
-            erased = true;
+            again = true;
             break;
         }
-        if (!erased)
+		// no more annotations, nothing else to do
+        if (!again)
             break;
     }
 }
 
+// get a value from the map
+Value *Annotations::getValue(const char *annotation)
+{
+    AnnotMap::iterator am = this->map->find(annotation);
+	if (am == this->map->end())
+		return NULL;
+    return am->getValue();
+}
+
+
+// dump map
 void Annotations::dump()
 {
-    AnnotationMap::iterator am = this->map->begin();
+    AnnotMap::iterator am = this->map->begin();
 
     for (; am != this->map->end(); ++am){
         std::cout << am->getKeyData() << "\n";
     }
 }
 
-Value *Annotations::getValue(const char *annotation)
-{
-    AnnotationMap::iterator am = this->map->find(annotation);
-    assert(am != this->map->end());
-    return am->getValue();
-}
-
-ExecutionEngine *mkJIT(Module *M)
-{
-    ExecutionEngine *JIT;
-    std::string Error;
-
-    JIT = ExecutionEngine::createJIT(M, &Error);
-    if (!JIT){
-        std::cerr << "ExectionEngine::createJIT:" << Error << "\n";
-        exit(1);
-    }
-
-    std::cout << JIT->getTargetData()->getStringRepresentation() << "\n";
-
-    return JIT;
-}
 
