@@ -43,7 +43,7 @@ endif
 #endif
 
 deps         = $(dynarray_dep) $(phash_dep)
-libspmv_deps = vector.o method.o mt_lib.o mmf.o spm_parse.o \
+libspmv_deps = vector.o method.o mt_lib.o mmf.o             \
                spm_crs.o spm_crs_mt.o spm_bcsr.o            \
                spm_csrdu_mul.o spm_csrdu.o                  \
                spm_crsvi_utils.o spm_crsvi.o spm_crsvi_mt.o \
@@ -66,9 +66,6 @@ method.o: method.c method.h
 	$(COMPILE) -c $< -o $@
 
 mt_lib.o: mt_lib.c mt_lib.h
-	$(COMPILE) -c $< -o $@
-
-spm_parse.o: spm_parse.c spm_parse.h
 	$(COMPILE) -c $< -o $@
 
 spm_crs.o:  spm_crs.c spm_crs.h

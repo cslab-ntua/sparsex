@@ -15,7 +15,6 @@
 #include "vector.h"
 #include "spm_crs.h"
 #include "mmf.h"
-#include "spm_parse.h"
 #include "spmv_method.h"
 
 void *SPM_CRS_NAME(_init_mmf)(char *mmf_file,
