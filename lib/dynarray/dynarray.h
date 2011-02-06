@@ -1,12 +1,12 @@
 #ifndef DYNARRAY_H__
 #define DYNARRAY_H__
 
-#include "common.h"
-
 struct dynarray;
 typedef struct dynarray dynarray_t;
 
-BEGIN_C_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 dynarray_t *dynarray_create(unsigned long elem_size,
 							unsigned long alloc_grain);
@@ -31,6 +31,8 @@ void dynarray_seek(struct dynarray *da, unsigned long idx);
 unsigned long dynarray_size(struct dynarray *da);
 void *dynarray_destroy(struct dynarray *da);
 
-END_C_DECLS
+#ifdef __cplusplus
+}
+#endif
 
 #endif	/* DYNARRAY_H__ */
