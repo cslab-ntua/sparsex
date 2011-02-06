@@ -65,6 +65,167 @@ int convert_string_to_string_sequence(char *str, char **str_buf,
     return next;
 }
 
+void x_get_options(int **xform_buf)
+{
+    char *xform_orig = getenv("XFORM_CONF");
+    
+    *xform_buf = (int *) malloc(XFORM_MAX * sizeof(int));
+    if (!(*xform_buf)) {
+        perror("malloc");
+        exit(1);
+    }
+    
+    if (xform_orig && strlen(xform_orig)) {
+        int next = 0;
+        int t = atoi(strtok(xform_orig, ","));
+        char *token;
+        
+        (*xform_buf)[next] = t;
+        ++next;
+        while ((token = strtok(NULL, ",")) != NULL) {
+            t = atoi(token);
+            (*xform_buf)[next] = t;
+            ++next;
+        }
+        
+        (*xform_buf)[next] = -1;
+    } else {
+        (*xform_buf)[0] = 0;
+        (*xform_buf)[1] = -1;
+    }
+    
+    std::cout << "Encoding type: ";
+    for (unsigned int i = 0; (*xform_buf)[i] != -1; i++) {
+        if (i != 0)
+            std::cout << ", ";
+        
+        std::cout << SpmTypesNames[(*xform_buf)[i]];
+    }
+    
+    std::cout << std::endl;
+}
+
+void encode_deltas_get_options(int ***deltas)
+{
+    char *encode_deltas_str = getenv("ENCODE_DELTAS");
+    
+    if (encode_deltas_str) {
+        ///> Init matrix deltas.
+        *deltas = (int **) malloc(XFORM_MAX * sizeof(int *));
+        if (!*deltas) {
+            perror("malloc");
+            exit(1);
+        }
+        
+        for (int i = 0; i < XFORM_MAX; i++) {
+            (*deltas)[i] = (int *) malloc(DELTAS_MAX * sizeof(int));
+            if (!(*deltas)[i]) {
+                perror("malloc");
+                exit(1);
+            }
+        }
+
+        ///> Fill deltas with the appropriate data.
+        char **temp = (char **) malloc(XFORM_MAX * sizeof(char *));
+        int temp_size = convert_string_to_string_sequence(encode_deltas_str,
+                                                          temp, "{", "}");
+        
+        for (int i = 0; i < temp_size; i++) {
+            int j=0;
+            char *token = strtok(temp[i], ",");
+            
+            (*deltas)[i][j] = atoi(token);
+            ++j;
+            while ((token = strtok(NULL, ",")) != NULL) {
+                (*deltas)[i][j] = atoi(token);
+                ++j;
+            }
+            
+            (*deltas)[i][j] = -1;
+        }
+        
+        free(temp);
+        
+        ///> Print deltas.
+        std::cout << "Deltas to Encode: ";
+        for (int i = 0; i < temp_size; i++) {
+            if (i != 0)
+                std::cout << "}, ";
+            std::cout << "{";
+            assert((*deltas)[i][0] != -1);
+            std::cout << (*deltas)[i][0];
+            for (int j = 1; (*deltas)[i][j] != -1; j++)
+                std::cout << "," << (*deltas)[i][j];
+        }
+        
+        std::cout << "}" << std::endl;
+    }
+}
+
+uint64_t wsize_get_options()
+{
+    const char *wsize_str = getenv("WINDOW_SIZE");
+    uint64_t wsize;
+    
+    if (!wsize_str) {
+        wsize = 0;
+        std::cout << "Window size: Not set" << std::endl;
+    }
+    else {
+        wsize = atol(wsize_str);
+        std::cout << "Window size: " << wsize << std::endl;
+    }
+    
+    return wsize;
+}
+
+uint64_t samples_get_options()
+{
+    const char *samples = getenv("SAMPLES");
+    uint64_t samples_max;
+    
+    if (!samples) {
+        samples_max = std::numeric_limits<uint64_t>::max();
+        std::cout << "Number of samples: Not set" << std::endl;
+    }
+    else {
+        samples_max = atol(samples);
+        std::cout << "Number of samples: " << samples_max << std::endl;
+    }
+    
+    return samples_max;
+}
+
+double probability_get_options()
+{
+    const char *sampling_prob_str = getenv("SAMPLING_PROB");
+    double sampling_prob;
+    
+    if (!sampling_prob_str) {
+        sampling_prob = 0.0;
+        std::cout << "Sampling prob: Not set" << std::endl;
+    }
+    else {
+        sampling_prob = atof(sampling_prob_str);
+        std::cout << "Sampling prob: " << sampling_prob << std::endl;
+    }
+    
+    return sampling_prob;
+}
+
+bool split_get_options()
+{
+    const char *split_blocks_str = getenv("SPLIT_BLOCKS");
+    bool split_blocks;
+    
+    if (!split_blocks_str)
+        split_blocks = false;
+    else
+        split_blocks = true;
+        
+    return split_blocks;
+}
+
 /**
  *  Parallel Preprocessing.
  *
@@ -88,6 +249,7 @@ void *thread_function(void *initial_data)
     DrleMg->IgnoreAll();
     for (int i = 0; data->xform_buf[i] != -1; ++i)
         DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
+        
     /**
      *  If deltas choices given encode the matrix with the order given by 
      *  XFORM_CONF, else find statistical data for the types in XFORM_CONF,
@@ -104,13 +266,13 @@ void *thread_function(void *initial_data)
     return 0;
 }
 
-static spm_mt_t *getSpmMt(char *mmf_fname)
+static spm_mt_t *GetSpmMt(char *mmf_fname)
 {
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
     SPM *Spms;
-    int *xform_buf;
-    int **deltas;
+    int *xform_buf = NULL;
+    int **deltas = NULL;
     Parameters *data;
     pthread_t *threads;
     CsxJit **Jits;
@@ -119,7 +281,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     // TODO: In case of MT_CONF=empty a default message is printed by mt_get_options
     mt_get_options(&nr_threads, &threads_cpus);
     std::cout << "MT_CONF=";
-    for (unsigned int i=0; i<nr_threads; i++) {
+    for (unsigned int i = 0; i < nr_threads; i++) {
         if (i != 0)
             std::cout << ",";
             
@@ -129,161 +291,39 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     std::cout << std::endl;
 
     ///> Take XFORM_CONF.
-    char *xform_orig = getenv("XFORM_CONF");
-    
-    xform_buf = (int *) malloc(XFORM_MAX*sizeof(int));
-    if (!xform_buf) {
-        perror("malloc");
-        exit(1);
-    }
-    
-    if (xform_orig && strlen(xform_orig)) {
-        int next = 0;
-        int t = atoi(strtok(xform_orig, ","));
-        char *token;
+    x_get_options(&xform_buf);
 
-        xform_buf[next] = t;
-        ++next;
-        while ( (token = strtok(NULL, ",")) != NULL) {
-            t = atoi(token);
-           xform_buf[next] = t;
-            ++next;
-        }
-        
-        xform_buf[next] = -1;
-    } else {
-        xform_buf[0] = 0;
-        xform_buf[1] = -1;
-    }
-    
-    std::cout << "Encoding type: ";
-    for (unsigned int i = 0; xform_buf[i] != -1; i++) {
-        int t = xform_buf[i];
-        if (i != 0)
-            std::cout << ", ";
-        
-        std::cout << SpmTypesNames[t];
-    }
-    
-    std::cout << std::endl;
-
-    ///>Take ENCODE_DELTAS
-    //TODO:Make a function (parse_csv_int(char *str, const char *delimeter, int **tokens, int max_tokens)
-    char  *encode_deltas_str = getenv("ENCODE_DELTAS");
-    
-    deltas = NULL;
-    if (encode_deltas_str) {
-        ///> Init matrix deltas.
-        deltas = (int **) malloc(XFORM_MAX*sizeof(int *));
-        if (!deltas) {
-            perror("malloc");
-            exit(1);
-        }
-        
-        for (int i=0; i<XFORM_MAX; i++) {
-            deltas[i] = (int *) malloc(DELTAS_MAX*sizeof(int));
-            if (!deltas[i]) {
-                perror("malloc");
-                exit(1);
-            }
-        }
-
-        ///> Fill deltas with the appropriate data.
-        char **temp = (char **) malloc(XFORM_MAX*sizeof(char *));
-        int temp_size = convert_string_to_string_sequence(encode_deltas_str,
-                                                          temp, "{", "}");
-        for (int i=0; i<temp_size; i++) {
-            int j=0;
-            char *token = strtok(temp[i], ",");
-            
-            deltas[i][j] = atoi(token);
-            ++j;
-            while ((token = strtok(NULL, ",")) != NULL) {
-                deltas[i][j] = atoi(token);
-                ++j;
-            }
-            deltas[i][j] = -1;
-        }
-        
-        ///> Print deltas.
-        std::cout << "Deltas to Encode: ";
-        for (int i=0; i<temp_size; i++) {
-            if (i != 0)
-                std::cout << "}, ";
-            std::cout << "{";
-            assert(deltas[i][0] != -1);
-            std::cout << deltas[i][0];
-            for (int j=1; deltas[i][j]!=-1; j++)
-                std::cout << "," << deltas[i][j];
-        }
-        
-        std::cout << "}" << std::endl;
-    }
+    ///> Take ENCODE_DELTAS
+    encode_deltas_get_options(&deltas);
 
     ///> Take WINDOW_SIZE.
-    const char *wsize_str = getenv("WINDOW_SIZE");
-    uint64_t wsize;
-    
-    if (!wsize_str) {
-        wsize = 0;
-        std::cout << "Window size: Not set" << std::endl;
-    }
-    else {
-        wsize = atol(wsize_str);
-        std::cout << "Window size: " << wsize << std::endl;
-    }
+    uint64_t wsize = wsize_get_options();
 
     ///> Take SAMPLES.
-    const char *samples = getenv("SAMPLES");
-    uint64_t samples_max;
-    
-    if (!samples) {
-        samples_max = std::numeric_limits<uint64_t>::max();
-        std::cout << "Number of samples: Not set" << std::endl;
-    }
-    else {
-        samples_max = atol(samples);
-        std::cout << "Number of samples: " << samples_max << std::endl;
-    }
+    uint64_t samples_max = samples_get_options();
 
     ///> Take SAMPLING_PROB.
-    const char *sampling_prob_str = getenv("SAMPLING_PROB");
-    double sampling_prob;
-    
-    if (!sampling_prob_str) {
-        sampling_prob = 0.0;
-        std::cout << "Sampling prob: Not set" << std::endl;
-    }
-    else {
-        sampling_prob = atof(sampling_prob_str);
-        std::cout << "Sampling prob: " << sampling_prob << std::endl;
-    }
+    double sampling_prob = probability_get_options();
 
     ///> Take SPLIT_BLOCKS
-    const char *split_blocks_str = getenv("SPLIT_BLOCKS");
-    bool split_blocks;
-    
-    if (!split_blocks_str)
-        split_blocks = false;
-    else
-        split_blocks = true;
+    bool split_blocks = split_get_options();
 
     ///> Initalization of spm_mt.
     spm_mt = (spm_mt_t *) malloc(sizeof(spm_mt_t));
-    if (!spm_mt){
+    if (!spm_mt) {
         perror("malloc");
         exit(1);
     }
     
     spm_mt->nr_threads = nr_threads;
     spm_mt->spm_threads =
-        (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t)*nr_threads);
+        (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t) * nr_threads);
     if (!spm_mt->spm_threads){
         perror("malloc");
         exit(1);
     }
     
-    for (unsigned int i=0; i<nr_threads; i++)
+    for (unsigned int i = 0; i < nr_threads; i++)
         spm_mt->spm_threads[i].cpu = threads_cpus[i];
 
     ///> Load the appropriate sub-matrix to each thread.
@@ -295,7 +335,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     timer_start(&timer);
 
     ///> Initalization of pthreads.
-    threads = (pthread_t *) malloc((nr_threads-1)*sizeof(pthread_t));
+    threads = (pthread_t *) malloc((nr_threads - 1) * sizeof(pthread_t));
     if (!threads){
         perror("malloc");
         exit(1);
@@ -303,7 +343,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 
     ///> Parameters passed to each thread.
     data = new Parameters[nr_threads];
-    for (unsigned int i=0; i < nr_threads; i++) {
+    for (unsigned int i = 0; i < nr_threads; i++) {
         data[i].Spm = &Spms[i];
         data[i].wsize = wsize;
         data[i].thread_no = i;
@@ -316,8 +356,9 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     }
 
     ///> Parallel Preprocessing for each thread.
-    for (unsigned int i=1; i<nr_threads; i++)
+    for (unsigned int i = 1; i < nr_threads; i++)
         pthread_create(&threads[i-1],NULL,thread_function,(void *) &data[i]);
+        
     thread_function((void *) &data[0]);
 
     ///> Wait for other threads to finish.
@@ -327,14 +368,14 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     CsxJitInitGlobal();
 
     ///> Init Jits.
-    Jits = (CsxJit **) malloc(nr_threads*sizeof(CsxJit *));
+    Jits = (CsxJit **) malloc(nr_threads * sizeof(CsxJit *));
     if (!Jits){
         perror("malloc");
         exit(1);
     }
 
     ///> Serial Preprocessing.
-    for (unsigned int i=0; i < nr_threads; ++i){
+    for (unsigned int i = 0; i < nr_threads; ++i){
         /**
          *  Init CsxManager which holds the final CSX form of encoded
          *  sub-matrix.
@@ -354,7 +395,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
 
     ///> Optimize generated code and apply it to each thread seperately.
     CsxJitOptmize();
-    for (unsigned int i=0; i < nr_threads; i++){
+    for (unsigned int i=0; i < nr_threads; i++) {
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->getSpmvFn();
         delete Jits[i];
     }
@@ -373,7 +414,7 @@ static spm_mt_t *getSpmMt(char *mmf_fname)
     return spm_mt;
 }
 
-static void putSpmMt(spm_mt_t *spm_mt)
+static void PutSpmMt(spm_mt_t *spm_mt)
 {
     free(spm_mt->spm_threads);
     free(spm_mt);
@@ -399,7 +440,7 @@ static unsigned long CsxSize(spm_mt_t *spm_mt)
     unsigned long ret;
 
     ret = 0;
-    for (unsigned int i=0; i<spm_mt->nr_threads; i++) {
+    for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
         spm_mt_thread_t *t = spm_mt->spm_threads + i;
         csx_double_t *csx = (csx_double_t *)t->spm;
         
@@ -433,11 +474,11 @@ int main(int argc, char **argv)
     }
 
     for (int i = 1; i < argc; i++) {
-        spm_mt = getSpmMt(argv[i]);
+        spm_mt = GetSpmMt(argv[i]);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
-        putSpmMt(spm_mt);
+        PutSpmMt(spm_mt);
     }
     return 0;
 }
