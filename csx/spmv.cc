@@ -16,12 +16,12 @@
 #include "llvm_jit_help.h"
 
 extern "C" {
-#include "../mt_lib.h"
-#include "../spmv_method.h"
-#include "../spm_crs.h"
-#include "../spm_mt.h"
-#include "../spmv_loops_mt.h"
-#include "../../prfcnt/timer.h"
+#include "mt_lib.h"
+#include "spmv_method.h"
+#include "spm_crs.h"
+#include "spm_mt.h"
+#include "spmv_loops_mt.h"
+#include "timer.h"
 }
 
 #define DELTAS_MAX  64  ///> Max deltas that an encoding type may have.

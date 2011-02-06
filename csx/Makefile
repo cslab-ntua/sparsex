@@ -3,18 +3,22 @@
 all: spmv windows-sort csx_llvm_tmpl.llvm.bc
 
 ## Configuration
-libdir	     = ../lib
-dynarray_dir = $(libdir)/dynarray
-protodir     = ./proto
 llvmconf     = llvm-config-2.7
 
+dynarray_dir = ../lib/dynarray
+spm_dir      = ../lib/spm
+prfcnt_dir   = ../lib/prfcnt
+protodir     = ./proto
+
 GXX            ?= g++
-CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCPU_CORE
+CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
+INC            ?=
+
 #CXXFLAGS       += -Winline
 LDFLAGS         =
 CXXFLAGS       += -ggdb -rdynamic
 DEFS            =
-INC             =
+INC            += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir)
 
 ## cairomm
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
@@ -27,7 +31,6 @@ LLVM_CXXFLAGS   = $(shell $(llvmconf) --cxxflags)
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 
 dynarray_dep    = $(dynarray_dir)/dynarray.o
-INC            += -I$(libdir) -I$(dynarray_dir)
 
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
@@ -76,7 +79,7 @@ jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 spmv.o: spmv.cc
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
-spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o ../libspmv.o
+spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(GXX) $(LDFLAGS)  -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 clean:
