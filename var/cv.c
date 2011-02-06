@@ -1,6 +1,3 @@
-#ifndef __VC_H__
-#define __VC_H__
-
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -98,32 +95,6 @@
 
 int main(int argc, char **argv)
 {
-	#if 0
-	int val, new_val;
-	uc_ptr = foo;
-	
-	unsigned char foo[4] = {0, 0, 0, 0};
-	if (argc < 2){
-		printf("usage: %s <int>\n", argv[0]);
-		exit(1);
-	}
-
-	val = strtoimax(argv[1], &error, 10);
-	if ( *error != '\0' ){
-		printf("error: %s is not an int\n", argv[1]);
-		exit(1);
-	}
-	uc_put_int(val);
-
-	int i;
-	for (i=0; i<4; i++){
-		printf("cu-- %d, %lu\n", i, (unsigned long)foo[i]);
-	}
-
-	uc_ptr = foo;
-	new_val = uc_get_int();
-	printf("%d %d\n", val, new_val);
-	#endif
 	unsigned char *foo = malloc(MAX_INT_SUPPORTED*4);
 	long i = 0;
 	if ( !foo ){
@@ -135,7 +106,7 @@ int main(int argc, char **argv)
 	for (i=0; i<MAX_INT_SUPPORTED; i++){
 		uc_put_int((int)(i%64));
 	}
-	
+
 	uc_ptr = foo;
 	tsc_t tsc;
 	unsigned long ret=0;
@@ -154,5 +125,3 @@ int main(int argc, char **argv)
 }
 
 #endif /* VC_TEST */
-
-#endif /* __VC_H__ */

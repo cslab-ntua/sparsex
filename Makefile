@@ -227,15 +227,6 @@ spmv_crs64: libspmv.o spmv_crs64.o
 mmf_drle: mmf_drle.o mmf.o $(dynarray_dep)
 	$(COMPILE) $^ -o $@
 
-cv_simple: cv_simple.o libspmv.o
-	$(COMPILE_UR)  cv_simple.o libspmv.o -o $@
-
-cv1: cv1.o libspmv.o
-	$(COMPILE_UR)  cv1.o libspmv.o -o $@
-
-cv1_d: cv1_d.o libspmv.o
-	$(COMPILE_UR)  cv1_d.o libspmv.o -o $@
-
 vals_idx: vals_idx.c
 	$(COMPILE) $(PYCFLAGS) $(PYLIBS) $< -o $@
 
