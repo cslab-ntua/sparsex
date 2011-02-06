@@ -161,7 +161,7 @@ struct CooElem : public RowElem {
 /**
  * Compares two coordinate elements. This function imposes a lexicographical
  * order in the elements of the matrix.
- * 
+ *
  * @param p0 the first CooElem to compare
  * @param p1 the second CooElem to compare
  * @return   1 if <tt>p0</tt> succeeds <tt>p1</tt> in lexicographical order,
@@ -176,7 +176,7 @@ static inline int CooCmp(const CooElem &p0, const CooElem &p1)
     ret = p0.y - p1.y;
     if (ret == 0)
         ret = p0.x - p1.x;
-        
+
     if (ret > 0)
         return 1;
     else if (ret < 0)
@@ -265,7 +265,7 @@ public:
         long ret = jmp;
         if (order == type_)
             ret += ((size_ - 1) * delta_);
-            
+
         return ret;
     }
 
@@ -496,19 +496,24 @@ private:
 
 public:
     SPM() : type_(NONE), elems_(NULL), rowptr_(NULL) {}
-    
+
     ~SPM()
     {
         if (!elems_mapped_ && elems_)
             free(elems_);
-            
+
         if (rowptr_)
             free(rowptr_);
     };
-    
+
     uint64_t GetNrRows()
     {
         return rowptr_size_ - 1;
+    }
+
+    uint64_t GetNrCols()
+    {
+        return nr_cols_;
     }
 
     uint64_t GetNrNonzeros()
@@ -573,8 +578,8 @@ public:
     static SPM *LoadMMF_mt(MMF &mmf, const long nr);
 
     /**
-     *  Printing methods. 
-     */ 
+     *  Printing methods.
+     */
     void Print(std::ostream &out = std::cout);
     void PrintElems(std::ostream &out = std::cout);
     void PrintRows(std::ostream &out = std::cout);
@@ -723,7 +728,7 @@ class SPM::PntIter : public std::iterator<std::forward_iterator_tag, CooElem>
 public:
     PntIter(): spm_(NULL), row_idx_(0), elem_idx_(0) { }
     PntIter(SPM *spm, uint64_t row_idx);
-    
+
     bool operator==(const PntIter &pi);
     bool operator!=(const PntIter &pi);
     void operator++();

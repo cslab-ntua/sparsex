@@ -43,9 +43,9 @@ void Draw(SPM &spm,
 	// TODO:
 	//  If not HORIZNTAL, transform and transofrm back after end
 	if (row_end == 0)
-		row_end = spm.nrows;
+		row_end = spm.GetNrRows();
 	max_rows = (double)(row_end - row_start);
-	max_cols = (double)spm.ncols;
+	max_cols = (double)spm.GetNrCols();
 
 	// Lambdas for calculationg coordinates
 	coord_fn = (((bll::_1 - .5)*(bll::_2))/(bll::_3));
@@ -54,8 +54,8 @@ void Draw(SPM &spm,
 
 	cr->set_line_cap(Cairo::LINE_CAP_ROUND);
 	cr->set_line_width(2.0);
-	p_start = spm.points_begin(row_start);
-	p_end = spm.points_end(row_end);
+	p_start = spm.PointsBegin(row_start);
+	p_end = spm.PointsEnd(row_end);
 	for (p = p_start; p != p_end; ++p){
 		SpmCooElem elem = *p;
 		if (elem.pattern == NULL){
@@ -71,14 +71,14 @@ void Draw(SPM &spm,
 				cr->line_to(x_pos, y_pos);
 			}
 		} else {
-			Pattern::Generator *gen;
+			DeltaRLE::Generator *gen;
 			cr->save();
 			cr->set_source_rgb(.9, .1, .1);
 			gen = elem.pattern->generator(static_cast<CooElem>(elem));
 			// FIXME add mapping functions (ontop of {x,y}_coord fneeded
-			assert(spm.type == elem.pattern->type);
-			while ( !gen->isEmpty() ){
-				CooElem e = gen->next();
+			assert(spm.GetType() == elem.pattern->GetType());
+			while ( !gen->IsEmpty() ){
+				CooElem e = gen->Next();
 				cr->move_to(x_coord(e.x), y_coord(e.y));
 				// FIXME: add drawing
 			}
@@ -95,7 +95,7 @@ extern char *optarg;
 
 int main(int argc, char *argv[])
 {
-	char *out_file = "out.png";
+	char *out_file = (char *)"out.png";
 	bool symmetric = false;
 	char c;
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 
 	SPM *Spm;
 
-	Spm = SPM::loadMMF(argv[optind]);
+	Spm = SPM::LoadMMF(argv[optind]);
 	Draw(*Spm, out_file, 0, 0, 800, 800, symmetric);
 
 	return 0;
