@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 #include "dynarray.h"
-//#include "debug.h"
 
 struct dynarray {
 	void *elems;

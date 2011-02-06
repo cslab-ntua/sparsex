@@ -2,20 +2,14 @@
 
 all: dynarray.o
 
-## Configuration
-debug_dir    = ../debug/
-cpu_dir      = ../../../cpu/
+common_dir = ../
 
+## Configuration
 GCC         ?= gcc
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
-INC          = -I$(debug_dir)
-
-CPU         ?= $(shell $(cpu_dir)/cpu_info.sh)
-ifeq ($(CPU),NIAGARA)
-	CFLAGS += -m64
-endif
+INC          = -I$(common_dir)
 
 dynarray.o: dynarray.c dynarray.h
 	$(COMPILE) -c $< -o $@

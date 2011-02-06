@@ -43,12 +43,12 @@ void CsxJitOptmize(void)
 // Since LLVM Module is shared, Use a common JIT
 static ExecutionEngine *doJIT(void)
 {
-    static ExecutionEngine *EE = NULL;
+    static ExecutionEngine *ee = NULL;
 
-    if (EE == NULL)
-        EE = mkJIT(Mod_);
+    if (ee == NULL)
+        ee = mkJIT(Mod_);
 
-    return EE;
+    return ee;
 }
 
 LLVMContext &CsxJit::getLLVMCtx()
@@ -66,7 +66,8 @@ CsxJit::CsxJit(CsxManager *_csxmg, unsigned int tid) : CsxMg(_csxmg)
     // create a new spmv function for the therad
     std::ostringstream str_stream;
     str_stream << "csx_spmv_" << tid;
-    this->SpmvF = doCloneFunction(M, "csx_spmv_template", str_stream.str().c_str());
+    this->SpmvF = doCloneFunction(M, "csx_spmv_template",
+                                  str_stream.str().c_str());
     //str_stream << ".llvm.bc";
     //ModuleToFile(this->M, str_stream.str().c_str());
 
@@ -127,7 +128,7 @@ void CsxJit::doNewRowHook()
     Bld->SetInsertPoint(BB);
     doStoreYr();
 
-    if (!CsxMg->row_jmps){
+    if (!CsxMg->HasRowJmps()) {
         v = Bld->CreateLoad(YindxPtr, "y_indx");
         v = Bld->CreateAdd(v, One64, "y_indx_inc");
         Bld->CreateStore(v, YindxPtr);
@@ -138,9 +139,12 @@ void CsxJit::doNewRowHook()
         Value *Ul;
         PHINode *YindxAdd;
 
-        BB_rjmp = BasicBlock::Create(getLLVMCtx(), "rjmp", BB->getParent(), BB_next);
-        BB_rend = BasicBlock::Create(getLLVMCtx(), "rend", BB->getParent(), BB_next);
-        RJmpBit = ConstantInt::get(Type::getInt32Ty(getLLVMCtx()), CTL_RJMP_BIT);
+        BB_rjmp = BasicBlock::Create(getLLVMCtx(), "rjmp",
+                                     BB->getParent(), BB_next);
+        BB_rend = BasicBlock::Create(getLLVMCtx(), "rend",
+                                     BB->getParent(), BB_next);
+        RJmpBit = ConstantInt::get(Type::getInt32Ty(getLLVMCtx()),
+                                   CTL_RJMP_BIT);
         Yindx = Bld->CreateLoad(YindxPtr, "y_indx");
         Test = Bld->CreateCall2(TestBitF, FlagsPtr, RJmpBit);
         Test = Bld->CreateICmpEQ(Test, Zero32, "bit_test");
@@ -301,6 +305,7 @@ void CsxJit::BlockRowCaseRolled(BasicBlock *BB,
         doOp(Myx, Yindx);
         Yindx = Bld->CreateAdd(Yindx, One64);
     }
+
     NewMyx = Bld->CreateGEP(Myx, One64);
     NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
     Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
@@ -336,6 +341,7 @@ void CsxJit::BlockColCaseRolled(BasicBlock *BB,
         doOp(Myx, Yindx);
         Myx = Bld->CreateGEP(Myx, One64);
     }
+
     NewYindx = Bld->CreateAdd(Yindx, One64);
     NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
     Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
@@ -450,7 +456,7 @@ void CsxJit::doMul(Value *Myx, Value *Yindx)
     V = Bld->CreateLoad(Bld->CreateLoad(Vptr, "v_ptr"), "val");
     V = Bld->CreateMul(V, X, "mul");
 
-    if (Yindx == NULL){
+    if (Yindx == NULL) {
         Value *Yr;
         // use Yr to store the result
         Yr = Bld->CreateLoad(YrPtr, "yr");
@@ -484,7 +490,7 @@ void CsxJit::doDeltaAddMyx(int delta_bytes)
 {
     Function *F = NULL;
 
-    switch (delta_bytes){
+    switch (delta_bytes) {
         case 1:
             F = M->getFunction("u8_get");
             break;
@@ -521,7 +527,7 @@ void CsxJit::DeltaCase(BasicBlock *BB,
 
     Bld->SetInsertPoint(BB);
     // align ctl
-    if (delta_bytes > 1){
+    if (delta_bytes > 1) {
         Align = ConstantInt::get(Type::getInt32Ty(getLLVMCtx()),delta_bytes);
         Bld->CreateCall2(AlignF, CtlPtr, Align);
     }
@@ -563,12 +569,14 @@ void CsxJit::doBodyHook(std::ostream &os)
 
     // get pattern for switch instruction
     Bld->SetInsertPoint(BB);
-    PatternMask = ConstantInt::get(Type::getInt8Ty(getLLVMCtx()), CTL_PATTERN_MASK);
+    PatternMask = ConstantInt::get(Type::getInt8Ty(getLLVMCtx()),
+                                   CTL_PATTERN_MASK);
     v = Bld->CreateLoad(FlagsPtr, "flags");
     v = Bld->CreateAnd(PatternMask, v, "pattern");
 
     // switch default block (call the fail function)
-    BB_default = BasicBlock::Create(getLLVMCtx(), "default", BB->getParent(), BB_next);
+    BB_default = BasicBlock::Create(getLLVMCtx(), "default", BB->getParent(),
+                                    BB_next);
     Bld->SetInsertPoint(BB_default);
     Bld->CreateCall(FailF);
     Bld->CreateBr(BB_next);
@@ -582,7 +590,7 @@ void CsxJit::doBodyHook(std::ostream &os)
     // Fill up switch, by iterating given patterns
     CsxManager::PatMap::iterator pat_i = CsxMg->patterns.begin();
     BasicBlock *BB_lentry, *BB_lbody, *BB_lexit;
-    for ( ; pat_i !=  CsxMg->patterns.end(); ++pat_i){
+    for ( ; pat_i !=  CsxMg->patterns.end(); ++pat_i) {
         //std::cerr << "pat:" << pat_i->first << " flag:" << (int)pat_i->second.flag << "\n";
 
         // Alocate case + loop BBs
@@ -590,7 +598,7 @@ void CsxJit::doBodyHook(std::ostream &os)
 
         type  = static_cast<SpmIterOrder>(pat_i->first / CSX_PID_OFFSET);
         delta = pat_i->first % CSX_PID_OFFSET;
-        switch (type){
+        switch (type) {
             // Deltas
         case 0:
             assert(delta ==  8 ||
@@ -599,20 +607,24 @@ void CsxJit::doBodyHook(std::ostream &os)
                    delta == 64);
             os << "type:DELTA size:" << delta << " elements:"
                << pat_i->second.nr << std::endl;
-               BB_lentry = BasicBlock::Create(getLLVMCtx(), "lentry", BB->getParent(), BB_default);
-               BB_lbody  = BasicBlock::Create(getLLVMCtx(), "lbody", BB->getParent(), BB_default);
+               BB_lentry = BasicBlock::Create(getLLVMCtx(), "lentry",
+                                              BB->getParent(), BB_default);
+               BB_lbody  = BasicBlock::Create(getLLVMCtx(), "lbody",
+                                              BB->getParent(), BB_default);
             DeltaCase(BB_case,
                       BB_lentry, BB_lbody,
                       BB_next,
                       delta / 8);
             break;
 
-            // Horizontal
+        // Horizontal
         case HORIZONTAL:
             os << "type:DRLE order:HORIZONTAL delta:" << delta
                << " elements:" << pat_i->second.nr << std::endl;
-            BB_lbody = BasicBlock::Create(getLLVMCtx(), "lbody", BB->getParent(), BB_default);
-            BB_lexit = BasicBlock::Create(getLLVMCtx(), "lexit", BB->getParent(), BB_default);
+            BB_lbody = BasicBlock::Create(getLLVMCtx(), "lbody",
+                                          BB->getParent(), BB_default);
+            BB_lexit = BasicBlock::Create(getLLVMCtx(), "lexit",
+                                          BB->getParent(), BB_default);
             HorizCase(BB_case,
                       BB_lbody, BB_lexit,
                       BB_next,
@@ -623,7 +635,8 @@ void CsxJit::doBodyHook(std::ostream &os)
         case VERTICAL:
             os << "type:DRLE order:VERTICAL delta:" << delta
                << " elements:" << pat_i->second.nr << std::endl;
-            BB_lbody = BasicBlock::Create(getLLVMCtx(), "lbody", BB->getParent(), BB_default);
+            BB_lbody = BasicBlock::Create(getLLVMCtx(), "lbody",
+                                          BB->getParent(), BB_default);
             VertCase(BB_case,
                      BB_lbody,
                      BB_next,
@@ -634,7 +647,8 @@ void CsxJit::doBodyHook(std::ostream &os)
         case DIAGONAL:
             os << "type:DRLE order:DIAGONAL delta:" << delta
                << " elements:" << pat_i->second.nr << std::endl;
-            BB_lbody = BasicBlock::Create(getLLVMCtx(), "lbody", BB->getParent(), BB_default);
+            BB_lbody = BasicBlock::Create(getLLVMCtx(), "lbody",
+                                          BB->getParent(), BB_default);
             DiagCase(BB_case,
                      BB_lbody,
                      BB_next,
