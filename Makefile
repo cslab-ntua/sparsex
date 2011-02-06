@@ -3,7 +3,7 @@ SHELL = /bin/bash
 .PHONY: all clean
 
 all: scripts/calc_bits spmv
-#all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt spmv_crsvh spmv_crsvh_check spmv_crsvh_mt
+#all: spmv_crs spmv_crsvi spmv_crs64 spmv_crsvi_check spmv_crs_mt spmv_crs_mt_check spmv_crsvi_mt
 #all: spmv spmv-noxmiss dmv vxv spm_crsr_test
 #all: spmv dmv vxv spmv_check spmv_lib.o
 
@@ -145,18 +145,6 @@ spm_csrdu_vi_mul.o: spm_csrdu_vi_mul.c
 	$(LD) -i spm_csrdu{,_aligned}_vi{32,16,8}_{double,float}_mul.o \
 	      -o spm_csrdu_vi_mul.o
 
-spm_crsvh.o:  spm_crs_vh.c spm_crs_vh.h
-	for t in double float; do                 \
-	   for ci in 32 64; do                    \
-	       $(COMPILE)                         \
-	        -DELEM_TYPE=$$t                   \
-	        -DSPM_CRSVH_CI_BITS=$$ci          \
-	        -o spm_crs$${ci}_vh_$${t}.o       \
-	        -c $<;                            \
-	   done                                   \
-	done
-	$(LD) -i spm_crs{64,32}_vh_{double,float}.o -o spm_crsvh.o
-
 spm_crsvi_mt.o:  spm_crs_vi_mt.c spm_crs_vi_mt.h
 	for t in double float; do                          \
 	   for ci in 32 64; do                             \
@@ -171,21 +159,6 @@ spm_crsvi_mt.o:  spm_crs_vi_mt.c spm_crs_vi_mt.h
 	   done                                            \
 	done
 	$(LD) -i spm_crs{64,32}_vi{32,16,8}_mt_{double,float}.o -o spm_crsvi_mt.o
-
-spm_crsvh_mt.o:  spm_crs_vh_mt.c spm_crs_vh_mt.h
-	for t in double float; do                 \
-	   for ci in 32 64; do                    \
-	       $(COMPILE)                         \
-	        -DELEM_TYPE=$$t                   \
-	        -DSPM_CRSVH_CI_BITS=$$ci          \
-	        -o spm_crs$${ci}_vh_mt_$${t}.o    \
-	        -c $<;                            \
-		if [[ $$? != 0 ]]; then           \
-			exit;                     \
-		fi                                \
-	   done                                   \
-	done
-	$(LD) -i spm_crs{64,32}_vh_mt_{double,float}.o -o spm_crsvh_mt.o
 
 spmv_loops.o: spmv_loops.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_float.o
@@ -239,15 +212,6 @@ spmv_crsvi_mt: libspmv.o spmv_crsvi_mt.o
 spmv_crsvi_check: libspmv.o spmv_crsvi_check.o
 	$(COMPILE) $(LIBS) libspmv.o spmv_crsvi_check.o -o $@
 
-spmv_crsvh_check: libspmv.o spmv_crsvh_check.o
-	$(COMPILE) -Xlinker --allow-multiple-definition $(LIBS) spmv_crsvh_check.o $^  -o $@
-
-spmv_crsvh: libspmv.o spmv_crsvh.o
-	$(COMPILE) -Xlinker --allow-multiple-definition $(LIBS) spmv_crsvh.o $^  -o $@
-
-spmv_crsvh_mt: libspmv.o spmv_crsvh_mt.o
-	$(COMPILE) -Xlinker --allow-multiple-definition $(LIBS) $^  -o $@
-
 spmv_crs: libspmv.o spmv_crs.o
 	$(COMPILE) $(LIBS) libspmv.o spmv_crs.o -o $@
 
@@ -286,6 +250,6 @@ scripts/calc_bits: calc_bits.c
 	$(COMPILE) -E $< | indent -kr > $@
 
 
-#rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spmv_crsvh{,_check} spmv_crsvh_mt spm_csrdu_test spmv
+#rm -rf *.s *.o *.i spmv_crs{,64,vi{,_check,_mt},_mt,_mt_check} spm_csrdu_test spmv
 clean:
 	rm -rf *.s *.o *.i spmv crsvi_method
