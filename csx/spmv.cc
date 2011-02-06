@@ -49,37 +49,37 @@ int convert_string_to_string_sequence(char *str, char **str_buf,
     char *token = strtok(str, start_sep);
     int next = 0;
     int str_length = strcspn(token, end_sep);
-    
+
     str_buf[next] = (char *) malloc((str_length + 1) * sizeof(char));
     strncpy(str_buf[next], token, str_length);
     str_buf[next][str_length] = 0;
     ++next;
-    while ((token = strtok(NULL, start_sep)) != NULL) { 
+    while ((token = strtok(NULL, start_sep)) != NULL) {
         str_length = strcspn(token, end_sep);
         str_buf[next] = (char *) malloc((str_length - 1) * sizeof(char));
         strncpy(str_buf[next], token, str_length);
         str_buf[next][str_length] = 0;
         ++next;
     }
-    
+
     return next;
 }
 
 void x_get_options(int **xform_buf)
 {
     char *xform_orig = getenv("XFORM_CONF");
-    
+
     *xform_buf = (int *) malloc(XFORM_MAX * sizeof(int));
     if (!(*xform_buf)) {
         perror("malloc");
         exit(1);
     }
-    
+
     if (xform_orig && strlen(xform_orig)) {
         int next = 0;
         int t = atoi(strtok(xform_orig, ","));
         char *token;
-        
+
         (*xform_buf)[next] = t;
         ++next;
         while ((token = strtok(NULL, ",")) != NULL) {
@@ -87,28 +87,28 @@ void x_get_options(int **xform_buf)
             (*xform_buf)[next] = t;
             ++next;
         }
-        
+
         (*xform_buf)[next] = -1;
     } else {
         (*xform_buf)[0] = 0;
         (*xform_buf)[1] = -1;
     }
-    
+
     std::cout << "Encoding type: ";
     for (unsigned int i = 0; (*xform_buf)[i] != -1; i++) {
         if (i != 0)
             std::cout << ", ";
-        
+
         std::cout << SpmTypesNames[(*xform_buf)[i]];
     }
-    
+
     std::cout << std::endl;
 }
 
 void encode_deltas_get_options(int ***deltas)
 {
     char *encode_deltas_str = getenv("ENCODE_DELTAS");
-    
+
     if (encode_deltas_str) {
         ///> Init matrix deltas.
         *deltas = (int **) malloc(XFORM_MAX * sizeof(int *));
@@ -116,7 +116,7 @@ void encode_deltas_get_options(int ***deltas)
             perror("malloc");
             exit(1);
         }
-        
+
         for (int i = 0; i < XFORM_MAX; i++) {
             (*deltas)[i] = (int *) malloc(DELTAS_MAX * sizeof(int));
             if (!(*deltas)[i]) {
@@ -129,23 +129,23 @@ void encode_deltas_get_options(int ***deltas)
         char **temp = (char **) malloc(XFORM_MAX * sizeof(char *));
         int temp_size = convert_string_to_string_sequence(encode_deltas_str,
                                                           temp, "{", "}");
-        
+
         for (int i = 0; i < temp_size; i++) {
             int j=0;
             char *token = strtok(temp[i], ",");
-            
+
             (*deltas)[i][j] = atoi(token);
             ++j;
             while ((token = strtok(NULL, ",")) != NULL) {
                 (*deltas)[i][j] = atoi(token);
                 ++j;
             }
-            
+
             (*deltas)[i][j] = -1;
         }
-        
+
         free(temp);
-        
+
         ///> Print deltas.
         std::cout << "Deltas to Encode: ";
         for (int i = 0; i < temp_size; i++) {
@@ -157,7 +157,7 @@ void encode_deltas_get_options(int ***deltas)
             for (int j = 1; (*deltas)[i][j] != -1; j++)
                 std::cout << "," << (*deltas)[i][j];
         }
-        
+
         std::cout << "}" << std::endl;
     }
 }
@@ -166,7 +166,7 @@ uint64_t wsize_get_options()
 {
     const char *wsize_str = getenv("WINDOW_SIZE");
     uint64_t wsize;
-    
+
     if (!wsize_str) {
         wsize = 0;
         std::cout << "Window size: Not set" << std::endl;
@@ -175,7 +175,7 @@ uint64_t wsize_get_options()
         wsize = atol(wsize_str);
         std::cout << "Window size: " << wsize << std::endl;
     }
-    
+
     return wsize;
 }
 
@@ -183,7 +183,7 @@ uint64_t samples_get_options()
 {
     const char *samples = getenv("SAMPLES");
     uint64_t samples_max;
-    
+
     if (!samples) {
         samples_max = std::numeric_limits<uint64_t>::max();
         std::cout << "Number of samples: Not set" << std::endl;
@@ -192,7 +192,7 @@ uint64_t samples_get_options()
         samples_max = atol(samples);
         std::cout << "Number of samples: " << samples_max << std::endl;
     }
-    
+
     return samples_max;
 }
 
@@ -200,7 +200,7 @@ double probability_get_options()
 {
     const char *sampling_prob_str = getenv("SAMPLING_PROB");
     double sampling_prob;
-    
+
     if (!sampling_prob_str) {
         sampling_prob = 0.0;
         std::cout << "Sampling prob: Not set" << std::endl;
@@ -209,7 +209,7 @@ double probability_get_options()
         sampling_prob = atof(sampling_prob_str);
         std::cout << "Sampling prob: " << sampling_prob << std::endl;
     }
-    
+
     return sampling_prob;
 }
 
@@ -217,12 +217,12 @@ bool split_get_options()
 {
     const char *split_blocks_str = getenv("SPLIT_BLOCKS");
     bool split_blocks;
-    
+
     if (!split_blocks_str)
         split_blocks = false;
     else
         split_blocks = true;
-        
+
     return split_blocks;
 }
 
@@ -239,7 +239,7 @@ void *thread_function(void *initial_data)
     ///> Print Thread_Id.
     data->buffer << "==> Thread: #" << data->thread_no << endl;
     /**
-     *  Init DrleMg which takes statistical data and encodes and decodes the 
+     *  Init DrleMg which takes statistical data and encodes and decodes the
      *  matrix.
      */
     DrleMg = new DRLE_Manager(data->Spm, 4, 255-1, 0.1, data->wsize,
@@ -249,9 +249,9 @@ void *thread_function(void *initial_data)
     DrleMg->IgnoreAll();
     for (int i = 0; data->xform_buf[i] != -1; ++i)
         DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
-        
+
     /**
-     *  If deltas choices given encode the matrix with the order given by 
+     *  If deltas choices given encode the matrix with the order given by
      *  XFORM_CONF, else find statistical data for the types in XFORM_CONF,
      *  choose the best choise, encode it and proceed likewise until there is
      *  no satisfying encoding
@@ -260,7 +260,7 @@ void *thread_function(void *initial_data)
         DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
     else
         DrleMg->EncodeAll(data->buffer, data->split_blocks);
-        
+
     //DrleMg->MakeEncodeTree(data->split_blocks);
     delete DrleMg;
     return 0;
@@ -284,10 +284,10 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     for (unsigned int i = 0; i < nr_threads; i++) {
         if (i != 0)
             std::cout << ",";
-            
+
         std::cout << threads_cpus[i];
     }
-    
+
     std::cout << std::endl;
 
     ///> Take XFORM_CONF.
@@ -314,7 +314,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
         perror("malloc");
         exit(1);
     }
-    
+
     spm_mt->nr_threads = nr_threads;
     spm_mt->spm_threads =
         (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t) * nr_threads);
@@ -322,7 +322,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
         perror("malloc");
         exit(1);
     }
-    
+
     for (unsigned int i = 0; i < nr_threads; i++)
         spm_mt->spm_threads[i].cpu = threads_cpus[i];
 
@@ -358,7 +358,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     ///> Parallel Preprocessing for each thread.
     for (unsigned int i = 1; i < nr_threads; i++)
         pthread_create(&threads[i-1],NULL,thread_function,(void *) &data[i]);
-        
+
     thread_function((void *) &data[0]);
 
     ///> Wait for other threads to finish.
@@ -409,7 +409,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     ///> Stop the preprocessing time counter and print it.
     timer_pause(&timer);
     std::cout << "Preprocessing time: "
-              << timer_secs(&timer) << " sec" 
+              << timer_secs(&timer) << " sec"
               << std::endl;
     return spm_mt;
 }
@@ -443,11 +443,11 @@ static unsigned long CsxSize(spm_mt_t *spm_mt)
     for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
         spm_mt_thread_t *t = spm_mt->spm_threads + i;
         csx_double_t *csx = (csx_double_t *)t->spm;
-        
+
         ret += csx->nnz * sizeof(double);
         ret += csx->ctl_size;
     }
-    
+
     return ret;
 }
 

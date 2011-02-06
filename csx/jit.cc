@@ -508,6 +508,7 @@ void CsxJit::DoDeltaAddMyx(int delta_bytes)
         default:
             assert(false);
     }
+    assert(F && "Failed to find uxx_get() function");
 
     Value *Myx = Bld->CreateLoad(MyxPtr, "myx");
     Value *MyxAdd = Bld->CreateCall(F, CtlPtr, "myx_add");

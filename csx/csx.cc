@@ -37,71 +37,6 @@ void Copy(T *dst, uint64_t *src, long nr_items)
 }
 
 
-#define LONGUC_SHIFT (7)
-static inline void da_put_ul(dynarray_t *da, unsigned long val)
-{
-    uint8_t *uc;
-    const unsigned shift = LONGUC_SHIFT;
-    
-    for (;;) {
-        uc = (uint8_t *) dynarray_alloc(da);
-        *uc = (val & ((1 << shift) - 1));
-        if (val < (1 << shift))
-            break;
-            
-        *uc |= (1 << shift);
-        val >>= shift;
-    }
-}
-
-#define u8_get(ptr) ({                          \
-            uint8_t *_ptr = ptr;                \
-            ptr++; *_ptr;                       \
-        })
-
-#define u16_get(ptr) ({                         \
-            uint16_t ret = *((uint16_t *) ptr); \
-            ptr += sizeof(uint16_t);            \
-            ret;                                \
-        })
-
-#define u32_get(ptr) ({                         \
-            uint32_t ret = *((uint32_t *) ptr); \
-            ptr += sizeof(uint32_t);            \
-            ret;                                \
-        })
-
-#define u64_get(ptr) ({                         \
-            uint64_t ret = *((uint64_t *) ptr); \
-            ptr += sizeof(uint64_t);            \
-            ret;                                \
-        })
-
-#define uc_get_ul(ptr) ({                       \
-            unsigned long _val;                 \
-                                                \
-            _val = u8_get(ptr);                 \
-            if (_val > 127) {                   \
-                unsigned shift = 7;             \
-                unsigned long _uc;              \
-                                                \
-                _val -= 128;                    \
-                for (;;) {                      \
-                    uc = u8_get(ptr);           \
-                    if ( _uc > 127 ) {          \
-                        _uc -= 128;             \
-                        _val += (_uc << shift); \
-                        shift += 7;             \
-                    } else {                    \
-                        _val += (_uc << shift); \
-                        break;                  \
-                    }                           \
-                }                               \
-            }                                   \
-                                                \
-            _val;                               \
-        })                                      \
-
 uint8_t CsxManager::GetFlag(long pattern_id, uint64_t nnz)
 {
     CsxManager::PatMap::iterator pi;
@@ -111,15 +46,15 @@ uint8_t CsxManager::GetFlag(long pattern_id, uint64_t nnz)
     if (pi == this->patterns.end()) {
         ret = flag_avail_++;
         assert(ret <= CTL_PATTERNS_MAX && "too many patterns");
-        
+
         CsxManager::PatInfo pat_info(ret, nnz);
-        
+
         this->patterns[pattern_id] = pat_info;
     } else {
         ret = pi->second.flag;
         pi->second.nr += nnz;
     }
-    
+
     return ret;
 }
 
@@ -133,7 +68,7 @@ csx_double_t *CsxManager::MakeCsx()
         perror("malloc");
         exit(1);
     }
-    
+
     ctl_da_ = dynarray_create(sizeof(uint8_t), 512);
     csx->nnz = spm_->nr_nzeros_;
     csx->nrows = spm_->nr_rows_;
@@ -148,24 +83,24 @@ csx_double_t *CsxManager::MakeCsx()
         rend = spm_->RowEnd(i);
         if (debug)
             std::cerr << "MakeCsx(): row: " << i << "\n";
-            
-        if (rbegin == rend){ 		///> Check if row is empty.
+
+        if (rbegin == rend){		///> Check if row is empty.
             if (debug)
                 std::cerr << "MakeCsx(): row is empty" << std::endl;
-                
+
             if (new_row_ == false){
                 new_row_ = true; 	///> In case the first row is empty.
             } else {
                 empty_rows_++;
             }
-            
+
             continue;
         }
-        
+
         DoRow(rbegin, rend);
         new_row_ = true;
     }
-    
+
     csx->ctl_size = dynarray_size(ctl_da_);
     csx->ctl = (uint8_t *)dynarray_destroy(ctl_da_);
     ctl_da_ = NULL;
@@ -192,7 +127,7 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
     for (const SpmRowElem *spm_elem = rbegin; spm_elem < rend; spm_elem++) {
         if (debug)
             std::cerr << "\t" << *spm_elem << "\n";
-            
+
         ///> Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
             jmp = PreparePat(xs, *spm_elem);
@@ -200,19 +135,19 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
             AddPattern(*spm_elem, jmp);
             for (long i=0; i < spm_elem->pattern->GetSize(); i++)
                 values_[values_idx_++] = spm_elem->vals[i];
-            
+
             continue;
         }
-        
+
         ///> Check if we exceeded the maximum size for a unit.
         assert(xs.size() <= CTL_SIZE_MAX);
         if (xs.size() == CTL_SIZE_MAX)
              AddXs(xs);
-        
+
         xs.push_back(spm_elem->x);
         values_[values_idx_++] = spm_elem->val;
     }
-    
+
     if (xs.size() > 0)
         AddXs(xs);
 }
@@ -241,7 +176,7 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     DeltaSize delta_size;
     std::vector<uint64_t>::iterator vi;
     void *dst;
- 
+
     ///> Do delta encoding.
     xs_size = xs.size();
     last_col = xs[xs_size-1];
@@ -292,7 +227,7 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
             assert(false);
 	    }
     }
-    
+
     xs.clear();
     return;
 }
@@ -307,7 +242,7 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     if (debug)
         std::cerr << "AddPattern jmp: " << jmp << " pat_size: " << pat_size
                   << "\n";
-                  
+
     pat_id = elem.pattern->GetPatternId();
     ctl_flags = (uint8_t *)dynarray_alloc_nr(ctl_da_, 2);
     *ctl_flags = GetFlag(pat_id, pat_size);
@@ -318,7 +253,7 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     ujmp = jmp ? jmp : elem.x - last_col_;
     if (debug)
         std::cerr << "AddPattern ujmp " << ujmp << "\n";
-    
+
     da_put_ul(ctl_da_, ujmp);
     last_col_ = elem.pattern->ColIncreaseJmp(spm_->type_, elem.x);
     if (debug)

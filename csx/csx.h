@@ -11,7 +11,15 @@
 #ifndef CSX_H__
 #define CSX_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "ctl_ll.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 ///< CSX matrix format
 typedef struct {
