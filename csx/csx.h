@@ -127,7 +127,7 @@ private:
 
     SPM *spm_;
     uint8_t flag_avail_;    ///< Current available flags for pattern id mapping.
-    bool row_jmps_;	        ///< Whether or not row jumps included.
+    bool row_jmps_;	    ///< Whether or not row jumps included.
     
     double *values_;
     uint64_t values_idx_;
