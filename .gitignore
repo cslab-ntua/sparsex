@@ -1,0 +1,9 @@
+*.o
+csx/csx_llvm_tmpl.llvm.bc
+csx/spmv
+csx/windows-sort
+lib/cpu/cpuid
+lib/cpu/hwpfetch
+lib/phash/phash_i
+lib/phash/phash_test
+lib/spm/spmv
