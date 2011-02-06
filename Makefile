@@ -50,7 +50,7 @@ ifeq ($(shell $(cpu_dir)/numa_lib.sh FOO),FOO)
 	LIBS += -lnuma
 endif
 
-spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o #spm_delta.o spm_delta_vec.o spmv_ur.o spm_crsr.o matrix.o
+spmv_deps    = method.o mmf.o spm_parse.o spm_crs.o #spmv_ur.o spm_crsr.o matrix.o
 libspmv_deps = vector.o mmf.o method.o spm_parse.o spm_crs.o spm_crsvi.o spmv_loops.o spm_crs_mt.o spmv_loops_mt.o mt_lib.o spm_crsvi_mt.o spm_csrdu.o spm_crsvi_utils.o spm_csrdu_vi.o spm_csrdu_vi_mul.o spm_bcsr.o $(dynarray_dep)
 
 vector.o: vector.c vector.h
@@ -215,23 +215,6 @@ spm_csrdu_test.o: spm_csrdu_test.c spm_csrdu.h
 spm_csrdu_test: spm_csrdu.o spm_csrdu_test.o $(dynarray_dep) mmf.o method.o mt_lib.o
 	$(COMPILE) $^ -o $@
 
-#spm_delta.o: spm_delta_mul.c spm_delta.h vector.h
-#	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_mul_float.o
-#	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_mul_double.o
-#	$(LD) -i spm_delta_mul_{float,double}.o -o spm_delta.o
-#
-#spm_delta_mt.o: spm_delta_mt_part.c spm_delta_mt.h spm_delta_mt_mul.c
-#	$(COMPILE_UR) -DELEM_TYPE=float  -c spm_delta_mt_mul.c -o spm_delta_mt_mul_float.o
-#	$(COMPILE_UR) -DELEM_TYPE=double  -c spm_delta_mt_mul.c -o spm_delta_mt_mul_double.o
-#	$(COMPILE) -c spm_delta_mt_part.c -o spm_delta_mt_part.o
-#	$(LD) -i spm_delta_mt_{mul_{float,double},part}.o -o spm_delta_mt.o
-#
-#
-#spm_delta_cv.o: spm_delta_cv_mul.c spm_delta_cv.h spm_delta.h vector.h
-#	$(COMPILE_UR) -DELEM_TYPE=float  -c $< -o spm_delta_cv_mul_float.o
-#	$(COMPILE_UR) -DELEM_TYPE=double -c $< -o spm_delta_cv_mul_double.o
-#	$(LD) -i spm_delta_cv_mul_{float,double}.o -o spm_delta_cv.o
-#
 libspmv.o: $(libspmv_deps)
 	$(LD) -i --allow-multiple-definition $(libspmv_deps) $(deps) -o libspmv.o
 
