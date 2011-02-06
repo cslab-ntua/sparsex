@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 
 	v = vector_create(size);
 	y = x = 0;
-	
+
 	srand(time(NULL));
 	tsc_init(&tsc);
 	prfcnt_init(&prfcnt,cpu,PRFCNT_FL_T0|PRFCNT_FL_T1);
