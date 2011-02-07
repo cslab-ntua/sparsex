@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <numa.h>
 #include <sched.h>
 #include <stdlib.h>
 #include <stdio.h>
