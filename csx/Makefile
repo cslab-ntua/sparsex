@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv windows-sort csx_llvm_tmpl.llvm.bc
+all: spmv csx_llvm_tmpl.llvm.bc
 
 ## Configuration
 llvmconf     = llvm-config-2.7
@@ -33,12 +33,6 @@ LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
-
-windows-sort.o: $(protodir)/windows-sort.cpp spm.h mmf.h
-	$(CXX_COMPILE) $< -c -o $@
-
-windows-sort: windows-sort.o spm.o mmf.o
-	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(dynarray_dep) spm.o mmf.o windows-sort.o -lrt -o $@
 
 mmf.o: mmf.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
