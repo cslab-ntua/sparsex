@@ -30,7 +30,7 @@ int cr4_pce_enable_init(void)
 	#else
 	print(KERN_ALRT "FAILED: not x86\n");
 	#endif
-		
+
 	return 0;
 }
 

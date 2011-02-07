@@ -20,7 +20,7 @@ int main()
 	int cpu=0;
 	const unsigned int buffsize = (16*1024*1024);
 	prfcnt_t prfcnt;
-	
+
 	cpu_set_t cpu_set;
 
 	CPU_ZERO(&cpu_set);
@@ -31,7 +31,7 @@ int main()
 		perror("sched_setaffinity");
 		exit(1);
 	}
-	
+
 	buffy1_orig = malloc(buffsize+ALIGN_BOUND);
 	buffy2_orig = malloc(buffsize+ALIGN_BOUND);
 
@@ -48,7 +48,7 @@ int main()
 		buffy2[i] = buffy1[i] + 1;
 	}
 	prfcnt_pause(&prfcnt);
-	
+
 	prfcnt_report(&prfcnt);
 	prfcnt_shut(&prfcnt);
 

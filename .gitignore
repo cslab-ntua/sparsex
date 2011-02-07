@@ -1,6 +1,7 @@
 *.o
 csx/csx_llvm_tmpl.llvm.bc
 csx/spmv
+csx/draw
 csx/windows-sort
 lib/cpu/cpuid
 lib/cpu/hwpfetch

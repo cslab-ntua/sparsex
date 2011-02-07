@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 		printf("Usage: %s <cmd> (args)\n", argv[0]);
 		exit(1);
 	}
-	
+
 	new_argv = &argv[1];
 
 	if ( (pid = fork()) < 0){
@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 
 	tsc_init(&timer);
 	/*
-	 * FIXME: Can we do this better ? 
+	 * FIXME: Can we do this better ?
 	 */
 	if (pid) {
 		tsc_start(&timer);

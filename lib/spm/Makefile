@@ -5,29 +5,25 @@ SHELL = /bin/bash
 all: libspmv.o spmv
 
 ## Configuration
-cpu_dir      = $(shell pwd)/../cpu
+debug_dir    = ../lib/debug
 dynarray_dir = ../dynarray
 prfcnt_dir   = ../prfcnt
 
 dynarray_dep = $(dynarray_dir)/dynarray.o
 
-.PHONY: $(dynarray_dep)
+# This is ugly and non-portable
+# (we need a script to return CPU MhZs)
+MHZ_SH      ?= $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
 
-MHZ_SH      ?= $(cpu_dir)/cpu_mhz.sh
-#CL_BYTES    ?= $(shell $(cpu_dir)/cl_bytes.sh)
-#CACHE_BYTES ?= $(shell $(cpu_dir)/cache_bytes.sh)
-CPU         ?= $(shell $(cpu_dir)/cpu_info.sh)
 GCC         ?= llvm-gcc
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
-DEFS        += -DCPU_MHZ_SH=\"$(MHZ_SH)\" -DCPU_$(CPU)
+DEFS        += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
+#CFLAGS      += -DCPU_CORE -DSPMV_PRFCNT # performance counters for an intel core
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 LIBS         = -lm -lpthread
 INC          = -I$(dynarray_dir) -I$(prfcnt_dir)
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
-COMPILE_UR   = $(COMPILE) -funroll-loops
-PYLIBS       = $(shell python2.5-config --ldflags)
-PYCFLAGS     = $(shell python2.5-config --cflags)
 
 ifeq ($(CPU),NIAGARA)
 	CFLAGS += -m64
@@ -38,6 +34,9 @@ endif
 #	DEFS += -DSPM_NUMA
 #	LIBS += -lnuma
 #endif
+
+# do this, so that it doesn't match default %.c - >%.o rules
+$(dynarray_dep):
 
 deps         = $(dynarray_dep)
 libspmv_deps = vector.o method.o mt_lib.o mmf.o  \
@@ -95,6 +94,7 @@ spmv.o: spmv.c
 
 spmv: spmv.o libspmv.o
 	$(COMPILE) $(LIBS) $^ -o $@
+
 ## Usefull fallbacks
 %.s: %.c
 	$(COMPILE) -S -fverbose-asm $<

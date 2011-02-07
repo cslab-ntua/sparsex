@@ -7,7 +7,7 @@
 	#include "prfcnt_xeon.h"
 #elif defined(CPU_CORE)
 	#include "prfcnt_core.h"
-#else 
+#else
 	#warning "no prfcnt implementation found"
 	#include "prfcnt_nop.h"
 #endif

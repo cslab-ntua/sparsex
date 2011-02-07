@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# find cacheline size
+# Kornilios Kourtis <kkourt@cslab.ece.ntua.gr>
+
 cl=$(sed -n -e 's/cache_alignment\t: \([[:digit:]]\+\)/\1/p' < /proc/cpuinfo | head -1)
 if [ -n "$cl" ]; then
 	echo $cl

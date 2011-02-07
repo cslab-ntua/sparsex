@@ -52,7 +52,7 @@ static inline void prfcnt_init(prfcnt_t *handle, int cpu, unsigned long flags)
 	}
 
 	for (i=0; i < handle->events_nr ; i++){
-		prfcnt_event_t *event; 
+		prfcnt_event_t *event;
 		event             = &__evnts[__evnts_selected[i]];
 		event->cntr_nr    = i;
 		handle->events[i] = event;
@@ -104,7 +104,7 @@ static inline __u64 *prfcnt_readstats_rdmsr(prfcnt_t *handle, __u64 *stats)
 static inline __u64  *prfcnt_readstats_rdpmc(prfcnt_t *handle, __u64 *stats)
 {
 	int i;
-	
+
 	for (i=0; i < handle->events_nr; i++){
 		stats[i] = prfcnt_rdpmc(handle->events[i]->cntr_nr);
 	}

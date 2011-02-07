@@ -1,32 +1,33 @@
-.phony: all clean
+.PHONY: all clean
 
 ## Configuration
-cpu_dir = $(shell pwd)/../cpu
+scripts      = $(shell pwd)/scripts
 
 CC      = gcc
 CFLAGS  = -Wall -Winline -O2
-CPU    ?= $(shell $(cpu_dir)/cpu_info.sh)
-MHZ_SH ?= $(cpu_dir)/cpu_mhz.sh
-DEFS   += -DCPU_$(CPU) -DCPU_MHZ_SH=\"$(MHZ_SH)\"
+# run scripts to get information
+CPU     ?= $(shell $(scripts)/cpu_info.sh)
+MHZ_SH  ?= $(scripts)/cpu_mhz.sh
+DEFS    += -DCPU_$(CPU) -DCPU_MHZ_SH=\"$(MHZ_SH)\"
+COMPILE  = $(CC) $(CFLAGS) $(INC) $(DEFS)
 
 ifeq ($(CPU),NIAGARA)
 	CFLAGS += -m64
 endif
 
-cc_def  = $(CC) $(CFLAGS) $(INC) $(DEFS)
-
+# compile all .c as executables
 progs := $(patsubst %.c,%,$(wildcard *.c))
 
 all: $(progs)
 
 % : %.c
-	$(cc_def) -o $* $< 
+	$(COMPILE) -o $* $<
 
 %.s: %.c
-	$(cc_def) -S $<
+	$(COMPILE) -S $<
 
 %.i: %.c
-	$(cc_def) -E $< | indent -kr > $@
+	$(COMPILE) -E $< | indent -kr > $@
 
 clean: 
 	rm -rf $(progs) *.s *.i

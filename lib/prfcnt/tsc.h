@@ -1,6 +1,11 @@
 #ifndef __TSC__
 #define __TSC__
 
+/*
+ * Code to count ticks
+ * Kornilios Kourtis <kkourt@cslab.ece.ntua.gr>
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -72,29 +77,49 @@ static inline void tsc_pause(tsc_t *tsc)
 	tsc->ticks += (get_ticks() - tsc->last);
 }
 
+/*
+ * This is ugly, but we need a way to determine the CPU's frequency, so that we
+ * can translate ticks to seconds. It is better to do it at run-time to avoid
+ * stupid errors (yes, it used to be set at compile time, and I wasted several
+ * hours chasing the `bug').
+ */
 static double __getMhz(void)
 {
-	double mhz = 0;
 #ifdef CPU_MHZ_SH
+	double mhz;
 	FILE *script;
 	char buff[512], *endptr;
 	int ret;
 
 	script = popen(CPU_MHZ_SH, "r");
-	assert(script != NULL);
+	if (script == NULL){
+			perror("popen");
+			goto error;
+	}
+
 	ret = fread(buff, 1, sizeof(buff), script);
 	if (!ret){
 		perror("fread");
-		exit(1);
+		goto error;
 	}
 
 	mhz = strtod(buff, &endptr);
 	if (endptr == buff){
-		perror("strtod");
-		exit(1);
+		fprintf(stderr, "strtod failed\n");
+		goto error;
 	}
-#endif
+
 	return mhz;
+
+error:
+#endif
+	fprintf(stderr,
+	        "%s@%s:%d: ERROR: Dont now how to calculate MhZ.\n"
+	        "Please set CPU_MHZ_SH to a script that returns MHz when compiling\n"
+	        "Aborting...\n",
+	         __FUNCTION__, __FILE__,__LINE__);
+	exit(1);
+	return 0.0;
 }
 
 static inline double getMhz(void)

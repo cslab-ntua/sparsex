@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# find cache size info
+# Kornilios Kourtis <kkourt@cslab.ece.ntua.gr>
+
 cs=$(sed -r -n '
 	s/^cache size[[:space:]]+: /(/
 	s/ KB/*1024)/p

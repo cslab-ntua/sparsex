@@ -1,6 +1,7 @@
+
 /*
  * find out cpuid info
- * kkourt@cslab.ece.ntua.gr
+ * Kornilios Kourtis <kkourt@cslab.ece.ntua.gr>
  */
 
 #define _LARGEFILE64_SOURCE
@@ -72,10 +73,9 @@ void cpuid_print()
 	char buff[64];
 	unsigned int results[4];
 	int index;
-	
+
 	//printf("please type input: ");
 	while ( fgets(buff,63,stdin) != NULL) {
-		
 		index = strtoul(buff,NULL,0);
 		cpuid_fn(index, results);
 		printf("cpuid\t (0x%x) eax:0x%x ebx:0x%x ecx:0x%x edx:0x%x\n",
@@ -84,14 +84,14 @@ void cpuid_print()
 }
 
 /*
- * IA32-2a CPUID instruction 
+ * IA32-2a CPUID instruction
  */
 void cpuid_brand_string()
 {
 	unsigned int results[4];
 	char str[48];
 	unsigned int max;
-	
+
 	cpuid_fn(0x80000000, results);
 
 	max = results[0];
@@ -99,7 +99,7 @@ void cpuid_brand_string()
 		printf("Processor Brand String Not Supported\n");
 		return;
 	}
-	
+
 	cpuid_fn(0x80000002, (void *)str);
 	cpuid_fn(0x80000003, (void *)(str+16));
 	cpuid_fn(0x80000004, (void *)(str+32));
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 	}
 
 	snprintf(cpuname,20,"/dev/cpu/%d/cpuid", cpu);
-	
+
 	fd = open(cpuname, O_RDONLY);
 	if (fd == -1){
 		fprintf(stderr, "could not open %s \n", cpuname);
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 	} else {
 		cpuid_fn = cpuid_device;
 	}
-	
+
 	if ( !cmd || !strcmp(cmd, "print") ) {
 		cpuid_print();
 	} else if ( !strcmp(cmd, "brand_string") ) {
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 		usage();
 	}
 
-	if ( fd != -1) 
+	if ( fd != -1)
 		close(fd);
 
 	return 0;

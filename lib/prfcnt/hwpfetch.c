@@ -1,7 +1,9 @@
+
+
 /*
  * Program to query/enable/disable the hardware prefetcher
- * kkourt@cslab.ece.ntua.gr
- * References: 
+ * Kornilios Kourtis <kkourt@cslab.ece.ntua.gr>
+ * References:
  * IA32_MISC_ENABLE MSR in IA32 Vol. 3b
  */
 
@@ -52,7 +54,7 @@ static struct {
 static void print_features()
 {
 	int i=0;
-	
+
 	printf("Features:\n");
 	while ( ia32_misc_bits[i].id ){
 		printf(" %-12s  %-40s\n", ia32_misc_bits[i].id,ia32_misc_bits[i].desc);
@@ -146,13 +148,13 @@ int main(int argc, char **argv)
 		op   = OP_UNSET;
 		cpu  = parse_int(argv[2]);
 		feat = argv[3];
-	} 
+	}
 
 	if ( op == OP_UNDF){
 		help(argv[0]);
 		exit(1);
 	}
-	
+
 	snprintf(msr_dev,64,"/dev/cpu/%d/msr",cpu);
 
 	msr_fd = open(msr_dev,O_RDWR);
@@ -162,7 +164,7 @@ int main(int argc, char **argv)
 	}
 
 	ret = lseek(msr_fd, IA32_MISC_MSR, SEEK_SET);
-	if ( ret == (off_t)-1){	
+	if ( ret == (off_t)-1){
 		perror("lseek");
 		exit(1);
 	}
@@ -172,10 +174,10 @@ int main(int argc, char **argv)
 		perror("read");
 		exit(1);
 	}
-		
+
 	if ( feat )
 		bit = get_feature_bit(feat);
-	
+
 	switch (op){
 		case OP_QUERY:
 		do_query(oldval);
@@ -195,7 +197,7 @@ int main(int argc, char **argv)
 	}
 
 	ret = lseek(msr_fd, IA32_MISC_MSR, SEEK_SET);
-	if ( ret == (off_t)-1){	
+	if ( ret == (off_t)-1){
 		perror("lseek");
 		exit(1);
 	}
