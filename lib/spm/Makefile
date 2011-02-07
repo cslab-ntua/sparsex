@@ -30,7 +30,7 @@ ifeq ($(CPU),NIAGARA)
 	LD = ld -melf64_sparc
 endif
 
-#ifeq ($(shell $(cpu_dir)/numa_lib.sh FOO),FOO)
+#ifeq ($(shell $(prfcnt_dir)/scripts/numa_lib.sh FOO),FOO)
 #	DEFS += -DSPM_NUMA
 #	LIBS += -lnuma
 #endif

@@ -22,29 +22,32 @@ extern "C" {
 #include "spm_mt.h"
 #include "spmv_loops_mt.h"
 #include "timer.h"
+#include "ctl_ll.h"
 }
 
-#define DELTAS_MAX  64  ///> Max deltas that an encoding type may have.
+///> Max deltas that an encoding type may have. This is restricted by the
+///  number of bits used for encoding the different patterns in CSX.
+///
+///  @see ctl_ll.h
+#define DELTAS_MAX  CTL_PATTERNS_MAX
 
 using namespace csx;
-using namespace std;
 
-///> Necessary Data passed to each thread for parallel preprocessing.
-typedef struct parameters {
-    unsigned int    thread_no;
-    SPM *           Spm;
-    uint64_t        wsize;
-    ostringstream   buffer;
-    int             *xform_buf;
-    double          sampling_prob;
-    uint64_t        samples_max;
-    bool            split_blocks;
-    int             **deltas;
-} Parameters;
+///> Thread data essential for parallel preprocessing
+typedef struct thread_info {
+    unsigned int thread_no;
+    SPM * spm;
+    uint64_t wsize;
+    std::ostringstream buffer;
+    int *xform_buf;
+    double sampling_prob;
+    uint64_t samples_max;
+    bool split_blocks;
+    int **deltas;
+} thread_info_t;
 
-int convert_string_to_string_sequence(char *str, char **str_buf,
-                                      const char *start_sep,
-                                      const char *end_sep)
+int SplitString(char *str, char **str_buf, const char *start_sep,
+                const char *end_sep)
 {
     char *token = strtok(str, start_sep);
     int next = 0;
@@ -65,10 +68,9 @@ int convert_string_to_string_sequence(char *str, char **str_buf,
     return next;
 }
 
-void x_get_options(int **xform_buf)
+void GetOptionXform(int **xform_buf)
 {
     char *xform_orig = getenv("XFORM_CONF");
-
     *xform_buf = (int *) malloc(XFORM_MAX * sizeof(int));
     if (!(*xform_buf)) {
         perror("malloc");
@@ -105,12 +107,12 @@ void x_get_options(int **xform_buf)
     std::cout << std::endl;
 }
 
-void encode_deltas_get_options(int ***deltas)
+void GetOptionEncodeDeltas(int ***deltas)
 {
     char *encode_deltas_str = getenv("ENCODE_DELTAS");
 
     if (encode_deltas_str) {
-        ///> Init matrix deltas.
+        // Init matrix deltas.
         *deltas = (int **) malloc(XFORM_MAX * sizeof(int *));
         if (!*deltas) {
             perror("malloc");
@@ -125,13 +127,12 @@ void encode_deltas_get_options(int ***deltas)
             }
         }
 
-        ///> Fill deltas with the appropriate data.
+        // Fill deltas with the appropriate data.
         char **temp = (char **) malloc(XFORM_MAX * sizeof(char *));
-        int temp_size = convert_string_to_string_sequence(encode_deltas_str,
-                                                          temp, "{", "}");
+        int temp_size = SplitString(encode_deltas_str, temp, "{", "}");
 
         for (int i = 0; i < temp_size; i++) {
-            int j=0;
+            int j = 0;
             char *token = strtok(temp[i], ",");
 
             (*deltas)[i][j] = atoi(token);
@@ -146,7 +147,7 @@ void encode_deltas_get_options(int ***deltas)
 
         free(temp);
 
-        ///> Print deltas.
+        // Print deltas
         std::cout << "Deltas to Encode: ";
         for (int i = 0; i < temp_size; i++) {
             if (i != 0)
@@ -162,7 +163,7 @@ void encode_deltas_get_options(int ***deltas)
     }
 }
 
-uint64_t wsize_get_options()
+uint64_t GetOptionWindowSize()
 {
     const char *wsize_str = getenv("WINDOW_SIZE");
     uint64_t wsize;
@@ -179,7 +180,7 @@ uint64_t wsize_get_options()
     return wsize;
 }
 
-uint64_t samples_get_options()
+uint64_t GetOptionSamples()
 {
     const char *samples = getenv("SAMPLES");
     uint64_t samples_max;
@@ -196,7 +197,7 @@ uint64_t samples_get_options()
     return samples_max;
 }
 
-double probability_get_options()
+double GetOptionProbability()
 {
     const char *sampling_prob_str = getenv("SAMPLING_PROB");
     double sampling_prob;
@@ -213,7 +214,7 @@ double probability_get_options()
     return sampling_prob;
 }
 
-bool split_get_options()
+bool GetOptionSplitBlocks()
 {
     const char *split_blocks_str = getenv("SPLIT_BLOCKS");
     bool split_blocks;
@@ -229,39 +230,35 @@ bool split_get_options()
 /**
  *  Parallel Preprocessing.
  *
- *  @param initial_data parameters of matrix needed by each thread.
+ *  @param info parameters of matrix needed by each thread.
  */
-void *thread_function(void *initial_data)
+void *PreprocessThread(void *thread_info)
 {
-    Parameters *data = (Parameters *) initial_data;
+    thread_info_t *data = (thread_info_t *) thread_info;
     DRLE_Manager *DrleMg;
 
-    ///> Print Thread_Id.
-    data->buffer << "==> Thread: #" << data->thread_no << endl;
-    /**
-     *  Init DrleMg which takes statistical data and encodes and decodes the
-     *  matrix.
-     */
-    DrleMg = new DRLE_Manager(data->Spm, 4, 255-1, 0.1, data->wsize,
+    data->buffer << "==> Thread: #" << data->thread_no << std::endl;
+
+    // Initialize the DRLE manager
+    DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.1, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_prob,
                               data->samples_max);
-    ///> Adjust the ignore settings properly.
+    // Adjust the ignore settings properly
     DrleMg->IgnoreAll();
     for (int i = 0; data->xform_buf[i] != -1; ++i)
         DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
 
-    /**
-     *  If deltas choices given encode the matrix with the order given by
-     *  XFORM_CONF, else find statistical data for the types in XFORM_CONF,
-     *  choose the best choise, encode it and proceed likewise until there is
-     *  no satisfying encoding
-     */
+    
+     // If the user supplies the deltas choices, encode the matrix with the
+     // order given in XFORM_CONF, otherwise find statistical data for the types
+     // in XFORM_CONF, choose the best choise, encode it and proceed likewise
+     // until there is no satisfying encoding.
     if (data->deltas)
         DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
     else
         DrleMg->EncodeAll(data->buffer, data->split_blocks);
 
-    //DrleMg->MakeEncodeTree(data->split_blocks);
+    // DrleMg->MakeEncodeTree(data->split_blocks);
     delete DrleMg;
     return 0;
 }
@@ -273,12 +270,11 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     SPM *Spms;
     int *xform_buf = NULL;
     int **deltas = NULL;
-    Parameters *data;
+    thread_info_t *data;
     pthread_t *threads;
     CsxJit **Jits;
 
-    ///> Take MT_CONF.
-    // TODO: In case of MT_CONF=empty a default message is printed by mt_get_options
+    // Get MT_CONF
     mt_get_options(&nr_threads, &threads_cpus);
     std::cout << "MT_CONF=";
     for (unsigned int i = 0; i < nr_threads; i++) {
@@ -290,25 +286,25 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
 
     std::cout << std::endl;
 
-    ///> Take XFORM_CONF.
-    x_get_options(&xform_buf);
+    // Get XFORM_CONF
+    GetOptionXform(&xform_buf);
 
-    ///> Take ENCODE_DELTAS
-    encode_deltas_get_options(&deltas);
+    // Get ENCODE_DELTAS
+    GetOptionEncodeDeltas(&deltas);
 
-    ///> Take WINDOW_SIZE.
-    uint64_t wsize = wsize_get_options();
+    // Get WINDOW_SIZE
+    uint64_t wsize = GetOptionWindowSize();
 
-    ///> Take SAMPLES.
-    uint64_t samples_max = samples_get_options();
+    // Get SAMPLES
+    uint64_t samples_max = GetOptionSamples();
 
-    ///> Take SAMPLING_PROB.
-    double sampling_prob = probability_get_options();
+    // Get SAMPLING_PROB
+    double sampling_prob = GetOptionProbability();
 
-    ///> Take SPLIT_BLOCKS
-    bool split_blocks = split_get_options();
+    // Get SPLIT_BLOCKS
+    bool split_blocks = GetOptionSplitBlocks();
 
-    ///> Initalization of spm_mt.
+    // Initalization of the multithreaded sparse matrix representation
     spm_mt = (spm_mt_t *) malloc(sizeof(spm_mt_t));
     if (!spm_mt) {
         perror("malloc");
@@ -326,25 +322,24 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     for (unsigned int i = 0; i < nr_threads; i++)
         spm_mt->spm_threads[i].cpu = threads_cpus[i];
 
-    ///> Load the appropriate sub-matrix to each thread.
+    // Load the appropriate sub-matrix to each thread
     Spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
 
-    ///> Start timer for preprocessing.
+    // Start timer for preprocessing
     xtimer_t timer;
     timer_init(&timer);
     timer_start(&timer);
 
-    ///> Initalization of pthreads.
+    // Initalize and setup threads
     threads = (pthread_t *) malloc((nr_threads - 1) * sizeof(pthread_t));
     if (!threads){
         perror("malloc");
         exit(1);
     }
 
-    ///> Parameters passed to each thread.
-    data = new Parameters[nr_threads];
+    data = new thread_info_t[nr_threads];
     for (unsigned int i = 0; i < nr_threads; i++) {
-        data[i].Spm = &Spms[i];
+        data[i].spm = &Spms[i];
         data[i].wsize = wsize;
         data[i].thread_no = i;
         data[i].xform_buf = xform_buf;
@@ -355,58 +350,47 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
         data[i].buffer.str("");
     }
 
-    ///> Parallel Preprocessing for each thread.
+    // Start parallel preprocessing
     for (unsigned int i = 1; i < nr_threads; i++)
-        pthread_create(&threads[i-1],NULL,thread_function,(void *) &data[i]);
+        pthread_create(&threads[i-1], NULL, PreprocessThread,
+                       (void *) &data[i]);
 
-    thread_function((void *) &data[0]);
+    PreprocessThread((void *) &data[0]);
 
-    ///> Wait for other threads to finish.
     for (unsigned int i = 1; i < nr_threads; ++i)
         pthread_join(threads[i-1],NULL);
 
+    // CSX matrix construction and JIT compilation
     CsxJitInitGlobal();
-
-    ///> Init Jits.
     Jits = (CsxJit **) malloc(nr_threads * sizeof(CsxJit *));
     if (!Jits){
         perror("malloc");
         exit(1);
     }
 
-    ///> Serial Preprocessing.
     for (unsigned int i = 0; i < nr_threads; ++i){
-        /**
-         *  Init CsxManager which holds the final CSX form of encoded
-         *  sub-matrix.
-         */
         CsxManager *CsxMg = new CsxManager(&Spms[i]);
-        ///> Get the elements in CSX form.
         spm_mt->spm_threads[i].spm = CsxMg->MakeCsx();
-        ///> Init Jits which makes the generation code part.
         Jits[i] = new CsxJit(CsxMg, i);
-        ///> Make the generated code
         Jits[i]->GenCode(data[i].buffer);
-        //verifyModule(*(Jits[i]->M), AbortProcessAction, 0);
         delete CsxMg;
-        ///> Print the results of each thread.
         std::cout << data[i].buffer.str();
     }
 
-    ///> Optimize generated code and apply it to each thread seperately.
+    // Optimize generated code and assign it to every thread
     CsxJitOptmize();
-    for (unsigned int i=0; i < nr_threads; i++) {
+    for (unsigned int i = 0; i < nr_threads; i++) {
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->GetSpmvFn();
         delete Jits[i];
     }
 
-    ///> Free and Delete unnecessary data.
+    // Cleanup.
     free(Jits);
     free(threads);
     delete[] Spms;
     delete[] data;
 
-    ///> Stop the preprocessing time counter and print it.
+    // Preprocessing finished; stop timer
     timer_pause(&timer);
     std::cout << "Preprocessing time: "
               << timer_secs(&timer) << " sec"
@@ -420,7 +404,13 @@ static void PutSpmMt(spm_mt_t *spm_mt)
     free(spm_mt);
 }
 
-///> Check if encoded matrix return the correct result.
+/**
+ *  Check the CSX SpMV result against the baseline single-thread CSR
+ *  implementation.
+ *
+ *  @param the (mulithreaded) CSX matrix.
+ *  @param the MMF input file.
+ */
 static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     void *crs;
@@ -434,7 +424,11 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     std::cout << "Check Passed" << std::endl << std::flush;
 }
 
-///> Count the size of the compressed matrix in CSX form.
+/**
+ *  Compute the size (in bytes) of the compressed matrix in CSX form.
+ *
+ *  @parame spm_mt  the sparse matrix in CSX format.
+ */
 static unsigned long CsxSize(spm_mt_t *spm_mt)
 {
     unsigned long ret;
@@ -443,7 +437,6 @@ static unsigned long CsxSize(spm_mt_t *spm_mt)
     for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
         spm_mt_thread_t *t = spm_mt->spm_threads + i;
         csx_double_t *csx = (csx_double_t *)t->spm;
-
         ret += csx->nnz * sizeof(double);
         ret += csx->ctl_size;
     }
@@ -451,7 +444,9 @@ static unsigned long CsxSize(spm_mt_t *spm_mt)
     return ret;
 }
 
-///> Run spmv and print the results.
+/**
+ *  Run CSX SpMV and record the performance information.
+ */
 static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     uint64_t nrows, ncols, nnz;
@@ -460,9 +455,9 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 
     getMmfHeader(mmf_name, nrows, ncols, nnz);
     secs = spmv_double_bench_mt_loop(spm_mt, loops_nr, nrows, ncols, NULL);
-    flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
+    flops = (double) (loops_nr*nnz*2) / ((double) 1000*1000*secs);
     printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-      "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+           "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
 }
 
 int main(int argc, char **argv)

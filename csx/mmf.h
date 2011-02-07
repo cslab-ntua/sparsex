@@ -1,3 +1,12 @@
+/* -*- C++ -*-
+ *
+ * mmf.h -- Matrix Market Format routines
+ *
+ * Copyright (C) 2010, Computing Systems Laboratory (CSLab), NTUA.
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef MMF_H__
 #define MMF_H__
 
@@ -8,14 +17,13 @@
 
 namespace csx {
 
-void getMmfHeader(const char *mmf_file, uint64_t &nrows, uint64_t &ncols, uint64_t &nnz);
-void getMmfHeader(std::istream &in, uint64_t &nrows, uint64_t &ncols, uint64_t &nnz);
+void getMmfHeader(const char *mmf_file,
+                  uint64_t &nrows, uint64_t &ncols, uint64_t &nnz);
+void getMmfHeader(std::istream &in,
+                  uint64_t &nrows, uint64_t &ncols, uint64_t &nnz);
 
 class MMF
 {
-private:
-	std::istream &in;
-
 public:
 	uint64_t nrows, ncols, nnz;
 
@@ -29,59 +37,82 @@ public:
 	class iterator;
 	iterator begin();
 	iterator end();
+
+private:
+	std::istream &in_;
 };
 
 class MMF::iterator :
 public std::iterator<std::forward_iterator_tag, CooElem>
 {
-	MMF *mmf;
-	uint64_t cnt;
-	CooElem elem;
-	bool valid;
-
 public:
-	void _set(){
-		this->valid = this->mmf->next(this->elem.y, this->elem.x, this->elem.val);
-	}
-	iterator() { assert(false); }
-	iterator(MMF *mmf_, uint64_t cnt_): mmf(mmf_), cnt(cnt_)
+	iterator()
+    {
+        assert(false);
+    }
+
+	iterator(MMF *mmf, uint64_t cnt)
+        : mmf_(mmf), cnt_(cnt)
 	{
 		// this is the initializer
-		if (this->cnt == 0){
-			this->_set();
+		if (cnt_ == 0) {
+			this->DoSet();
 		}
 	}
 
 
-	bool operator==(const iterator &i){
-		//std::cout << "me: " << this->mmf << " " << this->cnt
+	bool operator==(const iterator &i)
+    {
+		//std::cout << "me: " << mmf_ << " " << cnt_
 		//          << " i: " << i.mmf << " " << i.cnt << "\n";
-		return (this->mmf == i.mmf) && (this->cnt == i.cnt);
+		return (mmf_ == i.mmf_) && (cnt_ == i.cnt_);
 	}
 
-	bool operator!=(const iterator &i){
+	bool operator!=(const iterator &i)
+    {
 		return !(*this == i);
 	}
 
-	void operator++(){
-		this->cnt++;
-		this->_set();
+	void operator++()
+    {
+		++cnt_;
+		this->DoSet();
 	}
 
-	CooElem operator*(){
-		if (!this->valid){
+	CooElem operator*()
+    {
+		if (!valid_) {
 			std::cout << "Requesting dereference, but mmf ended\n"
-			          << "cnt: " << this->cnt << std::endl;
+			          << "cnt: " << cnt_ << std::endl;
 			assert(false);
 		}
-		assert(valid);
-		return this->elem;
+
+		assert(valid_);
+		return elem_;
 	}
+
+private:
+	void DoSet()
+    {
+		valid_ = mmf_->next(elem_.y, elem_.x, elem_.val);
+	}
+
+	MMF *mmf_;
+	uint64_t cnt_;
+	CooElem elem_;
+	bool valid_;
 };
 
-MMF::iterator MMF::begin() { return MMF::iterator(this, 0); }
-MMF::iterator MMF::end() { return MMF::iterator(this, this->nnz); }
+MMF::iterator MMF::begin()
+{
+    return MMF::iterator(this, 0);
+}
+
+MMF::iterator MMF::end()
+{
+    return MMF::iterator(this, this->nnz);
+}
 
 } // csx namespace end
 
-#endif
+#endif  // MMF_H__

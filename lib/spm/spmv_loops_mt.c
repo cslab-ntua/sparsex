@@ -56,9 +56,9 @@ static void *do_spmv_thread(void *arg)
 static void *do_spmv_thread_main_swap(void *arg)
 {
 	spm_mt_thread_t	 *spm_mt_thread;
-		#ifdef SPMV_PRFCNT
-		prfcnt_t		 *prfcnt;
-		#endif
+#ifdef SPMV_PRFCNT
+	prfcnt_t		 *prfcnt;
+#endif
 	SPMV_NAME(_fn_t) *spmv_mt_fn;
 	tsc_t tsc;
 
@@ -76,13 +76,11 @@ static void *do_spmv_thread_main_swap(void *arg)
 	tsc_init(&tsc);
 	tsc_start(&tsc);
 #ifdef SPMV_PRFCNT
-	prfcnt_init(prfcnt,
-				spm_mt_thread->cpu,
-				PRFCNT_FL_T0 | PRFCNT_FL_T1);
+	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
 	prfcnt_start(prfcnt);
 #endif
 	int i;
-	for (i=0; i<loops_nr; i++){
+	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
@@ -109,9 +107,9 @@ static void init_barrier(unsigned count)
 	}
 }
 
-float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
-				 unsigned long rows_nr, unsigned long cols_nr,
-				 SPMV_NAME(_fn_t) *fn)
+float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
+                                unsigned long rows_nr, unsigned long cols_nr,
+                                SPMV_NAME(_fn_t) *fn)
 {
 	int i;
 	pthread_t *tids;
@@ -128,7 +126,7 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 		exit(1);
 	}
 
-	for (i=0; i<spm_mt->nr_threads; i++){
+	for (i = 0; i < spm_mt->nr_threads; i++) {
 		if (fn != NULL)
 			spm_mt->spm_threads[i].spmv_fn = fn;
 #ifdef SPMV_PRFCNT
@@ -146,10 +144,10 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 	 *	- N-1: do_spmv_thread: just computes
 	 */
 	pthread_create(tids, NULL, do_spmv_thread_main_swap, spm_mt->spm_threads);
-	for (i=1; i<spm_mt->nr_threads; i++)
+	for (i = 1; i < spm_mt->nr_threads; i++)
 		pthread_create(tids+i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
 
-	for (i=0; i<spm_mt->nr_threads; i++)
+	for (i = 0; i < spm_mt->nr_threads; i++)
 		pthread_join(tids[i], NULL);
 
 #ifdef SPMV_PRFCNT
@@ -158,7 +156,7 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 		spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
 		prfcnt_t		*prfcnt = (prfcnt_t *) spmv_thread.data;
 		fprintf(stdout, "Perf. counters: thread %d on cpu %d\n", i,
-				spmv_thread.cpu);
+		        spmv_thread.cpu);
 		prfcnt_report(prfcnt);
 		prfcnt_shut(prfcnt);
 		free(prfcnt);
@@ -172,10 +170,10 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 	return secs;
 }
 
-void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
-								 SPMV_NAME(_fn_t) *fn, unsigned long loops,
-								 unsigned long rows_nr, unsigned long cols_nr,
-				 SPMV_NAME(_fn_t) *mt_fn)
+void SPMV_NAME(_check_mt_loop) (void *spm, spm_mt_t *spm_mt,
+                                SPMV_NAME(_fn_t) *fn, unsigned long loops,
+                                unsigned long rows_nr, unsigned long cols_nr,
+                                SPMV_NAME(_fn_t) *mt_fn)
 {
 	int err, i;
 	pthread_t *tids;
@@ -193,12 +191,12 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 	}
 
 	tids = malloc(sizeof(pthread_t)*spm_mt->nr_threads);
-	if ( !tids ){
+	if (!tids) {
 		perror("malloc");
 		exit(1);
 	}
 
-	for (i=0; i<spm_mt->nr_threads; i++){
+	for (i = 0; i < spm_mt->nr_threads; i++) {
 		if (mt_fn != NULL)
 			spm_mt->spm_threads[i].spmv_fn = mt_fn;
 #ifdef SPMV_PRFCNT
@@ -211,7 +209,7 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 		pthread_create(tids+i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
 	}
 
-	for (i=0; i<loops; i++){
+	for (i = 0; i < loops; i++) {
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
 		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 		VECTOR_NAME(_init)(y2, (ELEM_TYPE)21);
@@ -219,7 +217,7 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 		pthread_barrier_wait(&barrier);
 		fn(spm, x, y2);
 
-		if ( VECTOR_NAME(_compare)(y2, y) < 0){
+		if (VECTOR_NAME(_compare)(y2, y) < 0) {
 			exit(1);
 		}
 	}
@@ -228,7 +226,7 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 	VECTOR_NAME(_destroy)(y);
 	VECTOR_NAME(_destroy)(y2);
 
-	for (i=0; i<spm_mt->nr_threads; i++){
+	for (i = 0; i < spm_mt->nr_threads; i++) {
 		pthread_join(tids[i], NULL);
 	}
 #ifdef SPMV_PRFCNT
@@ -243,11 +241,11 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 }
 
 void SPMV_NAME(_check_mt_loop_serial) (void *spm, spm_mt_t *spm_mt,
-									   SPMV_NAME(_fn_t) *fn,
-									   unsigned long loops,
-									   unsigned long rows_nr,
-									   unsigned long cols_nr,
-									   SPMV_NAME(_fn_t) *mt_fn)
+                                       SPMV_NAME(_fn_t) *fn,
+                                       unsigned long loops,
+                                       unsigned long rows_nr,
+                                       unsigned long cols_nr,
+                                       SPMV_NAME(_fn_t) *mt_fn)
 {
 	int i, j;
 	VECTOR_TYPE *y2;
@@ -257,12 +255,12 @@ void SPMV_NAME(_check_mt_loop_serial) (void *spm, spm_mt_t *spm_mt,
 	y2 = VECTOR_NAME(_create)(rows_nr);
 	loops_nr = loops;
 
-	for (i=0; i<spm_mt->nr_threads; i++){
+	for (i = 0; i < spm_mt->nr_threads; i++) {
 		if (mt_fn != NULL)
 			spm_mt->spm_threads[i].spmv_fn = mt_fn;
 	}
 
-	for (i=0; i<loops; i++){
+	for (i = 0; i < loops; i++) {
 		//unsigned long	 k;
 		//for (k=0; k < cols_nr; k++)
 		//	x->elements[k] = (ELEM_TYPE)(k+666.0);
@@ -270,7 +268,7 @@ void SPMV_NAME(_check_mt_loop_serial) (void *spm, spm_mt_t *spm_mt,
 		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 		VECTOR_NAME(_init)(y2, (ELEM_TYPE)21);
 
-		for (j=0; j<spm_mt->nr_threads; j++){
+		for (j = 0; j < spm_mt->nr_threads; j++) {
 			spm_mt_thread_t *t = spm_mt->spm_threads + j;
 			SPMV_NAME(_fn_t) *spmv_mt_fn = t->spmv_fn;
 			spmv_mt_fn(t->spm, x, y);
@@ -278,7 +276,7 @@ void SPMV_NAME(_check_mt_loop_serial) (void *spm, spm_mt_t *spm_mt,
 
 		fn(spm, x, y2);
 
-		if ( VECTOR_NAME(_compare)(y2, y) < 0){
+		if (VECTOR_NAME(_compare)(y2, y) < 0) {
 			exit(1);
 		}
 	}
