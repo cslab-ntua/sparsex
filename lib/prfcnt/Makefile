@@ -1,7 +1,7 @@
 .phony: all clean
 
 ## Configuration
-cpu_dir      = ../cpu/
+cpu_dir = $(shell pwd)/../cpu
 
 CC      = gcc
 CFLAGS  = -Wall -Winline -O2

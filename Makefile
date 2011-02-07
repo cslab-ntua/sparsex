@@ -1,9 +1,9 @@
 
-SUBDIRS = lib/dynarray lib/phash lib/spm csx
+SUBDIRS = lib/dynarray lib/spm lib/cpu lib/prfcnt csx
 
-all: $(SUBDIRS)
+.PHONY: all clean $(SUBDIRS)
 
-.PHONY: all $(SUBDIRS)
+all clean: $(SUBDIRS) 
 
 $(SUBDIRS):
-	 $(MAKE) -C $@
+	 $(MAKE) -C $@ $(MAKECMDGOALS)

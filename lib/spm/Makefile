@@ -5,7 +5,6 @@ SHELL = /bin/bash
 all: libspmv.o spmv
 
 ## Configuration
-debug_dir    = ../lib/debug
 cpu_dir      = $(shell pwd)/../cpu
 dynarray_dir = ../dynarray
 prfcnt_dir   = ../prfcnt
@@ -14,14 +13,14 @@ dynarray_dep = $(dynarray_dir)/dynarray.o
 
 .PHONY: $(dynarray_dep)
 
-#MHZ_SH      ?= $(cpu_dir)/cpu_mhz.sh
+MHZ_SH      ?= $(cpu_dir)/cpu_mhz.sh
 #CL_BYTES    ?= $(shell $(cpu_dir)/cl_bytes.sh)
 #CACHE_BYTES ?= $(shell $(cpu_dir)/cache_bytes.sh)
-#CPU         ?= $(shell $(cpu_dir)/cpu_info.sh)
+CPU         ?= $(shell $(cpu_dir)/cpu_info.sh)
 GCC         ?= llvm-gcc
-CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC #-DCPU_CORE #-DSPMV_PRFCNT
+CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
-#DEFS         += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
+DEFS        += -DCPU_MHZ_SH=\"$(MHZ_SH)\" -DCPU_$(CPU)
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
 LIBS         = -lm -lpthread
 INC          = -I$(dynarray_dir) -I$(prfcnt_dir)

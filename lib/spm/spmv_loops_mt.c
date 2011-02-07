@@ -20,17 +20,16 @@ static float secs = 0.0;
 static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
-        #ifdef SPMV_PRFCNT
-        prfcnt_t        *prfcnt = (prfcnt_t *) spm_mt_thread->data;
-        #endif
-	//printf("Hello I'm thread on cpu:%d\n", spm_mt_thread->cpu);
+#ifdef SPMV_PRFCNT
+	prfcnt_t		*prfcnt = (prfcnt_t *) spm_mt_thread->data;
+#endif
 	SPMV_NAME(_fn_t) *spmv_mt_fn = spm_mt_thread->spmv_fn;
 	setaffinity_oncpu(spm_mt_thread->cpu);
 	int i;
 
 #ifdef SPMV_PRFCNT
-    prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
-    prfcnt_start(prfcnt);
+	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
+	prfcnt_start(prfcnt);
 #endif
 
 	for (i=0; i<loops_nr; i++){
@@ -40,33 +39,34 @@ static void *do_spmv_thread(void *arg)
 	}
 
 #ifdef SPMV_PRFCNT
-    prfcnt_pause(prfcnt);
+	prfcnt_pause(prfcnt);
 #endif
 
 	return NULL;
 }
 
-#define SWAP(x,y) do {    \
-	typeof(x) _tmp;   \
-	_tmp = x;         \
-	x = y;            \
-	y = _tmp;         \
-} while (0)
+#define SWAP(x,y)								\
+	do {										\
+		typeof(x) _tmp;							\
+		_tmp = x;								\
+		x = y;									\
+		y = _tmp;								\
+	} while (0)
 
 static void *do_spmv_thread_main_swap(void *arg)
 {
-	spm_mt_thread_t  *spm_mt_thread;
-        #ifdef SPMV_PRFCNT
-        prfcnt_t         *prfcnt;
-        #endif
+	spm_mt_thread_t	 *spm_mt_thread;
+		#ifdef SPMV_PRFCNT
+		prfcnt_t		 *prfcnt;
+		#endif
 	SPMV_NAME(_fn_t) *spmv_mt_fn;
 	tsc_t tsc;
 
 	spm_mt_thread = arg;
 	spmv_mt_fn = spm_mt_thread->spmv_fn;
-        #ifdef SPMV_PRFCNT
-        prfcnt = (prfcnt_t *) spm_mt_thread->data;
-        #endif
+#ifdef SPMV_PRFCNT
+	prfcnt = (prfcnt_t *) spm_mt_thread->data;
+#endif
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
@@ -74,14 +74,12 @@ static void *do_spmv_thread_main_swap(void *arg)
 	// assert that this is a rectangular matrix, and swap is OK
 	assert(x->size == y->size);
 	tsc_init(&tsc);
-
-	//printf("Hello I'm thread on cpu:%d\n", spm_mt_thread->cpu);
 	tsc_start(&tsc);
 #ifdef SPMV_PRFCNT
-    prfcnt_init(prfcnt,
-                spm_mt_thread->cpu,
-                PRFCNT_FL_T0 | PRFCNT_FL_T1);
-    prfcnt_start(prfcnt);
+	prfcnt_init(prfcnt,
+				spm_mt_thread->cpu,
+				PRFCNT_FL_T0 | PRFCNT_FL_T1);
+	prfcnt_start(prfcnt);
 #endif
 	int i;
 	for (i=0; i<loops_nr; i++){
@@ -93,7 +91,7 @@ static void *do_spmv_thread_main_swap(void *arg)
 	}
 	tsc_pause(&tsc);
 #ifdef SPMV_PRFCNT
-    prfcnt_pause(prfcnt);
+	prfcnt_pause(prfcnt);
 #endif
 	secs = tsc_getsecs(&tsc);
 	tsc_shut(&tsc);
@@ -134,18 +132,18 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 		if (fn != NULL)
 			spm_mt->spm_threads[i].spmv_fn = fn;
 #ifdef SPMV_PRFCNT
-        spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
-        if (!spm_mt->spm_threads[i].data) {
-            perror("malloc");
-            exit(1);
-        }
+		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
+		if (!spm_mt->spm_threads[i].data) {
+			perror("malloc");
+			exit(1);
+		}
 #endif
 	}
 
 	/*
 	 * spawn two kind of threads:
-	 *  - 1  : do_spmv_thread_main_swap: computes, does SWAP(Y,X) and zeroes Y
-	 *  - N-1: do_spmv_thread: just computes
+	 *	- 1	 : do_spmv_thread_main_swap: computes, does SWAP(Y,X) and zeroes Y
+	 *	- N-1: do_spmv_thread: just computes
 	 */
 	pthread_create(tids, NULL, do_spmv_thread_main_swap, spm_mt->spm_threads);
 	for (i=1; i<spm_mt->nr_threads; i++)
@@ -155,16 +153,16 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 		pthread_join(tids[i], NULL);
 
 #ifdef SPMV_PRFCNT
-    /* Report performance counters for every thread */
-    for (i = 0; i < spm_mt->nr_threads; i++) {
-        spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
-        prfcnt_t        *prfcnt = (prfcnt_t *) spmv_thread.data;
-        fprintf(stdout, "Perf. counters: thread %d on cpu %d\n", i,
-                spmv_thread.cpu);
-        prfcnt_report(prfcnt);
-        prfcnt_shut(prfcnt);
-        free(prfcnt);
-    }
+	/* Report performance counters for every thread */
+	for (i = 0; i < spm_mt->nr_threads; i++) {
+		spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
+		prfcnt_t		*prfcnt = (prfcnt_t *) spmv_thread.data;
+		fprintf(stdout, "Perf. counters: thread %d on cpu %d\n", i,
+				spmv_thread.cpu);
+		prfcnt_report(prfcnt);
+		prfcnt_shut(prfcnt);
+		free(prfcnt);
+	}
 #endif
 
 	VECTOR_NAME(_destroy)(x);
@@ -175,8 +173,8 @@ float SPMV_NAME(_bench_mt_loop) (spm_mt_t *spm_mt, unsigned long loops,
 }
 
 void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
-                                 SPMV_NAME(_fn_t) *fn, unsigned long loops,
-                                 unsigned long rows_nr, unsigned long cols_nr,
+								 SPMV_NAME(_fn_t) *fn, unsigned long loops,
+								 unsigned long rows_nr, unsigned long cols_nr,
 				 SPMV_NAME(_fn_t) *mt_fn)
 {
 	int err, i;
@@ -204,11 +202,11 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 		if (mt_fn != NULL)
 			spm_mt->spm_threads[i].spmv_fn = mt_fn;
 #ifdef SPMV_PRFCNT
-        spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
-        if (!spm_mt->spm_threads[i].data) {
-            perror("malloc");
-            exit(1);
-        }
+		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
+		if (!spm_mt->spm_threads[i].data) {
+			perror("malloc");
+			exit(1);
+		}
 #endif
 		pthread_create(tids+i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
 	}
@@ -234,20 +232,22 @@ void SPMV_NAME(_check_mt_loop) ( void *spm, spm_mt_t *spm_mt,
 		pthread_join(tids[i], NULL);
 	}
 #ifdef SPMV_PRFCNT
-    for (i = 0; i < spm_mt->nr_threads; i++) {
-        spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
-        prfcnt_t        *prfcnt = (prfcnt_t *) spmv_thread.data;
-        prfcnt_shut(prfcnt);
-        free(prfcnt);
-    }
+	for (i = 0; i < spm_mt->nr_threads; i++) {
+		spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
+		prfcnt_t		*prfcnt = (prfcnt_t *) spmv_thread.data;
+		prfcnt_shut(prfcnt);
+		free(prfcnt);
+	}
 #endif
 	free(tids);
 }
 
-void SPMV_NAME(_check_mt_loop_serial) ( void *spm, spm_mt_t *spm_mt,
-                                        SPMV_NAME(_fn_t) *fn, unsigned long loops,
-                                        unsigned long rows_nr, unsigned long cols_nr,
-				        SPMV_NAME(_fn_t) *mt_fn)
+void SPMV_NAME(_check_mt_loop_serial) (void *spm, spm_mt_t *spm_mt,
+									   SPMV_NAME(_fn_t) *fn,
+									   unsigned long loops,
+									   unsigned long rows_nr,
+									   unsigned long cols_nr,
+									   SPMV_NAME(_fn_t) *mt_fn)
 {
 	int i, j;
 	VECTOR_TYPE *y2;
@@ -263,7 +263,7 @@ void SPMV_NAME(_check_mt_loop_serial) ( void *spm, spm_mt_t *spm_mt,
 	}
 
 	for (i=0; i<loops; i++){
-		//unsigned long  k;
+		//unsigned long	 k;
 		//for (k=0; k < cols_nr; k++)
 		//	x->elements[k] = (ELEM_TYPE)(k+666.0);
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
