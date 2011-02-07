@@ -26,20 +26,20 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 
 	spm_mt = malloc(sizeof(spm_mt_t));
 	if ( !spm_mt ){
-		perror("malloc");
+		fprintf(stderr, "malloc failed\n");
 		exit(1);
 	}
 
 	spm_mt->nr_threads = nr_cpus;
 	spm_mt->spm_threads = malloc(sizeof(spm_mt_thread_t)*nr_cpus);
 	if ( !spm_mt->spm_threads ){
-		perror("malloc");
+		fprintf(stderr, "malloc failed\n");
 		exit(1);
 	}
 
 	crs_mt = malloc(sizeof(SPM_CRS_MT_TYPE)*nr_cpus);
 	if ( !crs_mt ){
-		perror("malloc");
+		fprintf(stderr, "malloc failed\n");
 		exit(1);
 	}
 

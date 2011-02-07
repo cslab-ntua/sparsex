@@ -65,7 +65,7 @@ csx_double_t *CsxManager::MakeCsx()
     csx = (csx_double_t *) malloc(sizeof(csx_double_t));
     values_ = (double *) malloc(sizeof(double)*spm_->nr_nzeros_);
     if (!csx || !values_) {
-        perror("malloc");
+        std::cerr << __FUNCTION__ << ": malloc failed\n";
         exit(1);
     }
 

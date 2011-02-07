@@ -21,7 +21,7 @@ static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
 #ifdef SPMV_PRFCNT
-	prfcnt_t		*prfcnt = (prfcnt_t *) spm_mt_thread->data;
+	prfcnt_t *prfcnt = (prfcnt_t *) spm_mt_thread->data;
 #endif
 	SPMV_NAME(_fn_t) *spmv_mt_fn = spm_mt_thread->spmv_fn;
 	setaffinity_oncpu(spm_mt_thread->cpu);
@@ -45,19 +45,19 @@ static void *do_spmv_thread(void *arg)
 	return NULL;
 }
 
-#define SWAP(x,y)								\
-	do {										\
-		typeof(x) _tmp;							\
-		_tmp = x;								\
-		x = y;									\
-		y = _tmp;								\
+#define SWAP(x,y)                \
+	do {                     \
+		typeof(x) _tmp;  \
+		_tmp = x;        \
+		x = y;           \
+		y = _tmp;        \
 	} while (0)
 
 static void *do_spmv_thread_main_swap(void *arg)
 {
-	spm_mt_thread_t	 *spm_mt_thread;
+	spm_mt_thread_t *spm_mt_thread;
 #ifdef SPMV_PRFCNT
-	prfcnt_t		 *prfcnt;
+	prfcnt_t *prfcnt;
 #endif
 	SPMV_NAME(_fn_t) *spmv_mt_fn;
 	tsc_t tsc;
@@ -122,7 +122,7 @@ float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 
 	tids = malloc(sizeof(pthread_t)*spm_mt->nr_threads);
 	if ( !tids ){
-		perror("malloc");
+		fprintf(stderr, "malloc failed\n");
 		exit(1);
 	}
 
@@ -132,7 +132,7 @@ float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 #ifdef SPMV_PRFCNT
 		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
 		if (!spm_mt->spm_threads[i].data) {
-			perror("malloc");
+		        fprintf(stderr, "malloc failed\n");
 			exit(1);
 		}
 #endif
@@ -154,7 +154,7 @@ float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 	/* Report performance counters for every thread */
 	for (i = 0; i < spm_mt->nr_threads; i++) {
 		spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
-		prfcnt_t		*prfcnt = (prfcnt_t *) spmv_thread.data;
+		prfcnt_t *prfcnt = (prfcnt_t *) spmv_thread.data;
 		fprintf(stdout, "Perf. counters: thread %d on cpu %d\n", i,
 		        spmv_thread.cpu);
 		prfcnt_report(prfcnt);
@@ -192,7 +192,7 @@ void SPMV_NAME(_check_mt_loop) (void *spm, spm_mt_t *spm_mt,
 
 	tids = malloc(sizeof(pthread_t)*spm_mt->nr_threads);
 	if (!tids) {
-		perror("malloc");
+		fprintf(stderr, "malloc failed");
 		exit(1);
 	}
 
@@ -202,7 +202,7 @@ void SPMV_NAME(_check_mt_loop) (void *spm, spm_mt_t *spm_mt,
 #ifdef SPMV_PRFCNT
 		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
 		if (!spm_mt->spm_threads[i].data) {
-			perror("malloc");
+			fprintf(stderr, "malloc failed");
 			exit(1);
 		}
 #endif

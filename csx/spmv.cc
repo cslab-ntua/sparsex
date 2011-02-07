@@ -31,6 +31,22 @@ extern "C" {
 ///  @see ctl_ll.h
 #define DELTAS_MAX  CTL_PATTERNS_MAX
 
+// malloc wrapper
+#define xmalloc(x)                         \
+({                                         \
+    void *ret_;                            \
+    ret_ = malloc(x);                      \
+    if (ret_ == NULL){                     \
+        std::cerr << __FUNCTION__          \
+                  << " " << __FILE__       \
+                  << ":" << __LINE__       \
+                  << ": malloc failed\n";  \
+        exit(1);                           \
+    }                                      \
+    ret_;                                  \
+})
+
+
 using namespace csx;
 
 ///> Thread data essential for parallel preprocessing
@@ -53,7 +69,7 @@ int SplitString(char *str, char **str_buf, const char *start_sep,
     int next = 0;
     int str_length = strcspn(token, end_sep);
 
-    str_buf[next] = (char *) malloc((str_length + 1) * sizeof(char));
+    str_buf[next] = (char *) xmalloc((str_length + 1) * sizeof(char));
     strncpy(str_buf[next], token, str_length);
     str_buf[next][str_length] = 0;
     ++next;
@@ -71,11 +87,7 @@ int SplitString(char *str, char **str_buf, const char *start_sep,
 void GetOptionXform(int **xform_buf)
 {
     char *xform_orig = getenv("XFORM_CONF");
-    *xform_buf = (int *) malloc(XFORM_MAX * sizeof(int));
-    if (!(*xform_buf)) {
-        perror("malloc");
-        exit(1);
-    }
+    *xform_buf = (int *) xmalloc(XFORM_MAX * sizeof(int));
 
     if (xform_orig && strlen(xform_orig)) {
         int next = 0;
@@ -113,22 +125,14 @@ void GetOptionEncodeDeltas(int ***deltas)
 
     if (encode_deltas_str) {
         // Init matrix deltas.
-        *deltas = (int **) malloc(XFORM_MAX * sizeof(int *));
-        if (!*deltas) {
-            perror("malloc");
-            exit(1);
-        }
+        *deltas = (int **) xmalloc(XFORM_MAX * sizeof(int *));
 
         for (int i = 0; i < XFORM_MAX; i++) {
-            (*deltas)[i] = (int *) malloc(DELTAS_MAX * sizeof(int));
-            if (!(*deltas)[i]) {
-                perror("malloc");
-                exit(1);
-            }
+            (*deltas)[i] = (int *) xmalloc(DELTAS_MAX * sizeof(int));
         }
 
         // Fill deltas with the appropriate data.
-        char **temp = (char **) malloc(XFORM_MAX * sizeof(char *));
+        char **temp = (char **) xmalloc(XFORM_MAX * sizeof(char *));
         int temp_size = SplitString(encode_deltas_str, temp, "{", "}");
 
         for (int i = 0; i < temp_size; i++) {
@@ -248,7 +252,7 @@ void *PreprocessThread(void *thread_info)
     for (int i = 0; data->xform_buf[i] != -1; ++i)
         DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
 
-    
+
      // If the user supplies the deltas choices, encode the matrix with the
      // order given in XFORM_CONF, otherwise find statistical data for the types
      // in XFORM_CONF, choose the best choise, encode it and proceed likewise
@@ -305,19 +309,11 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     bool split_blocks = GetOptionSplitBlocks();
 
     // Initalization of the multithreaded sparse matrix representation
-    spm_mt = (spm_mt_t *) malloc(sizeof(spm_mt_t));
-    if (!spm_mt) {
-        perror("malloc");
-        exit(1);
-    }
+    spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
 
     spm_mt->nr_threads = nr_threads;
     spm_mt->spm_threads =
-        (spm_mt_thread_t *) malloc(sizeof(spm_mt_thread_t) * nr_threads);
-    if (!spm_mt->spm_threads){
-        perror("malloc");
-        exit(1);
-    }
+        (spm_mt_thread_t *) xmalloc(sizeof(spm_mt_thread_t) * nr_threads);
 
     for (unsigned int i = 0; i < nr_threads; i++)
         spm_mt->spm_threads[i].cpu = threads_cpus[i];
@@ -331,11 +327,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     timer_start(&timer);
 
     // Initalize and setup threads
-    threads = (pthread_t *) malloc((nr_threads - 1) * sizeof(pthread_t));
-    if (!threads){
-        perror("malloc");
-        exit(1);
-    }
+    threads = (pthread_t *) xmalloc((nr_threads - 1) * sizeof(pthread_t));
 
     data = new thread_info_t[nr_threads];
     for (unsigned int i = 0; i < nr_threads; i++) {
@@ -362,11 +354,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
 
     // CSX matrix construction and JIT compilation
     CsxJitInitGlobal();
-    Jits = (CsxJit **) malloc(nr_threads * sizeof(CsxJit *));
-    if (!Jits){
-        perror("malloc");
-        exit(1);
-    }
+    Jits = (CsxJit **) xmalloc(nr_threads * sizeof(CsxJit *));
 
     for (unsigned int i = 0; i < nr_threads; ++i){
         CsxManager *CsxMg = new CsxManager(&Spms[i]);

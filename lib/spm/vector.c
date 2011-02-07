@@ -17,14 +17,14 @@ VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 {
 	VECTOR_TYPE *v = malloc(sizeof(VECTOR_TYPE));
 	if ( !v ) {
-		perror("malloc");
+		fprintf(stderr, "malloc failed\n");
 		exit(1);
 	}
 
 	v->size = size;
 	v->elements = malloc(sizeof(ELEM_TYPE)*(size + 12));
 	if ( !v->elements ){
-		perror("malloc");
+		fprintf(stderr, "malloc failed\n");
 		exit(1);
 	}
 

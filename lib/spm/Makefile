@@ -5,7 +5,6 @@ SHELL = /bin/bash
 all: libspmv.o spmv
 
 ## Configuration
-debug_dir    = ../lib/debug
 dynarray_dir = ../dynarray
 prfcnt_dir   = ../prfcnt
 

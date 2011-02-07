@@ -25,7 +25,7 @@ method_t *method_create(char *name, void *fn, void *data)
 
 	ret = malloc( sizeof(*ret) + (name_size+1) );
 	if (!ret){
-		perror("malloc failed\n");
+		fprintf(stderr, "malloc failed\n");
 		return NULL;
 	}
 

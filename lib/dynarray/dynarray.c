@@ -18,9 +18,8 @@ dynarray_t *dynarray_create(unsigned long elem_size, unsigned long alloc_grain)
 {
 	struct dynarray *da;
 	da = malloc(sizeof(*da));
-
 	if ( !da ) {
-		perror("dynarray_create: malloc");
+		fprintf(stderr, "dynarray_create: malloc\n");
 		exit(1);
 	}
 
@@ -29,12 +28,11 @@ dynarray_t *dynarray_create(unsigned long elem_size, unsigned long alloc_grain)
 	da->elems_nr = da->alloc_grain = alloc_grain;
 
 	da->elems = malloc(elem_size*da->elems_nr);
-
-	//printf("da->elems: %p\n", da->elems);
 	if ( !da->elems ){
-		perror("dynarray_create: malloc");
+		fprintf(stderr, "dynarray_create: malloc\n");
 		exit(1);
 	}
+	//printf("da->elems: %p\n", da->elems);
 
 	return da;
 }
@@ -48,7 +46,7 @@ dynarray_t *dynarray_init_frombuff(unsigned long elem_size,
 {
 	struct dynarray *da = malloc(sizeof(struct dynarray));
 	if (!da){
-		perror("dynarray_init_frombuff: malloc");
+		fprintf(stderr, "dynarray_init_frombuff: malloc\n");
 		exit(1);
 	}
 
@@ -64,7 +62,7 @@ dynarray_t *dynarray_init_frombuff(unsigned long elem_size,
 		da->elems_nr += alloc_grain - rem;
 		da->elems = realloc(da->elems, da->elem_size*da->elems_nr);
 		if (!da->elems) {
-			perror("dynarray_init_from_buff: realloc failed");
+			fprintf(stderr, "dynarray_init_from_buff: realloc failed\n");
 			exit(1);
 		}
 
@@ -111,9 +109,8 @@ static inline void dynarray_expand(struct dynarray *da)
 	//printf("old addr: %lu	 ", (unsigned long)da->elems);
 	//printf("expand realloc: %lu %lu %lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size);
 	da->elems = realloc(da->elems, da->elem_size*da->elems_nr);
-
 	if (!da->elems) {
-		perror("dynarray_expand: realloc failed");
+		fprintf(stderr, "dynarray_expand: realloc failed\n");
 		exit(1);
 	}
 	//printf("new addr: %lu\n", (unsigned long)da->elems);

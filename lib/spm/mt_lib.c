@@ -46,7 +46,7 @@ void mt_get_options(unsigned int *nr_cpus, unsigned int **cpus)
         *nr_cpus = 1;
         *cpus = malloc(sizeof(unsigned int)*(*nr_cpus));
         if (!*cpus){
-            perror("malloc");
+            fprintf(stderr, "mt_get_options: malloc failed\n");
             exit(1);
         }
         *cpus[0] = 0;
@@ -54,7 +54,7 @@ void mt_get_options(unsigned int *nr_cpus, unsigned int **cpus)
     }
     s = malloc(strlen(e)+1);
     if ( !s ){
-        perror("malloc");
+        fprintf(stderr, "mt_get_options: malloc failed\n");
         exit(1);
     }
     memcpy(s, e, strlen(e)+1);
@@ -67,7 +67,7 @@ void mt_get_options(unsigned int *nr_cpus, unsigned int **cpus)
     i = 0;
     *cpus = malloc(sizeof(unsigned int)*(*nr_cpus));
     if ( !(*cpus) ){
-        perror("malloc");
+        fprintf(stderr, "mt_get_options: malloc failed\n");
         exit(1);
     }
     token = strtok(s, ",");

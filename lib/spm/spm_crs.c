@@ -24,7 +24,7 @@ void *SPM_CRS_NAME(_init_mmf)(char *mmf_file,
 	SPM_CRS_TYPE *crs;
 	crs = malloc(sizeof(SPM_CRS_TYPE));
 	if (!crs){
-		perror("malloc failed");
+		fprintf(stderr, "malloc failed\n");
 		exit(1);
 	}
 
@@ -38,7 +38,7 @@ void *SPM_CRS_NAME(_init_mmf)(char *mmf_file,
 	crs->col_ind = malloc(sizeof(SPM_CRS_IDX_TYPE)*crs->nz);
 	crs->row_ptr = malloc(sizeof(SPM_CRS_IDX_TYPE)*(crs->nrows + 1));
 	if (!crs->values || !crs->col_ind || !crs->row_ptr){
-		perror("malloc failed");
+		fprintf(stderr, "malloc failed\n");
 		exit(1);
 	}
 
