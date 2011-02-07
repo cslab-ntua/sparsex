@@ -9,19 +9,17 @@ extern "C" {
 #endif
 
 dynarray_t *dynarray_create(unsigned long elem_size,
-							unsigned long alloc_grain);
-dynarray_t *dynarray_create_numa(unsigned long elem_size,
-								 unsigned long alloc_grain);
+                            unsigned long alloc_grain);
 dynarray_t *dynarray_init_frombuff(unsigned long elem_size,
-								   unsigned long alloc_grain,
-								   void *elems, unsigned long elems_nr);
+                                   unsigned long alloc_grain,
+                                   void *elems, unsigned long elems_nr);
 
 void *dynarray_alloc(struct dynarray *da);
 void dynarray_dealloc(struct dynarray *da);
 void *dynarray_alloc_nr(struct dynarray *da, unsigned long nr);
 void dynarray_align(struct dynarray *da, unsigned long align);
 void *dynarray_alloc_nr_aligned(struct dynarray *da, unsigned long nr,
-								unsigned long align);
+                                unsigned long align);
 void dynarray_dealloc(struct dynarray *da);
 void dynarray_dealloc_nr(struct dynarray *da, unsigned long nr);
 void dynarray_dealloc_all(struct dynarray *da);

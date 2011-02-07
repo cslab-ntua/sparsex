@@ -16,8 +16,8 @@ struct dynarray {
 
 dynarray_t *dynarray_create(unsigned long elem_size, unsigned long alloc_grain)
 {
-    struct dynarray *da;
-    da = malloc(sizeof(*da));
+	struct dynarray *da;
+	da = malloc(sizeof(*da));
 
 	if ( !da ) {
 		perror("dynarray_create: malloc");
@@ -28,7 +28,7 @@ dynarray_t *dynarray_create(unsigned long elem_size, unsigned long alloc_grain)
 	da->elem_size = elem_size;
 	da->elems_nr = da->alloc_grain = alloc_grain;
 
-    da->elems = malloc(elem_size*da->elems_nr);
+	da->elems = malloc(elem_size*da->elems_nr);
 
 	//printf("da->elems: %p\n", da->elems);
 	if ( !da->elems ){
@@ -43,8 +43,8 @@ dynarray_t *dynarray_create(unsigned long elem_size, unsigned long alloc_grain)
  * elems pointer should be subjectible to realloc() calls
  */
 dynarray_t *dynarray_init_frombuff(unsigned long elem_size,
-								   unsigned long alloc_grain,
-								   void *elems, unsigned long elems_nr)
+                                   unsigned long alloc_grain,
+                                   void *elems, unsigned long elems_nr)
 {
 	struct dynarray *da = malloc(sizeof(struct dynarray));
 	if (!da){
@@ -91,7 +91,7 @@ void *dynarray_get(struct dynarray *da, unsigned long idx)
 	unsigned long addr = (unsigned long) da->elems;
 	if (idx >= da->next_idx) {
 		fprintf(stderr, "dynarray_get: out of bounds idx=%lu next_idx=%lu\n",
-                idx, da->next_idx);
+		                idx, da->next_idx);
 		//print_trace();
 		exit(1);
 	}
@@ -110,8 +110,8 @@ static inline void dynarray_expand(struct dynarray *da)
 	da->elems_nr += da->alloc_grain;
 	//printf("old addr: %lu	 ", (unsigned long)da->elems);
 	//printf("expand realloc: %lu %lu %lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size);
-    da->elems = realloc(da->elems, da->elem_size*da->elems_nr);
-        
+	da->elems = realloc(da->elems, da->elem_size*da->elems_nr);
+
 	if (!da->elems) {
 		perror("dynarray_expand: realloc failed");
 		exit(1);
@@ -162,7 +162,7 @@ void dynarray_align(struct dynarray *da, unsigned long align)
 }
 
 void *dynarray_alloc_nr_aligned(struct dynarray *da,
-								unsigned long nr, unsigned long align)
+                                unsigned long nr, unsigned long align)
 {
 	dynarray_align(da, align);
 	return dynarray_alloc_nr(da, nr);
@@ -191,7 +191,7 @@ void *dynarray_destroy(struct dynarray *da)
 {
 	void *ret = da->elems;
 	//printf("destroy realloc: idx:%lu nr:%lu realloc size:%lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size);
-    ret = realloc(ret, da->next_idx*da->elem_size);
-    free(da);
+	ret = realloc(ret, da->next_idx*da->elem_size);
+	free(da);
 	return ret;
 }
