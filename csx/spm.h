@@ -467,7 +467,6 @@ void MakeRowElem(const CooElem &src, SpmRowElem *dst);
 void MakeRowElem(const SpmCooElem &src, SpmRowElem *dst);
 void MakeRowElem(const SpmRowElem &src, SpmRowElem *dst);
 
-typedef std::iterator<std::forward_iterator_tag, CooElem> SpmPointIter;
 typedef boost::function<void (CooElem &p)> TransformFn;
 
 /**

@@ -77,4 +77,4 @@ spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(GXX) $(LDFLAGS)  -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 clean:
-	rm -f *.o spmv drle_shell drle_test jit
+	rm -f *.o spmv
