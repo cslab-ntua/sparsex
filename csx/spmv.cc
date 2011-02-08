@@ -23,6 +23,7 @@ extern "C" {
 #include "spmv_loops_mt.h"
 #include "timer.h"
 #include "ctl_ll.h"
+#include <libgen.h>
 }
 
 ///> Max deltas that an encoding type may have. This is restricted by the
