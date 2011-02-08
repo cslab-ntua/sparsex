@@ -63,7 +63,7 @@ drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ -o $@
 
 csx_llvm_tmpl.llvm.bc: csx_llvm_tmpl.c ctl_ll.h
-	llvm-gcc -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
+	llvm-gcc-4.2 -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
 
 llvm_jit_help.o: llvm_jit_help.cc llvm_jit_help.h
 	$(GXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<

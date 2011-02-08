@@ -148,6 +148,7 @@ void GetOptionEncodeDeltas(int ***deltas)
             }
 
             (*deltas)[i][j] = -1;
+            free(temp[i]);
         }
 
         free(temp);
