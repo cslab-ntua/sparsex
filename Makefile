@@ -1,5 +1,5 @@
 
-SUBDIRS = lib/dynarray lib/prfcnt lib/spm csx
+SUBDIRS = lib/dynarray lib/spm csx
 
 .PHONY: all clean $(SUBDIRS)
 
