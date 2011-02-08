@@ -89,7 +89,7 @@ csx_double_t *CsxManager::MakeCsx()
                 std::cerr << "MakeCsx(): row is empty" << std::endl;
 
             if (new_row_ == false){
-                new_row_ = true; 	///> In case the first row is empty.
+                new_row_ = true;	///> In case the first row is empty.
             } else {
                 empty_rows_++;
             }
