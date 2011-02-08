@@ -18,8 +18,8 @@ typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt spm_crs ## __idx
 void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_init_mmf( \
 	char *mmf_file, \
-	unsigned long *rows_nr, unsigned long *cols_nr, \
-	unsigned long *nz_nr); \
+	uint64_t *rows_nr, uint64_t *cols_nr, \
+	uint64_t *nz_nr); \
 \
 /* XXX: Destroy */ \
 \

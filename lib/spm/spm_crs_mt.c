@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <stdint.h>
 
 #include "macros.h"
 #include "mt_lib.h"
@@ -10,8 +11,8 @@
 #include "spmv_method.h"
 
 void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
-                                 unsigned long *rows_nr, unsigned long *cols_nr,
-                                 unsigned long *nz_nr)
+                                 uint64_t *rows_nr, uint64_t *cols_nr,
+                                 uint64_t *nz_nr)
 {
 	int i;
 	unsigned int nr_cpus, *cpus;

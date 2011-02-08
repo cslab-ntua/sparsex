@@ -3,6 +3,10 @@
 #include <fstream>
 #include <cstdlib>
 
+extern "C" {
+#include <inttypes.h> /* PRIu64 */
+}
+
 using namespace csx;
 
 namespace csx {
@@ -27,7 +31,7 @@ void getMmfHeader(std::istream &in, uint64_t &nrows, uint64_t &ncols,
 		in.getline(buff, sizeof(buff));
 	} while (buff[0] == '#');
 
-	ret = sscanf(buff, "%lu %lu %lu", &nrows, &ncols, &nnz);
+	ret = sscanf(buff, "%" PRIu64 " %" PRIu64 " %" PRIu64, &nrows, &ncols, &nnz);
 	if (ret != 3) {
 		std::cerr << "mmf header error: sscanf" << std::endl;
 		exit(1);
@@ -51,7 +55,7 @@ bool MMF::next(uint64_t &y, uint64_t &x, double &v)
 		return false;
 	}
 
-	ret = sscanf(buff, "%lu %lu %lf", &y, &x, &v);
+	ret = sscanf(buff, "%" PRIu64 " %" PRIu64 " %lf", &y, &x, &v);
 	assert(ret == 3);
 	return true;
 }

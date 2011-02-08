@@ -12,8 +12,13 @@ typedef enum {
 	DELTA_MAX
 } DeltaSize;
 
+//#define  spm_csrdu_ucmax(ci_size) (1UL<<(8<<ci_size)) XXX: not 32-bit compatible
+static inline uint64_t spm_csrdu_ucmax(DeltaSize ci_size)
+{
+	uint64_t one = 1;
+	return (one << (8<<ci_size));
+}
 
-#define  spm_csrdu_ucmax(ci_size) (1UL<<(8<<ci_size))
 static inline DeltaSize getDeltaSize(uint64_t u)
 {
 	if ( u < spm_csrdu_ucmax(DELTA_U8)){

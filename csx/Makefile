@@ -34,8 +34,9 @@ dynarray_dep    = $(dynarray_dir)/dynarray.o
 
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
+# the additional flag are so that we can use PRIu64
 mmf.o: mmf.cc spm.h mmf.h
-	$(CXX_COMPILE) $< -c -o $@
+	$(CXX_COMPILE) -D__STDC_FORMAT_MACROS $< -c -o $@
 
 spm.o: spm.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@

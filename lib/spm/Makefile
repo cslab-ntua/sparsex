@@ -19,7 +19,7 @@ CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
 DEFS        += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
 #CFLAGS      += -DCPU_CORE -DSPMV_PRFCNT # performance counters for an intel core
-DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE
+DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
 LIBS         = -lm -lpthread
 INC          = -I$(dynarray_dir) -I$(prfcnt_dir)
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
