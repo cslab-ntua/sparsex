@@ -33,12 +33,12 @@ void inline fail()
 
 void print_yx(uint64_t y, uint64_t x)
 {
-	printf("%lu %lu\n", y+1, x+1);
+	printf("%" PRIu64 " %" PRIu64 "\n", y+1, x+1);
 }
 
 void print_yxv(uint64_t y, uint64_t x, double v)
 {
-	printf("%lu %lu %le\n", y+1, x+1, v);
+	printf("%" PRIu64 " %" PRIu64 " %le\n", y+1, x+1, v);
 }
 
 #define ELEM_TYPE double

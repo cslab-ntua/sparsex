@@ -26,6 +26,7 @@ CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 
 #llvm
 llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter
+LLVM_GCC        = llvm-gcc
 LLVM_CFLAGS     = $(shell $(llvmconf) --cflags)
 LLVM_CXXFLAGS   = $(shell $(llvmconf) --cxxflags)
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
@@ -34,7 +35,7 @@ dynarray_dep    = $(dynarray_dir)/dynarray.o
 
 CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 
-# the additional flag are so that we can use PRIu64
+# define __STDC_FORMAT_MACROS, so that we can use PRIu64
 mmf.o: mmf.cc spm.h mmf.h
 	$(CXX_COMPILE) -D__STDC_FORMAT_MACROS $< -c -o $@
 
@@ -62,8 +63,9 @@ test.o: test.cc drle.h spm.h
 drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ -o $@
 
+# define __STDC_FORMAT_MACROS, so that we can use PRIu64
 csx_llvm_tmpl.llvm.bc: csx_llvm_tmpl.c ctl_ll.h
-	llvm-gcc-4.2 -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
+	$(LLVM_GCC) -D__STDC_FORMAT_MACROS -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
 
 llvm_jit_help.o: llvm_jit_help.cc llvm_jit_help.h
 	$(GXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
@@ -74,8 +76,10 @@ jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 spmv.o: spmv.cc
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
+# -Xlinker --allow-multiple-definition is set because
+# dynarray code is also included in libspmv.o.
 spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
-	$(GXX) $(LDFLAGS)  -ggdb -rdynamic -lnuma -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
+	$(GXX) $(LDFLAGS)  -ggdb -rdynamic -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 clean:
 	rm -f *.o spmv

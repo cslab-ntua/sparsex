@@ -24,11 +24,11 @@ LIBS         = -lm -lpthread
 INC          = -I$(dynarray_dir) -I$(prfcnt_dir)
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 
-ifeq ($(CPU),NIAGARA)
-	CFLAGS += -m64
-	LD = ld -melf64_sparc
-endif
-
+#ifeq ($(CPU),NIAGARA)
+#	CFLAGS += -m64
+#	LD = ld -melf64_sparc
+#endif
+#
 #ifeq ($(shell $(prfcnt_dir)/scripts/numa_lib.sh FOO),FOO)
 #	DEFS += -DSPM_NUMA
 #	LIBS += -lnuma
