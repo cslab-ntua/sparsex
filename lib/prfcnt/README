@@ -7,6 +7,6 @@ Simple performance Counters library
  - A Simple module to use the rdpmc function
 
  - quick-n-dirty scripts for processor characteristics identification
-   (probably only work on linix)
+   (NOT portable)
 
 --kkourt

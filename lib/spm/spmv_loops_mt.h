@@ -1,3 +1,12 @@
+/*
+ * spmv_loops_mt.h -- multithreaded spmv loops
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef __SPMV_LOOPS_MT__
 #define __SPMV_LOOPS_MT__
 

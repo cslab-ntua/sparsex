@@ -1,3 +1,13 @@
+/*
+ * dynnaray.c -- dynamically sized arrays
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * Copyright (C) 2010-2011, Vasileios Karakasis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #include <assert.h>
 #include <sched.h>
 #include <stdlib.h>

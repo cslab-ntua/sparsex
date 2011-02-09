@@ -1,10 +1,15 @@
+/*
+ * tsc.h -- code to count ticks
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
 #ifndef __TSC__
 #define __TSC__
-
-/*
- * Code to count ticks
- * Kornilios Kourtis <kkourt@cslab.ece.ntua.gr>
- */
 
 #include <stdio.h>
 #include <stdlib.h>

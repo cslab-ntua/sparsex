@@ -1,8 +1,12 @@
-
-
 /*
- * Program to query/enable/disable the hardware prefetcher
- * Kornilios Kourtis <kkourt@cslab.ece.ntua.gr>
+ * hwpfetch.c -- query/enable/disable the hardware prefetcher
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ *
  * References:
  * IA32_MISC_ENABLE MSR in IA32 Vol. 3b
  */

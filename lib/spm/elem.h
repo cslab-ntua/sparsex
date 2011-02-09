@@ -1,3 +1,12 @@
+/*
+ * elem.h -- code for matrix numerical elements
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef __ELEM_H__
 #define __ELEM_H__
 

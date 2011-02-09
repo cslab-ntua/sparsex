@@ -1,4 +1,4 @@
 This code originates from older spmv formats implementations
 (e.g., CSR-DU, CSR-VI, etc)
 
-We still use it in CSX to do benchmarking.
+We still use it in CSX to do benchmarking and testing.

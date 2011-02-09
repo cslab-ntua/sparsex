@@ -1,3 +1,12 @@
+/*
+ * prfcnt_core.h -- prfcnt implementation for Intel Core
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef __PRFCNT_CORE__
 #define __PRFCNT_CORE__
 

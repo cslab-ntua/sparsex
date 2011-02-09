@@ -1,3 +1,14 @@
+/*
+ * prfcnt_xeon.h -- prfcnt Netburst implementation
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * Originally derived from gtsouk's code
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef __PRFCNT_XEON_H__
 #define __PRFCNT_XEON_H__
 

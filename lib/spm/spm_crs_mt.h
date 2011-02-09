@@ -1,3 +1,12 @@
+/*
+ * spm_crs_mt.h -- multithreaded CRS
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef __SPM_CRS_MT_H__
 #define __SPM_CRS_MT_H__
 

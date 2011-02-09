@@ -1,11 +1,14 @@
+/*
+ * prfcnt_simple.h -- common functions for Core and AMD Architectures
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef __PRFCNT_SIMPLE_H__
 #define __PRFCNT_SIMPLE_H__
-
-/*
- * prfcnt_simple.h
- *
- * Common functions for Core and AMD Architecture
- */
 
 static inline void prfcnt_cntr_setup(prfcnt_t *handle, prfcnt_event_t *event)
 {

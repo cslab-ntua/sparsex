@@ -27,7 +27,7 @@ int main(int argc, char **argv)
 		printf("Usage: %s <cmd> (args)\n", argv[0]);
 		exit(1);
 	}
-	
+
 	new_argv = &argv[1];
 
 	/*
@@ -69,6 +69,6 @@ int main(int argc, char **argv)
 
 	tsc_report(&timer);
 	prfcnt_report(&prfcnt);
-	
+
 	return 0;
 }

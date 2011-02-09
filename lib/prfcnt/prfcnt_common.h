@@ -1,3 +1,12 @@
+/*
+ * prfcnt_common.h -- some common functions
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef __PRFCNT_COMMON_H__
 #define __PRFCNT_COMMON_H__
 
@@ -7,7 +16,7 @@
  * Common functions (at least for x86 like insruction sets)
  * for accessing performance counters via :
  *  - /dev/msr linux device
- *  - rdpmc instruction 
+ *  - rdpmc instruction
  */
 
 #ifndef _GNU_SOURCE
