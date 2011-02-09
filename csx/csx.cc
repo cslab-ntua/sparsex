@@ -75,7 +75,7 @@ csx_double_t *CsxManager::MakeCsx()
     csx->ncols = spm_->nr_cols_;
     csx->row_start = spm_->row_start_;
     values_idx_ = 0;
-    new_row_ = false;		        ///> Do not mark first row.
+    new_row_ = false;		        // Do not mark first row.
     for (uint64_t i = 0; i < spm_->GetNrRows(); i++){
         const SpmRowElem *rbegin, *rend;
 
@@ -84,12 +84,12 @@ csx_double_t *CsxManager::MakeCsx()
         if (debug)
             std::cerr << "MakeCsx(): row: " << i << "\n";
 
-        if (rbegin == rend){		///> Check if row is empty.
+        if (rbegin == rend){		// Check if row is empty.
             if (debug)
                 std::cerr << "MakeCsx(): row is empty" << std::endl;
 
             if (new_row_ == false){
-                new_row_ = true;	///> In case the first row is empty.
+                new_row_ = true;	// In case the first row is empty.
             } else {
                 empty_rows_++;
             }
@@ -102,7 +102,7 @@ csx_double_t *CsxManager::MakeCsx()
     }
 
     csx->ctl_size = dynarray_size(ctl_da_);
-    csx->ctl = (uint8_t *)dynarray_destroy(ctl_da_);
+    csx->ctl = (uint8_t *) dynarray_destroy(ctl_da_);
     ctl_da_ = NULL;
     assert(values_idx_ == spm_->nr_nzeros_);
     csx->values = values_;
@@ -128,7 +128,7 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
         if (debug)
             std::cerr << "\t" << *spm_elem << "\n";
 
-        ///> Check if this element contains a pattern.
+        // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
             jmp = PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
@@ -139,7 +139,7 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
             continue;
         }
 
-        ///> Check if we exceeded the maximum size for a unit.
+        // Check if we exceeded the maximum size for a unit.
         assert(xs.size() <= CTL_SIZE_MAX);
         if (xs.size() == CTL_SIZE_MAX)
              AddXs(xs);
@@ -152,7 +152,7 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
         AddXs(xs);
 }
 
-///> Note that this function may allocate space in ctl_da.
+// Note that this function may allocate space in ctl_da.
 void CsxManager::UpdateNewRow(uint8_t *flags)
 {
 	if (!new_row_)
@@ -177,38 +177,38 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     std::vector<uint64_t>::iterator vi;
     void *dst;
 
-    ///> Do delta encoding.
+    // Do delta encoding.
     xs_size = xs.size();
     last_col = xs[xs_size-1];
     DeltaEncode(xs.begin(), xs.end(), last_col_);
     last_col_ = last_col;
 
-    ///> Calculate the delta's size and the pattern id.
+    // Calculate the delta's size and the pattern id.
     max = 0;
     if (xs_size > 1) {
         vi = xs.begin();
-        std::advance(vi, 1);                        ///> Advance over jmp.
+        std::advance(vi, 1);                        // Advance over jmp.
         max = *(std::max_element(vi, xs.end()));
     }
     delta_size =  getDeltaSize(max);
     pat_id = (8<<delta_size) + PID_DELTA_BASE;
 
-    ///> Set flags.
+    // Set flags.
     ctl_flags = (uint8_t *) dynarray_alloc_nr(ctl_da_, 2);
     *ctl_flags = GetFlag(PID_DELTA_BASE + pat_id, xs_size);
 
-    ///> Set size.
+    // Set size.
     ctl_size = ctl_flags + 1;
     assert( (xs_size > 0) && (xs_size <= CTL_SIZE_MAX));
     *ctl_size = xs_size;
 
-    ///> Variables ctls_size, ctl_flags are not valid after this call.
+    // Variables ctls_size, ctl_flags are not valid after this call.
     UpdateNewRow(ctl_flags);
 
-    ///> Add jmp and deltas.
+    // Add jmp and deltas.
     da_put_ul(ctl_da_, xs[0]);
 
-    ///> Add deltas (if needed).
+    // Add deltas (if needed).
     if (xs_size > 1) {
         delta_bytes = DeltaSize_getBytes(delta_size);
         dst = dynarray_alloc_nr_aligned(ctl_da_, delta_bytes*(xs_size-1),
@@ -218,10 +218,10 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
             Copy((uint8_t  *) dst, &xs[1], xs_size-1);
             break;
         case DELTA_U16:
-            Copy((uint16_t *)dst, &xs[1], xs_size-1);
+            Copy((uint16_t *) dst, &xs[1], xs_size-1);
             break;
         case DELTA_U32:
-            Copy((uint32_t *)dst, &xs[1], xs_size-1);
+            Copy((uint32_t *) dst, &xs[1], xs_size-1);
             break;
         default:
             assert(false);
@@ -244,7 +244,7 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
                   << "\n";
 
     pat_id = elem.pattern->GetPatternId();
-    ctl_flags = (uint8_t *)dynarray_alloc_nr(ctl_da_, 2);
+    ctl_flags = (uint8_t *) dynarray_alloc_nr(ctl_da_, 2);
     *ctl_flags = GetFlag(pat_id, pat_size);
     ctl_size = ctl_flags + 1;
     assert(pat_size + (jmp ? 1 : 0) <= CTL_SIZE_MAX);
