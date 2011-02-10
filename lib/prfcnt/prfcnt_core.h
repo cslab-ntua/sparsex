@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
+ * Copyright (C) 2011,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -47,13 +48,13 @@
 
 #define EVNTSEL_SET(what, val) ( val << (EVNTSEL_ ## what ## _SHIFT) )
 
-#define EVNT_UNIT_CORE_ALL       ((1<<14) | (1<<15))
-#define EVNT_UNIT_CORE_THIS      ((1<<14) | (0<<15))
-#define EVNT_UNIT_AGENT_ALL      (1<<13)
-#define EVNT_UNIT_AGENT_THIS     (0<<13)
-#define EVNT_UNIT_PFETCH_ALL     ((1<<12) | (1<<13))
-#define EVNT_UNIT_PFETCH_HW      ((1<<12) | (0<<13))
-#define EVNT_UNIT_PFETCH_NOHW    ((0<<12) | (0<<13))
+#define EVNT_UNIT_CORE_ALL       ((1<<6) | (1<<7))
+#define EVNT_UNIT_CORE_THIS      ((1<<6) | (0<<7))
+#define EVNT_UNIT_AGENT_ALL      (1<<5)
+#define EVNT_UNIT_AGENT_THIS     (0<<5)
+#define EVNT_UNIT_PFETCH_ALL     ((1<<4) | (1<<5))
+#define EVNT_UNIT_PFETCH_HW      ((1<<4) | (0<<5))
+#define EVNT_UNIT_PFETCH_NOHW    ((0<<4) | (0<<5))
 #define EVNT_UNIT_MESI_INVALID   (1<<0)
 #define EVNT_UNIT_MESI_SHARED    (1<<1)
 #define EVNT_UNIT_MESI_EXCLUSIVE (1<<2)
@@ -133,35 +134,35 @@ static prfcnt_event_t __evnts[] = {
 	[EVENT_INSTR_RETIRED] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xc0)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Instructions Retired"
 	},
 
 	[EVENT_LLC_REFERENCE] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x2e)    |
 		                EVNTSEL_SET(UNIT, 0x4f)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Last Level Cache references"
 	},
 
 	[EVENT_LLC_MISSES] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x2e)    |
 		                EVNTSEL_SET(UNIT, 0x41)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Last Level cache misses"
 	},
 
 	[EVENT_BR_RETIRED] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xc4)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Branch Instruction Retired"
 	},
 
 	[EVENT_MISPRED_BR_RETIRED] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xc5)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Mispredicted Branch Instruction Retired"
 	},
 	/*
@@ -170,91 +171,91 @@ static prfcnt_event_t __evnts[] = {
 	[EVENT_MUL] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x12)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Multiply Operations (INT+FP)"
 	},
 
 	[EVENT_DIV] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x13)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Divition Operations (INT+FP)"
 	},
 
 	[EVENT_L2_REJECT_CYCLES] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x30)                |
 		                EVNTSEL_SET(UNIT, EVNT_UNIT_MESI_ALL)   |
-				EVNTSEL_SET(UNIT, EVNT_UNIT_PFETCH_ALL) |
-				EVNTSEL_SET(UNIT, EVNT_UNIT_CORE_THIS)  |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_PFETCH_ALL) |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_CORE_THIS)  |
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Cycles L2 is Busy (MESI_ALL,PF_ALL,CORE_THIS)"
 	},
 	[EVENT_L2_LINES_IN] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x24)                |
 		                EVNTSEL_SET(UNIT, EVNT_UNIT_MESI_ALL)   |
-				EVNTSEL_SET(UNIT, EVNT_UNIT_PFETCH_ALL) |
-				EVNTSEL_SET(UNIT, EVNT_UNIT_CORE_THIS)  |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_PFETCH_ALL) |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_CORE_THIS)  |
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "L2 cache misses (incl. hwpref)"
 	},
 	[EVENT_RESOURCE_STALL] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xa2)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Cycles of Resource Stall"
 	},
 	[EVENT_FP_COMP_OPS] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x10)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "FP computational Instructions executed"
 	},
 	[EVENT_L1D_REPL] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x45)    |
 		                EVNTSEL_SET(UNIT, 0x0f)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "L1 Data CL replacements"
 	},
 	[EVENT_BR_BOGUS] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xe4)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Bogus brances"
 	},
 	[EVENT_BP_BTB_MISSES] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xe2)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "branch misses in BTB"
 	},
 	[EVENT_BR_IDEC] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xe0)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Branch instructions decoded"
 	},
 	[EVENT_FUSED_UOPS_RET] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xda)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Fused uops retired"
 	},
 	[EVENT_ICACHE_MISSES] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x81)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "ICache misses"
 	},
 	[EVENT_BR_EXECUTED] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x88)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Branch instruction executed"
 	},
 	[EVENT_BR_MISSPREDICTED] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x89)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
-				EVNTSEL_SET(USR, 1),
+		                EVNTSEL_SET(USR, 1),
 		.desc          = "Branch instruction executed and mispredicted"
 	},
 };

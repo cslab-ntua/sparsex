@@ -1,3 +1,12 @@
+/*
+ * draw.cc -- Utility for drawing sparse matrices.
+ *
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #include "spm.h"
 
 #include "draw.h"

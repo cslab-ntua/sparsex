@@ -1,3 +1,12 @@
+/*
+ * draw.h -- Definitions for the drawing utility.
+ *
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef CSX_SPM_DRAW__
 #define CSX_SPM_DRAW__
 

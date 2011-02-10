@@ -7,11 +7,11 @@ of the column index array of the typical Compressed Sparse Row (CSR) format by
 exploiting dense patterns inside the sparse matrix. Instead of storing a single
 index for every nonzero element of the sparse matrix, CSX stores a short
 description for each pattern found in the matrix (and selected for
-encoding). This is technique can save significant amount of main memory storage
-and minimize the bandwidth requirements of the Sparse Matrix-Vector
-Multiplication (SpMV) kernel. Finally, the CSX format employes runtime code
-generation (using the LLVM compiler infrastructure) for emitting optimized SpMV
-routines for each encoded pattern.
+encoding). This technique can save significant amount of main memory storage and
+minimize the bandwidth requirements of the Sparse Matrix-Vector Multiplication
+(SpMV) kernel. Finally, the CSX format employes runtime code generation (using
+the LLVM compiler infrastructure) for emitting optimized SpMV routines for each
+encoded pattern.
 
 More information about the CSX format can be found in
 
@@ -24,7 +24,7 @@ Programming (PPoPP'11) San Antonio, TX, USA, February 12-16, 2011.
 2. Prerequisites and external dependencies
 ==========================================
 
-This package depends on LLVM 2.7 and the LLVM GCC front-end API (llvm-gcc).
+This package depends on LLVM 2.7 and the LLVM GCC front-end compiler (llvm-gcc).
 
 The package will not compile with LLVM 2.5, because the LLVM API has changed
 since then. However, the package has not been tested against LLVM 2.6, but it
@@ -34,10 +34,10 @@ might compile without errors for this release, too.
 2. Compiling the package
 ========================
 
-This packages is written in C and C++, so `g++' is required for compilation.
+This package is written in C and C++, so `g++' is required for compilation.
 
-If have properly installed and configured LLVM 2.7 and `g++', simply run `make'
-in the top-level source directory of the package.
+If you have properly installed and configured LLVM 2.7 and `g++', simply run
+`make' in the top-level source directory of the package.
 
 
 3. Running CSX
@@ -84,10 +84,10 @@ MT_CONF         Set the cpu affinity for running `spmv'. This is the only way to
 
 ** Variables controlling the construction of CSX
 
-XFORM_COMF      Set the pattern types to search for in the matrix. This is a
+XFORM_CONF      Set the pattern types to search for in the matrix. This is a
                 comma-separated list of the pattern type IDs as specified in the
                 enumeration `SpmIterOrder' in `spm.h'. The mapping between type
-                IDs and types if the following:
+                IDs and types is the following:
 
                            0 -> NONE
                            1 -> HORIZONTAL
@@ -140,19 +140,46 @@ SPLIT_BLOCKS    Enable splitting of larger blocks into smaller ones, when
                 better compression, since it improves the statistics (number of
                 nonzero elements covered by a pattern) of smaller blocks making
                 them eligible for encoding. However, this option should be
-                avoided, if the improved preprocessing using sorting windows is
+                avoided, if the improved preprocessing using sampling windows is
                 to be used, since it can lead to inflated statistics, which may
                 not correspond to the actual distribution of the patterns in the
                 matrix. The value of this variable is ignored and it might be
                 null as well.
 
-** Variables controlling the preprocessing
+** Variables controlling preprocessing
 
-WINDOW_SIZE
+WINDOW_SIZE     If set and nonzero, enable preprocessing using sampling
+                windows. This variable specifies the size of the sampling
+                windows either in terms of number of rows or number of nonzero
+                elements. The default policy is to extract sampling windows
+                based on the number of nonzero elements, in which case
+                WINDOW_SIZE denotes how many nonzero elements each sampling
+                window will have. The size of the window will be "rounded" up to
+                the next full row. The matrix could also be sampled row-wise, in
+                which case WINDOW_SIZE is the number or rows of each
+                window. However, to enable this policy, you should alter
+                `spmv.cc' and recompile. Sampling based on the nonzero elements
+                (default policy) is recommended, since it can provide better
+                coverage of the matrix, especially if used in conjunction with
+                the SAMPLES variable (see below), and lower preprocessing cost.
 
-SAMPLING_PROB
+SAMPLING_PROB   If window preprocessing is enabled, specify the probability of
+                selecting a window for pattern searching. The original matrix is
+                statically partitioned into preprocessing windows and
+                SAMPLING_PROB specifies the probability of considering each
+                window for pattern search. The statistics gathered from all the
+                selected windows are projected to the whole matrix and the
+                selection of patterns types to encode proceeds as in the normal
+                case (without sampling windows).
 
-SAMPLES
+SAMPLES         Specify the maximum number of sampling windows to consider for
+                searching. This variable can be used either in conjunction with
+                the SAMPLING_PROB or alone. In the latter case, the sampling
+                probability is computed automatically, so that the selected
+                windows span the whole matrix. This variable in conjunction with
+                a reasonable window size can provide a very good coverage of the
+                nonzero elements of the original matrix. For our experiments, we
+                usually use 5 sampling windows with 32K nonzero elements each.
 
 4. Licence
 ==========

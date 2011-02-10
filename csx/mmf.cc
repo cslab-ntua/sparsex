@@ -1,3 +1,14 @@
+/*
+ * mmf.cc -- Matrix Market Format routines
+ *
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2011,      Vasileios Karakasis
+ * Copyright (C) 2011,      Theodors Goudouvas
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #include "mmf.h"
 
 #include <fstream>
@@ -31,7 +42,8 @@ void getMmfHeader(std::istream &in, uint64_t &nrows, uint64_t &ncols,
         in.getline(buff, sizeof(buff));
     } while (buff[0] == '#');
 
-    ret = sscanf(buff, "%" PRIu64 " %" PRIu64 " %" PRIu64, &nrows, &ncols, &nnz);
+    ret = sscanf(buff, "%" PRIu64 " %" PRIu64 " %" PRIu64,
+                 &nrows, &ncols, &nnz);
     if (ret != 3) {
         std::cerr << "mmf header error: sscanf" << std::endl;
         exit(1);

@@ -1,3 +1,14 @@
+/*
+ * spm.cc --  Internal representation of sparse matrices (implementation)
+ *
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2009-2011, Vasileios Karakasis
+ * Copyright (C) 2011,      Theodors Goudouvas
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #include "spm.h"
 #include "mmf.h"
 
@@ -1053,7 +1064,7 @@ void test_drle()
 	}
 	std::cout << std::endl;
 
-	drle = RLEncode(delta);RMAP_
+	drle = RLEncode(delta);
 	FOREACH(RLE<int> &v, drle){
 		std::cout << "(" << v.val << "," << v.freq << ") ";
 	}

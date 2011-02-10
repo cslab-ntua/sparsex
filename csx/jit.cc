@@ -1,3 +1,14 @@
+/*
+ * jit.cc -- Just In Time compilation routines.
+ *
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2009-2011, Vasileios Karakasis
+ * Copyright (C) 2010-2011, Theodors Goudouvas
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #include <iostream>
 #include <sstream>
 #include <cassert>

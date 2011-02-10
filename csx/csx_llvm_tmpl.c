@@ -1,3 +1,12 @@
+/*
+ * csx_llvm_tmpl.c -- The CSX multiplication template
+ *
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #include <stdio.h>
 #include <inttypes.h>
 #include <assert.h>

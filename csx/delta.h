@@ -1,3 +1,13 @@
+/* -*- C++ -*-
+ *
+ * delta.h -- Utilities for delta units.
+ *
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef CSX_DELTA_H__
 #define CSX_DELTA_H__
 

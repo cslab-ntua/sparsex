@@ -1,3 +1,14 @@
+/*
+ * csx.cc -- The CSX Manager implementation
+ *
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2010-2011, Theodors Goudouvas
+ * Copyright (C) 2011,      Vasileios Karakasis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #include <map>
 #include <algorithm>
 
@@ -112,7 +123,7 @@ csx_double_t *CsxManager::MakeCsx()
     return csx;
 }
 
-/**
+/*
  *  Ctl Rules
  *  1. Each unit leaves the x index at the last element it calculated on the
  *     current row.

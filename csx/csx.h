@@ -1,9 +1,11 @@
 /* -*- C++ -*-
  *
- * csx.h -- Implements the CSX manager class, which responsible for creating
- *          the final CSX matrix.
+ * csx.h -- The CSX Manager interface
  *
- * Copyright (C) 2010, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2011,      Vasileios Karakasis
+ * Copyright (C) 2011,      Theodors Goudouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
