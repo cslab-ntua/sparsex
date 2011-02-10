@@ -4,9 +4,9 @@
 This package is a proof-of-concept release of the Compressed Sparse eXtended
 format for sparse matrices. This format seeks to minimize the memory footprint
 of the column index array of the typical Compressed Sparse Row (CSR) format by
-exploiting dense patterns inside the sparse matrix. Instead of storing a single
-index for every nonzero element of the sparse matrix, CSX stores a short
-description for each pattern found in the matrix (and selected for
+exploiting dense substructures inside the sparse matrix. Instead of storing a
+single index for every nonzero element of the sparse matrix, CSX stores a short
+description for each substructure found in the matrix (and selected for
 encoding). This technique can save significant amount of main memory storage and
 minimize the bandwidth requirements of the Sparse Matrix-Vector Multiplication
 (SpMV) kernel. Finally, the CSX format employes runtime code generation (using
