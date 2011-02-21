@@ -24,6 +24,9 @@ Programming (PPoPP'11) San Antonio, TX, USA, February 12-16, 2011.
 2. Prerequisites and external dependencies
 ==========================================
 
+This package is only expected to work on a (fairly recent) Linux OS.
+Porting to other OSes should not be too difficult, though.
+
 This package depends on LLVM 2.7 and the LLVM GCC front-end compiler (llvm-gcc).
 
 The package will not compile with LLVM 2.5, because the LLVM API has changed
