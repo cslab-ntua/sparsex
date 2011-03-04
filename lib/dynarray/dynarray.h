@@ -20,6 +20,8 @@ extern "C" {
 
 dynarray_t *dynarray_create(unsigned long elem_size,
                             unsigned long alloc_grain);
+dynarray_t *dynarray_create_numa(unsigned long elem_size,
+                                 unsigned long alloc_grain);
 dynarray_t *dynarray_init_frombuff(unsigned long elem_size,
                                    unsigned long alloc_grain,
                                    void *elems, unsigned long elems_nr);

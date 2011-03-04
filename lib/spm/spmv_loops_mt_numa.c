@@ -1,3 +1,12 @@
+/*
+ * spmv_loops_mt_numa.c -- NUMA-aware SpMV implementation
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2011,      Vasileios Karakasis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #include <assert.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -7,7 +16,6 @@
 #include "mt_lib.h"
 #include "spmv_loops_mt_numa.h"
 #include "tsc.h"
-#include "prfcnt.h"
 #include "vector.h"
 
 static VECTOR_TYPE *y = NULL;

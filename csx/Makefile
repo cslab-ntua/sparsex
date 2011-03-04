@@ -8,7 +8,7 @@ llvmconf     = llvm-config-2.7
 dynarray_dir = ../lib/dynarray
 spm_dir      = ../lib/spm
 prfcnt_dir   = ../lib/prfcnt
-protodir     = ./proto
+script_dir   = ../scripts
 
 GXX            ?= g++
 CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
@@ -33,7 +33,7 @@ LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
-ifeq ($(shell $(cpu_dir)/numa_lib.sh FOO),FOO)
+ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	DEFS += -DSPM_NUMA
 	override LDFLAGS += -lnuma
 endif

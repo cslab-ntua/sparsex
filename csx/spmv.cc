@@ -74,7 +74,7 @@ typedef struct thread_info {
     unsigned int cpu;
     SPM * spm;
     spm_mt_thread_t *spm_encoded;
-    CsxManager      *csxmg;
+    CsxManager *csxmg;
     uint64_t wsize;
     std::ostringstream buffer;
     int *xform_buf;
@@ -312,7 +312,6 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     for (unsigned int i = 0; i < nr_threads; i++) {
         if (i != 0)
             std::cout << ",";
-
         std::cout << threads_cpus[i];
     }
 
@@ -343,7 +342,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     spm_mt->spm_threads =
         (spm_mt_thread_t *) xmalloc(sizeof(spm_mt_thread_t) * nr_threads);
 
-    for (unsigned int i = 0; i < nr_threads; i++)
+    for (unsigned int i = 0; i < nr_threads; i++) {
         spm_mt->spm_threads[i].cpu = threads_cpus[i];
         spm_mt->spm_threads[i].node = numa_node_of_cpu(threads_cpus[i]);
     }
@@ -489,7 +488,7 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
     flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
     printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-	   "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+           "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
 
 #undef SPMV_BENCH_FN
 }

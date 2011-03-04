@@ -1,3 +1,12 @@
+/*
+ * spmv_loops_mt_numa.h -- NUMA-aware SpMV benchmark routines
+ *
+ * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2011,      Vasileios Karakasis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
 #ifndef SPMV_LOOPS_MT_NUMA_H__
 #define SPMV_LOOPS_MT_NUMA_H__
 
