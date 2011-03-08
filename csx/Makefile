@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv csx_llvm_tmpl.llvm.bc
+all: spmv csx_llvm_tmpl.llvm.bc libcsx.so
 
 ## Configuration
 llvmconf     = llvm-config
@@ -85,10 +85,19 @@ jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 spmv.o: spmv.cc $(spm_dir)/spm_mt.h
 	$(CXX_COMPILE) -c $<
 
+elmerif.o: elmerif.cc spmv.h
+	$(CXX_COMPILE) -c $<
+
+main.o: main.cc spmv.h
+	$(CXX_COMPILE) -c $<
+
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
-spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
+spmv: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(LINK) $(LIBS) $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
+
+libcsx.so: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o elmerif.o $(spm_dir)/libspmv.o
+	$(LINK) $(LDFLAGS) -shared $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
 
 clean:
 	rm -f *.o spmv csx_llvm_tmpl.llvm.bc
