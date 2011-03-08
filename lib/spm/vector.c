@@ -31,6 +31,23 @@ enum {
 #define ALIGN_BOUND (12)
 #define ALIGN(ul)  (ul + (ul % ALIGN_BOUND))
 
+/*
+ *	Create a vector from an input buffer. The elements are not copied.
+ */ 
+VECTOR_TYPE *VECTOR_NAME(_create_from_buff)(ELEM_TYPE *buff, unsigned long size)
+{
+	VECTOR_TYPE *v = malloc(sizeof(VECTOR_TYPE));
+	if (!v) {
+		fprintf(stderr, "malloc failed\n");
+		exit(1);
+	}
+
+	v->size = size;
+	v->alloc_type = ALLOC_STD;
+	v->elements = buff;
+	return v;
+}
+
 VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 {
 	VECTOR_TYPE *v = malloc(sizeof(VECTOR_TYPE));

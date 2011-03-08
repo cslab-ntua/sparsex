@@ -10,6 +10,8 @@
 #ifndef __SPM_MT_H__
 #define __SPM_MT_H__
 
+#include "vector.h"
+
 struct spm_mt_thread {
 	void *spm;
 	void *spmv_fn;
@@ -17,6 +19,7 @@ struct spm_mt_thread {
     int node;
     void *part_info; /* partition info */
     void *data;
+    VECTOR_TYPE *x, *y;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
 

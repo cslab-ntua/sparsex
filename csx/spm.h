@@ -497,7 +497,7 @@ private:
     friend class DRLE_Manager;
 
 public:
-    SPM() : type_(NONE), elems_(NULL), rowptr_(NULL) {}
+    SPM() : type_(NONE), elems_(NULL), rowptr_(NULL), elems_mapped_(false) {}
 
     ~SPM()
     {
@@ -578,6 +578,12 @@ public:
     static SPM *LoadMMF_mt(const char *mmf_file, const long nr);
     static SPM *LoadMMF_mt(std::istream &in, const long nr);
     static SPM *LoadMMF_mt(MMF &mmf, const long nr);
+
+    static SPM *LoadFromCSR_mt(const uint64_t *rowptr,
+                               const uint64_t *colind,
+                               const double *values,
+                               uint64_t nr_rows, uint64_t nr_cols,
+                               long nr_parts);
 
     /**
      *  Printing methods.

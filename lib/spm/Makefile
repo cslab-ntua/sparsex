@@ -41,7 +41,8 @@ $(dynarray_dep):
 deps         = $(dynarray_dep)
 libspmv_deps = vector.o method.o mt_lib.o mmf.o  \
                spm_crs.o spm_crs_mt.o            \
-               spmv_loops.o spmv_loops_mt.o spmv_loops_mt_numa.o
+               spmv_loops.o spmv_loops_mt.o spmv_loops_mt_numa.o \
+               spmv_matvec_mt.o
 
 libspmv.o: $(libspmv_deps) $(deps)
 	$(LD) -i --allow-multiple-definition $(libspmv_deps) $(deps) -o libspmv.o
@@ -93,6 +94,11 @@ spmv_loops_mt_numa.o: spmv_loops_mt_numa.c spmv_loops_mt_numa.h spmv_method.h ve
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_mt_numa_float.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_numa_double.o
 	$(LD) -i spmv_loops_mt_numa_{float,double}.o -o spmv_loops_mt_numa.o
+
+spmv_matvec_mt.o: spmv_matvec_mt.c spmv_matvec_mt.h vector.h
+	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_matvec_mt_float.o
+	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_matvec_mt_double.o
+	$(LD) -i spmv_matvec_mt_{float,double}.o -o spmv_matvec_mt.o
 
 spmv.o: spmv.c
 	$(COMPILE) -c $< -o $@

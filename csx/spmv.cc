@@ -1,5 +1,5 @@
 /*
- * spmv.cc -- Main program for invoking CSX.
+ * spmv.cc -- Utility routines for invoking CSX.
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -26,9 +26,10 @@
 #include "drle.h"
 #include "jit.h"
 #include "llvm_jit_help.h"
+#include "spmv.h"
 
 #ifdef SPM_NUMA
-#include <numa.h>
+#   include <numa.h>
 #endif
 
 extern "C" {
@@ -67,22 +68,6 @@ extern "C" {
 })
 
 using namespace csx;
-
-///> Thread data essential for parallel preprocessing
-typedef struct thread_info {
-    unsigned int thread_no;
-    unsigned int cpu;
-    SPM * spm;
-    spm_mt_thread_t *spm_encoded;
-    CsxManager *csxmg;
-    uint64_t wsize;
-    std::ostringstream buffer;
-    int *xform_buf;
-    double sampling_prob;
-    uint64_t samples_max;
-    bool split_blocks;
-    int **deltas;
-} thread_info_t;
 
 int SplitString(char *str, char **str_buf, const char *start_sep,
                 const char *end_sep)
@@ -254,11 +239,6 @@ bool GetOptionSplitBlocks()
     return split_blocks;
 }
 
-/**
- *  Parallel Preprocessing.
- *
- *  @param info parameters of matrix needed by each thread.
- */
 void *PreprocessThread(void *thread_info)
 {
     thread_info_t *data = (thread_info_t *) thread_info;
@@ -295,11 +275,10 @@ void *PreprocessThread(void *thread_info)
     return 0;
 }
 
-static spm_mt_t *GetSpmMt(char *mmf_fname)
+spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms)
 {
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
-    SPM *Spms;
     int *xform_buf = NULL;
     int **deltas = NULL;
     thread_info_t *data;
@@ -348,7 +327,8 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     }
 
     // Load the appropriate sub-matrix to each thread
-    Spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
+    if (!Spms)
+        Spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
 
     // Start timer for preprocessing
     xtimer_t timer;
@@ -415,20 +395,13 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     return spm_mt;
 }
 
-static void PutSpmMt(spm_mt_t *spm_mt)
+void PutSpmMt(spm_mt_t *spm_mt)
 {
     free(spm_mt->spm_threads);
     free(spm_mt);
 }
 
-/**
- *  Check the CSX SpMV result against the baseline single-thread CSR
- *  implementation.
- *
- *  @param the (mulithreaded) CSX matrix.
- *  @param the MMF input file.
- */
-static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
+void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     void *crs;
     uint64_t nrows, ncols, nnz;
@@ -449,12 +422,7 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 #undef SPMV_CHECK_FN
 }
 
-/**
- *  Compute the size (in bytes) of the compressed matrix in CSX form.
- *
- *  @parame spm_mt  the sparse matrix in CSX format.
- */
-static unsigned long CsxSize(spm_mt_t *spm_mt)
+unsigned long CsxSize(spm_mt_t *spm_mt)
 {
     unsigned long ret;
 
@@ -469,10 +437,7 @@ static unsigned long CsxSize(spm_mt_t *spm_mt)
     return ret;
 }
 
-/**
- *  Run CSX SpMV and record the performance information.
- */
-static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
+void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     uint64_t nrows, ncols, nnz;
     double secs, flops;
@@ -492,24 +457,5 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 
 #undef SPMV_BENCH_FN
 }
-
-int main(int argc, char **argv)
-{
-    spm_mt_t *spm_mt;
-    if (argc < 2){
-        std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
-        exit(1);
-    }
-
-    for (int i = 1; i < argc; i++) {
-        spm_mt = GetSpmMt(argv[i]);
-        CheckLoop(spm_mt, argv[i]);
-        std::cerr.flush();
-        BenchLoop(spm_mt, argv[i]);
-        PutSpmMt(spm_mt);
-    }
-    return 0;
-}
-
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
