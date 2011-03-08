@@ -146,6 +146,12 @@ public:
         return DoLoadMatrix<CSR<IndexType, ValueType> >(csr, nr);
     };
 
+    static SPM *LoadFromCSR_mt(const uint64_t *rowptr,
+                               const uint64_t *colind,
+                               const double *values,
+                               uint64_t nr_rows, uint64_t nr_cols,
+                               long nr_parts);
+
     /**
      *  Printing methods.
      */

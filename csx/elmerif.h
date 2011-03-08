@@ -17,5 +17,4 @@ typedef double elmer_value_t;
 void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
                    void *values, void *x, void *y, void *reinit);
 
-
 #endif  /* ELMERIF_H__ */
