@@ -11,6 +11,7 @@
 #define __SPM_MT_H__
 
 #include <stdint.h>
+#include "vector.h"
 
 struct spm_mt_thread {
 	void *spm;
@@ -20,6 +21,7 @@ struct spm_mt_thread {
     uint64_t row_start;
     uint64_t nr_rows;
     void *data;
+    VECTOR_TYPE *x, *y;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
 

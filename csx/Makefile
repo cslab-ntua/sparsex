@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv csx_llvm_tmpl.llvm.bc
+all: spmv csx_llvm_tmpl.llvm.bc libcsx.so
 
 ## Configuration
 llvmconf     = llvm-config-2.7
@@ -16,7 +16,7 @@ INC            ?=
 
 #CXXFLAGS       += -Winline
 LDFLAGS         =
-CXXFLAGS       += -ggdb -rdynamic
+CXXFLAGS       += -ggdb -rdynamic -fPIC
 DEFS            =
 INC            += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir)
 
@@ -83,10 +83,19 @@ jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 spmv.o: spmv.cc $(spm_dir)/spm_mt.h
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
+elmerif.o: elmerif.cc spmv.h
+	$(CXX_COMPILE) -c $<
+
+main.o: main.cc spmv.h
+	$(CXX_COMPILE) -c $<
+
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
 spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(CXX) $(LDFLAGS)  -ggdb -rdynamic -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
+
+libcsx.so: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o elmerif.o $(spm_dir)/libspmv.o
+	$(CXX) $(LDFLAGS) -ggdb -rdynamic -Xlinker --allow-multiple-definition -shared $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 clean:
 	rm -f *.o spmv

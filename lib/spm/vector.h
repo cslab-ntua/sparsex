@@ -29,6 +29,7 @@ typedef struct { \
 } _VTYPE(vtype); \
 \
 _VTYPE(vtype) *_VNAME(vtype,create)(unsigned long size); \
+_VTYPE(vtype) *_VNAME(vtype,create_from_buff)(ELEM_TYPE *buff, unsigned long size); \
 _VTYPE(vtype) *_VNAME(vtype,create_onnode)(unsigned long size, int node); \
 _VTYPE(vtype) *_VNAME(vtype,create_interleaved)(unsigned long size, size_t *parts, int nr_parts, const int *nodes); \
 void _VNAME(vtype,destroy)(_VTYPE(vtype) *v); \
