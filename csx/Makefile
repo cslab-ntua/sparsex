@@ -9,9 +9,11 @@ dynarray_dir = ../lib/dynarray
 spm_dir      = ../lib/spm
 prfcnt_dir   = ../lib/prfcnt
 script_dir   = ../scripts
+csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
 
 GXX            ?= g++
-CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
+CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCSX_TEMPLATE=\"$(csx_template)\"
+#CXXFLAGS       ?= -Wall -g -O0 -DCSX_TEMPLATE=\"$(csx_template)\"
 INC            ?=
 
 #CXXFLAGS       += -Winline
@@ -44,7 +46,7 @@ CXX_COMPILE     = $(GXX) $(CXXFLAGS) $(INC) $(DEFS)
 mmf.o: mmf.cc spm.h mmf.h
 	$(CXX_COMPILE) -D__STDC_FORMAT_MACROS $< -c -o $@
 
-spm.o: spm.cc spm.h mmf.h
+spm.o: spm.cc spm.h spm_bits.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
 
 draw.o: draw.cc spm.h draw.h
@@ -81,7 +83,7 @@ jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 spmv.o: spmv.cc spmv.h
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
-elmerif.o: elmerif.cc spmv.h
+elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
 	$(CXX_COMPILE) -c $<
 
 main.o: main.cc spmv.h
@@ -90,7 +92,7 @@ main.o: main.cc spmv.h
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
 spmv: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
-	$(GXX) $(LDFLAGS)  -ggdb -rdynamic -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
+	$(GXX) $(LDFLAGS) -ggdb -rdynamic -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 libcsx.so: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o elmerif.o $(spm_dir)/libspmv.o
 	$(GXX) $(LDFLAGS) -ggdb -rdynamic -Xlinker --allow-multiple-definition -shared $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@

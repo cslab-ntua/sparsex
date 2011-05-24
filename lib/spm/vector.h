@@ -34,7 +34,8 @@ _VTYPE(vtype) *_VNAME(vtype,create_interleaved)(unsigned long size, size_t *part
 void _VNAME(vtype,destroy)(_VTYPE(vtype) *v); \
 void _VNAME(vtype,init)(_VTYPE(vtype) *v, vtype val); \
 void _VNAME(vtype,init_rand_range)(_VTYPE(vtype) *v, vtype max, vtype min); \
-int _VNAME(vtype,compare)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2);
+int _VNAME(vtype,compare)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2); \
+void _VNAME(vtype,print)(_VTYPE(vtype) *v);
 
 DECLARE_VECTOR(float)
 DECLARE_VECTOR(double)

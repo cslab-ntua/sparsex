@@ -7,6 +7,7 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -20,6 +21,7 @@ enum {
     ALLOC_STD = 1,
     ALLOC_NUMA,
     ALLOC_MMAP,
+    ALLOC_OTHER,
 };
 
 /*
@@ -43,7 +45,7 @@ VECTOR_TYPE *VECTOR_NAME(_create_from_buff)(ELEM_TYPE *buff, unsigned long size)
 	}
 
 	v->size = size;
-	v->alloc_type = ALLOC_STD;
+	v->alloc_type = ALLOC_OTHER;
 	v->elements = buff;
 	return v;
 }
@@ -154,6 +156,11 @@ void VECTOR_NAME(_destroy)(VECTOR_TYPE *v)
     } else if (v->alloc_type == ALLOC_MMAP) {
         munmap(v->elements, sizeof(ELEM_TYPE)*v->size);
         munmap(v, sizeof(VECTOR_TYPE));
+    } else if (v->alloc_type == ALLOC_OTHER) {
+        /* Just free our stuff; elements are supplied from user */
+        free(v);
+    } else {
+        assert(0 && "unknown allocation type");
     }
 }
 
@@ -177,7 +184,8 @@ void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)
 {
-	if ( fabs((double)(a-b)/(double)a)  > 0.0000001 ){
+	if ( fabs((double)(a-b)/(double)a)  > 1.e-7 ){
+//	if (fabs((double) (a - b)) > 1.e-7) {
 		return 1;
 	}
 	return 0;
@@ -199,4 +207,14 @@ int VECTOR_NAME(_compare)(VECTOR_TYPE *v1, VECTOR_TYPE *v2)
 	}
 
 	return 0;
+}
+
+void VECTOR_NAME(_print)(VECTOR_TYPE *v)
+{
+    unsigned long i;
+
+    printf("[ ");
+    for (i = 0; i < v->size; i++)
+        printf("%lf ", (double) v->elements[i]);
+    printf("]\n");
 }
