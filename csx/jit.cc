@@ -39,6 +39,8 @@ static Module *Mod_ = NULL;
 void CsxJitInitGlobal(void)
 {
     static bool init = false;
+    if (init)
+        return;
 
     assert(init == false && "wrong assignment");
     std::cout << __FUNCTION__ << ": One-time initialization" << "\n";
@@ -105,7 +107,7 @@ CsxJit::CsxJit(CsxManager *csx_mg, unsigned int tid) : CsxMg(csx_mg)
     this->SizePtr  = annotations.getValue("spmv::size");
     this->FlagsPtr = annotations.getValue("spmv::flags");
 
-    ///< Initialize needed constants.
+    // Initialize needed constants
     this->Zero8   = ConstantInt::get(Type::getInt8Ty (GetLLVMCtx()), 0);
     this->Zero32  = ConstantInt::get(Type::getInt32Ty(GetLLVMCtx()), 0);
     this->Zero64  = ConstantInt::get(Type::getInt64Ty(GetLLVMCtx()), 0);
@@ -136,7 +138,7 @@ void CsxJit::DoNewRowHook()
     BasicBlock *BB, *BB_next;
     Value *v;
 
-    ///< New row.
+    // New row
     BB = llvm_hook_newbb(M, "__new_row_hook", SpmvF, &BB_next);
     Bld->SetInsertPoint(BB);
     DoStoreYr();
@@ -494,9 +496,9 @@ void CsxJit::DoIncV()
 void CsxJit::DoOp(Value *Myx, Value *Yindx)
 {
     DoMul(Myx, Yindx);
+//    DoPrint(Myx, Yindx);
     DoIncV();
 }
-
 void CsxJit::DoDeltaAddMyx(int delta_bytes)
 {
     Function *F = NULL;

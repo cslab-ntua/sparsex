@@ -264,44 +264,6 @@ SpmRowElem *SPM::RowEnd(uint64_t ridx)
     return &elems_[rowptr_[ridx+1]];
 }
 
-template<typename IterT>
-uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
-                       unsigned long limit, uint64_t nr_elems, uint64_t nrows,
-                       SPM::Builder *SpmBld)
-{
-    SpmRowElem *elem;
-    uint64_t row_prev, row;
-
-    row_prev = first_row;
-    for (; pi != pnts_end; ++pi) {
-        row = (*pi).y;
-        if (row != row_prev) {
-            assert(row > row_prev);
-            if (limit && SpmBld->GetElemsCnt() >= limit)
-                break;
-            SpmBld->NewRow(row - row_prev);
-            row_prev = row;
-        }
-
-        elem = SpmBld->AllocElem();
-        MakeRowElem(*pi, elem);
-    }
-
-    return elems_size_;
-}
-
-template<typename IterT>
-uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
-                       unsigned long limit, uint64_t nr_elems, uint64_t nrows)
-{
-    SPM::Builder *SpmBld = new SPM::Builder(this, nr_elems, nrows);
-
-    SetElems(pi, pnts_end, first_row, limit, nr_elems, nrows, SpmBld);
-    SpmBld->Finalize();
-    delete SpmBld;
-    return elems_size_;
-}
-
 SPM *SPM::LoadMMF_mt(const char *mmf_file, const long nr)
 {
     SPM *ret;
@@ -357,44 +319,6 @@ SPM *SPM::LoadMMF(const char *mmf_file)
     mmf.open(mmf_file);
     ret = LoadMMF(mmf);
     mmf.close();
-    return ret;
-}
-
-SPM *SPM::LoadFromCSR_mt(const uint64_t *rowptr,
-                         const uint64_t *colind,
-                         const double *values,
-                         uint64_t nr_rows, uint64_t nr_cols,
-                         long nr_parts)
-{
-    assert(nr_parts && "nr_parts must be non-zero");
-    uint64_t nr_nzeros = rowptr[nr_rows+1];
-    uint64_t nr_nzeros_part = nr_nzeros / nr_parts;
-    SPM *ret = new SPM[nr_parts];
-
-    uint64_t cnt = 0;
-    uint64_t i_part = 0;
-    uint64_t row_start = 0;
-    for (uint64_t i = 0; i < nr_rows; ++i) {
-        cnt += rowptr[i+1] - rowptr[i];
-        if (cnt >= nr_nzeros_part) {
-            SPM *spm = ret + i_part;
-            spm->nr_rows_ = i - row_start + 1;
-            spm->nr_cols_ = nr_cols;
-            spm->nr_nzeros_ = cnt;
-            spm->rowptr_size_ = spm->nr_rows_ + 1;
-            spm->elems_size_ = cnt;
-            spm->row_start_ = row_start;
-            memcpy(spm->rowptr_, rowptr + row_start,
-                   spm->rowptr_size_*sizeof(*spm->rowptr_));
-            memcpy(spm->elems_, values + rowptr[row_start],
-                   spm->elems_size_*sizeof(*spm->elems_));
-            spm->rowptr_[spm->nr_rows_] = cnt;
-            row_start = i + 1;
-            cnt = 0;
-            ++i_part;
-        }
-    }
-
     return ret;
 }
 
