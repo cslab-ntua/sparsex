@@ -322,44 +322,6 @@ SPM *SPM::LoadMMF(const char *mmf_file)
     return ret;
 }
 
-SPM *SPM::LoadFromCSR_mt(const uint64_t *rowptr,
-                         const uint64_t *colind,
-                         const double *values,
-                         uint64_t nr_rows, uint64_t nr_cols,
-                         long nr_parts)
-{
-    assert(nr_parts && "nr_parts must be non-zero");
-    uint64_t nr_nzeros = rowptr[nr_rows+1];
-    uint64_t nr_nzeros_part = nr_nzeros / nr_parts;
-    SPM *ret = new SPM[nr_parts];
-
-    uint64_t cnt = 0;
-    uint64_t i_part = 0;
-    uint64_t row_start = 0;
-    for (uint64_t i = 0; i < nr_rows; ++i) {
-        cnt += rowptr[i+1] - rowptr[i];
-        if (cnt >= nr_nzeros_part) {
-            SPM *spm = ret + i_part;
-            spm->nr_rows_ = i - row_start + 1;
-            spm->nr_cols_ = nr_cols;
-            spm->nr_nzeros_ = cnt;
-            spm->rowptr_size_ = spm->nr_rows_ + 1;
-            spm->elems_size_ = cnt;
-            spm->row_start_ = row_start;
-            memcpy(spm->rowptr_, rowptr + row_start,
-                   spm->rowptr_size_*sizeof(*spm->rowptr_));
-            memcpy(spm->elems_, values + rowptr[row_start],
-                   spm->elems_size_*sizeof(*spm->elems_));
-            spm->rowptr_[spm->nr_rows_] = cnt;
-            row_start = i + 1;
-            cnt = 0;
-            ++i_part;
-        }
-    }
-
-    return ret;
-}
-
 void SPM::Print(std::ostream &out)
 {
     SPM::PntIter p, p_start, p_end;

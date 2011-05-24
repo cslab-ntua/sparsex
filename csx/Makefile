@@ -91,7 +91,7 @@ elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
 main.o: main.cc spmv.h
 	$(CXX_COMPILE) -c $<
 
-elmerif.o: elmerif.cc spmv.h
+elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
 	$(CXX_COMPILE) -c $<
 
 main.o: main.cc spmv.h
