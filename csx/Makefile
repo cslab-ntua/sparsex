@@ -9,9 +9,12 @@ dynarray_dir = ../lib/dynarray
 spm_dir      = ../lib/spm
 prfcnt_dir   = ../lib/prfcnt
 script_dir   = ../scripts
+csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
 
 CXX            ?= g++
 CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
+CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCSX_TEMPLATE=\"$(csx_template)\"
+#CXXFLAGS       ?= -Wall -g -O0 -DCSX_TEMPLATE=\"$(csx_template)\"
 INC            ?=
 
 #CXXFLAGS       += -Winline
@@ -46,7 +49,7 @@ CXX_COMPILE     = $(CXX) $(CXXFLAGS) $(INC) $(DEFS)
 mmf.o: mmf.cc spm.h mmf.h
 	$(CXX_COMPILE) -D__STDC_FORMAT_MACROS $< -c -o $@
 
-spm.o: spm.cc spm.h mmf.h
+spm.o: spm.cc spm.h spm_bits.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
 
 draw.o: draw.cc spm.h draw.h
@@ -83,7 +86,7 @@ jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 spmv.o: spmv.cc $(spm_dir)/spm_mt.h
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
-elmerif.o: elmerif.cc spmv.h
+elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
 	$(CXX_COMPILE) -c $<
 
 main.o: main.cc spmv.h

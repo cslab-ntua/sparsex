@@ -46,7 +46,7 @@ void SPMV_NAME(_matvec_mt)(spm_mt_t *spm_mt, VECTOR_TYPE *x, VECTOR_TYPE *y)
 		spm_mt->spm_threads[i].y = y;
 	}
 
-	for (i = 0; i < spm_mt->nr_threads; i++) {
+	for (i = 1; i < spm_mt->nr_threads; i++) {
 		if (pthread_create(tids + i, NULL, do_matvec_thread,
 						   spm_mt->spm_threads + i)) {
 			perror("pthread_create");
@@ -54,8 +54,10 @@ void SPMV_NAME(_matvec_mt)(spm_mt_t *spm_mt, VECTOR_TYPE *x, VECTOR_TYPE *y)
 		}
 	}
 
-	for (i = 0; i < spm_mt->nr_threads; i++) {
-		if (pthread_join(tids + i, NULL)) {
+    do_matvec_thread(spm_mt->spm_threads);
+
+	for (i = 1; i < spm_mt->nr_threads; i++) {
+		if (pthread_join(tids[i], NULL)) {
 			perror("pthread_join");
 			exit(1);
 		}

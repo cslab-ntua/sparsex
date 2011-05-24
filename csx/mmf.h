@@ -25,6 +25,7 @@ void getMmfHeader(const char *mmf_file,
 void getMmfHeader(std::istream &in,
                   uint64_t &nrows, uint64_t &ncols, uint64_t &nnz);
 
+
 class MMF
 {
 public:
@@ -46,7 +47,7 @@ private:
 };
 
 class MMF::iterator :
-public std::iterator<std::forward_iterator_tag, CooElem>
+        public std::iterator<std::forward_iterator_tag, CooElem>
 {
 public:
 	iterator()
@@ -119,3 +120,5 @@ MMF::iterator MMF::end()
 } // csx namespace end
 
 #endif  // MMF_H__
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
