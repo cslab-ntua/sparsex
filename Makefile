@@ -1,4 +1,4 @@
-SUBDIRS = lib/dynarray lib/spm csx
+SUBDIRS = lib/dynarray lib/spm csx cg
 
 .PHONY: all clean $(SUBDIRS)
 
