@@ -11,6 +11,7 @@
 #ifndef SPM_BITS_H__
 #define SPM_BITS_H__
 
+#include <ostream>
 #include <inttypes.h>
 #include <map>
 #include <stdint.h>
