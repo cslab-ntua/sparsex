@@ -15,7 +15,7 @@ dynarray_dep = $(dynarray_dir)/dynarray.o
 # (we need a script to return CPU MhZs)
 MHZ_SH      ?= $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
 
-GCC         ?= llvm-gcc
+GCC         ?= llvm-gcc-4.2
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
 DEFS        += -DCPU_MHZ_SH=\"$(MHZ_SH)\"

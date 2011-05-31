@@ -1,9 +1,19 @@
+/* -*- C -*-
+ *
+ * main.c -- Implementation of Conjugate Gradient Method (CG).
+ *
+ * Copyright (C) 2011,      Theodoros Gkountouvas
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <libgen.h>
+#include <math.h>
 #include <cblas.h>
+#include <libgen.h>
 #include <assert.h>
 #include <pthread.h>
 #include <sys/time.h>
@@ -25,7 +35,7 @@ int main(int argc, char *argv[])
     int             err;
     
     ///> Take input file from which matrix will be loaded.
-    assert(argc == 3 && "wrong arguments");
+    assert(argc == 3 && "usage: ./cg <number of loops> <filename of matrix>");
     mmf_file = argv[2];
     
     ///> Load matrix in CSR format.

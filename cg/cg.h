@@ -14,9 +14,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <cblas.h>
-#include <pthread.h>
-#include <sys/time.h>
 
 #include "mt_lib.h"
 #include "spm_crs_mt.h"

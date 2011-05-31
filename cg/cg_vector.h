@@ -11,13 +11,9 @@
 #ifndef CG_VECTOR_H_
 #define CG_VECTOR_H_
 
-#include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
-#include <numa.h>
-#include <numaif.h>
-#include <sys/mman.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #include "vector.h"
 

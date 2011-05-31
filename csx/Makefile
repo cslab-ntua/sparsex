@@ -28,7 +28,7 @@ CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 
 #llvm
 llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter
-LLVM_GCC        = llvm-gcc
+LLVM_GCC        = llvm-gcc-4.2
 LLVM_CFLAGS     = $(shell $(llvmconf) --cflags)
 LLVM_CXXFLAGS   = $(shell $(llvmconf) --cxxflags)
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))

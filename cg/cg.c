@@ -1,6 +1,6 @@
 /* -*- C -*-
  *
- * cg.h -- The CG Manager Implementation.
+ * cg.c -- The CG Manager Implementation.
  *
  * Copyright (C) 2011,      Theodoros Gkountouvas
  * All rights reserved.

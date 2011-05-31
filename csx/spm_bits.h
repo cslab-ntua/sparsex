@@ -13,6 +13,7 @@
 
 #include <inttypes.h>
 #include <map>
+#include <ostream>
 #include <stdint.h>
 #include <boost/function.hpp>
 
