@@ -19,13 +19,7 @@
 
 void vector_double_add(vector_double_t *in1, vector_double_t *in2, vector_double_t *out);
 void vector_double_sub(vector_double_t *in1, vector_double_t *in2, vector_double_t *out);
-void vector_double_mul(vector_double_t *in, double mul, vector_double_t *out);
-void vector_double_div(vector_double_t *in1, vector_double_t *in2, vector_double_t *out);
-double vector_double_max(vector_double_t *in);
-double vector_double_min(vector_double_t *in);
-double vector_double_avg(vector_double_t *in);
 void vector_double_copy(vector_double_t *in, vector_double_t *out);
-void vector_double_abs(vector_double_t *in);
   
 #endif /* CG_VECTOR_H_ */
 

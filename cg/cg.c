@@ -16,9 +16,10 @@ void *cg_side_thread(void *arg)
     cg_params *params = (cg_params *) arg;
     uint64_t nr_loops = params->nr_loops;
     spm_mt_thread_t *spm_thread = params->spm_thread;
-    spm_crs32_double_mt_t *csr_mt = (spm_crs32_double_mt_t *) spm_thread->spm;
+    spmv_double_fn_t *fn = spm_thread->spmv_fn;
     vector_double_t *in = params->in;
     vector_double_t *out = params->out;
+    
     
     ///> Set thread to the appropriate cpu.
     setaffinity_oncpu(spm_thread->cpu);
@@ -26,7 +27,7 @@ void *cg_side_thread(void *arg)
     ///> Do nr_loops SpMxVs.
     for (i = 0; i < nr_loops; i++) {
         pthread_barrier_wait(&barrier);
-        spm_crs32_double_mt_multiply((void *) &csr_mt->crs, in, out);
+        fn(spm_thread->spm, in, out);
         pthread_barrier_wait(&barrier);
     }
     return NULL;
