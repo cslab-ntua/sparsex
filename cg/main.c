@@ -11,8 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <math.h>
 #include <cblas.h>
+#include <math.h>
 #include <libgen.h>
 #include <assert.h>
 #include <pthread.h>
@@ -46,9 +46,8 @@ int main(int argc, char *argv[])
     if (!tids) {
 	fprintf(stderr, "malloc failed\n");
 	exit(1);
-    }
-    err = pthread_barrier_init(&barrier, NULL, A->nr_threads);
-    if (err) {
+    } 
+    if (pthread_barrier_init(&barrier, NULL, A->nr_threads)) {
         fprintf(stderr, "pthread_barrier_init");
         exit(1);
     }
@@ -107,13 +106,13 @@ int main(int argc, char *argv[])
         ai = rr/tp;
         cblas_daxpy(nr_cols, ai, p->elements, 1, x->elements, 1);       ///> Do x = x + ai*p.
 	cblas_daxpy(nr_cols, -ai, t->elements, 1, r->elements, 1);      ///> Do r = r - ai*A*p.
-	if (i % 10 == 0) {
+	/*if (i % 10 == 0) {
             vector_double_sub(sol, x, t);
             avg_error = cblas_ddot(nr_cols, t->elements, 1, t->elements, 1);
             avg_error = sqrt(avg_error);
             avg_error /= sol_dis;
             printf("Loop: %lu Relative Distance: %lf\n", i, avg_error);
-	}
+	}*/
 	rr_new = cblas_ddot(nr_cols, r->elements, 1, r->elements, 1);   ///> Calculate bi.
 	bi = rr_new / rr;
         vector_double_mul(p, bi, t);                                    ///> Do p = r + bi*p.
@@ -129,7 +128,7 @@ int main(int argc, char *argv[])
     avg_error = cblas_ddot(nr_cols, t->elements, 1, t->elements, 1);
     avg_error = sqrt(avg_error);
     avg_error /= sol_dis;
-    printf("Loop: %lu Relative Distance: %lf\n", nr_loops, avg_error);
+    //printf("Loop: %lu Relative Distance: %lf\n", nr_loops, avg_error);
     printf("m:%s l:%lu rd:%lf t:%lf\n", basename(mmf_file), nr_loops, avg_error, time);
     
     ///> Release vectors.
