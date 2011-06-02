@@ -380,7 +380,7 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms)
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->GetSpmvFn();
         delete Jits[i];
     }
-
+    
     // Cleanup.
     free(Jits);
     free(threads);

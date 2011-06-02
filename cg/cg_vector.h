@@ -1,7 +1,7 @@
-/* -*- C -*-
- *
+/*
  * cg_vector.h -- Interface of Expansion of Vector Operations for CG.
  *
+ * Copyright (C) 2011,      Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011,      Theodoros Gkountouvas
  * All rights reserved.
  *
@@ -11,11 +11,12 @@
 #ifndef CG_VECTOR_H_
 #define CG_VECTOR_H_
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
+#include <cstring>
 
+extern "C" {
 #include "vector.h"
+}
 
 void vector_double_add(vector_double_t *in1, vector_double_t *in2, vector_double_t *out);
 void vector_double_sub(vector_double_t *in1, vector_double_t *in2, vector_double_t *out);

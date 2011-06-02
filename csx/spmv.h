@@ -59,7 +59,11 @@ bool GetOptionSplitBlocks();
  *  @param info parameters of matrix needed by each thread.
  */
 void *PreprocessThread(void *thread_info);
+#ifdef __cplusplus                  /* included in a C++ program */
 spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms = 0);
+#else /* included in a C program */
+spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms = 0);
+#endif
 void PutSpmMt(spm_mt_t *spm_mt);
 
 /**
