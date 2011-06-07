@@ -11,7 +11,7 @@ DEFS=-DCPU_MHZ_SH=\"$(MHZ_SH)\" -DSPM_NUMA #-Dpar #-Dcheck #-DCPU_CORE -DCPU_BIT
 OTHER_FLAGS=#CFLAGS+=$(DEFS) $(OTHER_FLAGS)
 
 LIBDIR=
-LIBS=-lblas -lm -lpthread -lnuma
+LIBS=-lm -lpthread -lnuma
 
 dynarray_dir = ../lib/dynarray
 spm_dir      = ../lib/spm

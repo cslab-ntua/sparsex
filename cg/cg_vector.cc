@@ -30,6 +30,29 @@ void vector_double_sub(vector_double_t *in1, vector_double_t *in2, vector_double
         out->elements[i] = in1->elements[i] - in2->elements[i];
 }
 
+double vector_double_mul(vector_double_t *in1, vector_double_t *in2)
+{
+    unsigned long i;
+    double out;
+
+    assert(in1->size == in2->size &&  "vectors for mul have different size");
+
+    out = 0;
+    for (i = 0; i < in1->size; i++)
+        out += in1->elements[i] * in2->elements[i];
+    return out;
+}
+
+void vector_double_scale(vector_double_t *in, double scale, vector_double_t *out)
+{
+    unsigned long i;
+
+    assert(in->size == out->size &&  "vectors for scale have different size");
+
+    for (i = 0; i < in->size; i++)
+        out->elements[i] = in->elements[i] * scale;
+}
+
 void vector_double_copy(vector_double_t *in, vector_double_t *out)
 {
     unsigned long i;

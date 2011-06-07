@@ -20,6 +20,8 @@ extern "C" {
 
 void vector_double_add(vector_double_t *in1, vector_double_t *in2, vector_double_t *out);
 void vector_double_sub(vector_double_t *in1, vector_double_t *in2, vector_double_t *out);
+double vector_double_mul(vector_double_t *in1, vector_double_t *in2);
+void vector_double_scale(vector_double_t *in, double scale, vector_double_t *out);
 void vector_double_copy(vector_double_t *in, vector_double_t *out);
   
 #endif /* CG_VECTOR_H_ */

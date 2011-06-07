@@ -11,7 +11,6 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <cblas.h>
 
 #include <cmath>
 #include <cstdlib>
@@ -34,6 +33,7 @@ typedef enum {
 int main(int argc, char *argv[])
 {
     unsigned long       i;
+    int			j;
     char                *mmf_file;
     uint64_t            nr_rows, nr_cols, nr_nzeros;
     spm_mt_t            *spm_mt;
@@ -46,14 +46,15 @@ int main(int argc, char *argv[])
     pthread_barrier_t   barrier;
     spmv_double_fn_t    *fn;
     method_t            *meth;
+    csx_double_t	*csx;
     
     ///> Default options.
     unsigned long   nr_loops = 128;
     cg_method_t     cg_method = CSR;
     
     ///> Parse Options.
-    while ((i = getopt(argc, argv, "xsl:")) != -1) {
-        switch (i) {
+    while ((j = getopt(argc, argv, "cxsl:")) != -1) {
+        switch (j) {
             case 'x':
                 cg_method = CSX;
                 break;
@@ -89,13 +90,22 @@ int main(int argc, char *argv[])
             break;
         case(CSX) :
             spm_mt = GetSpmMt(mmf_file);
+            csx = (csx_double_t *) spm_mt->spm_threads[0].spm;
+            nr_cols = csx->ncols;
+	    nr_rows = 0;
+            nr_nzeros = 0;
+            for (i = 0; i < spm_mt->nr_threads; i++) {
+            	csx = (csx_double_t *) spm_mt->spm_threads[i].spm;
+            	nr_rows += csx->nrows;
+		nr_nzeros += csx->nnz;
+	    } 
             break;
         default :
             fprintf(stderr, "Wrong method choosed\n");
             exit(1);
     }
+    assert(nr_rows == nr_cols && "Matrix is not square");
             
-    
     ///> Init pthreads.
     tids = (pthread_t *) malloc((spm_mt->nr_threads - 1) * sizeof(pthread_t));
     if (!tids) {
@@ -114,7 +124,7 @@ int main(int argc, char *argv[])
     r = vector_double_create(nr_cols);
     p = vector_double_create(nr_cols);
     t = vector_double_create(nr_cols);
-    
+
     ///> Assign the appropriate parameters to each thread.
     cg_params *params = (cg_params *) malloc(spm_mt->nr_threads * sizeof(cg_params));
     for (i = 0; i < spm_mt->nr_threads; i++) {
@@ -137,7 +147,7 @@ int main(int argc, char *argv[])
         fn(spm_thread->spm, sol, t);
         vector_double_add(b, t, b);
     }
-    sol_dis = cblas_ddot(nr_cols, sol->elements, 1, sol->elements, 1);
+    sol_dis = vector_double_mul(sol, sol);
     sol_dis = sqrt(sol_dis);
     
     vector_double_init(x, 0.01);                                ///> Initiate vector x (x0).
@@ -166,25 +176,20 @@ int main(int argc, char *argv[])
     spm_thread = params[0].spm_thread;
     fn = (spmv_double_fn_t *) spm_thread->spmv_fn;
     for (i = 0; i < nr_loops; i++) {
+        vector_double_init(t, 0);
         pthread_barrier_wait(&barrier);
         fn(spm_thread->spm, p, t);                                      ///> Do t = Ap.
         pthread_barrier_wait(&barrier);
-        rr = cblas_ddot(nr_cols, r->elements, 1, r->elements, 1);       ///> Calculate ai.
-        tp = cblas_ddot(nr_cols, t->elements, 1, p->elements, 1);
+        rr = vector_double_mul(r, r); 					//Calculate ai.
+        tp = vector_double_mul(t, p);
         ai = rr/tp;
-        cblas_daxpy(nr_cols, ai, p->elements, 1, x->elements, 1);       ///> Do x = x + ai*p.
-	cblas_daxpy(nr_cols, -ai, t->elements, 1, r->elements, 1);      ///> Do r = r - ai*A*p.
-	/*if (i % 10 == 0) {
-            vector_double_sub(sol, x, t);
-            avg_error = cblas_ddot(nr_cols, t->elements, 1, t->elements, 1);
-            avg_error = sqrt(avg_error);
-            avg_error /= sol_dis;
-            printf("Loop: %lu Relative Distance: %lf\n", i, avg_error);
-	}*/
-	rr_new = cblas_ddot(nr_cols, r->elements, 1, r->elements, 1);   ///> Calculate bi.
+        vector_double_scale(t, ai, t);                                  ///> Do r = r - ai*A*p.
+        vector_double_sub(r, t, r);
+        vector_double_scale(p, ai, t);       				///> Do x = x + ai*p.
+	vector_double_add(x, t, x);
+	rr_new = vector_double_mul(r, r);   				///> Calculate bi.
 	bi = rr_new / rr;
-	vector_double_init(t, 0);                                       ///> Do p = r + bi*p.
-	cblas_daxpy(nr_cols, bi, p->elements, 1, t->elements, 1);
+	vector_double_scale(p, bi, t);                                  ///> Do p = r + bi*p.
         vector_double_add(r, t, p);
     }
     
@@ -194,7 +199,7 @@ int main(int argc, char *argv[])
     
     ///> Print results.
     vector_double_sub(sol, x, t);
-    avg_error = cblas_ddot(nr_cols, t->elements, 1, t->elements, 1);
+    avg_error = vector_double_mul(t, t);
     avg_error = sqrt(avg_error);
     avg_error /= sol_dis;
     //printf("Loop: %lu Relative Distance: %lf\n", nr_loops, avg_error);
