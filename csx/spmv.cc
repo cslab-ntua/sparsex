@@ -29,6 +29,7 @@
 
 #ifdef SPM_NUMA
 #include <numa.h>
+#include <numaif.h>
 #endif
 
 extern "C" {
@@ -266,6 +267,9 @@ void *PreprocessThread(void *thread_info)
 
     data->buffer << "==> Thread: #" << data->thread_no << std::endl;
 
+    // set cpu affinity
+    setaffinity_oncpu(data->cpu);
+
     // Initialize the DRLE manager
     DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.1, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_prob,
@@ -290,6 +294,16 @@ void *PreprocessThread(void *thread_info)
     csx_double_t *csx = data->csxmg->MakeCsx();
     data->spm_encoded->spm = csx;
     data->spm_encoded->part_info = (void *) csx->nrows;
+    int node;
+    if (get_mempolicy(&node, 0, 0, csx->values,
+                      MPOL_F_ADDR | MPOL_F_NODE) < 0) {
+        perror("get_mempolicy");
+        exit(1);
+    }
+
+    data->buffer << "csx part " << data->thread_no << " is on node " << node
+                 << " and must be on node "
+                 << data->spm_encoded->node << std::endl;
 
     delete DrleMg;
     return 0;
