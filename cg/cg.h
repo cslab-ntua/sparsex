@@ -21,7 +21,7 @@ extern "C" {
 
 typedef struct cg_params
 {
-    uint64_t            nr_loops;
+    uint64_t            nloops;
     spm_mt_thread_t     *spm_thread;
     vector_double_t     *in;
     vector_double_t     *out;

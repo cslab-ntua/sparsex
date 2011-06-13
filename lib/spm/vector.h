@@ -34,6 +34,8 @@ _VTYPE(vtype) *_VNAME(vtype,create_interleaved)(unsigned long size, size_t *part
 void _VNAME(vtype,destroy)(_VTYPE(vtype) *v); \
 void _VNAME(vtype,init)(_VTYPE(vtype) *v, vtype val); \
 void _VNAME(vtype,init_rand_range)(_VTYPE(vtype) *v, vtype max, vtype min); \
+void _VNAME(vtype,add)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, _VTYPE(vtype) *v3); \
+void _VNAME(vtype,addpart)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, _VTYPE(vtype) *v3, unsigned long start, unsigned long end); \
 int _VNAME(vtype,compare)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2); \
 void _VNAME(vtype,print)(_VTYPE(vtype) *v);
 
@@ -47,3 +49,5 @@ DECLARE_VECTOR(double)
 #define VECTOR_TYPE VECTOR_NAME(_t)
 
 #endif /* __VECTOR_H__ */
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

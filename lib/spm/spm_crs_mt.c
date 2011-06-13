@@ -129,6 +129,7 @@ void SPM_CRS_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		y[i] = yr;
 	}
 }
+
 XSPMV_MT_METH_INIT(
  SPM_CRS_MT_NAME(_multiply),
  SPM_CRS_MT_NAME(_init_mmf),

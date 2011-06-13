@@ -10,16 +10,6 @@
 
 #include "cg_vector.h"
 
-void vector_double_add(vector_double_t *in1, vector_double_t *in2, vector_double_t *out)
-{
-    unsigned long i;
-    
-    assert(in1->size == in2->size && in1->size == out->size && "vectors for add have different size");
-    
-    for (i = 0; i < in1->size; i++)
-        out->elements[i] = in1->elements[i] + in2->elements[i];
-}
-
 void vector_double_sub(vector_double_t *in1, vector_double_t *in2, vector_double_t *out)
 {
     unsigned long i;

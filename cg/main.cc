@@ -15,9 +15,11 @@
 #include <cmath>
 #include <cstdlib>
 
-#include "cg_vector.h"
-#include "cg.h"
 #include "spmv.h"
+
+#include "cg_vector.h"
+#include "cg_csr_sym.h"
+#include "cg.h"
 
 using namespace std;
 
@@ -35,21 +37,22 @@ int main(int argc, char *argv[])
     unsigned long       i;
     int			j;
     char                *mmf_file;
-    uint64_t            nr_rows, nr_cols, nr_nzeros;
+    uint64_t            nrows, ncols, nnz, n;
     spm_mt_t            *spm_mt;
     spm_mt_thread_t     *spm_thread;
     vector_double_t     *x, *b, *sol, *r, *p, *t;
     double              rr, tp, ai, bi, rr_new;
-    struct timeval      start, end;
-    double              time, avg_error, sol_dis;
+    double              time, rd, sol_dis;
     pthread_t           *tids;
     pthread_barrier_t   barrier;
     spmv_double_fn_t    *fn;
     method_t            *meth;
     csx_double_t	*csx;
+    struct timeval      start, end;
+    spm_crs32_double_sym_mt_t *crs_mt;
     
     ///> Default options.
-    unsigned long   nr_loops = 128;
+    unsigned long   nloops = 512;
     cg_method_t     cg_method = CSR;
     
     ///> Parse Options.
@@ -65,7 +68,7 @@ int main(int argc, char *argv[])
                     cg_method = CSX_s;
                 break;
             case 'l':
-                nr_loops = atol(optarg);
+                nloops = atol(optarg);
                 break;
 	    default:
 	        fprintf(stderr, "Usage: cg [-x -l <number of loops>] mmf_file\n");
@@ -83,28 +86,41 @@ int main(int argc, char *argv[])
     ///> Load matrix in appropriate format.
     switch(cg_method) {
         case(CSR) :
-            spm_mt = (spm_mt_t *) spm_crs32_double_mt_init_mmf(mmf_file, &nr_rows, &nr_cols, &nr_nzeros);
+            spm_mt = (spm_mt_t *) spm_crs32_double_mt_init_mmf(mmf_file, &nrows, &ncols, &nnz);
+	    assert(nrows == ncols && "Matrix is not square");
+	    n = nrows;
 	    meth = method_get((char *) "spm_crs32_double_mt_multiply");
             for (i = 0; i < spm_mt->nr_threads; i++)
                 spm_mt->spm_threads[i].spmv_fn = meth->fn;
             break;
+        case(CSR_s) :
+            spm_mt = (spm_mt_t *) spm_crs32_double_sym_mt_init_mmf(mmf_file, &n, &nnz);
+            for (i = 0; i < spm_mt->nr_threads; i++) {
+                printf("Thread %lu\n", i);
+                crs_mt = (spm_crs32_double_sym_mt_t *) spm_mt->spm_threads[i].spm;
+                printf("Start Point (%u, %u)\n", crs_mt->row_start, crs_mt->elem_start);
+                printf("End Point (%u, %u)\n", crs_mt->row_end, crs_mt->elem_end);
+            }
+            exit(0);
+            break;
         case(CSX) :
             spm_mt = GetSpmMt(mmf_file);
             csx = (csx_double_t *) spm_mt->spm_threads[0].spm;
-            nr_cols = csx->ncols;
-	    nr_rows = 0;
-            nr_nzeros = 0;
+            ncols = csx->ncols;
+	    nrows = 0;
+            nnz = 0;
             for (i = 0; i < spm_mt->nr_threads; i++) {
             	csx = (csx_double_t *) spm_mt->spm_threads[i].spm;
-            	nr_rows += csx->nrows;
-		nr_nzeros += csx->nnz;
-	    } 
+            	nrows += csx->nrows;
+		nnz += csx->nnz;
+	    }
+	    assert(nrows == ncols && "Matrix is not symmetric");
+	    n = nrows;
             break;
         default :
             fprintf(stderr, "Wrong method choosed\n");
             exit(1);
     }
-    assert(nr_rows == nr_cols && "Matrix is not square");
             
     ///> Init pthreads.
     tids = (pthread_t *) malloc((spm_mt->nr_threads - 1) * sizeof(pthread_t));
@@ -118,17 +134,17 @@ int main(int argc, char *argv[])
     }
 
     ///> Create vectors with the appropriate size.
-    x = vector_double_create(nr_cols);
-    sol = vector_double_create(nr_cols);
-    b = vector_double_create(nr_rows);
-    r = vector_double_create(nr_cols);
-    p = vector_double_create(nr_cols);
-    t = vector_double_create(nr_cols);
+    x = vector_double_create(n);
+    sol = vector_double_create(n);
+    b = vector_double_create(n);
+    r = vector_double_create(n);
+    p = vector_double_create(n);
+    t = vector_double_create(n);
 
     ///> Assign the appropriate parameters to each thread.
     cg_params *params = (cg_params *) malloc(spm_mt->nr_threads * sizeof(cg_params));
     for (i = 0; i < spm_mt->nr_threads; i++) {
-        params[i].nr_loops = nr_loops;
+        params[i].nloops = nloops;
         params[i].spm_thread = spm_mt->spm_threads+i;
         params[i].in = p;
         params[i].out = t;
@@ -175,14 +191,14 @@ int main(int argc, char *argv[])
     ///> Execute main thread.
     spm_thread = params[0].spm_thread;
     fn = (spmv_double_fn_t *) spm_thread->spmv_fn;
-    for (i = 0; i < nr_loops; i++) {
+    for (i = 0; i < nloops; i++) {
         vector_double_init(t, 0);
         pthread_barrier_wait(&barrier);
         fn(spm_thread->spm, p, t);                                      ///> Do t = Ap.
         pthread_barrier_wait(&barrier);
         rr = vector_double_mul(r, r); 					//Calculate ai.
         tp = vector_double_mul(t, p);
-        ai = rr/tp;
+        ai = rr / tp;
         vector_double_scale(t, ai, t);                                  ///> Do r = r - ai*A*p.
         vector_double_sub(r, t, r);
         vector_double_scale(p, ai, t);       				///> Do x = x + ai*p.
@@ -195,15 +211,14 @@ int main(int argc, char *argv[])
     
     ///> Stop counting time.
     gettimeofday(&end, NULL);
-    time = end.tv_sec-start.tv_sec + (end.tv_usec-start.tv_usec)/1000000.0;
+    time = end.tv_sec - start.tv_sec + (end.tv_usec - start.tv_usec) / 1000000.0;
     
     ///> Print results.
     vector_double_sub(sol, x, t);
-    avg_error = vector_double_mul(t, t);
-    avg_error = sqrt(avg_error);
-    avg_error /= sol_dis;
-    //printf("Loop: %lu Relative Distance: %lf\n", nr_loops, avg_error);
-    printf("m:%s l:%lu rd:%lf t:%lf\n", basename(mmf_file), nr_loops, avg_error, time);
+    rd = vector_double_mul(t, t);
+    rd = sqrt(rd);
+    rd /= sol_dis;
+    printf("m:%s l:%lu rd:%lf t:%lf\n", basename(mmf_file), nloops, rd, time);
     
     ///> Release vectors.
     vector_double_destroy(x);
@@ -217,7 +232,8 @@ int main(int argc, char *argv[])
     free(tids);
     
     ///> Release matrix.
-    // TODO:Destroy Matrix.
+    free(spm_mt->spm_threads);
+    free(spm_mt);
     
     return 0;
 }

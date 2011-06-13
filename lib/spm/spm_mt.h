@@ -16,7 +16,8 @@ struct spm_mt_thread {
 	void *spm;
 	void *spmv_fn;
 	unsigned int cpu;
-    int node;
+    unsigned int id;
+    unsigned int node;
     void *part_info; /* partition info */
     void *data;
     VECTOR_TYPE *x, *y;

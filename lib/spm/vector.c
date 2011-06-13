@@ -182,6 +182,37 @@ void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 	}
 }
 
+void VECTOR_NAME(_add)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3)
+{
+	unsigned long i;
+	
+	if (v1->size != v2->size || v1->size != v3->size) {
+		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ", v1->size, v2->size, v3->size);
+		exit(1);
+	}
+	
+	for (i = 0; i < v1->size; i++)
+		v3->elements[i] = v1->elements[i] + v2->elements[i];
+}
+
+void VECTOR_NAME(_addpart)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3, unsigned long start, unsigned long end)
+{
+	unsigned long i;
+	
+	if (v1->size != v2->size || v1->size != v3->size) {
+		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ", v1->size, v2->size, v3->size);
+		exit(1);
+	}
+	
+	if (start > v1->size || end > v1->size || start > end) {
+		fprintf(stderr, "start=%lu end=%lu v->size=%lu not compatible", start, end, v1->size);
+		exit(1);
+	}
+	
+	for (i = start; i < end; i++)
+		v3->elements[i] = v1->elements[i] + v2->elements[i];
+}
+
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)
 {
 	if ( fabs((double)(a-b)/(double)a)  > 1.e-7 ){
@@ -218,3 +249,5 @@ void VECTOR_NAME(_print)(VECTOR_TYPE *v)
         printf("%lf ", (double) v->elements[i]);
     printf("]\n");
 }
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

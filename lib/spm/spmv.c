@@ -18,6 +18,7 @@
 #include "spmv_method.h"
 #include "spmv_loops.h"
 #include "spmv_loops_mt.h"
+#include "spmv_loops_sym_mt.h"
 
 static char *progname = NULL;
 extern int optind;
@@ -110,16 +111,22 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 
-		switch (elem_size + spmv_meth->mt_flag){
+		switch (elem_size + spmv_meth->flag){
 			case 8:
+			case (8+2):
 			spmv_double_check_loop(m1, m, meth1->fn, meth->fn, 1, nrows, ncols, nnz);
 			break;
 
 			case (8+1):
 			spmv_double_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
+			
+			case (8+3):
+			spmv_double_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
+			break;
 
 			case 4:
+			case (4+2):
 			spmv_float_check_loop(m1, m, meth1->fn, meth->fn, 1, nrows, ncols, nnz);
 			break;
 
@@ -127,6 +134,10 @@ int main(int argc, char **argv)
 			spmv_float_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 
+            case (4+3):
+			spmv_float_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
+			break;
+			
 			default:
 			fprintf(stderr, "woops!\n");
 			exit(1);
@@ -139,16 +150,22 @@ int main(int argc, char **argv)
 		int count;
 		double t = -666.0;
 		for (count=0; count < outer_loops; count++){
-			switch (elem_size + spmv_meth->mt_flag){
+			switch (elem_size + spmv_meth->flag){
 				case 8:
+				case (8+2):
 				t = spmv_double_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 
 				case (8+1):
 				t = spmv_double_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
 				break;
+				
+				case (8+3):
+				t = spmv_double_bench_sym_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
+				break;
 
 				case 4:
+			    case (4+2):
 				t = spmv_float_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 
@@ -156,6 +173,10 @@ int main(int argc, char **argv)
 				t = spmv_float_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 
+                case (4+3):
+				t = spmv_float_bench_sym_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
+				break;
+				
 				default:
 				fprintf(stderr, "woops!\n");
 				exit(1);

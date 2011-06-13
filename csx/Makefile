@@ -36,7 +36,7 @@ LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
-	DEFS += -DSPM_NUMA
+	#DEFS += -DSPM_NUMA
 	override LDFLAGS += -lnuma
 endif
 
