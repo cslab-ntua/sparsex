@@ -21,7 +21,7 @@ CFLAGS      += -g
 DEFS        += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
 #CFLAGS      += -DCPU_CORE -DSPMV_PRFCNT # performance counters for an intel core
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
-LIBS         = -lm -lpthread
+LIBS         = -lm -lpthread -lnuma
 INC          = -I$(dynarray_dir) -I$(prfcnt_dir)
 COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 
@@ -32,7 +32,6 @@ COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 #
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	DEFS += -DSPM_NUMA
-	LIBS += -lnuma
 endif
 
 # do this, so that it doesn't match default %.c - >%.o rules

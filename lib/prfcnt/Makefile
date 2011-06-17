@@ -1,12 +1,15 @@
 .PHONY: all clean
 
 ## Configuration
-scripts      = $(shell pwd)/scripts
+scripts      = $(shell pwd)/../../scripts
 
 CC      = gcc
 CFLAGS  = -Wall -Winline -O2
 # run scripts to get information
-CPU     ?= $(shell $(scripts)/cpu_info.sh)
+ifneq ($(MAKECMDGOALS), clean)
+	CPU ?= $(shell $(scripts)/cpu_info.sh)
+endif
+
 MHZ_SH  ?= $(scripts)/cpu_mhz.sh
 DEFS    += -DCPU_$(CPU) -DCPU_MHZ_SH=\"$(MHZ_SH)\"
 COMPILE  = $(CC) $(CFLAGS) $(INC) $(DEFS)

@@ -27,19 +27,18 @@
 #include "jit.h"
 #include "llvm_jit_help.h"
 
-#ifdef SPM_NUMA
 #include <numa.h>
 #include <numaif.h>
-#endif
 
 extern "C" {
 #include "mt_lib.h"
 #include "spmv_method.h"
 #include "spm_crs.h"
 #include "spm_mt.h"
-#include "spmv_loops_mt.h"
 #ifdef SPM_NUMA
 #   include "spmv_loops_mt_numa.h"
+#else
+#   include "spmv_loops_mt.h"
 #endif
 #include "timer.h"
 #include "ctl_ll.h"
@@ -294,6 +293,7 @@ void *PreprocessThread(void *thread_info)
     csx_double_t *csx = data->csxmg->MakeCsx();
     data->spm_encoded->spm = csx;
     data->spm_encoded->part_info = (void *) csx->nrows;
+#ifdef SPM_NUMA
     int node;
     if (get_mempolicy(&node, 0, 0, csx->values,
                       MPOL_F_ADDR | MPOL_F_NODE) < 0) {
@@ -305,6 +305,7 @@ void *PreprocessThread(void *thread_info)
                  << " and must be on node "
                  << data->spm_encoded->node << std::endl;
 
+#endif
     delete DrleMg;
     return 0;
 }
@@ -418,6 +419,8 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     // Cleanup.
     free(Jits);
     free(threads);
+    free(threads_cpus);
+    free(xform_buf);
     delete[] Spms;
     delete[] data;
 

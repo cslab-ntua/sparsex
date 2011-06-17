@@ -99,6 +99,7 @@ typedef struct prfcnt_core_handle prfcnt_t;
 enum {
 	EVENT_UNHLT_CORE_CYCLES = 0,
 	EVENT_INSTR_RETIRED,
+	EVENT_UOPS_RETIRED,
 	EVENT_LLC_REFERENCE,
 	EVENT_LLC_MISSES,
 	EVENT_BR_RETIRED,
@@ -107,8 +108,9 @@ enum {
 	EVENT_DIV,
 	EVENT_L2_REJECT_CYCLES,
 	EVENT_L2_LINES_IN,
+	EVENT_L2_RQSTS,
 	EVENT_RESOURCE_STALL,
-	EVENT_FP_COMP_OPS,
+	EVENT_FP_COMP_OPS_EXE,
 	EVENT_L1D_REPL,
 	EVENT_BR_BOGUS,
 	EVENT_BP_BTB_MISSES,
@@ -117,6 +119,9 @@ enum {
 	EVENT_ICACHE_MISSES,
 	EVENT_BR_EXECUTED,
 	EVENT_BR_MISSPREDICTED,
+	EVENT_SIMD_UOPS_EXEC,
+	EVENT_BUS_TRANS_MEM,
+	EVENT_BUS_TRANS_ANY,
 	EVENT_END
 };
 
@@ -165,9 +170,31 @@ static prfcnt_event_t __evnts[] = {
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Mispredicted Branch Instruction Retired"
 	},
+
 	/*
 	 * Non-Architectural Events
 	 */
+	[EVENT_UOPS_RETIRED] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0xc2)    |
+		                EVNTSEL_SET(UNIT, 0x0f)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "Micro-ops Retired"
+	},
+
+	[EVENT_FP_COMP_OPS_EXE] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x10)    |
+		                EVNTSEL_SET(UNIT, 0x00)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "Floating point computational micro-ops executed"
+	},
+
+	[EVENT_SIMD_UOPS_EXEC] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0xb0)    |
+		                EVNTSEL_SET(UNIT, 0x00)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "SIMD micro-ops executed"
+	},
+
 	[EVENT_MUL] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x12)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
@@ -190,25 +217,27 @@ static prfcnt_event_t __evnts[] = {
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Cycles L2 is Busy (MESI_ALL,PF_ALL,CORE_THIS)"
 	},
+
 	[EVENT_L2_LINES_IN] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x24)                |
-		                EVNTSEL_SET(UNIT, EVNT_UNIT_MESI_ALL)   |
-		                EVNTSEL_SET(UNIT, EVNT_UNIT_PFETCH_ALL) |
 		                EVNTSEL_SET(UNIT, EVNT_UNIT_CORE_THIS)  |
 		                EVNTSEL_SET(USR, 1),
-		.desc          = "L2 cache misses (incl. hwpref)"
+		.desc          = "L2 cache misses (no hwpref)"
 	},
+
+	[EVENT_L2_RQSTS] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x2e)                |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_MESI_ALL)   |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_CORE_THIS)  |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "L2 cache reference requests (no hwpref)"
+	},
+
 	[EVENT_RESOURCE_STALL] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xa2)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Cycles of Resource Stall"
-	},
-	[EVENT_FP_COMP_OPS] = {
-		.evntsel_data = EVNTSEL_SET(EVENT, 0x10)    |
-		                EVNTSEL_SET(UNIT, 0x00)     |
-		                EVNTSEL_SET(USR, 1),
-		.desc          = "FP computational Instructions executed"
 	},
 	[EVENT_L1D_REPL] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x45)    |
@@ -216,47 +245,70 @@ static prfcnt_event_t __evnts[] = {
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "L1 Data CL replacements"
 	},
+
 	[EVENT_BR_BOGUS] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xe4)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Bogus brances"
 	},
+
 	[EVENT_BP_BTB_MISSES] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xe2)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "branch misses in BTB"
 	},
+
 	[EVENT_BR_IDEC] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xe0)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Branch instructions decoded"
 	},
+
 	[EVENT_FUSED_UOPS_RET] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xda)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Fused uops retired"
 	},
+
 	[EVENT_ICACHE_MISSES] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x81)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "ICache misses"
 	},
+
 	[EVENT_BR_EXECUTED] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x88)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Branch instruction executed"
 	},
+
 	[EVENT_BR_MISSPREDICTED] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x89)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Branch instruction executed and mispredicted"
+	},
+
+	[EVENT_BUS_TRANS_MEM] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x6f)                |
+		                EVNTSEL_SET(UNIT, 0xc0)                 |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_AGENT_ALL)  |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "Completed memory transactions"
+	},
+
+	[EVENT_BUS_TRANS_ANY] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x70)                |
+		                EVNTSEL_SET(UNIT, 0xc0)                 |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_AGENT_ALL)  |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "All completed bus transactions"
 	},
 };
 
@@ -266,8 +318,13 @@ static prfcnt_event_t __evnts[] = {
  * intruction)
  */
 static const int __evnts_selected[] = {
-	EVENT_FP_COMP_OPS,
-	EVENT_INSTR_RETIRED,
+	EVENT_UNHLT_CORE_CYCLES,
+	EVENT_UOPS_RETIRED,
+/* 	EVENT_L2_LINES_IN, */
+/* 	EVENT_L2_RQSTS, */
+/* 	EVENT_LLC_REFERENCE, */
+/* 	EVENT_LLC_MISSES, */
+/* 	EVENT_BUS_TRANS_ANY, */
 };
 
 /*

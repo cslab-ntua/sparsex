@@ -497,7 +497,7 @@ private:
     friend class DRLE_Manager;
 
 public:
-    SPM() : type_(NONE), elems_(NULL), rowptr_(NULL) {}
+    SPM() : type_(NONE), elems_(NULL), rowptr_(NULL), elems_mapped_(false) {}
 
     ~SPM()
     {

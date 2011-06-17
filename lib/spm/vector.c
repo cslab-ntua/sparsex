@@ -9,6 +9,7 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>
 #include <numa.h>
 #include <numaif.h>
@@ -73,6 +74,11 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
                                               size_t *parts,
                                               int nr_parts,
                                               const int *nodes) {
+    int pagesize = numa_pagesize();
+    if (size*sizeof(ELEM_TYPE) <= pagesize)
+        /* if the vector is too small, fall back to create_onnode */
+        return VECTOR_NAME(_create_onnode)(size, nodes[0]);
+
     VECTOR_TYPE *v = mmap(NULL, sizeof(VECTOR_TYPE),
                           PROT_READ | PROT_WRITE,
                           MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
@@ -91,9 +97,7 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
         exit(1);
     }
 
-    int pagesize = numa_pagesize();
-    int nodes_max = numa_max_possible_node();
-
+    struct bitmask *nodemask = numa_bitmask_alloc(numa_num_configured_cpus());
 #define PAGE_ALIGN(addr) (void *)((unsigned long) addr & ~(pagesize-1))
     /*
      * Bind parts to specific nodes
@@ -110,9 +114,9 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
             rem = part_size % pagesize;
         }
 
-        unsigned long nodemask = 1 << nodes[i];
+        numa_bitmask_setbit(nodemask, nodes[i]);
         if (mbind(PAGE_ALIGN(curr_part), part_size,
-                  MPOL_BIND, &nodemask, nodes_max, 0) < 0) {
+                  MPOL_BIND, nodemask->maskp, nodemask->size, 0) < 0) {
             perror("mbind");
             exit(1);
         }
@@ -122,6 +126,7 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
     }
 
 #undef PAGE_ALIGN
+    numa_bitmask_free(nodemask);
     return v;
 }
 
