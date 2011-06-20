@@ -69,7 +69,7 @@ spm_crs.o:  spm_crs.c spm_crs.h
 	done
 	$(LD) -i spm_crs{64,32}_{double,float}.o -o spm_crs.o
 
-spm_crs_mt.o:  spm_crs_mt.c spm_crs_mt.h
+spm_crs_mt.o:  spm_crs_mt.c spm_crs_mt.h spm_mt.h
 	for t in double float; do                             \
 	  for ci in 32 64; do                                 \
 	    $(COMPILE) -DSPM_CRS_BITS=$$ci -DELEM_TYPE=$$t    \
@@ -83,12 +83,12 @@ spmv_loops.o: spmv_loops.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_double.o
 	$(LD) -i spmv_loops_{float,double}.o -o spmv_loops.o
 
-spmv_loops_mt.o: spmv_loops_mt.c spmv_loops_mt.h spmv_method.h vector.h ../prfcnt/*.h
+spmv_loops_mt.o: spmv_loops_mt.c spmv_loops_mt.h spmv_method.h vector.h spm_mt.h ../prfcnt/*.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_mt_float.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_double.o
 	$(LD) -i spmv_loops_mt_{float,double}.o -o spmv_loops_mt.o
 
-spmv_loops_mt_numa.o: spmv_loops_mt_numa.c spmv_loops_mt_numa.h spmv_method.h vector.h ../prfcnt/*.h
+spmv_loops_mt_numa.o: spmv_loops_mt_numa.c spmv_loops_mt_numa.h spmv_method.h vector.h spm_mt.h ../prfcnt/*.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_mt_numa_float.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_numa_double.o
 	$(LD) -i spmv_loops_mt_numa_{float,double}.o -o spmv_loops_mt_numa.o

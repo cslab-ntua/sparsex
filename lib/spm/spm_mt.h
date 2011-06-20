@@ -10,12 +10,15 @@
 #ifndef __SPM_MT_H__
 #define __SPM_MT_H__
 
+#include <stdint.h>
+
 struct spm_mt_thread {
 	void *spm;
 	void *spmv_fn;
 	unsigned int cpu;
     int node;
-    void *part_info; /* partition info */
+    uint64_t row_start;
+    uint64_t nr_rows;
     void *data;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;

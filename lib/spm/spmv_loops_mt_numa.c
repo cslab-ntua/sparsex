@@ -34,6 +34,8 @@ static void *do_spmv_thread_main(void *arg) {
     tsc_start(&tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
+        VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
+                                spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
 		pthread_barrier_wait(&barrier);
 	}
@@ -52,6 +54,8 @@ static void *do_spmv_thread(void *arg)
 	int i;
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
+        VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
+                                spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
 		pthread_barrier_wait(&barrier);
 	}
@@ -113,8 +117,7 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
             }
         }
 
-        /* part_info is the number of rows assigned to each thread */
-        parts[i] = (uint64_t) spm->part_info;
+        parts[i] = spm->nr_rows;
         nodes[i] = spm->node;
         spm->data = xs[spm->node];
         if (fn)
@@ -233,8 +236,7 @@ void SPMV_NAME(_check_mt_loop_numa)(void *spm_serial,
             }
         }
 
-        /* part_info is the number of rows assigned to each thread */
-        parts[i] = (uint64_t) spm->part_info;
+        parts[i] = spm->nr_rows;
         nodes[i] = node;
         spm->data = xs[node];
         if (mt_fn)

@@ -42,6 +42,8 @@ static void *do_spmv_thread(void *arg)
 
 	for (i=0; i<loops_nr; i++){
 		pthread_barrier_wait(&barrier);
+        VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
+                                spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
 	}
@@ -90,10 +92,11 @@ static void *do_spmv_thread_main_swap(void *arg)
 	int i;
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
+        VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
+                                spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
 		SWAP(x, y);
-		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 	}
 	tsc_pause(&tsc);
 #ifdef SPMV_PRFCNT
@@ -219,7 +222,6 @@ void SPMV_NAME(_check_mt_loop) (void *spm, spm_mt_t *spm_mt,
 
 	for (i = 0; i < loops; i++) {
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
-		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 		VECTOR_NAME(_init)(y2, (ELEM_TYPE)21);
 		pthread_barrier_wait(&barrier);
 		pthread_barrier_wait(&barrier);

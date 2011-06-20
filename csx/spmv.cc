@@ -292,7 +292,8 @@ void *PreprocessThread(void *thread_info)
 
     csx_double_t *csx = data->csxmg->MakeCsx();
     data->spm_encoded->spm = csx;
-    data->spm_encoded->part_info = (void *) csx->nrows;
+    data->spm_encoded->nr_rows = csx->nrows;
+    data->spm_encoded->row_start = csx->row_start;
 #ifdef SPM_NUMA
     int node;
     if (get_mempolicy(&node, 0, 0, csx->values,
@@ -458,7 +459,7 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 #   define SPMV_CHECK_FN spmv_double_check_mt_loop
 #endif
     SPMV_CHECK_FN(crs, spm_mt,
-                  spm_crs32_double_multiply, 1,
+                  spm_crs32_double_multiply, 2,
                   nrows, ncols,
                   NULL);
     spm_crs32_double_destroy(crs);

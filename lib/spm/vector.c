@@ -163,6 +163,14 @@ void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 	}
 }
 
+void VECTOR_NAME(_init_part)(VECTOR_TYPE *v, unsigned long start,
+							 unsigned long len, ELEM_TYPE val)
+{
+	unsigned long i;
+	for (i = 0; i < len; i++)
+		v->elements[start+i] = val;
+}
+
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)
 {
 	if ( fabs((double)(a-b)/(double)a)  > 0.0000001 ){

@@ -80,7 +80,7 @@ llvm_jit_help.o: llvm_jit_help.cc llvm_jit_help.h
 jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 	$(CXX_COMPILE)  $(LLVM_CXXFLAGS) -c $<
 
-spmv.o: spmv.cc
+spmv.o: spmv.cc $(spm_dir)/spm_mt.h
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
 # -Xlinker --allow-multiple-definition is set because
