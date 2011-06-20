@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
+ * Copyright (C) 2011,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -18,9 +19,9 @@
 #include "vector.h"
 
 enum {
-    ALLOC_STD = 1,
-    ALLOC_NUMA,
-    ALLOC_MMAP,
+	ALLOC_STD = 1,
+	ALLOC_NUMA,
+	ALLOC_MMAP,
 };
 
 /*
@@ -41,7 +42,7 @@ VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 	}
 
 	v->size = size;
-    v->alloc_type = ALLOC_STD;
+	v->alloc_type = ALLOC_STD;
 	v->elements = malloc(sizeof(ELEM_TYPE)*(size + 12));
 	if ( !v->elements ){
 		fprintf(stderr, "malloc failed\n");
@@ -53,96 +54,96 @@ VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 
 VECTOR_TYPE *VECTOR_NAME(_create_onnode)(unsigned long size, int node)
 {
-    VECTOR_TYPE *v = numa_alloc_onnode(sizeof(VECTOR_TYPE), node);
-    if (!v) {
-        perror("numa_alloc_onnode");
-        exit(1);
-    }
+	VECTOR_TYPE *v = numa_alloc_onnode(sizeof(VECTOR_TYPE), node);
+	if (!v) {
+		perror("numa_alloc_onnode");
+		exit(1);
+	}
 
-    v->size = size;
-    v->alloc_type = ALLOC_NUMA;
-    v->elements = numa_alloc_onnode(sizeof(ELEM_TYPE)*size, node);
-    if (!v->elements) {
-        perror("numa_alloc_onnode");
-        exit(1);
-    }
+	v->size = size;
+	v->alloc_type = ALLOC_NUMA;
+	v->elements = numa_alloc_onnode(sizeof(ELEM_TYPE)*size, node);
+	if (!v->elements) {
+		perror("numa_alloc_onnode");
+		exit(1);
+	}
 
-    return v;
+	return v;
 }
 
 VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
                                               size_t *parts,
                                               int nr_parts,
                                               const int *nodes) {
-    int pagesize = numa_pagesize();
-    if (size*sizeof(ELEM_TYPE) <= pagesize)
-        /* if the vector is too small, fall back to create_onnode */
-        return VECTOR_NAME(_create_onnode)(size, nodes[0]);
+	int pagesize = numa_pagesize();
+	if (size*sizeof(ELEM_TYPE) <= pagesize)
+		/* if the vector is too small, fall back to create_onnode */
+		return VECTOR_NAME(_create_onnode)(size, nodes[0]);
 
-    VECTOR_TYPE *v = mmap(NULL, sizeof(VECTOR_TYPE),
-                          PROT_READ | PROT_WRITE,
-                          MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-    if (v == (void *) -1) {
-        perror("mmap");
-        exit(1);
-    }
+	VECTOR_TYPE *v = mmap(NULL, sizeof(VECTOR_TYPE),
+	                      PROT_READ | PROT_WRITE,
+	                      MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+	if (v == (void *) -1) {
+		perror("mmap");
+		exit(1);
+	}
 
-    v->size = size;
-    v->alloc_type = ALLOC_MMAP;
-    v->elements = mmap(NULL, sizeof(ELEM_TYPE)*size,
-                       PROT_READ | PROT_WRITE,
-                       MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-    if (v->elements == (void *) -1) {
-        perror("mmap");
-        exit(1);
-    }
+	v->size = size;
+	v->alloc_type = ALLOC_MMAP;
+	v->elements = mmap(NULL, sizeof(ELEM_TYPE)*size,
+	                   PROT_READ | PROT_WRITE,
+	                   MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+	if (v->elements == (void *) -1) {
+		perror("mmap");
+		exit(1);
+	}
 
-    struct bitmask *nodemask = numa_bitmask_alloc(numa_num_configured_cpus());
+	struct bitmask *nodemask = numa_bitmask_alloc(numa_num_configured_cpus());
 #define PAGE_ALIGN(addr) (void *)((unsigned long) addr & ~(pagesize-1))
-    /*
-     * Bind parts to specific nodes
-     * All parts must be page aligned
-     */
-    ELEM_TYPE *curr_part = v->elements;
-    int i;
-    for (i = 0; i < nr_parts; i++) {
-        size_t  part_size = parts[i]*sizeof(ELEM_TYPE);
-        size_t  rem = part_size % pagesize;
-        while (rem < pagesize / 2 && i < nr_parts - 1) {
-            /* Leave the page for the next partition */
-            part_size -= sizeof(ELEM_TYPE);
-            rem = part_size % pagesize;
-        }
+	/*
+	 * Bind parts to specific nodes
+	 * All parts must be page aligned
+	 */
+	ELEM_TYPE *curr_part = v->elements;
+	int i;
+	for (i = 0; i < nr_parts; i++) {
+		size_t	part_size = parts[i]*sizeof(ELEM_TYPE);
+		size_t	rem = part_size % pagesize;
+		while (rem < pagesize / 2 && i < nr_parts - 1) {
+			/* Leave the page for the next partition */
+			part_size -= sizeof(ELEM_TYPE);
+			rem = part_size % pagesize;
+		}
 
-        numa_bitmask_setbit(nodemask, nodes[i]);
-        if (mbind(PAGE_ALIGN(curr_part), part_size,
-                  MPOL_BIND, nodemask->maskp, nodemask->size, 0) < 0) {
-            perror("mbind");
-            exit(1);
-        }
+		numa_bitmask_setbit(nodemask, nodes[i]);
+		if (mbind(PAGE_ALIGN(curr_part), part_size,
+			      MPOL_BIND, nodemask->maskp, nodemask->size, 0) < 0) {
+			perror("mbind");
+			exit(1);
+		}
 
-        parts[i] = part_size / sizeof(ELEM_TYPE);
-        curr_part += parts[i];
-    }
+		parts[i] = part_size / sizeof(ELEM_TYPE);
+		curr_part += parts[i];
+	}
 
 #undef PAGE_ALIGN
-    numa_bitmask_free(nodemask);
-    return v;
+	numa_bitmask_free(nodemask);
+	return v;
 }
 
 
 void VECTOR_NAME(_destroy)(VECTOR_TYPE *v)
 {
-    if (v->alloc_type == ALLOC_STD) {
-        free(v->elements);
-        free(v);
-    } else if (v->alloc_type == ALLOC_NUMA) {
-        numa_free(v->elements, sizeof(ELEM_TYPE)*v->size);
-        numa_free(v, sizeof(VECTOR_TYPE));
-    } else if (v->alloc_type == ALLOC_MMAP) {
-        munmap(v->elements, sizeof(ELEM_TYPE)*v->size);
-        munmap(v, sizeof(VECTOR_TYPE));
-    }
+	if (v->alloc_type == ALLOC_STD) {
+		free(v->elements);
+		free(v);
+	} else if (v->alloc_type == ALLOC_NUMA) {
+		numa_free(v->elements, sizeof(ELEM_TYPE)*v->size);
+		numa_free(v, sizeof(VECTOR_TYPE));
+	} else if (v->alloc_type == ALLOC_MMAP) {
+		munmap(v->elements, sizeof(ELEM_TYPE)*v->size);
+		munmap(v, sizeof(VECTOR_TYPE));
+	}
 }
 
 void VECTOR_NAME(_init)(VECTOR_TYPE *v, ELEM_TYPE val)
@@ -164,7 +165,7 @@ void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 }
 
 void VECTOR_NAME(_init_part)(VECTOR_TYPE *v, unsigned long start,
-							 unsigned long len, ELEM_TYPE val)
+                             unsigned long len, ELEM_TYPE val)
 {
 	unsigned long i;
 	for (i = 0; i < len; i++)
