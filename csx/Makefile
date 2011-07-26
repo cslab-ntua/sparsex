@@ -11,11 +11,7 @@ prfcnt_dir   = ../lib/prfcnt
 script_dir   = ../scripts
 csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
 
-<<<<<<< HEAD
 CXX            ?= g++
-=======
-GXX            ?= g++
->>>>>>> 2e84647ea78253b0a96de90fae3689024c6d0afe
 CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCSX_TEMPLATE=\"$(csx_template)\"
 #CXXFLAGS       ?= -Wall -g -O0 -DCSX_TEMPLATE=\"$(csx_template)\"
 INC            ?=
@@ -86,11 +82,7 @@ llvm_jit_help.o: llvm_jit_help.cc llvm_jit_help.h
 jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 	$(CXX_COMPILE)  $(LLVM_CXXFLAGS) -c $<
 
-<<<<<<< HEAD
 spmv.o: spmv.cc $(spm_dir)/spm_mt.h
-=======
-spmv.o: spmv.cc spmv.h
->>>>>>> 2e84647ea78253b0a96de90fae3689024c6d0afe
 	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
 elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
@@ -102,17 +94,10 @@ main.o: main.cc spmv.h
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
 spmv: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
-<<<<<<< HEAD
 	$(CXX) $(LDFLAGS)  -ggdb -rdynamic -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 libcsx.so: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o elmerif.o $(spm_dir)/libspmv.o
 	$(CXX) $(LDFLAGS) -ggdb -rdynamic -Xlinker --allow-multiple-definition -shared $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
-=======
-	$(GXX) $(LDFLAGS) -ggdb -rdynamic -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
-
-libcsx.so: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o elmerif.o $(spm_dir)/libspmv.o
-	$(GXX) $(LDFLAGS) -ggdb -rdynamic -Xlinker --allow-multiple-definition -shared $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
->>>>>>> 2e84647ea78253b0a96de90fae3689024c6d0afe
 
 clean:
 	rm -f *.o spmv libcsx.so
