@@ -12,7 +12,6 @@ script_dir   = ../scripts
 csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
 
 CXX            ?= g++
-CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
 CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCSX_TEMPLATE=\"$(csx_template)\"
 #CXXFLAGS       ?= -Wall -g -O0 -DCSX_TEMPLATE=\"$(csx_template)\"
 INC            ?=
@@ -94,11 +93,11 @@ main.o: main.cc spmv.h
 
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
-spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
+spmv: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(CXX) $(LDFLAGS)  -ggdb -rdynamic -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 libcsx.so: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o elmerif.o $(spm_dir)/libspmv.o
 	$(CXX) $(LDFLAGS) -ggdb -rdynamic -Xlinker --allow-multiple-definition -shared $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 clean:
-	rm -f *.o spmv
+	rm -f *.o spmv libcsx.so
