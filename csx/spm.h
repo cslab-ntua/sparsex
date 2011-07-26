@@ -260,7 +260,6 @@ private:
             cnt += spm->nr_nzeros_;
         }
 
-        ret[0].print_prod(22);
         assert((uint64_t) cnt == mat.GetNrNonzeros());
         return ret;
     }

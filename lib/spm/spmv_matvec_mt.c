@@ -41,6 +41,11 @@ void SPMV_NAME(_matvec_mt)(spm_mt_t *spm_mt, VECTOR_TYPE *x, VECTOR_TYPE *y)
 	}
 
 	tids = malloc(sizeof(*tids)*spm_mt->nr_threads);
+    if (!tids) {
+        perror("malloc() failed");
+        exit(1);
+    }
+
 	for (i = 0; i < spm_mt->nr_threads; i++) {
 		spm_mt->spm_threads[i].x = x;
 		spm_mt->spm_threads[i].y = y;

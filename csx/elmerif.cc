@@ -17,6 +17,24 @@ extern "C" {
 #include "spmv_matvec_mt.h"
 }
 
+static void matvec_csr(const elmer_index_t *rowptr,
+                       const elmer_index_t *colind,
+                       const elmer_value_t *values,
+                       elmer_index_t nr_rows,
+                       const elmer_value_t *x,
+                       elmer_value_t *y)
+{
+    elmer_index_t i, j;
+    for (i = 0; i < nr_rows; ++i) {
+        register elmer_value_t yi_ = 0;
+        for (j = rowptr[i] - 1; j < rowptr[i+1] - 1; ++j) {
+            yi_ += values[j]*x[colind[j] - 1];
+        }
+
+        y[i] = yi_;
+    }
+}
+
 void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
                    void *values, void *u, void *v, void *reinit)
 {
@@ -33,6 +51,13 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
     elmer_value_t *y_ = (elmer_value_t *) v;
 
     if (!*tuned || reinit_) {
+        uint64_t nr_nzeros = rowptr_[n_] - 1;
+        uint64_t ws = (n_ + nr_nzeros)*sizeof(elmer_index_t) +
+            nr_nzeros*sizeof(elmer_value_t);
+        std::cout << "Rows: " << n_ << " "
+                  << "Non-zeros: " << nr_nzeros << " "
+                  << "Working set size (MB): " << ((double) ws) / (1024*1024)
+                  << std::endl;
         mt_get_options(&nr_threads, &cpus);
         spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
             (rowptr_, colind_, values_, n_, n_, false, nr_threads);

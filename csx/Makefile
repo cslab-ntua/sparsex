@@ -109,4 +109,4 @@ libcsx.so: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o elmerif.
 	$(CXX) $(LDFLAGS) -ggdb -rdynamic -Xlinker --allow-multiple-definition -shared $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
 
 clean:
-	rm -f *.o spmv csx_llvm_tmpl.llvm.bc
+	rm -f *.o spmv libcsx.so csx_llvm_tmpl.llvm.bc
