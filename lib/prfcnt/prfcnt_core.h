@@ -100,26 +100,30 @@ enum {
 	EVENT_UNHLT_CORE_CYCLES = 0,
 	EVENT_INSTR_RETIRED,
 	EVENT_UOPS_RETIRED,
+	EVENT_UOPS_ISSUED_ANY,
 	EVENT_LLC_REFERENCE,
 	EVENT_LLC_MISSES,
 	EVENT_BR_RETIRED,
 	EVENT_MISPRED_BR_RETIRED,
 	EVENT_MUL,
 	EVENT_DIV,
+	EVENT_L1I_READS,
+	EVENT_L1I_MISSES,
+	EVENT_L1D_REPL,
+	EVENT_L1D_ALL_REF,
 	EVENT_L2_REJECT_CYCLES,
 	EVENT_L2_LINES_IN,
 	EVENT_L2_RQSTS,
 	EVENT_RESOURCE_STALL,
 	EVENT_FP_COMP_OPS_EXE,
-	EVENT_L1D_REPL,
 	EVENT_BR_BOGUS,
 	EVENT_BP_BTB_MISSES,
 	EVENT_FUSED_UOPS_RET,
 	EVENT_BR_IDEC,
-	EVENT_ICACHE_MISSES,
 	EVENT_BR_EXECUTED,
 	EVENT_BR_MISSPREDICTED,
 	EVENT_SIMD_UOPS_EXEC,
+	EVENT_SIMD_UOP_TYPE_EXEC_MUL,
 	EVENT_BUS_TRANS_MEM,
 	EVENT_BUS_TRANS_ANY,
 	EVENT_END
@@ -174,6 +178,13 @@ static prfcnt_event_t __evnts[] = {
 	/*
 	 * Non-Architectural Events
 	 */
+	[EVENT_UOPS_ISSUED_ANY] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x0e)    |
+		                EVNTSEL_SET(UNIT, 0x01)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "Uops issued"
+	},
+
 	[EVENT_UOPS_RETIRED] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xc2)    |
 		                EVNTSEL_SET(UNIT, 0x0f)     |
@@ -195,6 +206,13 @@ static prfcnt_event_t __evnts[] = {
 		.desc          = "SIMD micro-ops executed"
 	},
 
+	[EVENT_SIMD_UOP_TYPE_EXEC_MUL] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0xb3)    |
+		                EVNTSEL_SET(UNIT, 0x01)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "SIMD packed multiply micro-ops executed"
+	},
+
 	[EVENT_MUL] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x12)    |
 		                EVNTSEL_SET(UNIT, 0x00)     |
@@ -207,6 +225,34 @@ static prfcnt_event_t __evnts[] = {
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Divition Operations (INT+FP)"
+	},
+
+	[EVENT_L1I_READS] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x80)    |
+		                EVNTSEL_SET(UNIT, 0x00)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "Instruction fetches"
+	},
+
+	[EVENT_L1I_MISSES] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x81)    |
+		                EVNTSEL_SET(UNIT, 0x00)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "Instruction Fetch Unit misses"
+	},
+
+	[EVENT_L1D_ALL_REF] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x43)    |
+		                EVNTSEL_SET(UNIT, 0x01)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "All references to the L1 data cache"
+	},
+
+	[EVENT_L1D_REPL] = {
+		.evntsel_data = EVNTSEL_SET(EVENT, 0x45)    |
+		                EVNTSEL_SET(UNIT, 0x0f)     |
+		                EVNTSEL_SET(USR, 1),
+		.desc          = "Cache lines allocated in the L1 data cache"
 	},
 
 	[EVENT_L2_REJECT_CYCLES] = {
@@ -239,12 +285,6 @@ static prfcnt_event_t __evnts[] = {
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Cycles of Resource Stall"
 	},
-	[EVENT_L1D_REPL] = {
-		.evntsel_data = EVNTSEL_SET(EVENT, 0x45)    |
-		                EVNTSEL_SET(UNIT, 0x0f)     |
-		                EVNTSEL_SET(USR, 1),
-		.desc          = "L1 Data CL replacements"
-	},
 
 	[EVENT_BR_BOGUS] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0xe4)    |
@@ -272,13 +312,6 @@ static prfcnt_event_t __evnts[] = {
 		                EVNTSEL_SET(UNIT, 0x00)     |
 		                EVNTSEL_SET(USR, 1),
 		.desc          = "Fused uops retired"
-	},
-
-	[EVENT_ICACHE_MISSES] = {
-		.evntsel_data = EVNTSEL_SET(EVENT, 0x81)    |
-		                EVNTSEL_SET(UNIT, 0x00)     |
-		                EVNTSEL_SET(USR, 1),
-		.desc          = "ICache misses"
 	},
 
 	[EVENT_BR_EXECUTED] = {
@@ -318,13 +351,20 @@ static prfcnt_event_t __evnts[] = {
  * intruction)
  */
 static const int __evnts_selected[] = {
-	EVENT_UNHLT_CORE_CYCLES,
-	EVENT_UOPS_RETIRED,
+/* 	EVENT_UNHLT_CORE_CYCLES, */
+/* 	EVENT_UOPS_RETIRED, */
+/* 	EVENT_L1D_REPL, */
+/* 	EVENT_L1D_ALL_REF, */
+/* 	EVENT_L1I_READS, */
+/* 	EVENT_L1I_MISSES, */
 /* 	EVENT_L2_LINES_IN, */
 /* 	EVENT_L2_RQSTS, */
 /* 	EVENT_LLC_REFERENCE, */
 /* 	EVENT_LLC_MISSES, */
 /* 	EVENT_BUS_TRANS_ANY, */
+/* 	EVENT_SIMD_UOPS_EXEC, */
+	EVENT_BR_RETIRED,
+	EVENT_MISPRED_BR_RETIRED,
 };
 
 /*

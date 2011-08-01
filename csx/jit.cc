@@ -27,7 +27,9 @@
 using namespace llvm;
 using namespace csx;
 
-#define CSX_TEMPLATE "csx_llvm_tmpl.llvm.bc"
+#ifndef CSX_TEMPLATE
+#   define CSX_TEMPLATE "csx_llvm_tmpl.llvm.bc"
+#endif
 
 ///< State shared between all CsxJits.
 ///< We maintain a single Module and Context for LLVM.

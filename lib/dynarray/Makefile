@@ -5,10 +5,10 @@ all: dynarray.o
 common_dir = ../
 
 ## Configuration
-GCC         ?= gcc
+CC          ?= gcc
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
-COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
+COMPILE      = $(CC) $(CFLAGS) $(INC) $(DEFS)
 INC          = -I$(common_dir)
 
 dynarray.o: dynarray.c dynarray.h

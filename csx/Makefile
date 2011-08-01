@@ -9,9 +9,10 @@ dynarray_dir = ../lib/dynarray
 spm_dir      = ../lib/spm
 prfcnt_dir   = ../lib/prfcnt
 script_dir   = ../scripts
+csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
 
 CXX            ?= g++
-CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization
+CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCSX_TEMPLATE=\"$(csx_template)\"
 INC            ?=
 
 #CXXFLAGS       += -Winline
@@ -26,7 +27,7 @@ CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 
 #llvm
 llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter
-LLVM_GCC        = llvm-gcc
+LLVM_CC         = llvm-gcc
 LLVM_CFLAGS     = $(shell $(llvmconf) --cflags)
 LLVM_CXXFLAGS   = $(shell $(llvmconf) --cxxflags)
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
@@ -72,7 +73,7 @@ drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 
 # define __STDC_FORMAT_MACROS, so that we can use PRIu64
 csx_llvm_tmpl.llvm.bc: csx_llvm_tmpl.c ctl_ll.h
-	$(LLVM_GCC) -D__STDC_FORMAT_MACROS -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
+	$(LLVM_CC) -D__STDC_FORMAT_MACROS -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
 
 llvm_jit_help.o: llvm_jit_help.cc llvm_jit_help.h
 	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
