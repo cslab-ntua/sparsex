@@ -1,13 +1,17 @@
 #!/bin/bash
 
-# CPUID basic information highest value
-# This seems to be safe for now ...
-if [ -x "$(dirname $0)/cpuid" ]; then
-	hv=$( echo 0 | $(dirname $0)/cpuid | sed -r -e 's/.*eax:([[:alnum:]]+) .*/\1/' )
-	if [ "$hv" == "0xa" ]; then
-		echo "CORE"
-		exit 0
-	fi
+#
+# Query the cpu family /proc/cpuinfo
+#       6: Intel Core
+#      15: Intel Netburst
+#
+cb=$(cat /proc/cpuinfo | grep 'cpu family' | head -n1 | awk -F': ' '{print $2}')
+if [ "$cb" = "6" ]; then
+	echo "CORE"
+	exit 0
+elif [ "$cb" = "15" ]; then
+	echo "XEON"
+	exit 0
 fi
 
 cb=$(egrep -o '(Xeon|AMD|IA-64|Niagara)' </proc/cpuinfo \
