@@ -5,7 +5,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2010-2011, Theodors Goudouvas
+ * Copyright (C) 2010-2011, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -96,12 +96,14 @@ private:
        *MyxPtr,    ///< MyX:   current position in X (pointer)
        *YindxPtr,  ///< Yindx: Y index
        *SizePtr,   ///< Size:  size of current unit (taken from Ctl)
-       *FlagsPtr;  ///< Flags: flags of current unit (taken from Ctl)
+       *FlagsPtr,  ///< Flags: flags of current unit (taken from Ctl)
+       *DVptr,     ///< DV:    DV array for diagonal values.
+       *TempPtr;
 
 
 public:
-    CsxJit(CsxManager *CsxMg, unsigned int id=0);
-    void GenCode(std::ostream &os);
+    CsxJit(CsxManager *CsxMg, unsigned int id = 0, bool symmetric = false);
+    void GenCode(std::ostream &os, bool symmetric = false);
     void *GetSpmvFn();
 
 private:
@@ -109,55 +111,68 @@ private:
 
     void DoPrint(Value *Myx=NULL, Value *Yindx=NULL);
     void DoIncV();
+    void DoIncDV();
     void DoMul(Value *Myx=NULL, Value *Yindx=NULL);
+    void DoSymMul(Value *Myx=NULL, Value *Yindx=NULL);
     void DoStoreYr();
     void DoOp(Value *MyX=NULL, Value *Yindx=NULL);
+    void DoDiagOp(Value *Yindx);
+    void DoSymOp(Value *MyX=NULL, Value *Yindx=NULL);
 
     void DoNewRowHook();
-    void DoBodyHook(std::ostream &os);
-
+    void DoNewRowSymHook();
+    void DoBodyHook(std::ostream &os, bool symmetric);
+    
     void DoDeltaAddMyx(int delta_bytes);
 
     void DeltaCase(BasicBlock *BB,          // case
                    BasicBlock *BB_lentry,   // loop entry
                    BasicBlock *BB_lbody,    // loop body
                    BasicBlock *BB_exit,     // final exit
-                   int delta_bytes);
+                   int delta_bytes,
+                   bool symmetric);
 
     void HorizCase(BasicBlock *BB,
                    BasicBlock *BB_lbody,
                    BasicBlock *BB_lexit,
                    BasicBlock *BB_exit,
-                   int delta_size);
+                   int delta_size,
+                   bool symmetric);
 
     void VertCase(BasicBlock *BB,
                   BasicBlock *BB_lbody,
                   BasicBlock *BB_exit,
-                  int delta_size);
+                  int delta_size,
+                  bool symmetric);
 
     void DiagCase(BasicBlock *BB,
                   BasicBlock *BB_lbody,
                   BasicBlock *BB_exit,
                   int delta_size,
-                  bool reversed);
+                  bool reversed,
+                  bool symmetric);
 
     void BlockRowCaseRolled(BasicBlock *BB,
                             BasicBlock *BB_lbody,
                             BasicBlock *BB_exit,
-                            int r, int c);
+                            int r, int c,
+                            bool symmetric);
 
     void BlockColCaseRolled(BasicBlock *BB,
                             BasicBlock *BB_lbody,
                             BasicBlock *BB_exit,
-                            int r, int c);
+                            int r, int c,
+                            bool symmetric);
 
     void BlockRowCaseUnrolled(BasicBlock *BB,
                               BasicBlock *BB_exit,
-                              int r, int c);
+                              int r, int c,
+                              bool symmetric);
 
     void BlockColCaseUnrolled(BasicBlock *BB,
                               BasicBlock *BB_exit,
-                              int r, int c);
+                              int r, int c,
+                              bool symmetric);
 
 };
 

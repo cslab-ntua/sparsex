@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2010-2011, Theodors Goudouvas
+ * Copyright (C) 2010-2011, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -72,7 +72,8 @@ LLVMContext &CsxJit::GetLLVMCtx()
     return Ctx_;
 }
 
-CsxJit::CsxJit(CsxManager *csx_mg, unsigned int tid) : CsxMg(csx_mg)
+CsxJit::CsxJit(CsxManager *csx_mg, unsigned int tid, bool symmetric)
+    : CsxMg(csx_mg)
 {
     assert(Mod_ && "module not initiated");
     this->M = Mod_;
@@ -81,8 +82,12 @@ CsxJit::CsxJit(CsxManager *csx_mg, unsigned int tid) : CsxMg(csx_mg)
     ///< Create a new spmv function for the thread.
     std::ostringstream str_stream;
     str_stream << "csx_spmv_" << tid;
-    this->SpmvF = doCloneFunction(M, "csx_spmv_template",
-                                  str_stream.str().c_str());
+    if (!symmetric)
+        this->SpmvF = doCloneFunction(M, "csx_spmv_template",
+                                      str_stream.str().c_str());
+    else
+        this->SpmvF = doCloneFunction(M, "csx_sym_spmv_template",
+                                      str_stream.str().c_str());
     //str_stream << ".llvm.bc";
     //ModuleToFile(this->M, str_stream.str().c_str());
 
@@ -106,6 +111,10 @@ CsxJit::CsxJit(CsxManager *csx_mg, unsigned int tid) : CsxMg(csx_mg)
     this->CtlPtr   = annotations.getValue("spmv::ctl");
     this->SizePtr  = annotations.getValue("spmv::size");
     this->FlagsPtr = annotations.getValue("spmv::flags");
+    if (symmetric) {
+        this->DVptr = annotations.getValue("spmv::dv");
+        this->TempPtr = annotations.getValue("spmv::cur");
+    }
 
     // Initialize needed constants
     this->Zero8   = ConstantInt::get(Type::getInt8Ty (GetLLVMCtx()), 0);
@@ -180,10 +189,80 @@ void CsxJit::DoNewRowHook()
     }
 }
 
+void CsxJit::DoNewRowSymHook()
+{
+    BasicBlock *BB, *BB_next;
+    Value *v;
+
+    ///> New row code.
+    BB = llvm_hook_newbb(M, "__new_row_hook", SpmvF, &BB_next);
+    Bld->SetInsertPoint(BB);
+    DoStoreYr();
+    
+    if (!CsxMg->HasRowJmps()) {
+        v = Bld->CreateLoad(YindxPtr, "y_indx");
+        DoDiagOp(v);
+        v = Bld->CreateAdd(v, One64, "y_indx_inc");
+        Bld->CreateStore(v, YindxPtr);
+        Bld->CreateBr(BB_next);
+        
+    } else {
+        BasicBlock *BB_rjmp, *BB_rend, *BB_dv, *BB_end;
+        Value *RJmpBit, *Yindx, *NewYindx, *Test, *Jmp, *Ul;
+        PHINode *YindxAdd, *Yi;
+
+        BB_rjmp = BasicBlock::Create(GetLLVMCtx(), "rjmp",
+                                     BB->getParent(), BB_next);
+        BB_rend = BasicBlock::Create(GetLLVMCtx(), "rend",
+                                     BB->getParent(), BB_next);
+        BB_dv = BasicBlock::Create(GetLLVMCtx(), "bnext",
+                                     BB->getParent(), BB_next);
+        BB_end = BasicBlock::Create(GetLLVMCtx(), "bend",
+                                    BB->getParent(), BB_next);
+        RJmpBit = ConstantInt::get(Type::getInt32Ty(GetLLVMCtx()),
+                                   CTL_RJMP_BIT);
+                                   
+        Yindx = Bld->CreateLoad(YindxPtr, "y_indx");
+        Test = Bld->CreateCall2(TestBitF, FlagsPtr, RJmpBit);
+        Test = Bld->CreateICmpEQ(Test, Zero32, "bit_test");
+        Bld->CreateCondBr(Test, BB_rend, BB_rjmp);
+        
+        ///> BB_rjmp code
+        Bld->SetInsertPoint(BB_rjmp);
+        Ul = Bld->CreateCall(UlGet, CtlPtr);
+        Bld->CreateBr(BB_rend);
+
+        ///> BB_rend code.
+        Bld->SetInsertPoint(BB_rend);
+        YindxAdd = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yindx_add");
+        YindxAdd->addIncoming(One64, BB);
+        YindxAdd->addIncoming(Ul, BB_rjmp);
+        Jmp = Bld->CreateAdd(Yindx, YindxAdd);
+        Bld->CreateBr(BB_dv);
+
+        ///> BB_dv code.
+        Bld->SetInsertPoint(BB_dv);
+        Yi = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yi");
+        DoDiagOp(Yi);
+        NewYindx = Bld->CreateAdd(Yi, One64);
+        Test = Bld->CreateICmpEQ(Jmp, NewYindx, "fin_test");
+        Bld->CreateCondBr(Test, BB_end, BB_dv);
+        
+        Yi->addIncoming(Yindx, BB_rend);
+        Yi->addIncoming(NewYindx, BB_dv);
+        
+        ///> BB_end_code.
+        Bld->SetInsertPoint(BB_end);
+        Bld->CreateStore(Jmp, YindxPtr);
+        Bld->CreateBr(BB_next);
+    }
+}
+
 void CsxJit::HorizCase(BasicBlock *BB,
                        BasicBlock *BB_lbody, BasicBlock *BB_lexit,
                        BasicBlock *BB_exit,
-                       int delta_size)
+                       int delta_size,
+                       bool symmetric)
 {
     Value *Size, *Delta, *Myx0, *newMyx, *NextCnt, *Test;
     PHINode *Myx, *Cnt;
@@ -199,8 +278,11 @@ void CsxJit::HorizCase(BasicBlock *BB,
     Bld->SetInsertPoint(BB_lbody);
     Cnt = Bld->CreatePHI(Type::getInt8Ty(GetLLVMCtx()), "cnt");
     Myx = Bld->CreatePHI(Myx0->getType(), "myx");
-    DoOp(Myx);
-
+    if (!symmetric)
+        DoOp(Myx);
+    else
+        DoSymOp(Myx);
+    
     newMyx = Bld->CreateGEP(Myx, Delta, "new_myx");
 
     NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
@@ -222,7 +304,8 @@ void CsxJit::HorizCase(BasicBlock *BB,
 void CsxJit::VertCase(BasicBlock *BB,
                       BasicBlock *BB_lbody,
                       BasicBlock *BB_exit,
-                      int delta_size)
+                      int delta_size,
+                      bool symmetric)
 {
     Value *Size, *Delta, *Yindx0, *YindxAdd, *NextCnt, *Test;
     PHINode *Yindx, *Cnt;
@@ -239,7 +322,10 @@ void CsxJit::VertCase(BasicBlock *BB,
     Cnt =   Bld->CreatePHI(Type::getInt8Ty (GetLLVMCtx()), "cnt");
     Yindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yindx");
 
-    DoOp(NULL, Yindx);
+    if (!symmetric)
+        DoOp(NULL, Yindx);
+    else
+        DoSymOp(NULL, Yindx);
 
     YindxAdd = Bld->CreateAdd(Yindx, Delta);
     NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
@@ -257,7 +343,8 @@ void CsxJit::DiagCase(BasicBlock *BB,
                       BasicBlock *BB_lbody,
                       BasicBlock *BB_exit,
                       int delta_size,
-                      bool reversed)
+                      bool reversed,
+                      bool symmetric)
 {
     Value *Size, *D, *minusD, *Test;
     PHINode *Myx, *Yindx, *Cnt;
@@ -279,7 +366,10 @@ void CsxJit::DiagCase(BasicBlock *BB,
     Yindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yindx");
     Myx = Bld->CreatePHI(Myx0->getType(), "myx");
 
-    DoOp(Myx, Yindx);
+    if (!symmetric)
+        DoOp(Myx, Yindx);
+    else
+        DoSymOp(Myx, Yindx);
 
     YindxAdd = Bld->CreateAdd(Yindx, D);
     newMyx = reversed ? Bld->CreateGEP(Myx, minusD) : Bld->CreateGEP(Myx, D);
@@ -300,7 +390,8 @@ void CsxJit::DiagCase(BasicBlock *BB,
 void CsxJit::BlockRowCaseRolled(BasicBlock *BB,
                                 BasicBlock *BB_lbody,
                                 BasicBlock *BB_exit,
-                                int r, int c)
+                                int r, int c,
+                                bool symmetric)
 {
     Value *Myx0, *NewMyx, *NextCnt, *Size, *Test, *Yindx;
     PHINode *Myx, *Cnt;
@@ -317,7 +408,10 @@ void CsxJit::BlockRowCaseRolled(BasicBlock *BB,
     Myx = Bld->CreatePHI(Myx0->getType(), "myx");
     Yindx = Bld->CreateLoad(YindxPtr, "yindx");
     for (int i = 0; i < r; i++) {
-        DoOp(Myx, Yindx);
+        if (!symmetric)
+            DoOp(Myx, Yindx);
+        else
+            DoSymOp(Myx, Yindx);
         Yindx = Bld->CreateAdd(Yindx, One64);
     }
 
@@ -336,7 +430,8 @@ void CsxJit::BlockRowCaseRolled(BasicBlock *BB,
 void CsxJit::BlockColCaseRolled(BasicBlock *BB,
                                 BasicBlock *BB_lbody,
                                 BasicBlock *BB_exit,
-                                int r, int c)
+                                int r, int c,
+                                bool symmetric)
 {
     Value *Yindx0, *NewYindx, *NextCnt, *Size, *Test, *Myx;
     PHINode *Yindx, *Cnt;
@@ -353,7 +448,10 @@ void CsxJit::BlockColCaseRolled(BasicBlock *BB,
     Yindx = Bld->CreatePHI(Yindx0->getType(), "yindx");
     Myx = Bld->CreateLoad(MyxPtr,"myx");
     for (int i = 0; i < c; i++) {
-        DoOp(Myx, Yindx);
+        if (!symmetric)
+            DoOp(Myx, Yindx);
+        else
+            DoSymOp(Myx, Yindx);
         Myx = Bld->CreateGEP(Myx, One64);
     }
 
@@ -371,7 +469,8 @@ void CsxJit::BlockColCaseRolled(BasicBlock *BB,
 
 void CsxJit::BlockRowCaseUnrolled(BasicBlock *BB,
                                   BasicBlock *BB_exit,
-                                  int r, int c)
+                                  int r, int c,
+                                  bool symmetric)
 {
     Value **Myx = new Value*[c+1];
     Value **Yindx = new Value*[r+1];
@@ -389,13 +488,19 @@ void CsxJit::BlockRowCaseUnrolled(BasicBlock *BB,
 
     for (int i = 0; i < c; i++)
         for (int j = 0; j < r; j++)
-            DoOp(Myx[i], Yindx[j]);
+            if (!symmetric)
+                DoOp(Myx[i], Yindx[j]);
+            else
+                DoSymOp(Myx[i], Yindx[j]);
 #else
     ///< Elements in block-row types are stored column-wise
     for (int i = 0; i < c; i++) {
         Yindx[0] = Bld->CreateLoad(YindxPtr);
         for (int j = 0; j < r; j++) {
-            DoOp(Myx[i], Yindx[j]);
+            if (!symmetric)
+                DoOp(Myx[i], Yindx[j]);
+            else
+                DoSymOp(Myx[i], Yindx[j]);
             Yindx[j+1] = Bld->CreateAdd(Yindx[j], One64);
         }
         Myx[i+1] = Bld->CreateGEP(Myx[i], One64);
@@ -406,7 +511,8 @@ void CsxJit::BlockRowCaseUnrolled(BasicBlock *BB,
 
 void CsxJit::BlockColCaseUnrolled(BasicBlock *BB,
                                   BasicBlock *BB_exit,
-                                  int r, int c)
+                                  int r, int c,
+                                  bool symmetric)
 {
     Value **Myx = new Value*[c+1];
     Value **Yindx = new Value*[r+1];
@@ -423,12 +529,18 @@ void CsxJit::BlockColCaseUnrolled(BasicBlock *BB,
         Yindx[i+1] = Bld->CreateAdd(Yindx[i], One64);
     for (int i = 0; i < r; i++)
         for (int j = 0; j < c; j++)
-            DoOp(Myx[j], Yindx[i]);
+            if (!symmetric)
+                DoOp(Myx[i], Yindx[j]);
+            else
+                DoSymOp(Myx[i], Yindx[j]);
 #else
     for (int i = 0; i < r; i++) {
         Myx[0] = Bld->CreateLoad(MyxPtr);
         for (int j = 0; j < c; j++) {
-            DoOp(Myx[j], Yindx[i]);
+            if (!symmetric)
+                DoOp(Myx[i], Yindx[j]);
+            else
+                DoSymOp(Myx[i], Yindx[j]);
             Myx[j+1] = Bld->CreateGEP(Myx[j], One64);
         }
         Yindx[i+1] = Bld->CreateAdd(Yindx[i], One64);
@@ -486,6 +598,55 @@ void CsxJit::DoMul(Value *Myx, Value *Yindx)
     }
 }
 
+void CsxJit::DoSymMul(Value *Myx, Value *Yindx)
+{
+    Value *V, *X, *R, *Y, *Yr, *YiPtr, *Xindx;
+    BasicBlock *BB_y;
+    BasicBlock *BB_temp;
+
+    BB_temp = BasicBlock::Create(GetLLVMCtx(), "tempb");
+    BB_y = BasicBlock::Create(GetLLVMCtx(), "tempy");
+
+    if (Myx == NULL)
+        Myx = Bld->CreateLoad(MyxPtr);
+
+    X = Bld->CreateLoad(Myx, "x");
+    V = Bld->CreateLoad(Bld->CreateLoad(Vptr, "v_ptr"), "val");
+    R = Bld->CreateMul(V, X, "mul");
+
+    if (Yindx == NULL) {
+        Yr = Bld->CreateLoad(YrPtr, "yr");
+        Yr = Bld->CreateAdd(Yr, R, "yr_add");
+        Bld->CreateStore(Yr, YrPtr);
+    } else {
+        YiPtr = Bld->CreateLoad(Yptr, "y_ptr");
+        YiPtr = Bld->CreateGEP(YiPtr, Yindx);
+        Y = Bld->CreateLoad(YiPtr, "y");
+        Y = Bld->CreateAdd(Y, R, "new_y");
+        Bld->CreateStore(Y, YiPtr);
+    }
+    
+    Myx = Bld->CreatePtrToInt(Myx, Type::getInt64Ty(GetLLVMCtx()), "myx_int");
+    Xindx = Bld->CreateLoad(Xptr);
+    Xindx = Bld->CreatePtrToInt(Xindx, Type::getInt64Ty(GetLLVMCtx()), "x_int");
+    Xindx = Bld->CreateSub(Myx, Xindx);
+    Xindx = Bld->CreateAShr(Xindx, Three64);
+    
+    if (Yindx == NULL)
+        Yindx = Bld->CreateLoad(YindxPtr);
+
+    X = Bld->CreateLoad(Xptr, "x_start");
+    X = Bld->CreateGEP(X, Yindx, "x_ptr");
+    X = Bld->CreateLoad(X, "x");
+    R = Bld->CreateMul(V, X, "mul");
+    
+    YiPtr = Bld->CreateLoad(TempPtr, "temp_ptr");
+    YiPtr = Bld->CreateGEP(YiPtr, Xindx);
+    Y = Bld->CreateLoad(YiPtr, "temp");
+    Y = Bld->CreateAdd(Y, R, "new_temp");
+    Bld->CreateStore(Y, YiPtr);
+}
+
 void CsxJit::DoIncV()
 {
     Value *V = Bld->CreateLoad(Vptr);
@@ -493,12 +654,48 @@ void CsxJit::DoIncV()
     Bld->CreateStore(newV, Vptr);
 }
 
+void CsxJit::DoIncDV()
+{
+    Value *DV = Bld->CreateLoad(DVptr);
+    Value *newDV = Bld->CreateGEP(DV, One64);
+    Bld->CreateStore(newDV, DVptr);
+}
+
 void CsxJit::DoOp(Value *Myx, Value *Yindx)
 {
     DoMul(Myx, Yindx);
+    
 //    DoPrint(Myx, Yindx);
     DoIncV();
 }
+
+void CsxJit::DoDiagOp(Value *Yindx)
+{
+    Value *V, *X, *YiPtr, *Yi;
+    
+    X = Bld->CreateLoad(Xptr, "xi_ptr");
+    X = Bld->CreateGEP(X, Yindx, "new_xi_ptr");
+    X = Bld->CreateLoad(X, "xi");
+    
+    V = Bld->CreateLoad(Bld->CreateLoad(DVptr, "dv_ptr"), "dval");
+    V = Bld->CreateMul(V, X, "mul");
+    
+    YiPtr = Bld->CreateLoad(Yptr, "yi_ptr");
+    YiPtr = Bld->CreateGEP(YiPtr, Yindx, "new_yi_ptr");
+    Yi = Bld->CreateLoad(YiPtr, "yi");
+    
+    Yi = Bld->CreateAdd(Yi, V);
+    Bld->CreateStore(Yi, YiPtr);
+    
+    DoIncDV();
+}
+
+void CsxJit::DoSymOp(Value *Myx, Value *Yindx)
+{
+    DoSymMul(Myx, Yindx);
+    DoIncV();
+}
+
 void CsxJit::DoDeltaAddMyx(int delta_bytes)
 {
     Function *F = NULL;
@@ -534,7 +731,8 @@ void CsxJit::DoDeltaAddMyx(int delta_bytes)
 void CsxJit::DeltaCase(BasicBlock *BB,
                        BasicBlock *BB_entry, BasicBlock *BB_body,
                        BasicBlock *BB_exit,
-                       int delta_bytes)
+                       int delta_bytes,
+                       bool symmetric)
 {
     Value *Align, *Size, *Test, *NextCnt;
     PHINode *Cnt;
@@ -542,7 +740,7 @@ void CsxJit::DeltaCase(BasicBlock *BB,
     Bld->SetInsertPoint(BB);
     ///< Align ctl.
     if (delta_bytes > 1) {
-        Align = ConstantInt::get(Type::getInt32Ty(GetLLVMCtx()),delta_bytes);
+        Align = ConstantInt::get(Type::getInt32Ty(GetLLVMCtx()), delta_bytes);
         Bld->CreateCall2(AlignF, CtlPtr, Align);
     }
     Size = Bld->CreateLoad(SizePtr, "size");
@@ -551,7 +749,10 @@ void CsxJit::DeltaCase(BasicBlock *BB,
     ///< Entry
     Bld->SetInsertPoint(BB_entry);
 
-    DoOp();
+    if (!symmetric)
+        DoOp();
+    else
+        DoSymOp();
 
     Test = Bld->CreateICmpUGT(Size, One8);
     Bld->CreateCondBr(Test, BB_body, BB_exit);
@@ -562,7 +763,10 @@ void CsxJit::DeltaCase(BasicBlock *BB,
     DoDeltaAddMyx(delta_bytes);
     NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
 
-    DoOp();
+    if (!symmetric)
+        DoOp();
+    else
+        DoSymOp();
 
     Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
     Bld->CreateCondBr(Test, BB_exit, BB_body);
@@ -571,7 +775,7 @@ void CsxJit::DeltaCase(BasicBlock *BB,
     Cnt->addIncoming(NextCnt, BB_body);
 }
 
-void CsxJit::DoBodyHook(std::ostream &os)
+void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
 {
     BasicBlock *BB, *BB_next, *BB_default, *BB_case;
     Value *PatternMask;
@@ -625,7 +829,8 @@ void CsxJit::DoBodyHook(std::ostream &os)
             DeltaCase(BB_case,
                       BB_lentry, BB_lbody,
                       BB_next,
-                      delta / 8);
+                      delta / 8,
+                      symmetric);
             break;
 
         ///< Horizontal
@@ -639,7 +844,8 @@ void CsxJit::DoBodyHook(std::ostream &os)
             HorizCase(BB_case,
                       BB_lbody, BB_lexit,
                       BB_next,
-                      delta);
+                      delta,
+                      symmetric);
             break;
 
         ///< Vertical
@@ -651,7 +857,8 @@ void CsxJit::DoBodyHook(std::ostream &os)
             VertCase(BB_case,
                      BB_lbody,
                      BB_next,
-                     delta);
+                     delta,
+                     symmetric);
             break;
 
         ///< Diagonal
@@ -664,7 +871,8 @@ void CsxJit::DoBodyHook(std::ostream &os)
                      BB_lbody,
                      BB_next,
                      delta,
-                     false);
+                     false,
+                     symmetric);
             break;
 
         ///< Reverse Diagonal
@@ -677,7 +885,8 @@ void CsxJit::DoBodyHook(std::ostream &os)
                      BB_lbody,
                      BB_next,
                      delta,
-                     true);
+                     true,
+                     symmetric);
             break;
 
         ///< Row blocks
@@ -687,9 +896,9 @@ void CsxJit::DoBodyHook(std::ostream &os)
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
             BlockRowCaseRolled(BB_case, BB_lbody, BB_next,
-                               type - BLOCK_TYPE_START, delta);
+                               type - BLOCK_TYPE_START, delta, symmetric);
             /*BlockRowCaseUnrolled(BB_case, BB_next,
-                                   type - BLOCK_TYPE_START, delta);*/
+                                   type - BLOCK_TYPE_START, delta, symmetric);*/
             break;
             
         ///< Column Blocks
@@ -700,9 +909,9 @@ void CsxJit::DoBodyHook(std::ostream &os)
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
             BlockColCaseRolled(BB_case, BB_lbody, BB_next, delta,
-                               type - BLOCK_COL_START);
+                               type - BLOCK_COL_START, symmetric);
             /*BlockColCaseUnrolled(BB_case, BB_next, delta,
-                                   type - BLOCK_COL_START);*/
+                                   type - BLOCK_COL_START, symmetric);*/
             break;
             
         default:
@@ -716,10 +925,13 @@ void CsxJit::DoBodyHook(std::ostream &os)
     }
 }
 
-void CsxJit::GenCode(std::ostream &os)
+void CsxJit::GenCode(std::ostream &os, bool symmetric)
 {
-    DoNewRowHook();
-    DoBodyHook(os);
+    if (!symmetric)
+        DoNewRowHook();
+    else
+        DoNewRowSymHook();
+    DoBodyHook(os, symmetric);
 }
 
 void *CsxJit::GetSpmvFn()

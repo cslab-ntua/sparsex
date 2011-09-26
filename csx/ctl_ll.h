@@ -147,6 +147,6 @@ end:
     return ret;
 }
 
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
+#endif // CTL_CTX_LL_H
 
-#endif // CTL_CTX_LL_H__
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4__

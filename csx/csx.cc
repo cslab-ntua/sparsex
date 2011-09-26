@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2010-2011, Theodors Goudouvas
+ * Copyright (C) 2010-2011, Theodoros Gkountouvas
  * Copyright (C) 2011,      Vasileios Karakasis
  * All rights reserved.
  *
@@ -64,7 +64,6 @@ uint8_t CsxManager::GetFlag(long pattern_id, uint64_t nnz)
     if (pi == this->patterns.end()) {
         ret = flag_avail_++;
         assert(ret <= CTL_PATTERNS_MAX && "too many patterns");
-
         CsxManager::PatInfo pat_info(ret, nnz);
 
         this->patterns[pattern_id] = pat_info;
@@ -76,7 +75,25 @@ uint8_t CsxManager::GetFlag(long pattern_id, uint64_t nnz)
     return ret;
 }
 
-csx_double_t *CsxManager::MakeCsx()
+csx_double_sym_t *CsxManager::MakeCsxSym()
+{
+    csx_double_sym_t *csx;
+    double *diagonal = spm_sym_->GetDiagonal();
+    uint64_t diagonal_size = spm_sym_->GetDiagonalSize();
+    
+    spm_ = spm_sym_->GetLowerMatrix();
+    
+    csx = (csx_double_sym_t *) malloc(sizeof(csx_double_sym_t));
+    csx->dvalues = (double *) malloc(diagonal_size * sizeof(double));
+    
+    for (uint64_t i = 0; i < diagonal_size; i++)
+        csx->dvalues[i] = diagonal[i];
+    csx->lower_matrix = MakeCsx(true);
+    
+    return csx;
+}
+
+csx_double_t *CsxManager::MakeCsx(bool symmetric)
 {
     csx_double_t *csx;
 
@@ -112,31 +129,59 @@ csx_double_t *CsxManager::MakeCsx()
     csx->row_start = spm_->row_start_;
     values_idx_ = 0;
     new_row_ = false;		        // Do not mark first row.
-    for (uint64_t i = 0; i < spm_->GetNrRows(); i++){
-        const SpmRowElem *rbegin, *rend;
-
-        rbegin = spm_->RowBegin(i);
-        rend = spm_->RowEnd(i);
-        if (debug)
-            std::cerr << "MakeCsx(): row: " << i << "\n";
-
-        if (rbegin == rend){		// Check if row is empty.
+    
+    if (!symmetric) {
+        for (uint64_t i = 0; i < spm_->GetNrRows(); i++){
+            const SpmRowElem *rbegin, *rend;
+    
+            rbegin = spm_->RowBegin(i);
+            rend = spm_->RowEnd(i);
             if (debug)
-                std::cerr << "MakeCsx(): row is empty" << std::endl;
-
-            if (new_row_ == false){
-                new_row_ = true;	// In case the first row is empty.
-            } else {
-                empty_rows_++;
+                std::cerr << "MakeCsx(): row: " << i << "\n";
+    
+            if (rbegin == rend){		// Check if row is empty.
+                if (debug)
+                    std::cerr << "MakeCsx(): row is empty" << std::endl;
+    
+                if (new_row_ == false){
+                    new_row_ = true;	// In case the first row is empty.
+                } else {
+                    empty_rows_++;
+                }
+    
+                continue;
             }
-
-            continue;
+    
+            DoRow(rbegin, rend);
+            new_row_ = true;
         }
-
-        DoRow(rbegin, rend);
-        new_row_ = true;
+    } else {
+        for (uint64_t i = 0; i < spm_->GetNrRows(); i++){
+            const SpmRowElem *rbegin, *rend;
+    
+            rbegin = spm_->RowBegin(i);
+            rend = spm_->RowEnd(i);
+            if (debug)
+                std::cerr << "MakeCsx(): row: " << i << "\n";
+    
+            if (rbegin == rend){		// Check if row is empty.
+                if (debug)
+                    std::cerr << "MakeCsx(): row is empty" << std::endl;
+    
+                if (new_row_ == false){
+                    new_row_ = true;	// In case the first row is empty.
+                } else {
+                    empty_rows_++;
+                }
+    
+                continue;
+            }
+    
+            DoSymRow(rbegin, rend);
+            new_row_ = true;
+        }
     }
-
+    
     csx->ctl_size = dynarray_size(ctl_da_);
     csx->ctl = (uint8_t *) dynarray_destroy(ctl_da_);
     ctl_da_ = NULL;
@@ -161,6 +206,75 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 
     last_col_ = 1;
     for (const SpmRowElem *spm_elem = rbegin; spm_elem < rend; spm_elem++) {
+        if (debug)
+            std::cerr << "\t" << *spm_elem << "\n";
+
+        // Check if this element contains a pattern.
+        if (spm_elem->pattern != NULL) {
+            jmp = PreparePat(xs, *spm_elem);
+            assert(xs.size() == 0);
+            AddPattern(*spm_elem, jmp);
+            for (long i=0; i < spm_elem->pattern->GetSize(); i++)
+                values_[values_idx_++] = spm_elem->vals[i];
+
+            continue;
+        }
+
+        // Check if we exceeded the maximum size for a unit.
+        assert(xs.size() <= CTL_SIZE_MAX);
+        if (xs.size() == CTL_SIZE_MAX)
+             AddXs(xs);
+
+        xs.push_back(spm_elem->x);
+        values_[values_idx_++] = spm_elem->val;
+    }
+
+    if (xs.size() > 0)
+        AddXs(xs);
+}
+
+/*
+ *  Ctl Rules
+ *  1. Each unit leaves the x index at the last element it calculated on the
+ *     current row.
+ *  2. Size is the number of elements that will be calculated.
+ */
+void CsxManager::DoSymRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
+{
+    std::vector<uint64_t> xs;
+    uint64_t jmp;
+    const SpmRowElem *spm_elem = rbegin;
+
+    last_col_ = 1;
+    for ( ; spm_elem < rend && spm_elem->x < spm_->GetRowStart() + 1; 
+         spm_elem++) {
+        if (debug)
+            std::cerr << "\t" << *spm_elem << "\n";
+
+        // Check if this element contains a pattern.
+        if (spm_elem->pattern != NULL) {
+            jmp = PreparePat(xs, *spm_elem);
+            assert(xs.size() == 0);
+            AddPattern(*spm_elem, jmp);
+            for (long i=0; i < spm_elem->pattern->GetSize(); i++)
+                values_[values_idx_++] = spm_elem->vals[i];
+
+            continue;
+        }
+
+        // Check if we exceeded the maximum size for a unit.
+        assert(xs.size() <= CTL_SIZE_MAX);
+        if (xs.size() == CTL_SIZE_MAX)
+             AddXs(xs);
+
+        xs.push_back(spm_elem->x);
+        values_[values_idx_++] = spm_elem->val;
+    }
+
+    if (xs.size() > 0)
+        AddXs(xs);
+
+    for ( ; spm_elem < rend; spm_elem++) {
         if (debug)
             std::cerr << "\t" << *spm_elem << "\n";
 

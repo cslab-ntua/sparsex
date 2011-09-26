@@ -7,8 +7,11 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+ 
 #ifndef __SPM_MT_H__
 #define __SPM_MT_H__
+
+#include <stdbool.h>
 
 #include "vector.h"
 
@@ -20,6 +23,7 @@ struct spm_mt_thread {
     unsigned int node;
     void *part_info; /* partition info */
     void *data;
+    map_t *map;
     VECTOR_TYPE *x, *y;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
@@ -27,6 +31,7 @@ typedef struct spm_mt_thread spm_mt_thread_t;
 struct spm_mt {
 	spm_mt_thread_t *spm_threads;
 	unsigned int nr_threads;
+    bool symmetric;
 };
 typedef struct spm_mt spm_mt_t;
 

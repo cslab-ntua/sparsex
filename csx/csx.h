@@ -5,7 +5,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2011,      Vasileios Karakasis
- * Copyright (C) 2011,      Theodors Goudouvas
+ * Copyright (C) 2011,      Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -29,6 +29,11 @@ typedef struct {
     double *values;
     uint8_t *ctl;
 } csx_double_t;
+
+typedef struct {
+    csx_double_t *lower_matrix;
+    double *dvalues;
+} csx_double_sym_t;
 
 #include "dynarray.h"
 
@@ -68,7 +73,14 @@ public:
           row_jmps_(false),
           ctl_da_(NULL),
           last_col_(0), empty_rows_(0) {}
-
+    
+    CsxManager(SPMSym *spm_sym)
+        : spm_sym_(spm_sym),
+          flag_avail_(0),
+          row_jmps_(false),
+          ctl_da_(NULL),
+          last_col_(0), empty_rows_(0) {}
+    
     /**
      *  Get a unique CSX ID for the pattern with SPM ID <tt>pattern_id</tt> and
      *  updates statistics for this pattern.
@@ -85,7 +97,8 @@ public:
      *
      *  @return a handle to the newly created CSX matrix.
      */
-    csx_double_t *MakeCsx();
+    csx_double_t *MakeCsx(bool symmetric);
+    csx_double_sym_t *MakeCsxSym();
 
     /**
      *  Checks whether row jumps exist in the matrix to be encoded in CSX
@@ -97,6 +110,7 @@ public:
     {
         return row_jmps_;
     }
+    
 private:
     /**
      *  Transform a row of the matrix into CSX form.
@@ -105,6 +119,7 @@ private:
      *  @rend   last element of the row.
      */
     void DoRow(const SpmRowElem *rstart, const SpmRowElem *rend);
+    void DoSymRow(const SpmRowElem *rstart, const SpmRowElem *rend);
 
     /**
      *  Set flags that concern change of row.
@@ -136,6 +151,7 @@ private:
     uint64_t PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem);
 
     SPM *spm_;
+    SPMSym *spm_sym_;
     uint8_t flag_avail_;    ///< Current available flags for pattern id mapping.
     bool row_jmps_;         ///< Whether or not row jumps included.
 

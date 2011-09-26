@@ -172,6 +172,25 @@ void VECTOR_NAME(_init)(VECTOR_TYPE *v, ELEM_TYPE val)
 	}
 }
 
+void VECTOR_NAME(_init_part)(VECTOR_TYPE *v, ELEM_TYPE val, unsigned long start,
+                 unsigned long end)
+{
+	unsigned long i;
+	
+	for (i = start; i < end; i++)
+	    v->elements[i] = val;
+}
+
+void VECTOR_NAME(_init_from_map)(VECTOR_TYPE **v, ELEM_TYPE val, map_t *map)
+{
+    unsigned int i;
+    unsigned int *cpus = map->cpus;
+    unsigned int *pos = map->elems_pos;
+    
+    for (i = 0; i < map->length; i++)
+        v[cpus[i]]->elements[pos[i]] = 0;
+}
+
 void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 {
 	unsigned long i;
@@ -195,22 +214,32 @@ void VECTOR_NAME(_add)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3)
 		v3->elements[i] = v1->elements[i] + v2->elements[i];
 }
 
-void VECTOR_NAME(_addpart)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3, unsigned long start, unsigned long end)
+void VECTOR_NAME(_add_part)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3, unsigned long start, unsigned long end)
 {
 	unsigned long i;
 	
 	if (v1->size != v2->size || v1->size != v3->size) {
-		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ", v1->size, v2->size, v3->size);
+		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ\n", v1->size, v2->size, v3->size);
 		exit(1);
 	}
 	
 	if (start > v1->size || end > v1->size || start > end) {
-		fprintf(stderr, "start=%lu end=%lu v->size=%lu not compatible", start, end, v1->size);
+		fprintf(stderr, "start=%lu end=%lu v->size=%lu not compatible\n", start, end, v1->size);
 		exit(1);
 	}
 	
 	for (i = start; i < end; i++)
 		v3->elements[i] = v1->elements[i] + v2->elements[i];
+}
+
+void VECTOR_NAME(_addmap)(VECTOR_TYPE *v1, VECTOR_TYPE **v2, VECTOR_TYPE *v3, map_t *map)
+{
+    unsigned int i;
+    unsigned int *cpus = map->cpus;
+    unsigned int *pos = map->elems_pos;
+    
+    for (i = 0; i < map->length; i++)
+        v3->elements[pos[i]] = v1->elements[pos[i]] + v2[cpus[i]]->elements[pos[i]];
 }
 
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)

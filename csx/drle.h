@@ -5,7 +5,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2010-2011, Theodoros Goudouvas
+ * Copyright (C) 2010-2011, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -19,6 +19,7 @@
 #include <limits>
 #include <cassert>
 #include <cstdlib>
+#include <iostream>
 
 #include "spm.h"
 
@@ -176,7 +177,7 @@ public:
      *  @param split_blocks determines whether or not the extra function of
      *                      spliting blocks is used.
      */
-    void MakeEncodeTree(bool operate);
+    void MakeEncodeTree(bool split_blocks);
 
     /**
      *  Encode patterns of a series of types explicitly specified by the user.
@@ -186,7 +187,7 @@ public:
      *  @param split_blocks determines whether or not the extra function of
      *                      spliting blocks is used.
      */
-    void EncodeSerial(int *xform, int **deltas, bool operate);
+    void EncodeSerial(int *xform, int **deltas, bool split_blocks);
 
     /**
      *  Output the split points of the sorting windows, if windows are used for
@@ -363,6 +364,7 @@ private:
     double sampling_probability_;
     uint64_t samples_max_;
     static const uint64_t max_sampling_tries_ = 3;
+    bool symmetric_;
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;

@@ -93,7 +93,6 @@ static void *do_spmv_thread_main_swap(void *arg)
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
 		SWAP(x, y);
-		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 	}
 	tsc_pause(&tsc);
 #ifdef SPMV_PRFCNT

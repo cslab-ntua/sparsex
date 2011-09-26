@@ -15,7 +15,7 @@
 #include "spm_crs.h"
 #include "spm_mt.h"
 #include "spmv_method.h"
-
+   
 #define SPM_CRS_MT_DECLARE(__idx_bits, __elem_type) \
 struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt { \
 	spm_crs ## __idx_bits ## _ ## __elem_type ## _t    *crs; \
@@ -29,6 +29,9 @@ spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_init_mmf( \
 	char *mmf_file, \
 	uint64_t *rows_nr, uint64_t *cols_nr, \
 	uint64_t *nz_nr); \
+\
+uint64_t \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_size(void *spm); \
 \
 /* XXX: Destroy */ \
 \

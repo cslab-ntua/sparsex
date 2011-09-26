@@ -11,16 +11,28 @@
 #ifndef CG_VECTOR_H_
 #define CG_VECTOR_H_
 
+#include <stdint.h>
 #include <assert.h>
 #include <cstring>
 
 extern "C" {
-#include "vector.h"
+#include "../lib/spm/vector.h"
 }
 
-void vector_double_sub(vector_double_t *in1, vector_double_t *in2, vector_double_t *out);
+void vector_double_sub(vector_double_t *in1, vector_double_t *in2,
+                       vector_double_t *out);
+void vector_double_sub_part(vector_double_t *in1, vector_double_t *in2,
+                            vector_double_t *out, uint64_t start, uint64_t end);
 double vector_double_mul(vector_double_t *in1, vector_double_t *in2);
-void vector_double_scale(vector_double_t *in, double scale, vector_double_t *out);
+double vector_double_mul_part(vector_double_t *in1, vector_double_t *in2,
+                              uint64_t start, uint64_t end);
+void vector_double_scale(vector_double_t *in, double scale,
+                         vector_double_t *out);
+void vector_double_scale_add(vector_double_t *in1, vector_double_t *in2, 
+                             vector_double_t *out, double scale);
+void vector_double_scale_add_part(vector_double_t *in1, vector_double_t *in2, 
+                                  vector_double_t *out, double scale,
+                                  uint64_t start, uint64_t end);
 void vector_double_copy(vector_double_t *in, vector_double_t *out);
   
 #endif /* CG_VECTOR_H_ */

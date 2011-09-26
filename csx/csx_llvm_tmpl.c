@@ -72,6 +72,9 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
     x = in  ? in->elements : NULL;
     y = out ? out->elements: NULL;
     myx = x;
+    
+    vector_double_init_part(out, 0, csx->row_start,
+                            csx->row_start + csx->nrows);
 
     llvm_annotate(&yr, "spmv::yr");
     llvm_annotate(&myx, "spmv::myx");
@@ -82,6 +85,7 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
     llvm_annotate(&ctl, "spmv::ctl");
     llvm_annotate(&size, "spmv::size");
     llvm_annotate(&flags, "spmv::flags");
+    
     do {
         //printf("ctl:%p\n", ctl);
         flags = *ctl++;
@@ -100,4 +104,74 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
         //printf("x_indx at end: %lu\n", myx - x);
     } while (ctl < ctl_end);
     y[y_indx] += yr;
+}
+
+void csx_sym_spmv_template(void *spm, vector_double_t *in, vector_double_t *out,
+                           vector_double_t *tmp)
+{
+    csx_double_sym_t *csx_sym = (csx_double_sym_t *) spm;
+    csx_double_t *csx = (csx_double_t *) csx_sym->lower_matrix;
+    double *x;
+    double *y;
+    double *temp;
+    double *cur;
+    double *v = csx->values;
+    double *dv = csx_sym->dvalues;
+    double *myx;
+    double yr = 0;
+    uint8_t *ctl = csx->ctl;
+    uint8_t *ctl_end = ctl + csx->ctl_size;
+    uint64_t y_indx = csx->row_start;
+    uint64_t y_end = csx->row_start + csx->nrows;
+    uint8_t size, flags;
+    uint64_t i, curx;
+    
+    for (i = y_indx; i < y_end; i++)
+        y[i] = 0;
+            
+    //printf("csx->ctl: %p\n", csx->ctl);
+
+    x = in  ? in->elements : NULL;
+    y = out ? out->elements : NULL;
+    temp = tmp ? tmp->elements : NULL;
+    myx = x;
+    cur = temp;
+    
+    vector_double_init_part(out, 0, csx->row_start,
+                            csx->row_start + csx->nrows);
+    
+    llvm_annotate(&yr, "spmv::yr");
+    llvm_annotate(&myx, "spmv::myx");
+    llvm_annotate(&x, "spmv::x");
+    llvm_annotate(&y, "spmv::y");
+    llvm_annotate(&y_indx, "spmv::y_indx");
+    llvm_annotate(&v, "spmv::v");
+    llvm_annotate(&dv, "spmv::dv");
+    llvm_annotate(&ctl, "spmv::ctl");
+    llvm_annotate(&size, "spmv::size");
+    llvm_annotate(&flags, "spmv::flags");
+    llvm_annotate(&cur, "spmv::cur");
+    
+    do {
+        flags = *ctl++;
+        size = *ctl++;
+        if (test_bit(&flags, CTL_NR_BIT)) {
+            __new_row_hook();
+            myx = x;
+            yr = 0;
+            cur = temp;
+        }
+        myx += ul_get(&ctl);
+        curx = myx - x;
+        if (curx >= csx->row_start)
+            cur = y;
+        __body_hook();
+    } while (ctl < ctl_end);
+    y[y_indx] += yr + x[y_indx] * dv[0];
+    y_indx++;
+    while (y_indx < y_end) {
+        dv++;
+        y[y_indx] += x[y_indx] * dv[0];
+        y_indx++;
+    }
 }

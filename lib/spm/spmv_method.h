@@ -20,6 +20,8 @@
 
 typedef void spmv_double_fn_t(void *matrix, vector_double_t *in, vector_double_t *out);
 typedef void spmv_float_fn_t(void *matrix, vector_float_t *in, vector_float_t *out);
+typedef void spmv_double_sym_fn_t(void *matrix, vector_double_t *in, vector_double_t *out, vector_double_t *temp);
+typedef void spmv_float_sym_fn_t(void *matrix, vector_float_t *in, vector_float_t *out, vector_float_t *temp);
 typedef void *spm_load_fn_t(char *mmf, uint64_t *nrows, uint64_t *ncols, uint64_t *nnz);
 
 typedef uint64_t spm_size_fn_t(void *matrix);

@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2010-2011, Theodoros Goudouvas
+ * Copyright (C) 2010-2011, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -136,8 +136,8 @@ DeltaRLE::Stats DRLE_Manager::GenerateStats(SPM *spm, uint64_t rs, uint64_t re)
     DeltaRLE::Stats stats;
 
     for (uint64_t i = rs; i < re; ++i) {
-        for (const SpmRowElem *elem = spm->RowBegin(i); elem != spm->RowEnd(i);
-             ++elem) {
+        for (const SpmRowElem *elem = spm->RowBegin(i);
+             elem != spm->RowEnd(i); ++elem) {
             if (elem->pattern == NULL) {
                 xs.push_back(elem->x);
                 continue;
@@ -148,7 +148,6 @@ DeltaRLE::Stats DRLE_Manager::GenerateStats(SPM *spm, uint64_t rs, uint64_t re)
 
         UpdateStats(spm, xs, stats);
     }
-
     return stats;
 }
 
@@ -364,7 +363,7 @@ void DRLE_Manager::Encode(SpmIterOrder type, bool split_blocks)
 
     SpmBld->Finalize();
     delete SpmBld;
-
+    
     // Transform matrix to the original iteration order
     spm_->Transform(oldtype);
     AddIgnore(type);
@@ -412,7 +411,7 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
 {
     SpmIterOrder type = NONE;
     StatsMap::iterator iter;
-
+    
     for (;;) {
         GenAllStats(split_blocks);
         OutStats(os);

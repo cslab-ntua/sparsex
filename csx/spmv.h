@@ -27,6 +27,7 @@ typedef struct thread_info {
     unsigned int thread_no;
     unsigned int cpu;
     csx::SPM *spm;
+    csx::SPMSym *spm_sym;
     spm_mt_thread_t *spm_encoded;
     csx::CsxManager *csxmg;
     uint64_t wsize;
@@ -35,6 +36,7 @@ typedef struct thread_info {
     double sampling_prob;
     uint64_t samples_max;
     bool split_blocks;
+    bool symmetric;
     int **deltas;
 } thread_info_t;
 
@@ -59,6 +61,10 @@ bool GetOptionSplitBlocks();
  *  @param info parameters of matrix needed by each thread.
  */
 void *PreprocessThread(void *thread_info);
+
+void MakeMap(spm_mt_t *spm_mt, csx::SPMSym *spm_sym);
+uint64_t MapSize(void *spm);
+
 #ifdef __cplusplus                  /* included in a C++ program */
 spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms = 0);
 #else /* included in a C program */
@@ -83,10 +89,12 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name);
 /**
  *  Compute the size (in bytes) of the compressed matrix in CSX form.
  *
- *  @parame spm_mt  the sparse matrix in CSX format.
+ *  @param spm_mt  the sparse matrix in CSX format.
  */
+uint64_t CsxSize(void *spm_mt);
 unsigned long CsxSize(spm_mt_t *spm_mt);
-
+uint64_t CsxSymSize(void *spm_mt);
+unsigned long CsxSymSize(spm_mt_t *spm_mt);
 
 #endif // SPMV_H__
 

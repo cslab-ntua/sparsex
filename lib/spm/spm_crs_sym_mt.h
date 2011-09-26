@@ -24,7 +24,7 @@
 
 #define SPM_CRS_SYM_MT_DECLARE(__idx_bits, __elem_type) \
 struct spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt { \
-    spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_t    *crs; \
+    spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_t *crs; \
     uint64_t row_start, row_end; \
     uint64_t nnz; \
 }; \
@@ -36,7 +36,16 @@ spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_init_mmf( \
     uint64_t *nrows, uint64_t *ncols, \
     uint64_t *nnz); \
 \
-spmv_ ## __elem_type ## _fn_t spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_multiply;
+void \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_make_map(void *spm); \
+\
+uint64_t \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_size(void *spm); \
+\
+uint64_t \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_map_size(void *spm); \
+\
+spmv_ ## __elem_type ## _sym_fn_t spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_multiply;
 
 SPM_CRS_SYM_MT_DECLARE(32, double)
 SPM_CRS_SYM_MT_DECLARE(64, double)
@@ -45,6 +54,8 @@ SPM_CRS_SYM_MT_DECLARE(64, float)
 
 #define SPM_CRS_SYM_MT_NAME(name) CON6(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, _sym_mt, name)
 #define SPM_CRS_SYM_MT_TYPE SPM_CRS_SYM_MT_NAME(_t)
+#define SPM_CRS_SYM_MT_MAP_NAME(name) CON5(map, SPM_CRS_BITS, _, ELEM_TYPE, name)
+#define SPM_CRS_SYM_MT_MAP_TYPE SPM_CRS_SYM_MT_MAP_NAME(_t)
 
 #endif
 

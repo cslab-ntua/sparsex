@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2011,      Theodors Goudouvas
+ * Copyright (C) 2011,      Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -334,13 +334,18 @@ void SPM::Print(std::ostream &out)
     out << std::endl;
 }
 
+void SPM::PrintRows(std::ostream &out) {
+    std::cout << "Row Ptr: ";
+    for (long unsigned i = 0; i < rowptr_size_; i++)
+        std::cout << rowptr_[i] << " ";
+    std::cout << std::endl;
+}
+
 void SPM::PrintElems(std::ostream &out)
 {
     SPM::PntIter p, p_start, p_end;
-    uint64_t y0;
     static int cnt = 1;
 
-    y0 = row_start_;
     p_start = PointsBegin();
     p_end = PointsEnd();
     for (p = p_start; p != p_end; ++p) {
@@ -360,7 +365,7 @@ void SPM::PrintElems(std::ostream &out)
         pat = (*p).pattern;
         start = static_cast<CooElem>(*p);
         vals = start.vals;
-        std::cout << SpmTypesNames[pat->GetType()] << std::endl;
+        //out << SpmTypesNames[pat->GetType()] << std::endl;
         xform_fn = GetTransformFn(type_, pat->GetType());
         rxform_fn = GetTransformFn(pat->GetType(), type_);
         if (xform_fn)
@@ -784,7 +789,7 @@ void SPM::Builder::NewRow(uint64_t rdiff)
     uint64_t elems_cnt;
 
     elems_cnt = GetElemsCnt();
-    rowptr = (uint64_t *)dynarray_alloc_nr(da_rowptr_, rdiff);
+    rowptr = (uint64_t *) dynarray_alloc_nr(da_rowptr_, rdiff);
     for (uint64_t i = 0; i < rdiff; i++)
         rowptr[i] = elems_cnt;
 }
@@ -879,7 +884,223 @@ std::ostream &SPM::PntIter::operator<<(std::ostream &out)
     return out;
 }
 
-//*** Do I keep the code from now on;
+SPMSym *SPMSym::LoadMMF_mt(const char *mmf_file, const long nr)
+{
+    SPMSym *ret;
+    std::ifstream mmf;
+
+    mmf.open(mmf_file);
+    ret = LoadMMF_mt(mmf, nr);
+    mmf.close();
+    return ret;
+}
+
+SPMSym *SPMSym::LoadMMF_mt(std::istream &in, const long nr)
+{
+    MMF mmf(in);
+    return LoadMMF_mt(mmf, nr);
+}
+
+SPMSym *SPMSym::LoadMMF_mt(MMF &mmf, const long nr)
+{
+    SPMSym *ret, *spm_sym;
+    long limit, cnt, row_start, nr_nzeros, n, nnz;
+    MMF::iterator iter = mmf.begin();
+    MMF::iterator iter_end = mmf.end();
+
+    assert(mmf.nrows == mmf.ncols);
+    nr_nzeros = (mmf.nnz + mmf.ncols) / 2;
+    n = mmf.ncols;
+    ret = new SPMSym[nr];
+    row_start = limit = cnt = 0;
+    for (long i = 0; i < nr; ++i) {
+        spm_sym = ret + i;
+        limit = (nr_nzeros - cnt) / (nr - i);
+        nnz = spm_sym->SetElems(iter, iter_end, row_start + 1, limit);
+        spm_sym->lower_matrix_->SetNrNonzeros(nnz - spm_sym->GetDiagonalSize());
+        spm_sym->lower_matrix_->SetNrRows(spm_sym->lower_matrix_->GetNrRows());
+        spm_sym->lower_matrix_->SetNrCols(n);
+        spm_sym->lower_matrix_->SetRowStart(row_start);
+        row_start += spm_sym->GetDiagonalSize();
+        spm_sym->lower_matrix_->SetType(HORIZONTAL);
+        cnt += nnz;
+    }
+
+    assert((uint64_t) cnt == (uint64_t) nr_nzeros);
+    return ret;
+}
+
+void SPMSym::DivideMatrix()
+{
+    SPM *matrix = lower_matrix_;
+    uint64_t *rowptr = matrix->GetRowPtr();
+    SpmRowElem *elems = matrix->GetElems();
+    uint64_t row_start = matrix->GetRowStart();
+    uint64_t nr_cols = matrix->GetNrCols();
+    uint64_t rows1 = 0;
+    uint64_t rows2 = 0;
+    
+    SPM::Builder *spmbld1 = new SPM::Builder(m1_);
+    SPM::Builder *spmbld2 = new SPM::Builder(m2_);
+    
+    SpmRowElem *elem;
+    
+    m1_->SetType(HORIZONTAL);
+    m1_->SetRowStart(row_start);
+    m1_->SetNrCols(nr_cols);
+    m1_->SetNrNonzeros(0);
+    
+    m2_->SetType(HORIZONTAL);
+    m2_->SetRowStart(row_start);
+    m2_->SetNrCols(nr_cols);
+    m2_->SetNrNonzeros(0);
+    
+    for (unsigned long i = 0; i < matrix->GetNrRows(); i++) {
+        for (unsigned long j = rowptr[i]; j < rowptr[i+1]; j++) {
+            elem = elems + j;
+            if (elem->x < row_start + 1) {
+                if (rows1 < i) {
+                    spmbld1->NewRow(i - rows1);
+                    rows1 = i;
+                }
+                m1_->SetNrNonzeros(m1_->GetNrNonzeros() + 1);
+                MakeRowElem(*elem, spmbld1->AllocElem());
+            } else {
+                if (rows2 < i) {
+                    spmbld2->NewRow(i - rows2);
+                    rows2 = i;
+                }
+                m2_->SetNrNonzeros(m2_->GetNrNonzeros() + 1);
+                MakeRowElem(*elem, spmbld2->AllocElem());
+            }
+        }
+    }
+    
+    spmbld1->Finalize();
+    spmbld2->Finalize();
+    
+    m1_->SetNrRows(m1_->GetNrRows());
+    m2_->SetNrRows(m2_->GetNrRows());
+    
+    delete spmbld1;
+    delete spmbld2;
+    
+    /*
+    std::cout << "New Thread" << std::endl;
+    std::cout << "First" << std::endl;
+    m1_->PrintRows(std::cout);
+    m1_->PrintElems(std::cout);
+    std::cout << "Second" << std::endl;
+    m2_->PrintRows(std::cout);
+    m2_->PrintElems(std::cout);
+    */
+}
+
+void SPMSym::MergeMatrix()
+{
+    SPM *m1 = GetFirstMatrix();
+    SPM *m2 = GetSecondMatrix();
+    SPM *temp = new SPM();
+    
+    SPM *matrix = lower_matrix_;
+    uint64_t *rowptr1 = m1->GetRowPtr();
+    uint64_t *rowptr2 = m2->GetRowPtr();
+    SpmRowElem *elems1 = m1->GetElems();
+    SpmRowElem *elems2 = m2->GetElems();
+    uint64_t row_start = matrix->GetRowStart();
+    uint64_t nr_rows = matrix->GetNrRows();
+    uint64_t nr_cols = matrix->GetNrCols();
+    
+    SPM::Builder *spmbld = new SPM::Builder(temp);
+    
+    SpmRowElem *elem;
+    
+    temp->SetType(HORIZONTAL);
+    temp->SetRowStart(row_start);
+    temp->SetNrCols(nr_cols);
+    temp->SetNrNonzeros(m1_->GetNrNonzeros() + m2_->GetNrNonzeros());
+    
+    for (unsigned long i = 0; i < nr_rows; i++) {
+        if (m1_->GetNrRows() > i) {
+            for (unsigned long j = rowptr1[i]; j < rowptr1[i+1]; j++) {
+                elem = elems1 + j;
+                MakeRowElem(*elem, spmbld->AllocElem());
+            }
+        }
+        if (m2_->GetNrRows() > i) {
+            for (unsigned long j = rowptr2[i]; j < rowptr2[i+1]; j++) {
+                elem = elems2 + j;
+                MakeRowElem(*elem, spmbld->AllocElem());
+            }
+        }
+        spmbld->NewRow(1);
+    }
+    
+    spmbld->Finalize();
+    
+    temp->SetNrRows(temp->GetNrRows());
+    
+    delete spmbld;
+    
+    delete lower_matrix_;
+    lower_matrix_ = temp;
+    
+    delete m1_;
+    delete m2_;
+}
+
+void SPMSym::PrintDiagElems(std::ostream &out)
+{
+    uint64_t row_start = lower_matrix_->GetRowStart();
+    
+    for (long unsigned i = 0; i < diagonal_size_; i++)
+        std::cout << row_start + i + 1 << " " << row_start + i + 1 << " "
+                  << diagonal_[i] << " cnt:" << i << std::endl;
+}
+
+SPMSym::Builder::Builder(SPMSym *spm_sym, uint64_t nr_elems, uint64_t nr_rows) 
+                        : spm_sym_(spm_sym)
+{
+    SPM *spm = spm_sym_->GetLowerMatrix();
+    
+    spm_bld_ = new SPM::Builder(spm, nr_elems, nr_rows);
+    da_dvalues_ = dynarray_create(sizeof(double), nr_rows ? nr_rows : 512);
+}
+
+SPMSym::Builder::~Builder()
+{
+    delete spm_bld_;
+    assert(da_dvalues_ == NULL && "da_dvalues_ not destroyed");
+}
+
+double *SPMSym::Builder::AllocDiagElem()
+{
+    assert(dynarray_size(da_dvalues_) < 
+           spm_sym_->GetLowerMatrix()->GetNrRows() &&
+           "out of bounds");
+           
+    return (double *) dynarray_alloc(da_dvalues_);
+}
+
+uint64_t SPMSym::Builder::GetDiagElemsCnt()
+{
+    return dynarray_size(da_dvalues_);
+}
+
+uint64_t SPMSym::Builder::GetElemsCnt()
+{
+    return GetDiagElemsCnt() + spm_bld_->GetElemsCnt();
+}
+
+void SPMSym::Builder::Finalize()
+{
+
+    spm_bld_->Finalize();
+    //assert(GetDiagElemsCnt() == spm_sym_->GetLowerMatrix()->GetNrRows());
+    spm_sym_->SetDiagonalSize(GetDiagElemsCnt());
+    spm_sym_->SetDiagonal((double *) dynarray_destroy(da_dvalues_));
+    da_dvalues_ = NULL;
+}
 
 void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
                     std::ostream &out)

@@ -96,7 +96,6 @@ int main(int argc, char **argv)
 	void *m = spmv_meth->mmf_init_fn(mmf_file, &nrows, &ncols, &nnz);
 	int elem_size = spmv_meth->elem_size;
 	assert(elem_size == 8 || elem_size == 4);
-
 	if (opt_check){
 		method_t *meth1;
 		spmv_method_t *spmv_meth1;
