@@ -31,7 +31,8 @@ typedef enum {
 
 int main(int argc, char *argv[])
 {
-    unsigned long       i, j;
+    unsigned long       i;
+    long                j;
     char                *mmf_file;
     char                *symmetric;
     
@@ -51,8 +52,6 @@ int main(int argc, char *argv[])
     
     csx_double_t	*csx;
     csx_double_sym_t    *csx_sym;
-    
-    Map                 *map = NULL;
     
     ///> Variables that store counting time.
     struct timeval      cg_start, cg_end;
@@ -130,9 +129,6 @@ int main(int argc, char *argv[])
             assert(nrows == ncols && "Matrix is not square");
             n = nrows;
             
-            map = new Map(spm_mt->nr_threads, n);
-            map->Init();
-            
             CgSideThread = SymCgSideThread;
             CgMainThread = SymCgMainThread;
             SpMSize = spm_crs32_double_sym_mt_size;
@@ -184,9 +180,6 @@ int main(int argc, char *argv[])
 	    }
 	    assert(nrows == ncols && "Matrix is not square");
 	    n = nrows;
-	    
-            map = new Map(spm_mt->nr_threads, n);
-            map->Init();
 	    
             CgSideThread = SymCgSideThread;
             CgMainThread = SymCgMainThread;
@@ -265,12 +258,17 @@ int main(int argc, char *argv[])
     sol_dis = sqrt(sol_dis);
     
     ///> Find b vector for the specified solution.
-    FindSolution(spm_mt, sol, b, t, map);
-    map->SplitToThreads();
+    if (cg_method == CSR_sym || cg_method == CSX_sym)
+        FindSymSolution(spm_mt, sol, b, t);
+    else
+        FindSolution(spm_mt, sol, b, t);
     
     ///> Initialize CG method.
-    InitializeCg(spm_mt, x, r, p, b, t);
-    
+    if (cg_method == CSR_sym || cg_method == CSX_sym)
+        InitializeSymCg(spm_mt, x, r, p, b, t);
+    else
+        InitializeCg(spm_mt, x, r, p, b, t);
+        
     ///> Start counting time.
     gettimeofday(&cg_start, NULL);
     
@@ -316,12 +314,6 @@ int main(int argc, char *argv[])
     free(ai);
     free(bi);
     free(params);
-    
-    ///> Free map.
-    if (map) {
-        map->Finalize();
-        delete map;
-    }
     
     ///> Free pthreads.
     free(tids);

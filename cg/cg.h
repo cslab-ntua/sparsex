@@ -45,11 +45,16 @@ typedef struct cg_params
 } cg_params;
 
 void FindSolution(spm_mt_t *spm_mt, vector_double_t *sol, vector_double_t *b,
-                  vector_double_t *temp, Map *map);
-                  
+                  vector_double_t *temp);
+void FindSymSolution(spm_mt_t *spm_mt, vector_double_t *sol,
+                     vector_double_t *b, vector_double_t *temp);
+                     
 void InitializeCg(spm_mt_t *spm_mt, vector_double_t *x, vector_double_t *r,
                   vector_double_t *p, vector_double_t *b,
                   vector_double_t *temp);
+void InitializeSymCg(spm_mt_t *spm_mt, vector_double_t *x, vector_double_t *r,
+                     vector_double_t *p, vector_double_t *b,
+                     vector_double_t *temp);                  
 
 void *NormalCgSideThread(void *arg);
 void *SymCgSideThread(void *arg);
