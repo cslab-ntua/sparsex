@@ -23,15 +23,12 @@ INC= -I$(spm_dir) -I$(csx_dir) -I$(dynarray_dir)
 SPM_OBJS=$(spm_dir)/libspmv.o
 CSX_OBJS=$(csx_dir)/libcsx.so
 
-OBJS=cg_vector.o cg.o map.o $(SPM_OBJS) $(CSX_OBJS)
+OBJS=cg_vector.o cg.o $(SPM_OBJS) $(CSX_OBJS)
 	 
 cg_vector.o: cg_vector.cc cg_vector.h $(spm_dir)/libspmv.o
 	$(CC) -L/$(LIBDIR) $(LIBS) $(CFLAGS) $(INC) -c $< -o $@
 	
 cg.o: cg.cc cg.h
-	$(CC) -L/$(LIBDIR) $(LIBS) $(CFLAGS) $(INC) -c $< -o $@
-		
-map.o: map.cc map.h
 	$(CC) -L/$(LIBDIR) $(LIBS) $(CFLAGS) $(INC) -c $< -o $@
 	
 cg: $(OBJS) main.cc

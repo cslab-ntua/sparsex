@@ -22,7 +22,6 @@ extern "C" {
 }
 
 #include "cg_vector.h"
-#include "map.h"
 
 typedef struct cg_params
 {
@@ -59,10 +58,8 @@ void InitializeSymCg(spm_mt_t *spm_mt, vector_double_t *x, vector_double_t *r,
 void *NormalCgSideThread(void *arg);
 void *SymCgSideThread(void *arg);
 
-void CsrNormalCgMainThread(cg_params *params, double *spmv_time,
-                           double * red_time);
-void CsxNormalCgMainThread(cg_params *params, double *spmv_time,
-                           double * red_time);
+void NormalCgMainThread(cg_params *params, double *spmv_time,
+                        double * red_time);
 void SymCgMainThread(cg_params *params, double *spmv_time, double * red_time);
 
 #endif /* CG_H_ */

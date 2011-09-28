@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 	    n = nrows;
             
             CgSideThread = NormalCgSideThread;
-            CgMainThread = CsrNormalCgMainThread;
+            CgMainThread = NormalCgMainThread;
             SpMSize = spm_crs32_double_mt_size;
             
             break;
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 	    n = nrows;
 	    
             CgSideThread = NormalCgSideThread;
-            CgMainThread = CsxNormalCgMainThread;
+            CgMainThread = NormalCgMainThread;
             SpMSize = CsxSize;
             
             break;

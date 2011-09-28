@@ -187,8 +187,8 @@ void *SymCgSideThread(void *arg)
     return NULL;
 }
 
-void CsrNormalCgMainThread(cg_params *params, double *spmv_time,
-                           double * red_time)
+void NormalCgMainThread(cg_params *params, double *spmv_time,
+                        double * red_time)
 {
     uint64_t i, j;
     uint64_t nloops = params->nloops;
@@ -219,72 +219,6 @@ void CsrNormalCgMainThread(cg_params *params, double *spmv_time,
         
         ///> Do temp = A*p.
         fn(spm_thread->spm, p, temp);
-        pthread_barrier_wait(barrier);
-        gettimeofday(&spmv_end, NULL);
-        *spmv_time += spmv_end.tv_sec - spmv_start.tv_sec +
-                      (spmv_end.tv_usec - spmv_start.tv_usec) / 1000000.0;
-        
-        ///> Calculate ai.
-        rr[0] = vector_double_mul_part(r, r, start, end);
-        tp[0] = vector_double_mul_part(temp, p, start, end);
-        pthread_barrier_wait(barrier);
-        for (j = 1; j < ncpus; j++) {
-            rr[0] += rr[j];
-            tp[0] += tp[j];
-        }
-        *ai = rr[0] / tp[0];
-        
-        pthread_barrier_wait(barrier);
-        ///> Do r = r - ai*A*p.
-        vector_double_scale_add_part(r, temp, r, -(*ai), start, end);
-        ///> Do x = x + ai*p.
-        vector_double_scale_add_part(x, p, x, *ai, start, end);
-        pthread_barrier_wait(barrier);
-        
-        ///> Calculate bi.
-	rr_new[0] = vector_double_mul_part(r, r, start, end);
-        pthread_barrier_wait(barrier);
-        for (j = 1; j < ncpus; j++)
-            rr_new[0] += rr_new[j];
-        *bi = rr_new[0] / rr[0];
-        pthread_barrier_wait(barrier);
-        
-        ///> Do p = r + bi*p.
-	vector_double_scale_add_part(r, p, p, *bi, start, end);
-        pthread_barrier_wait(barrier);
-    }
-}
-
-void CsxNormalCgMainThread(cg_params *params, double *spmv_time,
-                           double * red_time)
-{
-    uint64_t i, j;
-    uint64_t nloops = params->nloops;
-    uint64_t ncpus = params->ncpus;
-    spm_mt_thread_t *spm_thread = params->spm_thread;
-    spmv_double_fn_t *fn = (spmv_double_fn_t *) spm_thread->spmv_fn;
-    vector_double_t *p = params->p;
-    vector_double_t *temp = params->temp;
-    vector_double_t *r = params->r;
-    vector_double_t *x = params->x;
-    double *rr = params->rr;
-    double *tp = params->tp;
-    double *rr_new = params->rr_new;
-    double *ai = params->ai;
-    double *bi = params->bi;
-    uint64_t start = params->start;
-    uint64_t end = params->end;
-    pthread_barrier_t *barrier = params->barrier;
-    struct timeval  spmv_start, spmv_end;
-    
-    ///> Set thread to the appropriate cpu.
-    setaffinity_oncpu(spm_thread->cpu);
-    
-    ///> Do nr_loops.
-    for (i = 0; i < nloops; i++) {
-        pthread_barrier_wait(barrier);
-        gettimeofday(&spmv_start, NULL);
-        fn(spm_thread->spm, p, temp);           ///> Do temp = Ap.
         pthread_barrier_wait(barrier);
         gettimeofday(&spmv_end, NULL);
         *spmv_time += spmv_end.tv_sec - spmv_start.tv_sec +
