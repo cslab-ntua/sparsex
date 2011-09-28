@@ -294,19 +294,22 @@ static prfcnt_event_t __evnts[] = {
 
 	[EVENT_L2_LINES_IN] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x24)                |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_MESI_ALL)   |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_PFETCH_ALL) |
 		                EVNTSEL_SET(UNIT, EVNT_UNIT_CORE_THIS)  |
 		                EVNTSEL_SET(USR, 1),
 		.type          = EVNT_TYPE_PROGRAMMABLE,
-		.desc          = "L2 cache misses (no hwpref)",
+		.desc          = "L2 cache misses (MESI, prefetch)",
 	},
 
 	[EVENT_L2_RQSTS] = {
 		.evntsel_data = EVNTSEL_SET(EVENT, 0x2e)                |
 		                EVNTSEL_SET(UNIT, EVNT_UNIT_MESI_ALL)   |
+		                EVNTSEL_SET(UNIT, EVNT_UNIT_PFETCH_ALL) |
 		                EVNTSEL_SET(UNIT, EVNT_UNIT_CORE_THIS)  |
 		                EVNTSEL_SET(USR, 1),
 		.type          = EVNT_TYPE_PROGRAMMABLE,
-		.desc          = "L2 cache reference requests (no hwpref)",
+		.desc          = "L2 cache reference requests (MESI, prefetch)",
 	},
 
 	[EVENT_RESOURCE_STALL] = {
@@ -397,8 +400,8 @@ static prfcnt_event_t __evnts[] = {
  * intruction)
  */
 static const int __evnts_selected[] = {
-/* 	EVENT_UNHLT_CORE_CYCLES, */
-/* 	EVENT_UOPS_RETIRED, */
+	EVENT_UNHLT_CORE_CYCLES,
+	EVENT_UOPS_RETIRED,
 /* 	EVENT_L1D_REPL, */
 /* 	EVENT_L1D_ALL_REF, */
 /* 	EVENT_L1I_READS, */
@@ -409,8 +412,8 @@ static const int __evnts_selected[] = {
 /* 	EVENT_LLC_MISSES, */
 /* 	EVENT_BUS_TRANS_ANY, */
 /* 	EVENT_SIMD_UOPS_EXEC, */
-	EVENT_BR_RETIRED,
-	EVENT_MISPRED_BR_RETIRED,
+/* 	EVENT_BR_RETIRED, */
+/* 	EVENT_MISPRED_BR_RETIRED, */
 /*	EVENT_UNCORE_FSB_ALL, */
 };
 

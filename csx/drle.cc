@@ -165,7 +165,7 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
         SpmIterOrder type = SpmTypes[t];
 
         //std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
-	if (sort_windows_) {
+        if (sort_windows_ && spm_->GetNrRows() > samples_max_) {
             uint64_t sampling_failures = 0;
         again:
             uint64_t samples_nnz = 0;

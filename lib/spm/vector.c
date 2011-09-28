@@ -106,13 +106,24 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
 	 */
 	ELEM_TYPE *curr_part = v->elements;
 	int i;
+	size_t new_part_size = 0;
 	for (i = 0; i < nr_parts; i++) {
 		size_t	part_size = parts[i]*sizeof(ELEM_TYPE);
 		size_t	rem = part_size % pagesize;
-		while (rem < pagesize / 2 && i < nr_parts - 1) {
-			/* Leave the page for the next partition */
-			part_size -= sizeof(ELEM_TYPE);
-			rem = part_size % pagesize;
+		if (part_size < pagesize) {
+			new_part_size += part_size;
+			if (new_part_size < pagesize) {
+				parts[i] = 0;
+				continue;
+			} else {
+				part_size = new_part_size;
+			}
+		} else {
+			while (rem < pagesize / 2 && i < nr_parts - 1) {
+				/* Leave the page for the next partition */
+				part_size -= sizeof(ELEM_TYPE);
+				rem = part_size % pagesize;
+			}
 		}
 
 		numa_bitmask_setbit(nodemask, nodes[i]);
@@ -122,8 +133,11 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
 			exit(1);
 		}
 
+		/* Clear the mask for the next round */
+		numa_bitmask_clearbit(nodemask, nodes[i]);
 		parts[i] = part_size / sizeof(ELEM_TYPE);
 		curr_part += parts[i];
+		new_part_size = 0;
 	}
 
 #undef PAGE_ALIGN
