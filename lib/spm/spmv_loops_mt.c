@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
+ * Copyright (C) 2011,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -27,6 +28,10 @@ static pthread_barrier_t barrier;
 static unsigned long loops_nr = 0;
 static float secs = 0.0;
 
+#ifndef _CSX_
+#   define _CSX_ 1
+#endif
+
 static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
@@ -35,13 +40,16 @@ static void *do_spmv_thread(void *arg)
 	int i;
 
 #ifdef SPMV_PRFCNT
-    prfcnt_t    *prfcnt = (prfcnt_t *) spm_mt_thread->data;
-    prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
-    prfcnt_start(prfcnt);
+	prfcnt_t	*prfcnt = (prfcnt_t *) spm_mt_thread->data;
+	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
+	prfcnt_start(prfcnt);
 #endif
 
 	for (i=0; i<loops_nr; i++){
 		pthread_barrier_wait(&barrier);
+        if (_CSX_)
+            VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
+                                    spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
 	}
@@ -90,6 +98,9 @@ static void *do_spmv_thread_main_swap(void *arg)
 	int i;
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
+        if (_CSX_)
+            VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
+                                    spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
 		SWAP(x, y);
@@ -177,10 +188,10 @@ float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 	return secs;
 }
 
-void SPMV_NAME(_check_mt_loop) (void *spm, spm_mt_t *spm_mt,
-                                SPMV_NAME(_fn_t) *fn, unsigned long loops,
-                                unsigned long rows_nr, unsigned long cols_nr,
-                                SPMV_NAME(_fn_t) *mt_fn)
+void SPMV_NAME(_check_mt_loop)(void *spm, spm_mt_t *spm_mt,
+                               SPMV_NAME(_fn_t) *fn, unsigned long loops,
+                               unsigned long rows_nr, unsigned long cols_nr,
+                               SPMV_NAME(_fn_t) *mt_fn)
 {
 	int err, i;
 	pthread_t *tids;
@@ -218,7 +229,6 @@ void SPMV_NAME(_check_mt_loop) (void *spm, spm_mt_t *spm_mt,
 
 	for (i = 0; i < loops; i++) {
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
-		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
 		VECTOR_NAME(_init)(y2, (ELEM_TYPE)21);
 		pthread_barrier_wait(&barrier);
 		pthread_barrier_wait(&barrier);
@@ -247,12 +257,12 @@ void SPMV_NAME(_check_mt_loop) (void *spm, spm_mt_t *spm_mt,
 	free(tids);
 }
 
-void SPMV_NAME(_check_mt_loop_serial) (void *spm, spm_mt_t *spm_mt,
-                                       SPMV_NAME(_fn_t) *fn,
-                                       unsigned long loops,
-                                       unsigned long rows_nr,
-                                       unsigned long cols_nr,
-                                       SPMV_NAME(_fn_t) *mt_fn)
+void SPMV_NAME(_check_mt_loop_serial)(void *spm, spm_mt_t *spm_mt,
+                                      SPMV_NAME(_fn_t) *fn,
+                                      unsigned long loops,
+                                      unsigned long rows_nr,
+                                      unsigned long cols_nr,
+                                      SPMV_NAME(_fn_t) *mt_fn)
 {
 	int i, j;
 	VECTOR_TYPE *y2;

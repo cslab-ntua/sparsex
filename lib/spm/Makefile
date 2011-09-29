@@ -15,15 +15,15 @@ dynarray_dep = $(dynarray_dir)/dynarray.o
 # (we need a script to return CPU MhZs)
 MHZ_SH      ?= $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
 
-GCC         ?= llvm-gcc-4.2
+CC          ?= llvm-gcc
 CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 CFLAGS      += -g
 DEFS        += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
-#CFLAGS      += -DSPMV_PRFCNT -DCPU_CORE #performance counters for an intel core
+CFLAGS      += -DCPU_CORE # -DSPMV_PRFCNT # performance counters for an intel core
 DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
-LIBS         = -lm -lpthread
+LIBS         = -lm -lpthread -lnuma
 INC          = -I$(dynarray_dir) -I$(prfcnt_dir)
-COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
+COMPILE      = $(CC) $(CFLAGS) $(INC) $(DEFS)
 
 #ifeq ($(CPU),NIAGARA)
 #	CFLAGS += -m64
@@ -32,7 +32,6 @@ COMPILE      = $(GCC) $(CFLAGS) $(INC) $(DEFS)
 #
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	DEFS += -DSPM_NUMA
-	LIBS += -lnuma
 endif
 
 # do this, so that it doesn't match default %.c - >%.o rules
@@ -71,7 +70,7 @@ spm_crs.o:  spm_crs.c spm_crs.h
 	done
 	$(LD) -i spm_crs{64,32}_{double,float}.o -o spm_crs.o
 
-spm_crs_mt.o:  spm_crs_mt.c spm_crs_mt.h
+spm_crs_mt.o:  spm_crs_mt.c spm_crs_mt.h spm_mt.h
 	for t in double float; do                             \
 	  for ci in 32 64; do                                 \
 	    $(COMPILE) -DSPM_CRS_BITS=$$ci -DELEM_TYPE=$$t    \
@@ -88,7 +87,7 @@ spm_crs_sym.o:  spm_crs_sym.c spm_crs_sym.h
 	  done                                              \
 	done
 	$(LD) -i spm_crs{64,32}_{double,float}_sym.o -o spm_crs_sym.o
-	
+
 spm_crs_sym_mt.o:  spm_crs_sym_mt.c spm_crs_sym_mt.h
 	for t in double float; do                               \
 	  for ci in 32 64; do                                   \
@@ -103,7 +102,7 @@ spmv_loops.o: spmv_loops.c spmv_method.h vector.h
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_double.o
 	$(LD) -i spmv_loops_{float,double}.o -o spmv_loops.o
 
-spmv_loops_mt.o: spmv_loops_mt.c spmv_loops_mt.h spmv_method.h vector.h ../prfcnt/*.h
+spmv_loops_mt.o: spmv_loops_mt.c spmv_loops_mt.h spmv_method.h vector.h spm_mt.h ../prfcnt/*.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_mt_float.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_double.o
 	$(LD) -i spmv_loops_mt_{float,double}.o -o spmv_loops_mt.o
@@ -113,7 +112,7 @@ spmv_loops_sym_mt.o: spmv_loops_sym_mt.c spmv_loops_sym_mt.h spmv_method.h vecto
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_sym_mt_double.o
 	$(LD) -i spmv_loops_sym_mt_{float,double}.o -o spmv_loops_sym_mt.o
 
-spmv_loops_mt_numa.o: spmv_loops_mt_numa.c spmv_loops_mt_numa.h spmv_method.h vector.h ../prfcnt/*.h
+spmv_loops_mt_numa.o: spmv_loops_mt_numa.c spmv_loops_mt_numa.h spmv_method.h vector.h spm_mt.h ../prfcnt/*.h
 	$(COMPILE) -DELEM_TYPE=float  -c $< -o spmv_loops_mt_numa_float.o
 	$(COMPILE) -DELEM_TYPE=double -c $< -o spmv_loops_mt_numa_double.o
 	$(LD) -i spmv_loops_mt_numa_{float,double}.o -o spmv_loops_mt_numa.o

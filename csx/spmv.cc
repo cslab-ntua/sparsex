@@ -28,9 +28,8 @@
 #include "llvm_jit_help.h"
 #include "spmv.h"
 
-#ifdef SPM_NUMA
-#   include <numa.h>
-#endif
+#include <numa.h>
+#include <numaif.h>
 
 extern "C" {
 #include "mt_lib.h"
@@ -41,6 +40,8 @@ extern "C" {
 #include "spmv_loops_sym_mt.h"
 #ifdef SPM_NUMA
 #   include "spmv_loops_mt_numa.h"
+#else
+#   include "spmv_loops_mt.h"
 #endif
 #include "timer.h"
 #include "ctl_ll.h"
@@ -411,9 +412,10 @@ void *PreprocessThread(void *thread_info)
 {
     thread_info_t *data = (thread_info_t *) thread_info;
     
+    // set cpu affinity
+    setaffinity_oncpu(data->cpu);
     if (!data->symmetric) {
         DRLE_Manager *DrleMg;
-
         data->buffer << "==> Thread: #" << data->thread_no << std::endl;
 
         // Initialize the DRLE manager
@@ -440,8 +442,22 @@ void *PreprocessThread(void *thread_info)
 
         csx_double_t *csx = data->csxmg->MakeCsx(false);
         data->spm_encoded->spm = csx;
-        data->spm_encoded->part_info = (void *) csx->nrows;
+        data->spm_encoded->nr_rows = csx->nrows;
+        data->spm_encoded->row_start = csx->row_start;
+#ifdef SPM_NUMA
+        int node;
+        if (get_mempolicy(&node, 0, 0, csx->values,
+                          MPOL_F_ADDR | MPOL_F_NODE) < 0) {
+            perror("get_mempolicy");
+            exit(1);
+        }
 
+        data->buffer << "csx part " << data->thread_no
+                     << " is on node " << node
+                     << " and must be on node "
+                     << data->spm_encoded->node << std::endl;
+
+#endif
         delete DrleMg;
     } else {
         DRLE_Manager *DrleMg1;
@@ -528,7 +544,8 @@ void *PreprocessThread(void *thread_info)
         
         csx_double_sym_t *csx = data->csxmg->MakeCsxSym();
         data->spm_encoded->spm = csx;
-        data->spm_encoded->part_info = (void *) csx->lower_matrix->nrows;
+        data->spm_encoded->row_start = csx->lower_matrix->row_start;
+        data->spm_encoded->nr_rows = csx->lower_matrix->nrows;
         
         delete DrleMg1;
         delete DrleMg2;
@@ -704,6 +721,8 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
     // Cleanup.
     free(Jits);
     free(threads);
+    free(threads_cpus);
+    free(xform_buf);
     delete[] spms;
     delete[] data;
 
@@ -730,17 +749,16 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     std::cout << "Checking ... " << std::flush;
 
 #ifdef SPM_NUMA
-    spmv_double_check_mt_loop_numa(crs, spm_mt, spm_crs32_double_multiply, 1,
+    spmv_double_check_mt_loop_numa(crs, spm_mt, spm_crs32_double_multiply, 2,
                                    nrows, ncols, NULL);
 #else
     if (!spm_mt->symmetric)
-        spmv_double_check_mt_loop(crs, spm_mt, spm_crs32_double_multiply, 1,
+        spmv_double_check_mt_loop(crs, spm_mt, spm_crs32_double_multiply, 2,
                                   nrows, ncols, NULL);
     else
-        spmv_double_check_sym_mt_loop(crs, spm_mt, spm_crs32_double_multiply, 1,
+        spmv_double_check_sym_mt_loop(crs, spm_mt, spm_crs32_double_multiply, 2,
                                       nrows, ncols, NULL);
 #endif
-
     spm_crs32_double_destroy(crs);
     std::cout << "Check Passed" << std::endl << std::flush;
 }

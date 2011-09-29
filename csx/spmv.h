@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
+ * Copyright (C) 2011, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -62,12 +63,16 @@ bool GetOptionSplitBlocks();
  */
 void *PreprocessThread(void *thread_info);
 
+/**
+ *  Routine responsible for making a map for the symmetric representation of
+ *  sparse matrices.
+ */
 void MakeMap(spm_mt_t *spm_mt, csx::SPMSym *spm_sym);
 uint64_t MapSize(void *spm);
 
 #ifdef __cplusplus                  /* included in a C++ program */
 spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms = 0);
-#else /* included in a C program */
+#else                               /* included in a C program */
 spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms = 0);
 #endif
 void PutSpmMt(spm_mt_t *spm_mt);

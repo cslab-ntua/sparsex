@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <numa.h>
+#include <sched.h>
 
 #include "dynarray.h"
 
@@ -22,7 +23,7 @@ struct dynarray {
 	unsigned long elem_size;
 	unsigned long next_idx;
 	unsigned long alloc_grain;
-    int numa;
+	int numa;
 };
 
 static dynarray_t *do_create(unsigned long elem_size,
@@ -35,7 +36,7 @@ dynarray_t *dynarray_create(unsigned long elem_size,
 }
 
 dynarray_t *dynarray_create_numa(unsigned long elem_size,
-								 unsigned long alloc_grain)
+                                 unsigned long alloc_grain)
 {
 	return do_create(elem_size, alloc_grain, 1);
 }
@@ -44,10 +45,10 @@ static dynarray_t *do_create(unsigned long elem_size,
                              unsigned long alloc_grain, int numa)
 {
 	struct dynarray *da;
-    int node = 0;
+	int node = 0;
 	if (numa) {
-		/* Numa-aware allocation */
 		int cpu = sched_getcpu();
+		/* Numa-aware allocation */
 		if (cpu < 0) {
 			perror("dynarray_create: sched_getcpu");
 			exit(1);
@@ -84,7 +85,6 @@ static dynarray_t *do_create(unsigned long elem_size,
 		fprintf(stderr, "dynarray_create: malloc\n");
 		exit(1);
 	}
-	//printf("da->elems: %p\n", da->elems);
 
 	return da;
 }
@@ -158,13 +158,13 @@ void *dynarray_get_last(struct dynarray *da)
 static inline void dynarray_expand(struct dynarray *da)
 {
 	da->elems_nr += da->alloc_grain;
-	//printf("old addr: %lu	 ", (unsigned long)da->elems);
+	//printf("old addr: %p	 ", da->elems);
 	//printf("expand realloc: %lu %lu %lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size);
 	if (da->numa) {
 		da->elems =
-			numa_realloc(da->elems,
-	                     da->elem_size*(da->elems_nr - da->alloc_grain),
-	                     da->elem_size*da->elems_nr);
+		    numa_realloc(da->elems,
+		                 da->elem_size*(da->elems_nr - da->alloc_grain),
+		                 da->elem_size*da->elems_nr);
 	} else {
 		da->elems = realloc(da->elems, da->elem_size*da->elems_nr);
 	}
@@ -173,7 +173,7 @@ static inline void dynarray_expand(struct dynarray *da)
 		fprintf(stderr, "dynarray_expand: realloc failed\n");
 		exit(1);
 	}
-	//printf("new addr: %lu\n", (unsigned long)da->elems);
+	//printf("new addr: %p\n", da->elems);
 }
 
 void *dynarray_alloc(struct dynarray *da)

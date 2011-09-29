@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
+ * Copyright (C) 2011,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -10,6 +11,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>
 #include <numa.h>
 #include <numaif.h>
@@ -59,7 +61,7 @@ VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 	}
 
 	v->size = size;
-    v->alloc_type = ALLOC_STD;
+	v->alloc_type = ALLOC_STD;
 	v->elements = malloc(sizeof(ELEM_TYPE)*(size + 12));
 	if ( !v->elements ){
 		fprintf(stderr, "malloc failed\n");
@@ -71,77 +73,95 @@ VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 
 VECTOR_TYPE *VECTOR_NAME(_create_onnode)(unsigned long size, int node)
 {
-    VECTOR_TYPE *v = numa_alloc_onnode(sizeof(VECTOR_TYPE), node);
-    if (!v) {
-        perror("numa_alloc_onnode");
-        exit(1);
-    }
+	VECTOR_TYPE *v = numa_alloc_onnode(sizeof(VECTOR_TYPE), node);
+	if (!v) {
+		perror("numa_alloc_onnode");
+		exit(1);
+	}
 
-    v->size = size;
-    v->alloc_type = ALLOC_NUMA;
-    v->elements = numa_alloc_onnode(sizeof(ELEM_TYPE)*size, node);
-    if (!v->elements) {
-        perror("numa_alloc_onnode");
-        exit(1);
-    }
+	v->size = size;
+	v->alloc_type = ALLOC_NUMA;
+	v->elements = numa_alloc_onnode(sizeof(ELEM_TYPE)*size, node);
+	if (!v->elements) {
+		perror("numa_alloc_onnode");
+		exit(1);
+	}
 
-    return v;
+	return v;
 }
 
 VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
                                               size_t *parts,
                                               int nr_parts,
                                               const int *nodes) {
-    VECTOR_TYPE *v = mmap(NULL, sizeof(VECTOR_TYPE),
-                          PROT_READ | PROT_WRITE,
-                          MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-    if (v == (void *) -1) {
-        perror("mmap");
-        exit(1);
-    }
+	int pagesize = numa_pagesize();
+	if (size*sizeof(ELEM_TYPE) <= pagesize)
+		/* if the vector is too small, fall back to create_onnode */
+		return VECTOR_NAME(_create_onnode)(size, nodes[0]);
 
-    v->size = size;
-    v->alloc_type = ALLOC_MMAP;
-    v->elements = mmap(NULL, sizeof(ELEM_TYPE)*size,
-                       PROT_READ | PROT_WRITE,
-                       MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-    if (v->elements == (void *) -1) {
-        perror("mmap");
-        exit(1);
-    }
+	VECTOR_TYPE *v = mmap(NULL, sizeof(VECTOR_TYPE),
+	                      PROT_READ | PROT_WRITE,
+	                      MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+	if (v == (void *) -1) {
+		perror("mmap");
+		exit(1);
+	}
 
-    int pagesize = numa_pagesize();
-    int nodes_max = numa_max_possible_node();
+	v->size = size;
+	v->alloc_type = ALLOC_MMAP;
+	v->elements = mmap(NULL, sizeof(ELEM_TYPE)*size,
+	                   PROT_READ | PROT_WRITE,
+	                   MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+	if (v->elements == (void *) -1) {
+		perror("mmap");
+		exit(1);
+	}
 
+	struct bitmask *nodemask = numa_bitmask_alloc(numa_num_configured_cpus());
 #define PAGE_ALIGN(addr) (void *)((unsigned long) addr & ~(pagesize-1))
-    /*
-     * Bind parts to specific nodes
-     * All parts must be page aligned
-     */
-    ELEM_TYPE *curr_part = v->elements;
-    int i;
-    for (i = 0; i < nr_parts; i++) {
-        size_t  part_size = parts[i]*sizeof(ELEM_TYPE);
-        size_t  rem = part_size % pagesize;
-        while (rem < pagesize / 2 && i < nr_parts - 1) {
-            /* Leave the page for the next partition */
-            part_size -= sizeof(ELEM_TYPE);
-            rem = part_size % pagesize;
-        }
+	/*
+	 * Bind parts to specific nodes
+	 * All parts must be page aligned
+	 */
+	ELEM_TYPE *curr_part = v->elements;
+	int i;
+	size_t new_part_size = 0;
+	for (i = 0; i < nr_parts; i++) {
+		size_t	part_size = parts[i]*sizeof(ELEM_TYPE);
+		size_t	rem = part_size % pagesize;
+		if (part_size < pagesize) {
+			new_part_size += part_size;
+			if (new_part_size < pagesize) {
+				parts[i] = 0;
+				continue;
+			} else {
+				part_size = new_part_size;
+			}
+		} else {
+			while (rem < pagesize / 2 && i < nr_parts - 1) {
+				/* Leave the page for the next partition */
+				part_size -= sizeof(ELEM_TYPE);
+				rem = part_size % pagesize;
+			}
+		}
 
-        unsigned long nodemask = 1 << nodes[i];
-        if (mbind(PAGE_ALIGN(curr_part), part_size,
-                  MPOL_BIND, &nodemask, nodes_max, 0) < 0) {
-            perror("mbind");
-            exit(1);
-        }
+		numa_bitmask_setbit(nodemask, nodes[i]);
+		if (mbind(PAGE_ALIGN(curr_part), part_size,
+			      MPOL_BIND, nodemask->maskp, nodemask->size, 0) < 0) {
+			perror("mbind");
+			exit(1);
+		}
 
-        parts[i] = part_size / sizeof(ELEM_TYPE);
-        curr_part += parts[i];
-    }
+		/* Clear the mask for the next round */
+		numa_bitmask_clearbit(nodemask, nodes[i]);
+		parts[i] = part_size / sizeof(ELEM_TYPE);
+		curr_part += parts[i];
+		new_part_size = 0;
+	}
 
 #undef PAGE_ALIGN
-    return v;
+	numa_bitmask_free(nodemask);
+	return v;
 }
 
 
@@ -172,23 +192,22 @@ void VECTOR_NAME(_init)(VECTOR_TYPE *v, ELEM_TYPE val)
 	}
 }
 
-void VECTOR_NAME(_init_part)(VECTOR_TYPE *v, ELEM_TYPE val, unsigned long start,
-                 unsigned long end)
+void VECTOR_NAME(_init_part)(VECTOR_TYPE *v, ELEM_TYPE val,
+                             unsigned long start, unsigned long end)
 {
 	unsigned long i;
-	
 	for (i = start; i < end; i++)
-	    v->elements[i] = val;
+		v->elements[i] = val;
 }
 
 void VECTOR_NAME(_init_from_map)(VECTOR_TYPE **v, ELEM_TYPE val, map_t *map)
 {
-    unsigned int i;
-    unsigned int *cpus = map->cpus;
-    unsigned int *pos = map->elems_pos;
-    
-    for (i = 0; i < map->length; i++)
-        v[cpus[i]]->elements[pos[i]] = 0;
+	unsigned int i;
+	unsigned int *cpus = map->cpus;
+	unsigned int *pos = map->elems_pos;
+
+	for (i = 0; i < map->length; i++)
+		v[cpus[i]]->elements[pos[i]] = 0;
 }
 
 void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
@@ -204,42 +223,48 @@ void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 void VECTOR_NAME(_add)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3)
 {
 	unsigned long i;
-	
+
 	if (v1->size != v2->size || v1->size != v3->size) {
-		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ", v1->size, v2->size, v3->size);
+		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ",
+		        v1->size, v2->size, v3->size);
 		exit(1);
 	}
-	
+
 	for (i = 0; i < v1->size; i++)
 		v3->elements[i] = v1->elements[i] + v2->elements[i];
 }
 
-void VECTOR_NAME(_add_part)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3, unsigned long start, unsigned long end)
+void VECTOR_NAME(_add_part)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3,
+                            unsigned long start, unsigned long end)
 {
 	unsigned long i;
-	
+
 	if (v1->size != v2->size || v1->size != v3->size) {
-		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ\n", v1->size, v2->size, v3->size);
+		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ\n",
+		        v1->size, v2->size, v3->size);
 		exit(1);
 	}
-	
+
 	if (start > v1->size || end > v1->size || start > end) {
-		fprintf(stderr, "start=%lu end=%lu v->size=%lu not compatible\n", start, end, v1->size);
+		fprintf(stderr, "start=%lu end=%lu v->size=%lu not compatible\n",
+		        start, end, v1->size);
 		exit(1);
 	}
-	
+
 	for (i = start; i < end; i++)
 		v3->elements[i] = v1->elements[i] + v2->elements[i];
 }
 
-void VECTOR_NAME(_addmap)(VECTOR_TYPE *v1, VECTOR_TYPE **v2, VECTOR_TYPE *v3, map_t *map)
+void VECTOR_NAME(_addmap)(VECTOR_TYPE *v1, VECTOR_TYPE **v2, VECTOR_TYPE *v3,
+                          map_t *map)
 {
-    unsigned int i;
-    unsigned int *cpus = map->cpus;
-    unsigned int *pos = map->elems_pos;
-    
-    for (i = 0; i < map->length; i++)
-        v3->elements[pos[i]] = v1->elements[pos[i]] + v2[cpus[i]]->elements[pos[i]];
+	unsigned int i;
+	unsigned int *cpus = map->cpus;
+	unsigned int *pos = map->elems_pos;
+
+	for (i = 0; i < map->length; i++)
+		v3->elements[pos[i]] =
+		    v1->elements[pos[i]] + v2[cpus[i]]->elements[pos[i]];
 }
 
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)
