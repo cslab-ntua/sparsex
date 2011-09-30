@@ -630,7 +630,7 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
             deltas_set->find(nr_elem / block_align) != deltas_set->end() &&
             nr_elem >= (uint64_t) 2 * block_align) {
 
-            uint64_t    rle_start;
+            uint64_t rle_start;
 
             if (col != 1) {
                 rle_start = col - 1;
@@ -682,7 +682,7 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
         } else {
             // add individual elements
             for (int i = 0; i < rle.freq; ++i) {
-                elem.x = col + i*rle.val;
+                elem.x = col + i * rle.val;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
@@ -765,6 +765,7 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
                 while (other_dim >= (*i)) {
                     //We have a new block RLE
                     uint64_t nr_elem_block = block_align * (*i);
+                    
                     elem.x = rle_start;
                     rle_start += nr_elem_block;
                     encoded.push_back(elem);
@@ -842,6 +843,7 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
             DoEncode(xs, vs, newrow, split_blocks);
 
         newrow.push_back(*e);
+        
         if (e->pattern)
             delete e->pattern;
     }
