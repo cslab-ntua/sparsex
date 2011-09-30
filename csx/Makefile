@@ -3,7 +3,7 @@
 all: spmv csx_llvm_tmpl.llvm.bc
 
 ## Configuration
-llvmconf     = llvm-config-2.7
+llvmconf     = llvm-config
 
 dynarray_dir = ../lib/dynarray
 spm_dir      = ../lib/spm
@@ -11,15 +11,15 @@ prfcnt_dir   = ../lib/prfcnt
 script_dir   = ../scripts
 csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
 
-CXX            ?= g++
-CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCSX_TEMPLATE=\"$(csx_template)\"
-INC            ?=
+CXX         ?= g++
+LD			 = $(CXX)
+CXXFLAGS    ?= -g -rdynamic -Wall -O3 -Wdisabled-optimization
+LIBS		 = -lnuma -lpthread
 
-#CXXFLAGS       += -Winline
-LDFLAGS         =
-CXXFLAGS       += -ggdb -rdynamic
-DEFS            =
-INC            += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir)
+# Always add the following flags
+override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\"
+override CPPFLAGS += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir)
+override LDFLAGS  += -Wl,--allow-multiple-definition
 
 ## cairomm
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
@@ -31,17 +31,14 @@ LLVM_CC         = llvm-gcc
 LLVM_CFLAGS     = $(shell $(llvmconf) --cflags)
 LLVM_CXXFLAGS   = $(shell $(llvmconf) --cxxflags)
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
-
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
-	DEFS += -DSPM_NUMA
+	override CPPFLAGS += -DSPM_NUMA
 endif
 
-# libnuma is required for sucessful linking anyway...
-override LDFLAGS += -lnuma
-
-CXX_COMPILE     = $(CXX) $(CXXFLAGS) $(INC) $(DEFS)
+CXX_COMPILE = $(CXX) $(CPPFLAGS) $(CXXFLAGS)
+LINK        = $(LD) $(LDFLAGS)
 
 # define __STDC_FORMAT_MACROS, so that we can use PRIu64
 mmf.o: mmf.cc spm.h mmf.h
@@ -54,7 +51,7 @@ draw.o: draw.cc spm.h draw.h
 	$(CXX_COMPILE) $(CAIROMM_FLAGS) $< -c -o $@
 
 draw: draw.cc spm.h draw.h spm.o mmf.o
-	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_FLAGS) $(CAIROMM_LIBS) $(dynarray_dep) spm.o mmf.o $<  -o $@
+	$(LINK) $(CAIROMM_FLAGS) $(CAIROMM_LIBS) $(dynarray_dep) spm.o mmf.o $<  -o $@
 
 csx.o: csx.cc csx.h spm.h delta.h
 	$(CXX_COMPILE) -I$(dynarray_dir) $< -c -o $@
@@ -69,14 +66,14 @@ test.o: test.cc drle.h spm.h
 #	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $(CAIROMM_LIBS) $^ -o $@
 
 drle_test: mmf.o spm.o drle.o test.o drle_test.cc
-	$(CXX_COMPILE) -Xlinker --allow-multiple-definition $^ -o $@
+	$(LINK) $^ -o $@
 
 # define __STDC_FORMAT_MACROS, so that we can use PRIu64
 csx_llvm_tmpl.llvm.bc: csx_llvm_tmpl.c ctl_ll.h
 	$(LLVM_CC) -D__STDC_FORMAT_MACROS -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
 
 llvm_jit_help.o: llvm_jit_help.cc llvm_jit_help.h
-	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $<
+	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
 
 jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 	$(CXX_COMPILE)  $(LLVM_CXXFLAGS) -c $<
@@ -87,7 +84,7 @@ spmv.o: spmv.cc $(spm_dir)/spm_mt.h
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
 spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
-	$(CXX) $(LDFLAGS)  -ggdb -rdynamic -Xlinker --allow-multiple-definition $^ $(LLVM_LDFLAGS) $(dynarray_dep) -lpthread -o $@
+	$(LINK) $(LIBS) $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
 
 clean:
 	rm -f *.o spmv
