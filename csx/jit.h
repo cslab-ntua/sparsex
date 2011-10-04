@@ -113,9 +113,11 @@ private:
     void DoIncV();
     void DoIncDV();
     void DoMul(Value *Myx=NULL, Value *Yindx=NULL);
+    void DoMul2(Value *Myx, Value *Yindx);
     void DoSymMul(Value *Myx=NULL, Value *Yindx=NULL);
     void DoStoreYr();
     void DoOp(Value *MyX=NULL, Value *Yindx=NULL);
+    void DoOp2(Value *MyX, Value *Yindx, Value *SMyX, Value *SYindx);
     void DoDiagOp(Value *Yindx);
     void DoSymOp(Value *MyX=NULL, Value *Yindx=NULL);
 
@@ -136,33 +138,28 @@ private:
                    BasicBlock *BB_lbody,
                    BasicBlock *BB_lexit,
                    BasicBlock *BB_exit,
-                   int delta_size,
-                   bool symmetric);
+                   int delta_size);
 
     void VertCase(BasicBlock *BB,
                   BasicBlock *BB_lbody,
                   BasicBlock *BB_exit,
-                  int delta_size,
-                  bool symmetric);
+                  int delta_size);
 
     void DiagCase(BasicBlock *BB,
                   BasicBlock *BB_lbody,
                   BasicBlock *BB_exit,
                   int delta_size,
-                  bool reversed,
-                  bool symmetric);
+                  bool reversed);
 
     void BlockRowCaseRolled(BasicBlock *BB,
                             BasicBlock *BB_lbody,
                             BasicBlock *BB_exit,
-                            int r, int c,
-                            bool symmetric);
+                            int r, int c);
 
     void BlockColCaseRolled(BasicBlock *BB,
                             BasicBlock *BB_lbody,
                             BasicBlock *BB_exit,
-                            int r, int c,
-                            bool symmetric);
+                            int r, int c);
 
     void BlockRowCaseUnrolled(BasicBlock *BB,
                               BasicBlock *BB_exit,
@@ -174,6 +171,21 @@ private:
                               int r, int c,
                               bool symmetric);
 
+    void SymHorizCase(BasicBlock *BB, BasicBlock *BB_lbody,
+                      BasicBlock *BB_lexit, BasicBlock *BB_exit,
+                      int delta_size);
+
+    void SymVertCase(BasicBlock *BB, BasicBlock *BB_lbody, BasicBlock *BB_exit,
+                     int delta_size);
+                     
+    void SymDiagCase(BasicBlock *BB, BasicBlock *BB_lbody, BasicBlock *BB_exit,
+                     int delta_size, bool reversed);
+                     
+    void SymBlockRowCaseRolled(BasicBlock *BB, BasicBlock *BB_lbody,
+                               BasicBlock *BB_exit, int r, int c);
+                               
+    void SymBlockColCaseRolled(BasicBlock *BB, BasicBlock *BB_lbody,
+                               BasicBlock *BB_exit, int r, int c);
 };
 
 } // end csx namespace

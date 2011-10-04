@@ -261,8 +261,7 @@ void CsxJit::DoNewRowSymHook()
 void CsxJit::HorizCase(BasicBlock *BB,
                        BasicBlock *BB_lbody, BasicBlock *BB_lexit,
                        BasicBlock *BB_exit,
-                       int delta_size,
-                       bool symmetric)
+                       int delta_size)
 {
     Value *Size, *Delta, *Myx0, *newMyx, *NextCnt, *Test;
     PHINode *Myx, *Cnt;
@@ -278,10 +277,7 @@ void CsxJit::HorizCase(BasicBlock *BB,
     Bld->SetInsertPoint(BB_lbody);
     Cnt = Bld->CreatePHI(Type::getInt8Ty(GetLLVMCtx()), "cnt");
     Myx = Bld->CreatePHI(Myx0->getType(), "myx");
-    if (!symmetric)
-        DoOp(Myx);
-    else
-        DoSymOp(Myx);
+    DoOp(Myx);
     
     newMyx = Bld->CreateGEP(Myx, Delta, "new_myx");
 
@@ -301,11 +297,64 @@ void CsxJit::HorizCase(BasicBlock *BB,
     Bld->CreateBr(BB_exit);
 }
 
+void CsxJit::SymHorizCase(BasicBlock *BB, BasicBlock *BB_lbody,
+                          BasicBlock *BB_lexit, BasicBlock *BB_exit,
+                          int delta_size)
+{
+    Value *Size, *Delta, *Myx0, *newMyx, *NextCnt, *Test, *SMyx0, *SYindx0;
+    Value *Temp, *X, *newSYindx;
+    PHINode *Myx, *Cnt, *SYindx;
+
+    Delta = ConstantInt::get(Type::getInt64Ty(GetLLVMCtx()), delta_size);
+    Bld->SetInsertPoint(BB);
+    Size = Bld->CreateLoad(SizePtr, "size");
+    Myx0 = Bld->CreateLoad(MyxPtr, "myx0");
+
+    Temp = Bld->CreatePtrToInt(Myx0, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx0 = Bld->CreateLoad(Xptr);
+    SYindx0 = Bld->CreatePtrToInt(SYindx0, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx0 = Bld->CreateSub(Temp, SYindx0);
+    SYindx0 = Bld->CreateAShr(SYindx0, Three64);
+
+    Temp = Bld->CreateLoad(YindxPtr);
+    X = Bld->CreateLoad(Xptr);
+    SMyx0 = Bld->CreateGEP(X, Temp);
+    
+    Bld->CreateBr(BB_lbody);
+
+    ///< Body
+    Bld->SetInsertPoint(BB_lbody);
+    Cnt =   Bld->CreatePHI(Type::getInt8Ty (GetLLVMCtx()), "cnt");
+    SYindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yindx");
+    Myx = Bld->CreatePHI(Myx0->getType(), "myx");
+
+    DoOp2(Myx, NULL, SMyx0, SYindx);
+    
+    newMyx = Bld->CreateGEP(Myx, Delta, "new_myx");
+    newSYindx = Bld->CreateAdd(SYindx, Delta);
+    NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
+    Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
+    Bld->CreateCondBr(Test, BB_lexit, BB_lbody);
+    
+    Cnt->addIncoming(Zero8, BB);
+    Cnt->addIncoming(NextCnt, BB_lbody);
+
+    SYindx->addIncoming(SYindx0, BB);
+    SYindx->addIncoming(newSYindx, BB_lbody);
+    
+    Myx->addIncoming(Myx0, BB);
+    Myx->addIncoming(newMyx, BB_lbody);
+    
+    ///< Exit
+    Bld->SetInsertPoint(BB_lexit);
+    Bld->CreateStore(Myx, MyxPtr);
+    Bld->CreateBr(BB_exit);
+}
+
 void CsxJit::VertCase(BasicBlock *BB,
                       BasicBlock *BB_lbody,
                       BasicBlock *BB_exit,
-                      int delta_size,
-                      bool symmetric)
+                      int delta_size)
 {
     Value *Size, *Delta, *Yindx0, *YindxAdd, *NextCnt, *Test;
     PHINode *Yindx, *Cnt;
@@ -322,10 +371,7 @@ void CsxJit::VertCase(BasicBlock *BB,
     Cnt =   Bld->CreatePHI(Type::getInt8Ty (GetLLVMCtx()), "cnt");
     Yindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yindx");
 
-    if (!symmetric)
-        DoOp(NULL, Yindx);
-    else
-        DoSymOp(NULL, Yindx);
+    DoOp(NULL, Yindx);
 
     YindxAdd = Bld->CreateAdd(Yindx, Delta);
     NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
@@ -339,12 +385,60 @@ void CsxJit::VertCase(BasicBlock *BB,
     Yindx->addIncoming(YindxAdd, BB_lbody);
 }
 
+void CsxJit::SymVertCase(BasicBlock *BB,
+                         BasicBlock *BB_lbody,
+                         BasicBlock *BB_exit,
+                         int delta_size)
+{
+    Value *Size, *Delta, *Yindx0, *SYindx0, *SMyx0, *YindxAdd, *newSMyx,
+          *NextCnt, *Test, *Temp, *X;
+    PHINode *Yindx, *SMyx, *Cnt;
+
+    Delta = ConstantInt::get(Type::getInt64Ty(GetLLVMCtx()), delta_size);
+
+    Bld->SetInsertPoint(BB);
+    Size = Bld->CreateLoad(SizePtr, "size");
+    Yindx0 = Bld->CreateLoad(YindxPtr);
+    X = Bld->CreateLoad(Xptr);
+    
+    Temp = Bld->CreateLoad(MyxPtr);
+    Temp = Bld->CreatePtrToInt(Temp, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx0 = Bld->CreatePtrToInt(X, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx0 = Bld->CreateSub(Temp, SYindx0);
+    SYindx0 = Bld->CreateAShr(SYindx0, Three64);
+
+    SMyx0 = Bld->CreateGEP(X, Yindx0);
+    Bld->CreateBr(BB_lbody);
+
+    ///< Body
+    Bld->SetInsertPoint(BB_lbody);
+    Cnt =   Bld->CreatePHI(Type::getInt8Ty (GetLLVMCtx()), "cnt");
+    Yindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yindx");
+    SMyx = Bld->CreatePHI(SMyx0->getType());
+    
+    DoOp2(NULL, Yindx, SMyx, SYindx0);
+
+    YindxAdd = Bld->CreateAdd(Yindx, Delta);
+    newSMyx = Bld->CreateGEP(SMyx, Delta);
+    NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
+    Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
+    Bld->CreateCondBr(Test, BB_exit, BB_lbody);
+
+    Cnt->addIncoming(Zero8, BB);
+    Cnt->addIncoming(NextCnt, BB_lbody);
+
+    Yindx->addIncoming(Yindx0, BB);
+    Yindx->addIncoming(YindxAdd, BB_lbody);
+    
+    SMyx->addIncoming(SMyx0, BB);
+    SMyx->addIncoming(newSMyx, BB_lbody);
+}
+
 void CsxJit::DiagCase(BasicBlock *BB,
                       BasicBlock *BB_lbody,
                       BasicBlock *BB_exit,
                       int delta_size,
-                      bool reversed,
-                      bool symmetric)
+                      bool reversed)
 {
     Value *Size, *D, *minusD, *Test;
     PHINode *Myx, *Yindx, *Cnt;
@@ -366,10 +460,7 @@ void CsxJit::DiagCase(BasicBlock *BB,
     Yindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yindx");
     Myx = Bld->CreatePHI(Myx0->getType(), "myx");
 
-    if (!symmetric)
-        DoOp(Myx, Yindx);
-    else
-        DoSymOp(Myx, Yindx);
+    DoOp(Myx, Yindx);
 
     YindxAdd = Bld->CreateAdd(Yindx, D);
     newMyx = reversed ? Bld->CreateGEP(Myx, minusD) : Bld->CreateGEP(Myx, D);
@@ -387,11 +478,78 @@ void CsxJit::DiagCase(BasicBlock *BB,
     Yindx->addIncoming(YindxAdd, BB_lbody);
 }
 
+void CsxJit::SymDiagCase(BasicBlock *BB,
+                      BasicBlock *BB_lbody,
+                      BasicBlock *BB_exit,
+                      int delta_size,
+                      bool reversed)
+{
+    Value *Size, *Delta, *minusDelta, *Myx0, *Yindx0, *SMyx0, *SYindx0,
+          *newMyx, *YindxAdd, *newSMyx, *SYindxAdd, *NextCnt, *Test, *Temp, *X;
+    PHINode *Myx, *Yindx, *SMyx, *SYindx, *Cnt;
+    
+    Delta = ConstantInt::get(Type::getInt64Ty(GetLLVMCtx()), delta_size);
+    minusDelta = ConstantInt::get(Type::getInt64Ty(GetLLVMCtx()), -delta_size);
+
+    Bld->SetInsertPoint(BB);
+    Size = Bld->CreateLoad(SizePtr, "size");
+    Myx0 = Bld->CreateLoad(MyxPtr, "myx0");
+    Yindx0 = Bld->CreateLoad(YindxPtr);
+    
+    X = Bld->CreateLoad(Xptr);
+    SMyx0 = Bld->CreateGEP(X, Yindx0);
+    
+    Temp = Bld->CreatePtrToInt(Myx0, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx0 = Bld->CreatePtrToInt(X, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx0 = Bld->CreateSub(Temp, SYindx0);
+    SYindx0 = Bld->CreateAShr(SYindx0, Three64);
+    
+    Bld->CreateBr(BB_lbody);
+
+    ///< Body
+    Bld->SetInsertPoint(BB_lbody);
+    Cnt = Bld->CreatePHI(Type::getInt8Ty(GetLLVMCtx()), "cnt");
+    Myx = Bld->CreatePHI(Myx0->getType(), "myx");
+    Yindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()), "yindx");
+    SMyx = Bld->CreatePHI(SMyx0->getType());
+    SYindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()));
+
+    DoOp2(Myx, Yindx, SMyx, SYindx);
+    
+    if (reversed) {
+        newMyx = Bld->CreateGEP(Myx, minusDelta);
+        SYindxAdd = Bld->CreateSub(SYindx, Delta);
+    } else {
+        newMyx = Bld->CreateGEP(Myx, Delta);
+        SYindxAdd = Bld->CreateAdd(SYindx, Delta);
+    }
+    YindxAdd = Bld->CreateAdd(Yindx, Delta);
+    newSMyx = Bld->CreateGEP(SMyx, Delta);
+    
+    NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
+    Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
+    Bld->CreateCondBr(Test, BB_exit, BB_lbody);
+
+    Cnt->addIncoming(Zero8, BB);
+    Cnt->addIncoming(NextCnt, BB_lbody);
+
+    Myx->addIncoming(Myx0, BB);
+    Myx->addIncoming(newMyx, BB_lbody);
+
+    Yindx->addIncoming(Yindx0, BB);
+    Yindx->addIncoming(YindxAdd, BB_lbody);
+
+    SMyx->addIncoming(SMyx0, BB);
+    SMyx->addIncoming(newSMyx, BB_lbody);
+
+    SYindx->addIncoming(SYindx0, BB);
+    SYindx->addIncoming(SYindxAdd, BB_lbody);
+}
+
 void CsxJit::BlockRowCaseRolled(BasicBlock *BB,
                                 BasicBlock *BB_lbody,
                                 BasicBlock *BB_exit,
-                                int r, int c,
-                                bool symmetric)
+                                int r, int c)
 {
     Value *Myx0, *NewMyx, *NextCnt, *Size, *Test, *Yindx;
     PHINode *Myx, *Cnt;
@@ -408,10 +566,7 @@ void CsxJit::BlockRowCaseRolled(BasicBlock *BB,
     Myx = Bld->CreatePHI(Myx0->getType(), "myx");
     Yindx = Bld->CreateLoad(YindxPtr, "yindx");
     for (int i = 0; i < r; i++) {
-        if (!symmetric)
-            DoOp(Myx, Yindx);
-        else
-            DoSymOp(Myx, Yindx);
+        DoOp(Myx, Yindx);
         Yindx = Bld->CreateAdd(Yindx, One64);
     }
 
@@ -427,11 +582,64 @@ void CsxJit::BlockRowCaseRolled(BasicBlock *BB,
     Myx->addIncoming(NewMyx, BB_lbody);
 }
 
+void CsxJit::SymBlockRowCaseRolled(BasicBlock *BB,
+                                   BasicBlock *BB_lbody,
+                                   BasicBlock *BB_exit,
+                                   int r, int c)
+{
+    Value *Size, *Myx0, *SYindx0, *Yindx, *SMyx, *newMyx,
+          *SYindxAdd, *NextCnt, *Test, *Temp, *X;
+    PHINode *Myx, *SYindx, *Cnt;
+
+    ///< Initialization
+    Bld->SetInsertPoint(BB);
+    Size = ConstantInt::get(Type::getInt8Ty(GetLLVMCtx()), c);
+    Myx0 = Bld->CreateLoad(MyxPtr);
+    
+    X = Bld->CreateLoad(Xptr);
+    
+    Temp = Bld->CreatePtrToInt(Myx0, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx0 = Bld->CreatePtrToInt(X, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx0 = Bld->CreateSub(Temp, SYindx0);
+    SYindx0 = Bld->CreateAShr(SYindx0, Three64);
+    
+    Bld->CreateBr(BB_lbody);
+
+    ///< Body
+    Bld->SetInsertPoint(BB_lbody);
+    Cnt = Bld->CreatePHI(Type::getInt8Ty(GetLLVMCtx()), "cnt");
+    Myx = Bld->CreatePHI(Myx0->getType(), "myx");
+    SYindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()));
+    
+    Yindx = Bld->CreateLoad(YindxPtr);
+    SMyx = Bld->CreateGEP(X, Yindx);
+    
+    for (int i = 0; i < r; i++) {
+        DoOp2(Myx, Yindx, SMyx, SYindx);
+        Yindx = Bld->CreateAdd(Yindx, One64);
+        SMyx = Bld->CreateGEP(SMyx, One64);
+    }
+
+    newMyx = Bld->CreateGEP(Myx, One64);
+    SYindxAdd = Bld->CreateAdd(SYindx, One64);
+    NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
+    Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
+    Bld->CreateCondBr(Test, BB_exit, BB_lbody);
+
+    Cnt->addIncoming(Zero8, BB);
+    Cnt->addIncoming(NextCnt, BB_lbody);
+
+    Myx->addIncoming(Myx0, BB);
+    Myx->addIncoming(newMyx, BB_lbody);
+    
+    SYindx->addIncoming(SYindx0, BB);
+    SYindx->addIncoming(SYindxAdd, BB_lbody);
+}
+
 void CsxJit::BlockColCaseRolled(BasicBlock *BB,
                                 BasicBlock *BB_lbody,
                                 BasicBlock *BB_exit,
-                                int r, int c,
-                                bool symmetric)
+                                int r, int c)
 {
     Value *Yindx0, *NewYindx, *NextCnt, *Size, *Test, *Myx;
     PHINode *Yindx, *Cnt;
@@ -448,10 +656,7 @@ void CsxJit::BlockColCaseRolled(BasicBlock *BB,
     Yindx = Bld->CreatePHI(Yindx0->getType(), "yindx");
     Myx = Bld->CreateLoad(MyxPtr,"myx");
     for (int i = 0; i < c; i++) {
-        if (!symmetric)
-            DoOp(Myx, Yindx);
-        else
-            DoSymOp(Myx, Yindx);
+        DoOp(Myx, Yindx);
         Myx = Bld->CreateGEP(Myx, One64);
     }
 
@@ -465,6 +670,59 @@ void CsxJit::BlockColCaseRolled(BasicBlock *BB,
 
     Yindx->addIncoming(Yindx0, BB);
     Yindx->addIncoming(NewYindx, BB_lbody);
+}
+
+void CsxJit::SymBlockColCaseRolled(BasicBlock *BB,
+                                   BasicBlock *BB_lbody,
+                                   BasicBlock *BB_exit,
+                                   int r, int c)
+{
+    Value *Size, *Yindx0, *SMyx0, *YindxAdd, *newSMyx, *NextCnt, *Myx, *SYindx,
+          *Test, *Temp, *X;
+    PHINode *Yindx, *SMyx, *Cnt;
+
+    ///< Initialization
+    Bld->SetInsertPoint(BB);
+    Size = ConstantInt::get(Type::getInt8Ty(GetLLVMCtx()), r);
+    Yindx0 = Bld->CreateLoad(YindxPtr);
+    
+    X = Bld->CreateLoad(Xptr);
+    SMyx0 = Bld->CreateGEP(X, Yindx0);
+    
+    Bld->CreateBr(BB_lbody);
+
+    ///< Body
+    Bld->SetInsertPoint(BB_lbody);
+    Cnt = Bld->CreatePHI(Type::getInt8Ty(GetLLVMCtx()), "cnt");
+    Yindx = Bld->CreatePHI(Type::getInt64Ty(GetLLVMCtx()));
+    SMyx = Bld->CreatePHI(SMyx0->getType());
+    
+    Myx = Bld->CreateLoad(MyxPtr);
+    Temp = Bld->CreatePtrToInt(Myx, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx = Bld->CreatePtrToInt(X, Type::getInt64Ty(GetLLVMCtx()));
+    SYindx = Bld->CreateSub(Temp, SYindx);
+    SYindx = Bld->CreateAShr(SYindx, Three64);
+    
+    for (int i = 0; i < c; i++) {
+        DoOp2(Myx, Yindx, SMyx, SYindx);
+        Myx = Bld->CreateGEP(Myx, One64);
+        SYindx = Bld->CreateAdd(SYindx, One64);
+    }
+
+    YindxAdd = Bld->CreateAdd(Yindx, One64);
+    newSMyx = Bld->CreateGEP(SMyx, One64);
+    NextCnt = Bld->CreateAdd(Cnt, One8, "next_cnt");
+    Test = Bld->CreateICmpEQ(NextCnt, Size, "cnt_test");
+    Bld->CreateCondBr(Test, BB_exit, BB_lbody);
+
+    Cnt->addIncoming(Zero8, BB);
+    Cnt->addIncoming(NextCnt, BB_lbody);
+
+    Yindx->addIncoming(Yindx0, BB);
+    Yindx->addIncoming(YindxAdd, BB_lbody);
+    
+    SMyx->addIncoming(SMyx0, BB);
+    SMyx->addIncoming(newSMyx, BB_lbody);
 }
 
 void CsxJit::BlockRowCaseUnrolled(BasicBlock *BB,
@@ -598,6 +856,23 @@ void CsxJit::DoMul(Value *Myx, Value *Yindx)
     }
 }
 
+void CsxJit::DoMul2(Value *Myx, Value *Yindx)
+{
+    Value *V, *X, *YiPtr, *Y;
+
+    assert(Myx != NULL && Yindx != NULL);
+        
+    X = Bld->CreateLoad(Myx, "x");
+    V = Bld->CreateLoad(Bld->CreateLoad(Vptr, "v_ptr"), "val");
+    V = Bld->CreateMul(V, X, "mul");
+
+    YiPtr = Bld->CreateLoad(TempPtr, "temp_ptr");
+    YiPtr = Bld->CreateGEP(YiPtr, Yindx);
+    Y = Bld->CreateLoad(YiPtr, "temp");
+    Y = Bld->CreateAdd(Y, V, "new_temp");
+    Bld->CreateStore(Y, YiPtr);
+}
+
 void CsxJit::DoSymMul(Value *Myx, Value *Yindx)
 {
     Value *V, *X, *R, *Y, *Yr, *YiPtr, *Xindx;
@@ -663,9 +938,17 @@ void CsxJit::DoIncDV()
 
 void CsxJit::DoOp(Value *Myx, Value *Yindx)
 {
+    // DoPrint(Myx, Yindx);
     DoMul(Myx, Yindx);
-    
-//    DoPrint(Myx, Yindx);
+    DoIncV();
+}
+
+void CsxJit::DoOp2(Value *Myx, Value *Yindx, Value *SMyx, Value *SYindx)
+{
+    // DoPrint(Myx, Yindx);
+    // DoPrint(SMyx, SYindx);
+    DoMul(Myx, Yindx);
+    DoMul2(SMyx, SYindx);
     DoIncV();
 }
 
@@ -807,6 +1090,7 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
     ///< Fill up switch, by iterating given patterns.
     CsxManager::PatMap::iterator pat_i = CsxMg->patterns.begin();
     BasicBlock *BB_lentry, *BB_lbody, *BB_lexit;
+    
     for ( ; pat_i !=  CsxMg->patterns.end(); ++pat_i) {
         ///< Alocate case + loop BBs.
         BB_case = BasicBlock::Create(GetLLVMCtx(), "case", BB->getParent(),
@@ -841,11 +1125,19 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
                                           BB->getParent(), BB_default);
             BB_lexit = BasicBlock::Create(GetLLVMCtx(), "lexit",
                                           BB->getParent(), BB_default);
-            HorizCase(BB_case,
-                      BB_lbody, BB_lexit,
-                      BB_next,
-                      delta,
-                      symmetric);
+                                          
+            if (!symmetric) {
+                HorizCase(BB_case,
+                          BB_lbody, BB_lexit,
+                          BB_next,
+                          delta);
+            } else {
+                SymHorizCase(BB_case,
+                             BB_lbody, BB_lexit,
+                             BB_next,
+                             delta);
+            }
+            
             break;
 
         ///< Vertical
@@ -854,11 +1146,17 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
                << " elements:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
-            VertCase(BB_case,
-                     BB_lbody,
-                     BB_next,
-                     delta,
-                     symmetric);
+            if (!symmetric) {
+                VertCase(BB_case,
+                         BB_lbody,
+                         BB_next,
+                         delta);
+            } else {
+                SymVertCase(BB_case,
+                            BB_lbody,
+                            BB_next,
+                            delta);
+            }
             break;
 
         ///< Diagonal
@@ -867,12 +1165,19 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
                << " elements:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
-            DiagCase(BB_case,
-                     BB_lbody,
-                     BB_next,
-                     delta,
-                     false,
-                     symmetric);
+            if (!symmetric) {
+                DiagCase(BB_case,
+                         BB_lbody,
+                         BB_next,
+                         delta,
+                         false);
+            } else {
+                SymDiagCase(BB_case,
+                            BB_lbody,
+                            BB_next,
+                            delta,
+                            false);
+            }
             break;
 
         ///< Reverse Diagonal
@@ -881,12 +1186,19 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
                << " elements:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
-            DiagCase(BB_case,
-                     BB_lbody,
-                     BB_next,
-                     delta,
-                     true,
-                     symmetric);
+            if (!symmetric) {
+                DiagCase(BB_case,
+                         BB_lbody,
+                         BB_next,
+                         delta,
+                         true);
+            } else {
+                SymDiagCase(BB_case,
+                            BB_lbody,
+                            BB_next,
+                            delta,
+                            true);
+            }
             break;
 
         ///< Row blocks
@@ -895,8 +1207,13 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
                << delta << " nnz:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
-            BlockRowCaseRolled(BB_case, BB_lbody, BB_next,
-                               type - BLOCK_TYPE_START, delta, symmetric);
+            if (!symmetric) {
+                BlockRowCaseRolled(BB_case, BB_lbody, BB_next,
+                                   type - BLOCK_TYPE_START, delta);
+            } else {
+                SymBlockRowCaseRolled(BB_case, BB_lbody, BB_next,
+                                      type - BLOCK_TYPE_START, delta);
+            }
             /*BlockRowCaseUnrolled(BB_case, BB_next,
                                    type - BLOCK_TYPE_START, delta, symmetric);*/
             break;
@@ -908,8 +1225,13 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
                <<  pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
-            BlockColCaseRolled(BB_case, BB_lbody, BB_next, delta,
-                               type - BLOCK_COL_START, symmetric);
+            if (!symmetric) {
+                BlockColCaseRolled(BB_case, BB_lbody, BB_next, delta,
+                                   type - BLOCK_COL_START);
+            } else {
+                SymBlockColCaseRolled(BB_case, BB_lbody, BB_next, delta,
+                                      type - BLOCK_COL_START);
+            }
             /*BlockColCaseUnrolled(BB_case, BB_next, delta,
                                    type - BLOCK_COL_START, symmetric);*/
             break;
