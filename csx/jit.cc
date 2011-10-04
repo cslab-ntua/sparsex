@@ -277,6 +277,7 @@ void CsxJit::HorizCase(BasicBlock *BB,
     Bld->SetInsertPoint(BB_lbody);
     Cnt = Bld->CreatePHI(Type::getInt8Ty(GetLLVMCtx()), "cnt");
     Myx = Bld->CreatePHI(Myx0->getType(), "myx");
+    
     DoOp(Myx);
     
     newMyx = Bld->CreateGEP(Myx, Delta, "new_myx");
