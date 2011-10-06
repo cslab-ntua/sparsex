@@ -10,6 +10,7 @@ spm_dir      = ../lib/spm
 prfcnt_dir   = ../lib/prfcnt
 script_dir   = ../scripts
 csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
+llvm_dir     = $(shell $(llvmconf) --includedir)
 
 CXX         ?= g++
 LD			 = $(CXX)
@@ -17,8 +18,8 @@ CXXFLAGS    ?= -g -rdynamic -Wall -O3 -Wdisabled-optimization
 LIBS		 = -lnuma -lpthread
 
 # Always add the following flags
-override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\"
-override CPPFLAGS += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir)
+override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
+override CPPFLAGS += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir) -I$(llvm_dir)
 override LDFLAGS  += -Wl,--allow-multiple-definition
 
 ## cairomm
@@ -29,8 +30,10 @@ CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter
 LLVM_CC         = llvm-gcc
 LLVM_CFLAGS     = $(shell $(llvmconf) --cflags)
-LLVM_CXXFLAGS   = $(shell $(llvmconf) --cxxflags)
+LLVM_CPPFLAGS	=
+LLVM_CXXFLAGS   = 
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
+LLVM_COMPILE	= $(LLVM_CC) $(LLVM_CPPFLAGS) $(CPPFLAGS) $(CXXFLAGS)
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
@@ -70,16 +73,16 @@ drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 
 # define __STDC_FORMAT_MACROS, so that we can use PRIu64
 csx_llvm_tmpl.llvm.bc: csx_llvm_tmpl.c ctl_ll.h
-	$(LLVM_CC) -D__STDC_FORMAT_MACROS -I../ $(INC) -Wall -emit-llvm -c csx_llvm_tmpl.c -o $@
+	$(LLVM_COMPILE) -emit-llvm -c csx_llvm_tmpl.c -o $@
 
 llvm_jit_help.o: llvm_jit_help.cc llvm_jit_help.h
-	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
+	$(CXX_COMPILE) -c $<
 
 jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
-	$(CXX_COMPILE)  $(LLVM_CXXFLAGS) -c $<
+	$(CXX_COMPILE) -c $<
 
 spmv.o: spmv.cc $(spm_dir)/spm_mt.h
-	$(CXX_COMPILE) $(LLVM_CXXFLAGS) -c $<
+	$(CXX_COMPILE) -c $<
 
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
