@@ -14,11 +14,11 @@ llvm_dir     = $(shell $(llvmconf) --includedir)
 
 CXX         ?= g++
 LD			 = $(CXX)
-CXXFLAGS    ?= -g -rdynamic -Wall -O3 -Wdisabled-optimization
+CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC
 LIBS		 = -lnuma -lpthread
 
 # Always add the following flags
-override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
+override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE
 override CPPFLAGS += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir) -I$(llvm_dir)
 override LDFLAGS  += -Wl,--allow-multiple-definition
 
