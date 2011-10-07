@@ -12,13 +12,15 @@ script_dir   = ../scripts
 csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
 llvm_dir     = $(shell $(llvmconf) --includedir)
 
+CC          ?= gcc
 CXX         ?= g++
 LD			 = $(CXX)
+CFLAGS       = -Wall
 CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC
 LIBS		 = -lnuma -lpthread
 
 # Always add the following flags
-override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE
+override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE -D__STDC_FORMAT_MACROS
 override CPPFLAGS += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir) -I$(llvm_dir)
 override LDFLAGS  += -Wl,--allow-multiple-definition
 
@@ -29,11 +31,10 @@ CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 #llvm
 llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter
 LLVM_CC         = llvm-gcc
-LLVM_CFLAGS     = $(shell $(llvmconf) --cflags)
 LLVM_CPPFLAGS	=
-LLVM_CXXFLAGS   = 
+LLVM_CFLAGS     = -O0
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
-LLVM_COMPILE	= $(LLVM_CC) $(LLVM_CPPFLAGS) $(CPPFLAGS) $(CXXFLAGS)
+LLVM_COMPILE	= $(LLVM_CC) $(CPPFLAGS) $(LLVM_CPPFLAGS) $(CFLAGS) $(LLVM_CFLAGS)
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
@@ -45,7 +46,7 @@ LINK        = $(LD) $(LDFLAGS)
 
 # define __STDC_FORMAT_MACROS, so that we can use PRIu64
 mmf.o: mmf.cc spm.h mmf.h
-	$(CXX_COMPILE) -D__STDC_FORMAT_MACROS $< -c -o $@
+	$(CXX_COMPILE) $< -c -o $@
 
 spm.o: spm.cc spm.h mmf.h
 	$(CXX_COMPILE) $< -c -o $@
@@ -90,4 +91,4 @@ spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(LINK) $(LIBS) $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
 
 clean:
-	rm -f *.o spmv
+	rm -f *.o spmv csx_llvm_tmpl.llvm.bc
