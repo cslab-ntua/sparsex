@@ -12,7 +12,6 @@ script_dir   = ../scripts
 csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
 llvm_dir     = $(shell $(llvmconf) --includedir)
 
-<<<<<<< HEAD:csx/Makefile
 CC          ?= gcc
 CXX         ?= g++
 LD			 = $(CXX)
@@ -24,18 +23,6 @@ LIBS		 = -lnuma -lpthread
 override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE -D__STDC_FORMAT_MACROS
 override CPPFLAGS += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir) -I$(llvm_dir)
 override LDFLAGS  += -Wl,--allow-multiple-definition
-=======
-CXX            ?= g++
-CXXFLAGS       ?= -Wall -O3 -Wdisabled-optimization -DCSX_TEMPLATE=\"$(csx_template)\"
-#CXXFLAGS       ?= -Wall -g -O0 -DCSX_TEMPLATE=\"$(csx_template)\"
-INC            ?=
-
-#CXXFLAGS       += -Winline
-LDFLAGS         =
-CXXFLAGS       += -ggdb -rdynamic -fPIC
-DEFS            =
-INC            += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir)
->>>>>>> Fixed some merge issues.:csx/Makefile
 
 ## cairomm
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
@@ -104,19 +91,13 @@ elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
 main.o: main.cc spmv.h
 	$(CXX_COMPILE) -c $<
 
-elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
-	$(CXX_COMPILE) -c $<
-
-main.o: main.cc spmv.h
-	$(CXX_COMPILE) -c $<
-
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
 spmv: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(LINK) $(LIBS) $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
 
 libcsx.so: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o elmerif.o $(spm_dir)/libspmv.o
-	$(LINK) $(LDFLAGS) -shared $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
+	$(LINK) $(LDFLAGS) -shared $^ $(LLVM_LDFLAGS) $(LIBS) $(dynarray_dep) -o $@
 
 clean:
 	rm -f *.o spmv libcsx.so csx_llvm_tmpl.llvm.bc

@@ -69,22 +69,6 @@ extern "C" {
 
 using namespace csx;
 
-///> Thread data essential for parallel preprocessing
-typedef struct thread_info {
-    unsigned int thread_no;
-    unsigned int cpu;
-    SPM * spm;
-    spm_mt_thread_t *spm_encoded;
-    CsxManager *csxmg;
-    uint64_t wsize;
-    std::ostringstream buffer;
-    int *xform_buf;
-    double sampling_portion;
-    uint64_t samples_max;
-    bool split_blocks;
-    int **deltas;
-} thread_info_t;
-
 int SplitString(char *str, char **str_buf, const char *start_sep,
                 const char *end_sep)
 {

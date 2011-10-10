@@ -34,7 +34,7 @@ COMPILE      = $(CC) $(CPPFLAGS) $(CFLAGS)
 #endif
 #
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
-	DEFS += -DSPM_NUMA
+	override CPPFLAGS += -DSPM_NUMA
 endif
 
 # do this, so that it doesn't match default %.c - >%.o rules

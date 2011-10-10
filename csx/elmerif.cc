@@ -8,9 +8,9 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 #include <iostream>
+#include <math.h>
 #include "spm.h"
 #include "spmv.h"
-#include <sys/time.h>
 
 extern "C" {
 #include "elmerif.h"
@@ -19,8 +19,47 @@ extern "C" {
 #include "timer.h"
 }
 
-xtimer_t load_timer, preproc_timer, spmv_timer, total_timer;
+// Always define _CSR_ if _DEBUG_ is defined
+#if defined(_DEBUG_) && !defined(_CSR_)
+#   define _CSR_
+#endif
 
+enum {
+    TIMER_CONSTRUCT_INTERN = 0,
+    TIMER_CONSTRUCT_CSX,
+    TIMER_SPMV,
+    TIMER_TOTAL,
+    TIMER_END,
+};
+
+static uint64_t nr_calls = 0;
+xtimer_t timers[TIMER_END];
+
+const char *timer_desc[] = {
+    "Convert to internal repr.",
+    "Convert to CSX",
+    "Multiplication",
+    "Total time in library",
+};
+
+void __attribute__ ((constructor)) init() {
+    for (int i = 0; i < TIMER_END; ++i) {
+        timer_init(&timers[i]);
+    }
+}
+
+void __attribute__ ((destructor)) finalize() {
+    std::cout << "libcsx called " << nr_calls
+              << " time(s)" << std::endl;
+
+    // Print timer statistics
+    for (int i = 0; i < TIMER_END; ++i) {
+        std::cout << timer_desc[i] << ": "
+                  << timer_secs(&timers[i]) << std::endl;
+    }
+}
+
+#ifdef _CSR_
 static void matvec_csr(const elmer_index_t *rowptr,
                        const elmer_index_t *colind,
                        const elmer_value_t *values,
@@ -38,6 +77,27 @@ static void matvec_csr(const elmer_index_t *rowptr,
         y[i] = yi_;
     }
 }
+#endif
+
+#ifdef _DEBUG_
+elmer_value_t *y_copy = 0;
+elmer_value_t *values_last = 0;
+
+static bool equal(elmer_value_t *v1, elmer_value_t *v2,
+                    elmer_index_t n)
+{
+    for (elmer_index_t i = 0; i < n; ++i) {
+        if (fabs(v1[i] - v2[i]) > 1.e-6) {
+            std::cout << "Element " << i << " differs: "
+                      << v1[i] << " != " << v2[i] << std::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+#endif
 
 void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
                    void *values, void *u, void *v, void *reinit)
@@ -54,8 +114,40 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
     elmer_value_t *x_ = (elmer_value_t *) u;
     elmer_value_t *y_ = (elmer_value_t *) v;
 
-    timer_start(&total_timer);
-#ifndef CSR
+    ++nr_calls;
+    timer_start(&timers[TIMER_TOTAL]);
+#ifdef _DEBUG_
+    if (!y_copy)
+        y_copy = (elmer_value_t *) malloc(n_*sizeof(*y_copy));
+    memcpy(y_copy, y_, n_*sizeof(*y_copy));
+    
+    size_t nnz = rowptr_[n_] - 1;
+    if (!values_last) {
+        values_last = (elmer_value_t *) malloc(nnz*sizeof(*values_last));
+    } else {
+        std::cout << "Checking values ...";
+        if (!equal(values_, values_last, nnz)) {
+            std::cout << "FAILED" << std::endl;
+        } else {
+            std::cout << "DONE" << std::endl;
+        }
+    }
+
+    memcpy(values_last, values_, nnz*sizeof(*values_last));
+#endif
+
+#ifdef _CSR_
+    timer_start(&timers[TIMER_SPMV]);
+#ifdef _DEBUG_
+    matvec_csr(rowptr_, colind_, values_, n_, x_, y_copy);
+    timer_pause(&timers[TIMER_SPMV]);
+#else
+    matvec_csr(rowptr_, colind_, values_, n_, x_, y_);
+    timer_pause(&timers[TIMER_SPMV]);
+    return;
+#endif
+#endif
+
     if (!*tuned || reinit_) {
         uint64_t nr_nzeros = rowptr_[n_] - 1;
         uint64_t ws = (n_ + nr_nzeros)*sizeof(elmer_index_t) +
@@ -64,45 +156,35 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
                   << "Non-zeros: " << nr_nzeros << " "
                   << "Working set size (MB): " << ((double) ws) / (1024*1024)
                   << std::endl;
-        timer_start(&load_timer);
         mt_get_options(&nr_threads, &cpus);
+        timer_start(&timers[TIMER_CONSTRUCT_INTERN]);
         spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
             (rowptr_, colind_, values_, n_, n_, false, nr_threads);
-        timer_pause(&load_timer);
+        timer_pause(&timers[TIMER_CONSTRUCT_INTERN]);
 
-        timer_start(&preproc_timer);
+        timer_start(&timers[TIMER_CONSTRUCT_CSX]);
         *tuned = spm_mt = GetSpmMt(NULL, spms);
-        timer_pause(&preproc_timer);
+        timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
     } else {
         spm_mt = (spm_mt_t *) *tuned;
     }
-#endif
-     timer_start(&spmv_timer);
      
-#ifndef CSR
     // FIXME: Although Elmer uses doubles by default, this is not portable
     vector_double_t *vec_x = vector_double_create_from_buff(x_, n_);
     vector_double_t *vec_y = vector_double_create_from_buff(y_, n_);
-    vector_double_init(vec_y, 0);
+    timer_start(&timers[TIMER_SPMV]);
     spmv_double_matvec_mt(spm_mt, vec_x, vec_y);
-#else
-    if (!*tuned || reinit_) {
-        *tuned = rowptr_;
-    }
+    timer_pause(&timers[TIMER_SPMV]);
 
-    matvec_csr(rowptr_, colind_, values_, n_, x_, y_);
+#ifdef _DEBUG_
+    std::cout << "Checking result... ";
+    if (equal(vec_y->elements, y_copy, n_))
+        std::cout << "DONE" << std::endl;
+    else
+        std::cout << "FAILED" << std::endl;
 #endif
-    timer_pause(&spmv_timer);
-    timer_pause(&total_timer);
-#ifndef CSR
-    std::cout << "Load CSR: " << timer_secs(&load_timer) << " "
-              << "CSX Preproc.: " << timer_secs(&preproc_timer) << " "
-              << "SpMV: " << timer_secs(&spmv_timer) << " "
-              << "Total: " << timer_secs(&total_timer) << std::endl;
-#else
-    std::cout << "SpMV: " << timer_secs(&spmv_timer) << " "
-              << "Total: " << timer_secs(&total_timer) << std::endl;
-#endif
+
+    timer_pause(&timers[TIMER_TOTAL]);
 }
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

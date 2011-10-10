@@ -32,7 +32,7 @@ typedef struct thread_info {
     uint64_t wsize;
     std::ostringstream buffer;
     int *xform_buf;
-    double sampling_prob;
+    double sampling_portion;
     uint64_t samples_max;
     bool split_blocks;
     int **deltas;
