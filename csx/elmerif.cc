@@ -183,7 +183,6 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
     else
         std::cout << "FAILED" << std::endl;
 #endif
-
     timer_pause(&timers[TIMER_TOTAL]);
 }
 

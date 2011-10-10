@@ -91,8 +91,6 @@ elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
 main.o: main.cc spmv.h
 	$(CXX_COMPILE) -c $<
 
-# -Xlinker --allow-multiple-definition is set because
-# dynarray code is also included in libspmv.o.
 spmv: main.o spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(LINK) $(LIBS) $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
 
