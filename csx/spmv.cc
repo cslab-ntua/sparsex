@@ -68,6 +68,8 @@ extern "C" {
 
 using namespace csx;
 
+double pre_time;
+
 ///> Thread data essential for parallel preprocessing
 typedef struct thread_info {
     unsigned int thread_no;
@@ -324,7 +326,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
 
     // Get MT_CONF
     mt_get_options(&nr_threads, &threads_cpus);
-    std::cout << "MT_CONF=";
+    std::cout << "MT_CONF: ";
     for (unsigned int i = 0; i < nr_threads; i++) {
         if (i != 0)
             std::cout << ",";
@@ -427,9 +429,8 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
 
     // Preprocessing finished; stop timer
     timer_pause(&timer);
-    std::cout << "Preprocessing time: "
-              << timer_secs(&timer) << " sec"
-              << std::endl;
+    pre_time = timer_secs(&timer);
+    
     return spm_mt;
 }
 
@@ -505,8 +506,8 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     getMmfHeader(mmf_name, nrows, ncols, nnz);
     secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
     flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-    printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-           "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+    printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n",
+           "csx", basename(mmf_name), CsxSize(spm_mt), pre_time, secs, flops);
 
 #undef SPMV_BENCH_FN
 }
