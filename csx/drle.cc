@@ -251,9 +251,10 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
     for (iter = stats.begin(); iter != stats.end(); ++iter) {
         os << "    " << iter->first << "-> " << "np:"
            << iter->second.npatterns
-           << " nnz: "
+           << " nnz: " << iter->second.nnz
+           << " ("
            <<  100 * ((double) iter->second.nnz / (double) spm.GetNrNonzeros())
-           << "%" << " (" << iter->second.nnz << ")";
+           << "%" << ")";
     }
 }
 
@@ -412,7 +413,9 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
 {
     SpmIterOrder type = NONE;
     StatsMap::iterator iter;
-
+    SpmIterOrder enc_seq[22];
+    int counter = 0;
+    
     for (;;) {
         GenAllStats(split_blocks);
         OutStats(os);
@@ -421,7 +424,19 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
             break;
         os << "Encode to " << SpmTypesNames[type] << "\n";
         Encode(type, split_blocks);
+        enc_seq[counter++] = type;
     }
+    
+    os << "Encoding sequence: ";
+    if (counter == 0)
+        os << "NONE";
+    else
+        os << SpmTypesNames[enc_seq[0]];
+        
+    for (int i = 1; i < counter; i++)
+        os << ", " << SpmTypesNames[enc_seq[i]];
+    
+    os << std::endl;
 }
 
 void DRLE_Manager::MakeEncodeTree(bool split_blocks)
@@ -1175,7 +1190,8 @@ void DRLE_Manager::OutStats(std::ostream &os)
     DRLE_Manager::StatsMap::iterator iter;
     for (iter = stats_.begin(); iter != stats_.end(); ++iter){
          if (!iter->second.empty()) {
-             os << SpmTypesNames[iter->first] << "\t";
+             os << SpmTypesNames[iter->first] << "\ts:" 
+                << GetTypeScore(iter->first);
              DRLE_OutStats(iter->second, *(spm_), os);
              os << std::endl;
          }
