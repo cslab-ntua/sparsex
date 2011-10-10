@@ -55,6 +55,11 @@ public:
                  double sampling_probability = 1.0,
                  uint64_t samples_max = std::numeric_limits<uint64_t>::max());
 
+    ~DRLE_Manager() {
+        if (selected_splits_)
+            delete selected_splits_;
+    }
+
     /**
      *  Generate pattern statistics for a sub-matrix of spm.
      *
@@ -333,6 +338,8 @@ private:
      */
     void ComputeSortSplits();
 
+    void SelectSplits();
+
     /*
      *  The actual splitting methods.
      */
@@ -360,7 +367,8 @@ private:
     uint64_t sort_window_size_;
     split_alg_t split_type_;
     std::vector<uint64_t> sort_splits_;
-    double sampling_probability_;
+    size_t *selected_splits_;
+    double sampling_portion_;
     uint64_t samples_max_;
     static const uint64_t max_sampling_tries_ = 3;
     StatsMap stats_;

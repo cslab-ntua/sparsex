@@ -80,7 +80,7 @@ typedef struct thread_info {
     uint64_t wsize;
     std::ostringstream buffer;
     int *xform_buf;
-    double sampling_prob;
+    double sampling_portion;
     uint64_t samples_max;
     bool split_blocks;
     int **deltas;
@@ -226,21 +226,21 @@ uint64_t GetOptionSamples()
     return samples_max;
 }
 
-double GetOptionProbability()
+double GetOptionPortion()
 {
-    const char *sampling_prob_str = getenv("SAMPLING_PROB");
-    double sampling_prob;
+    const char *sampling_portion_str = getenv("SAMPLING_PORTION");
+    double sampling_portion;
 
-    if (!sampling_prob_str) {
-        sampling_prob = 0.0;
-        std::cout << "Sampling prob: Not set" << std::endl;
+    if (!sampling_portion_str) {
+        sampling_portion = 0.0;
+        std::cout << "Sampling portion: Not set" << std::endl;
     }
     else {
-        sampling_prob = atof(sampling_prob_str);
-        std::cout << "Sampling prob: " << sampling_prob << std::endl;
+        sampling_portion = atof(sampling_portion_str);
+        std::cout << "Sampling portion: " << sampling_portion << std::endl;
     }
 
-    return sampling_prob;
+    return sampling_portion;
 }
 
 bool GetOptionSplitBlocks()
@@ -273,7 +273,7 @@ void *PreprocessThread(void *thread_info)
 
     // Initialize the DRLE manager
     DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.1, data->wsize,
-                              DRLE_Manager::SPLIT_BY_NNZ, data->sampling_prob,
+                              DRLE_Manager::SPLIT_BY_NNZ, data->sampling_portion,
                               data->samples_max);
     // Adjust the ignore settings properly
     DrleMg->IgnoreAll();
@@ -347,8 +347,8 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     // Get SAMPLES
     uint64_t samples_max = GetOptionSamples();
 
-    // Get SAMPLING_PROB
-    double sampling_prob = GetOptionProbability();
+    // Get SAMPLING_PORTION
+    double sampling_portion = GetOptionPortion();
 
     // Get SPLIT_BLOCKS
     bool split_blocks = GetOptionSplitBlocks();
@@ -385,7 +385,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
         data[i].thread_no = i;
         data[i].cpu = threads_cpus[i];
         data[i].xform_buf = xform_buf;
-        data[i].sampling_prob = sampling_prob;
+        data[i].sampling_portion = sampling_portion;
         data[i].samples_max = samples_max;
         data[i].split_blocks = split_blocks;
         data[i].deltas = deltas;
