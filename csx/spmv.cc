@@ -270,7 +270,7 @@ void *PreprocessThread(void *thread_info)
     setaffinity_oncpu(data->cpu);
 
     // Initialize the DRLE manager
-    DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.1, data->wsize,
+    DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_portion,
                               data->samples_max);
     // Adjust the ignore settings properly

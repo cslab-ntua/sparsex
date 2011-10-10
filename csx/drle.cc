@@ -119,9 +119,12 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
             samples_max_ = sort_splits_.size();
         }
 
+        stat_correction_factor_ =
+            spm_->nr_nzeros_ / (samples_max_*sort_window_size_);
         SelectSplits();
     } else {
         selected_splits_ = 0;
+        stat_correction_factor_ = 1;
     }
 }
     
@@ -190,7 +193,7 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
                 delete window;
             }
             
-            CorrectStats(type, (spm_->nr_nzeros_) / ((double) samples_nnz));
+            CorrectStats(type, stat_correction_factor_);
         } else {
             spm_->Transform(type);
             stats_[type] = GenerateStats(0, spm_->GetNrRows());
