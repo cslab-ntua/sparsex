@@ -44,6 +44,8 @@ extern "C" {
 #include "ctl_ll.h"
 #include <libgen.h>
 }
+#include <sched.h>
+
 
 ///> Max deltas that an encoding type may have. This is restricted by the
 ///  number of bits used for encoding the different patterns in CSX.
@@ -265,12 +267,12 @@ void *PreprocessThread(void *thread_info)
 {
     thread_info_t *data = (thread_info_t *) thread_info;
     DRLE_Manager *DrleMg;
-
-    data->buffer << "==> Thread: #" << data->thread_no << std::endl;
-
+    
     // set cpu affinity
     setaffinity_oncpu(data->cpu);
-
+    
+    data->buffer << "==> Thread: #" << data->thread_no << std::endl;
+    
     // Initialize the DRLE manager
     DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_portion,
@@ -280,7 +282,6 @@ void *PreprocessThread(void *thread_info)
     for (int i = 0; data->xform_buf[i] != -1; ++i)
         DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
 
-
      // If the user supplies the deltas choices, encode the matrix with the
      // order given in XFORM_CONF, otherwise find statistical data for the types
      // in XFORM_CONF, choose the best choise, encode it and proceed likewise
@@ -289,7 +290,6 @@ void *PreprocessThread(void *thread_info)
         DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
     else
         DrleMg->EncodeAll(data->buffer, data->split_blocks);
-
     // DrleMg->MakeEncodeTree(data->split_blocks);
 
     csx_double_t *csx = data->csxmg->MakeCsx();
@@ -332,7 +332,6 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
             std::cout << ",";
         std::cout << threads_cpus[i];
     }
-
     std::cout << std::endl;
 
     // Get XFORM_CONF
@@ -352,6 +351,9 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
 
     // Get SPLIT_BLOCKS
     bool split_blocks = GetOptionSplitBlocks();
+
+    // Set affinity for the serial part of the preproprecessing.
+    setaffinity_oncpu(threads_cpus[0]);
 
     // Initalization of the multithreaded sparse matrix representation
     spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
@@ -391,22 +393,22 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
         data[i].deltas = deltas;
         data[i].buffer.str("");
     }
-
+    
     // Start parallel preprocessing
     for (unsigned int i = 1; i < nr_threads; i++)
         pthread_create(&threads[i-1], NULL, PreprocessThread,
                        (void *) &data[i]);
-
+    
     PreprocessThread((void *) &data[0]);
 
     for (unsigned int i = 1; i < nr_threads; ++i)
-        pthread_join(threads[i-1],NULL);
+        pthread_join(threads[i-1], NULL);
 
     // CSX matrix construction and JIT compilation
     CsxJitInitGlobal();
     Jits = (CsxJit **) xmalloc(nr_threads * sizeof(CsxJit *));
 
-    for (unsigned int i = 0; i < nr_threads; ++i){
+    for (unsigned int i = 0; i < nr_threads; ++i) {
         Jits[i] = new CsxJit(data[i].csxmg, i);
         Jits[i]->GenCode(data[i].buffer);
         std::cout << data[i].buffer.str();
@@ -513,8 +515,9 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 }
 
 int main(int argc, char **argv)
-{
+{   
     spm_mt_t *spm_mt;
+    
     if (argc < 2){
         std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
         exit(1);
@@ -527,6 +530,7 @@ int main(int argc, char **argv)
         BenchLoop(spm_mt, argv[i]);
         PutSpmMt(spm_mt);
     }
+    
     return 0;
 }
 

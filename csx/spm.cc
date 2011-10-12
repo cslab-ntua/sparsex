@@ -537,7 +537,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
     e0 = elems.begin();
     ee = elems.end();
     sort(e0, ee, elem_cmp_less);
-    SetElems(e0, ee, rs + 1);
+    SetElems(e0, ee, rs + 1, elems_size_, rowptr_size_);
     elems.clear();
     type_ = t;
 }
@@ -739,7 +739,7 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
 
     elem_begin = elems.begin();
     elem_end = elems.end();
-    ret->SetElems(elem_begin, elem_end, rs + 1);
+    ret->SetElems(elem_begin, elem_end, rs + 1, elems_size_, rowptr_size_);
     elems.clear();
     ret->nr_rows_ = ret->rowptr_size_ - 1;
     ret->nr_cols_ = nr_cols_;
@@ -822,7 +822,7 @@ void SPM::Builder::NewRow(uint64_t rdiff)
     uint64_t elems_cnt;
 
     elems_cnt = GetElemsCnt();
-    rowptr = (uint64_t *)dynarray_alloc_nr(da_rowptr_, rdiff);
+    rowptr = (uint64_t *) dynarray_alloc_nr(da_rowptr_, rdiff);
     for (uint64_t i = 0; i < rdiff; i++)
         rowptr[i] = elems_cnt;
 }

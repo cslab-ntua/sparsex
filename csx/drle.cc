@@ -126,6 +126,9 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
         selected_splits_ = 0;
         stat_correction_factor_ = 1;
     }
+    
+    for (int i = 0; i < TIMER_END; i++)
+        timer_init(&timers_[i]);
 }
     
 DeltaRLE::Stats DRLE_Manager::GenerateStats(uint64_t rs, uint64_t re)
@@ -324,7 +327,7 @@ void DRLE_Manager::Encode(SpmIterOrder type, bool split_blocks)
     if (type == NONE && ((type = ChooseType()) == NONE))
         return;
 
-    SpmBld = new SPM::Builder(spm_);
+    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->rowptr_size_);
 
     // Transform matrix to the desired iteration order
     oldtype = spm_->type_;
@@ -334,7 +337,9 @@ void DRLE_Manager::Encode(SpmIterOrder type, bool split_blocks)
         EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row, split_blocks);
         nr_size = new_row.size();
         if (nr_size > 0) {
+            timer_start(&timers_[TIMER_ALLOC]);
             elems = SpmBld->AllocElems(nr_size);
+            timer_pause(&timers_[TIMER_ALLOC]);
             for (uint64_t i = 0; i < nr_size; ++i)
                 MakeRowElem(new_row[i], elems + i);
         }
@@ -367,7 +372,7 @@ void DRLE_Manager::Decode(SpmIterOrder type)
     spm_->Transform(type);
 
     // Do the decoding
-    SpmBld = new SPM::Builder(spm_);
+    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->rowptr_size_);
     for (uint64_t i = 0; i < spm_->GetNrRows(); ++i) {
         DecodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
@@ -395,18 +400,26 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
     StatsMap::iterator iter;
     SpmIterOrder enc_seq[22];
     int counter = 0;
-
+    double t;
+    
+    timer_start(&timers_[TIMER_TOTAL]);
     //os << "Computed window size: " << sort_window_size_ << std::endl;
     for (;;) {
+        timer_start(&timers_[TIMER_STATS]);
         GenAllStats(split_blocks);
+        timer_pause(&timers_[TIMER_STATS]);
         OutStats(os);
         type = ChooseType();
         if (type == NONE)
             break;
+        timer_start(&timers_[TIMER_ENCODE]);
         os << "Encode to " << SpmTypesNames[type] << "\n";
         Encode(type, split_blocks);
         enc_seq[counter++] = type;
+        timer_pause(&timers_[TIMER_ENCODE]);
     }
+    
+    timer_pause(&timers_[TIMER_TOTAL]);
     
     os << "Encoding sequence: ";
     if (counter == 0)
@@ -418,6 +431,11 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
         os << ", " << SpmTypesNames[enc_seq[i]];
     
     os << std::endl;
+    
+    for (int i = 0; i < TIMER_END; i++) {
+        t = timer_secs(&timers_[i]);
+        os << timers_desc_[i] << t << std::endl;
+    }
 }
 
 void DRLE_Manager::MakeEncodeTree(bool split_blocks)
