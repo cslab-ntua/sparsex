@@ -303,6 +303,7 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms)
 
     // Get MT_CONF
     mt_get_options(&nr_threads, &threads_cpus);
+    setaffinity_oncpu(threads_cpus[0]);
     std::cout << "MT_CONF=";
     for (unsigned int i = 0; i < nr_threads; i++) {
         if (i != 0)

@@ -9,6 +9,7 @@
  */
 #include <iostream>
 #include <math.h>
+#include <cfloat>
 #include "spm.h"
 #include "spmv.h"
 
@@ -16,13 +17,9 @@ extern "C" {
 #include "elmerif.h"
 #include "mt_lib.h"
 #include "spmv_matvec_mt.h"
+#include "spm_crs_mt.h"
 #include "timer.h"
 }
-
-// Always define _CSR_ if _DEBUG_ is defined
-#if defined(_DEBUG_) && !defined(_CSR_)
-#   define _CSR_
-#endif
 
 enum {
     TIMER_CONSTRUCT_INTERN = 0,
@@ -59,7 +56,10 @@ void __attribute__ ((destructor)) finalize() {
     }
 }
 
-#ifdef _CSR_
+#ifdef _DEBUG_
+elmer_value_t *y_copy = 0;
+elmer_value_t *values_last = 0;
+
 static void matvec_csr(const elmer_index_t *rowptr,
                        const elmer_index_t *colind,
                        const elmer_value_t *values,
@@ -77,17 +77,12 @@ static void matvec_csr(const elmer_index_t *rowptr,
         y[i] = yi_;
     }
 }
-#endif
-
-#ifdef _DEBUG_
-elmer_value_t *y_copy = 0;
-elmer_value_t *values_last = 0;
 
 static bool equal(elmer_value_t *v1, elmer_value_t *v2,
                     elmer_index_t n)
 {
     for (elmer_index_t i = 0; i < n; ++i) {
-        if (fabs(v1[i] - v2[i]) > 1.e-6) {
+        if (fabs(v1[i] - v2[i]) > DBL_EPSILON) {
             std::cout << "Element " << i << " differs: "
                       << v1[i] << " != " << v2[i] << std::endl;
             return false;
@@ -121,6 +116,7 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
         y_copy = (elmer_value_t *) malloc(n_*sizeof(*y_copy));
     memcpy(y_copy, y_, n_*sizeof(*y_copy));
     
+#if 0
     size_t nnz = rowptr_[n_] - 1;
     if (!values_last) {
         values_last = (elmer_value_t *) malloc(nnz*sizeof(*values_last));
@@ -135,17 +131,7 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
 
     memcpy(values_last, values_, nnz*sizeof(*values_last));
 #endif
-
-#ifdef _CSR_
-    timer_start(&timers[TIMER_SPMV]);
-#ifdef _DEBUG_
     matvec_csr(rowptr_, colind_, values_, n_, x_, y_copy);
-    timer_pause(&timers[TIMER_SPMV]);
-#else
-    matvec_csr(rowptr_, colind_, values_, n_, x_, y_);
-    timer_pause(&timers[TIMER_SPMV]);
-    return;
-#endif
 #endif
 
     if (!*tuned || reinit_) {
@@ -157,14 +143,21 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
                   << "Working set size (MB): " << ((double) ws) / (1024*1024)
                   << std::endl;
         mt_get_options(&nr_threads, &cpus);
+#ifdef _CSR_
+        spm_mt = spm_crs32_double_mt_get_spm((uint32_t *) rowptr_,
+                                             (uint32_t *) colind_,
+                                             values_, n_, nr_threads, cpus);
+#else
         timer_start(&timers[TIMER_CONSTRUCT_INTERN]);
         spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
             (rowptr_, colind_, values_, n_, n_, false, nr_threads);
         timer_pause(&timers[TIMER_CONSTRUCT_INTERN]);
 
         timer_start(&timers[TIMER_CONSTRUCT_CSX]);
-        *tuned = spm_mt = GetSpmMt(NULL, spms);
+        spm_mt = GetSpmMt(NULL, spms);
         timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
+#endif        
+        *tuned = spm_mt;
     } else {
         spm_mt = (spm_mt_t *) *tuned;
     }

@@ -25,8 +25,10 @@ static void *do_matvec_thread(void *arg)
 
 	setaffinity_oncpu(spm_mt_thread->cpu);
 	pthread_barrier_wait(&barrier);
+#ifndef _CSR_
     VECTOR_NAME(_init_part)(spm_mt_thread->y, spm_mt_thread->row_start,
                             spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
+#endif
 	spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->x, spm_mt_thread->y);
 	pthread_barrier_wait(&barrier);
 	return (void *) 0;

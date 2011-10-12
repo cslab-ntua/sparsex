@@ -16,13 +16,14 @@ CC          ?= gcc
 CXX         ?= g++
 LD			 = $(CXX)
 CFLAGS       = -Wall
-CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC
+CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization
 LIBS		 = -lnuma -lpthread
 
 # Always add the following flags
 override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE -D__STDC_FORMAT_MACROS
 override CPPFLAGS += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir) -I$(llvm_dir)
 override LDFLAGS  += -Wl,--allow-multiple-definition
+override CXXFLAGS += -fPIC
 
 ## cairomm
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
@@ -86,7 +87,7 @@ spmv.o: spmv.cc $(spm_dir)/spm_mt.h
 	$(CXX_COMPILE) -c $<
 
 elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
-	$(CXX_COMPILE) -c $<
+	$(CXX_COMPILE) -DSPM_CRS_BITS=32 -c $<
 
 main.o: main.cc spmv.h
 	$(CXX_COMPILE) -c $<

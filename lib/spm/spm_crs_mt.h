@@ -43,4 +43,14 @@ SPM_CRS_MT_DECLARE(64, float)
 #define SPM_CRS_MT_NAME(name) CON6(spm_crs, SPM_CRS_BITS, _,ELEM_TYPE,_mt,name)
 #define SPM_CRS_MT_TYPE SPM_CRS_MT_NAME(_t)
 
+spm_mt_t *SPM_CRS_MT_NAME(_get_spm)(SPM_CRS_IDX_TYPE *rowptr,
+                                    SPM_CRS_IDX_TYPE *colind,
+                                    ELEM_TYPE *values,
+                                    SPM_CRS_IDX_TYPE nr_rows,
+                                    unsigned int nr_threads,
+                                    unsigned int *cpus);
+
+void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in,
+                                         VECTOR_TYPE *out);
+
 #endif

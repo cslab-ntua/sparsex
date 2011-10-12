@@ -16,12 +16,13 @@ dynarray_dep = $(dynarray_dir)/dynarray.o
 MHZ_SH      ?= $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
 CC          ?= gcc
 LD          ?= ld
-CFLAGS      ?= -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC
+CFLAGS      ?= -g -Wall -Winline -O3 -Wdisabled-optimization
 
 # Always add the following flags
 override CPPFLAGS += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
 override CPPFLAGS += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
 override CPPFLAGS += -I$(dynarray_dir) -I$(prfcnt_dir)
+override CFLAGS   += -fPIC
 
 # Support for performance counters
 # override CPPFLAGS    += -DCPU_CORE -DSPMV_PRFCNT # performance counters for an intel core
