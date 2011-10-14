@@ -489,6 +489,9 @@ private:
     uint64_t row_start_;    ///< Row of the original matrix, where this
                             ///  sub-matrix starts.
     bool elems_mapped_;
+    
+    ///< Maximum possible rowptr_size after transformations.
+    uint64_t max_rowptr_size_;
 
     // These are mainly SPM construction classes, so make them friends
     friend class Builder;

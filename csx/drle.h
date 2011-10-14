@@ -20,8 +20,9 @@
 #include <cassert>
 #include <cstdlib>
 
-#include "spm.h"
+extern "C" {
 #include "timer.h"
+}
 
 namespace csx {
     
@@ -391,7 +392,7 @@ private:
     static const uint64_t max_sampling_tries_ = 3;
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
-    std::bitset<XFORM_MAX> xforms_ignore_;    
+    std::bitset<XFORM_MAX> xforms_ignore_;
     xtimer_t timers_[TIMER_END];
 };
 

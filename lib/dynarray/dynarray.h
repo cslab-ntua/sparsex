@@ -19,9 +19,11 @@ extern "C" {
 #endif
 
 dynarray_t *dynarray_create(unsigned long elem_size,
-                            unsigned long alloc_grain);
+                            unsigned long alloc_grain,
+                            unsigned long elems_nr);
 dynarray_t *dynarray_create_numa(unsigned long elem_size,
-                                 unsigned long alloc_grain);
+                                 unsigned long alloc_grain,
+                                 unsigned long elems_nr);
 dynarray_t *dynarray_init_frombuff(unsigned long elem_size,
                                    unsigned long alloc_grain,
                                    void *elems, unsigned long elems_nr);
@@ -39,6 +41,7 @@ void *dynarray_get(struct dynarray *da, unsigned long idx);
 void *dynarray_get_last(struct dynarray *da);
 void dynarray_seek(struct dynarray *da, unsigned long idx);
 unsigned long dynarray_size(struct dynarray *da);
+unsigned long dynarray_capacity(struct dynarray *da);
 void *dynarray_destroy(struct dynarray *da);
 
 #ifdef __cplusplus

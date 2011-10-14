@@ -331,12 +331,14 @@ SPM *SPM::LoadMMF_mt(MMF &mmf, const long nr)
     for (long i = 0; i < nr; i++) {
         spm = ret + i;
         limit = (mmf.nnz - cnt) / (nr - i);
-        spm->nr_nzeros_ = spm->SetElems(iter, iter_end, row_start + 1, limit);
+        spm->nr_nzeros_ = spm->SetElems(iter, iter_end, row_start + 1, limit,
+                                        limit + mmf.nrows - 1, mmf.nrows + 1);
         spm->nr_rows_ = spm->rowptr_size_ - 1;
         spm->nr_cols_ = mmf.ncols;
         spm->row_start_ = row_start;
         row_start += spm->nr_rows_;
         spm->type_ = HORIZONTAL;
+        spm->max_rowptr_size_ = spm->nr_rows_ + spm->nr_cols_ + 1;
         cnt += spm->nr_nzeros_;
     }
 
@@ -537,7 +539,7 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
     e0 = elems.begin();
     ee = elems.end();
     sort(e0, ee, elem_cmp_less);
-    SetElems(e0, ee, rs + 1, elems_size_, rowptr_size_);
+    SetElems(e0, ee, rs + 1, 0, elems_size_, max_rowptr_size_);
     elems.clear();
     type_ = t;
 }
@@ -713,6 +715,7 @@ SPM *SPM::GetWindow(uint64_t rs, uint64_t length)
     ret->row_start_ = row_start_ + rs;
     ret->type_ = type_;
     ret->elems_mapped_ = true;
+    ret->max_rowptr_size_ = ret->nr_rows_ + ret->nr_cols_ + 1;
     assert(ret->rowptr_[ret->rowptr_size_-1] == ret->elems_size_);
     return ret;
 }
@@ -739,7 +742,7 @@ SPM *SPM::ExtractWindow(uint64_t rs, uint64_t length)
 
     elem_begin = elems.begin();
     elem_end = elems.end();
-    ret->SetElems(elem_begin, elem_end, rs + 1, elems_size_, rowptr_size_);
+    ret->SetElems(elem_begin, elem_end, rs + 1, elems_size_);
     elems.clear();
     ret->nr_rows_ = ret->rowptr_size_ - 1;
     ret->nr_cols_ = nr_cols_;
@@ -770,7 +773,7 @@ void SPM::PutWindow(const SPM *window)
 SPM::Builder::Builder(SPM *spm, uint64_t nr_elems, uint64_t nr_rows) : spm_(spm)
 {
     uint64_t *rowptr;
-
+    
     if (spm_->elems_mapped_) {
         da_elems_ = dynarray_init_frombuff(sizeof(SpmRowElem),
                                            spm_->elems_size_,
@@ -779,10 +782,9 @@ SPM::Builder::Builder(SPM *spm, uint64_t nr_elems, uint64_t nr_rows) : spm_(spm)
         dynarray_seek(da_elems_, 0);
     } else {
         da_elems_ =
-            dynarray_create(sizeof(SpmRowElem), nr_elems ? nr_elems : 512);
+            dynarray_create(sizeof(SpmRowElem), 512, nr_elems);
     }
-
-    da_rowptr_ = dynarray_create(sizeof(uint64_t), nr_rows ? nr_rows : 512);
+    da_rowptr_ = dynarray_create(sizeof(uint64_t), 512, nr_rows);
     rowptr = (uint64_t *) dynarray_alloc(da_rowptr_);
     *rowptr = 0;
 }
@@ -798,7 +800,6 @@ SpmRowElem *SPM::Builder::AllocElem()
     if (spm_->elems_mapped_)
         assert(dynarray_size(da_elems_) < spm_->elems_size_ &&
                "out of bounds");
-        
     return (SpmRowElem *) dynarray_alloc(da_elems_);
 }
 
@@ -845,7 +846,7 @@ void SPM::Builder::Finalize()
         assert(spm_->elems_size_ == dynarray_size(da_elems_));
 
     spm_->elems_size_ = dynarray_size(da_elems_);
-
+    
     if (spm_->elems_mapped_)
         free(da_elems_);
     else

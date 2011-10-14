@@ -369,7 +369,7 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
 
     // Load the appropriate sub-matrix to each thread
     Spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
-
+    
     // Start timer for preprocessing
     xtimer_t timer;
     timer_init(&timer);
