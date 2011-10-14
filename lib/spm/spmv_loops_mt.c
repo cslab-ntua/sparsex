@@ -28,10 +28,6 @@ static pthread_barrier_t barrier;
 static unsigned long loops_nr = 0;
 static float secs = 0.0;
 
-#ifndef _CSX_
-#   define _CSX_ 1
-#endif
-
 static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
@@ -47,9 +43,6 @@ static void *do_spmv_thread(void *arg)
 
 	for (i=0; i<loops_nr; i++){
 		pthread_barrier_wait(&barrier);
-        if (_CSX_)
-            VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-                                    spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
 	}
@@ -98,9 +91,6 @@ static void *do_spmv_thread_main_swap(void *arg)
 	int i;
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-        if (_CSX_)
-            VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-                                    spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
 		pthread_barrier_wait(&barrier);
 		SWAP(x, y);

@@ -203,11 +203,11 @@ void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 }
 
 void VECTOR_NAME(_init_part)(VECTOR_TYPE *v, unsigned long start,
-                             unsigned long len, ELEM_TYPE val)
+                             unsigned long end, ELEM_TYPE val)
 {
 	unsigned long i;
-	for (i = 0; i < len; i++)
-		v->elements[start+i] = val;
+	for (i = start; i < end; i++)
+		v->elements[i] = val;
 }
 
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)

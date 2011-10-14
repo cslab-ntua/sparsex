@@ -46,6 +46,9 @@ private:
     uint64_t row_start_;    ///< Row of the original matrix, where this
                             ///  sub-matrix starts.
     bool elems_mapped_;
+    
+    ///< Maximum possible rowptr_size after transformations.
+    uint64_t max_rowptr_size_;
 
     // These are mainly SPM construction classes, so make them friends
     friend class Builder;
@@ -245,7 +248,9 @@ private:
             spm = ret + i;
             limit = (mat.GetNrNonzeros() - cnt) / (nr - i);
             spm->nr_nzeros_ = spm->SetElems(iter, iter_end, row_start + 1,
-                                            limit);
+                                            limit,
+                                            limit + mat.GetNrRows() + 1,
+                                            mat.GetNrRows() + 1);
             spm->nr_rows_ = spm->rowptr_size_ - 1;
             spm->nr_cols_ = mat.GetNrCols();
             spm->row_start_ = row_start;

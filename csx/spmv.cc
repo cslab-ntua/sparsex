@@ -45,6 +45,8 @@ extern "C" {
 #include "ctl_ll.h"
 #include <libgen.h>
 }
+#include <sched.h>
+
 
 ///> Max deltas that an encoding type may have. This is restricted by the
 ///  number of bits used for encoding the different patterns in CSX.
@@ -68,6 +70,8 @@ extern "C" {
 })
 
 using namespace csx;
+
+double pre_time;
 
 int SplitString(char *str, char **str_buf, const char *start_sep,
                 const char *end_sep)
@@ -243,21 +247,20 @@ void *PreprocessThread(void *thread_info)
 {
     thread_info_t *data = (thread_info_t *) thread_info;
     DRLE_Manager *DrleMg;
-
-    data->buffer << "==> Thread: #" << data->thread_no << std::endl;
-
+    
     // set cpu affinity
     setaffinity_oncpu(data->cpu);
-
+    
+    data->buffer << "==> Thread: #" << data->thread_no << std::endl;
+    
     // Initialize the DRLE manager
-    DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.1, data->wsize,
+    DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_portion,
                               data->samples_max);
     // Adjust the ignore settings properly
     DrleMg->IgnoreAll();
     for (int i = 0; data->xform_buf[i] != -1; ++i)
         DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
-
 
      // If the user supplies the deltas choices, encode the matrix with the
      // order given in XFORM_CONF, otherwise find statistical data for the types
@@ -267,7 +270,6 @@ void *PreprocessThread(void *thread_info)
         DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
     else
         DrleMg->EncodeAll(data->buffer, data->split_blocks);
-
     // DrleMg->MakeEncodeTree(data->split_blocks);
 
     csx_double_t *csx = data->csxmg->MakeCsx();
@@ -310,7 +312,6 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms)
             std::cout << ",";
         std::cout << threads_cpus[i];
     }
-
     std::cout << std::endl;
 
     // Get XFORM_CONF
@@ -330,6 +331,9 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms)
 
     // Get SPLIT_BLOCKS
     bool split_blocks = GetOptionSplitBlocks();
+
+    // Set affinity for the serial part of the preproprecessing.
+    setaffinity_oncpu(threads_cpus[0]);
 
     // Initalization of the multithreaded sparse matrix representation
     spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
@@ -370,22 +374,22 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms)
         data[i].deltas = deltas;
         data[i].buffer.str("");
     }
-
+    
     // Start parallel preprocessing
     for (unsigned int i = 1; i < nr_threads; i++)
         pthread_create(&threads[i-1], NULL, PreprocessThread,
                        (void *) &data[i]);
-
+    
     PreprocessThread((void *) &data[0]);
 
     for (unsigned int i = 1; i < nr_threads; ++i)
-        pthread_join(threads[i-1],NULL);
+        pthread_join(threads[i-1], NULL);
 
     // CSX matrix construction and JIT compilation
     CsxJitInitGlobal();
     Jits = (CsxJit **) xmalloc(nr_threads * sizeof(CsxJit *));
 
-    for (unsigned int i = 0; i < nr_threads; ++i){
+    for (unsigned int i = 0; i < nr_threads; ++i) {
         Jits[i] = new CsxJit(data[i].csxmg, i);
         Jits[i]->GenCode(data[i].buffer);
         std::cout << data[i].buffer.str();
@@ -408,9 +412,8 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms)
 
     // Preprocessing finished; stop timer
     timer_pause(&timer);
-    std::cout << "Preprocessing time: "
-              << timer_secs(&timer) << " sec"
-              << std::endl;
+    pre_time = timer_secs(&timer);
+    
     return spm_mt;
 }
 
@@ -471,8 +474,8 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     getMmfHeader(mmf_name, nrows, ncols, nnz);
     secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
     flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-    printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-           "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+    printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n",
+           "csx", basename(mmf_name), CsxSize(spm_mt), pre_time, secs, flops);
 
 #undef SPMV_BENCH_FN
 }

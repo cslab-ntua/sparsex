@@ -20,10 +20,28 @@
 #include <cassert>
 #include <cstdlib>
 
-#include "spm.h"
+extern "C" {
+#include "timer.h"
+}
 
 namespace csx {
+    
+enum {
+    TIMER_TOTAL = 0,
+    TIMER_STATS,
+    TIMER_ENCODE,
+    TIMER_ALLOC,
+    TIMER_END
+};
 
+const char *timers_desc_[] =
+{
+    "Total Time: ",
+    "Stats Time: ",
+    "Encode Time: ",
+    "Alloc Time: "
+};
+    
 /**
  *  Delta Run-Length Encoding Manager.
  *
@@ -370,10 +388,12 @@ private:
     size_t *selected_splits_;
     double sampling_portion_;
     uint64_t samples_max_;
+    double stat_correction_factor_;
     static const uint64_t max_sampling_tries_ = 3;
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;
+    xtimer_t timers_[TIMER_END];
 };
 
 /**

@@ -66,9 +66,9 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
     uint8_t *ctl_end = ctl + csx->ctl_size;
     uint64_t y_indx = csx->row_start;
     uint8_t size, flags;
+    uint64_t i;
 
     //printf("csx->ctl: %p\n", csx->ctl);
-
     x = in  ? in->elements : NULL;
     y = out ? out->elements: NULL;
     myx = x;
@@ -82,6 +82,10 @@ void csx_spmv_template(void *spm, vector_double_t *in, vector_double_t *out)
     llvm_annotate(&ctl, "spmv::ctl");
     llvm_annotate(&size, "spmv::size");
     llvm_annotate(&flags, "spmv::flags");
+    
+    for (i = csx->row_start; i < csx->row_start + csx->nrows; i++)
+        y[i] = 0;
+
     do {
         //printf("ctl:%p\n", ctl);
         flags = *ctl++;

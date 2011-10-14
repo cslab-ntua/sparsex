@@ -42,7 +42,7 @@ static inline void timer_pause(xtimer_t *t)
 	t->pauses++;
 }
 
-static double timer_secs(xtimer_t *t)
+static inline double timer_secs(xtimer_t *t)
 {
 	return (double)t->usecs_total/(double)1000000;
 }

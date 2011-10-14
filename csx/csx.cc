@@ -105,7 +105,9 @@ csx_double_t *CsxManager::MakeCsx()
         exit(1);
     }
 
-    ctl_da_ = DYNARRAY_CREATE(sizeof(uint8_t), 512);
+    // Be greedy with the initial capacity (equal to CSR col_ind size) 
+    // to avoid realloc()'s.
+    ctl_da_ = DYNARRAY_CREATE(sizeof(uint8_t), 512, 4*spm_->nr_nzeros_);
     csx->nnz = spm_->nr_nzeros_;
     csx->nrows = spm_->nr_rows_;
     csx->ncols = spm_->nr_cols_;

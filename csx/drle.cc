@@ -119,10 +119,16 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
             samples_max_ = sort_splits_.size();
         }
 
+        stat_correction_factor_ =
+            spm_->nr_nzeros_ / (samples_max_*sort_window_size_);
         SelectSplits();
     } else {
         selected_splits_ = 0;
+        stat_correction_factor_ = 1;
     }
+    
+    for (int i = 0; i < TIMER_END; i++)
+        timer_init(&timers_[i]);
 }
     
 DeltaRLE::Stats DRLE_Manager::GenerateStats(uint64_t rs, uint64_t re)
@@ -190,7 +196,7 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
                 delete window;
             }
             
-            CorrectStats(type, (spm_->nr_nzeros_) / ((double) samples_nnz));
+            CorrectStats(type, stat_correction_factor_);
         } else {
             spm_->Transform(type);
             stats_[type] = GenerateStats(0, spm_->GetNrRows());
@@ -228,9 +234,10 @@ void DRLE_OutStats(DeltaRLE::Stats &stats, SPM &spm, std::ostream &os)
     for (iter = stats.begin(); iter != stats.end(); ++iter) {
         os << "    " << iter->first << "-> " << "np:"
            << iter->second.npatterns
-           << " nnz: "
+           << " nnz: " << iter->second.nnz
+           << " ("
            <<  100 * ((double) iter->second.nnz / (double) spm.GetNrNonzeros())
-           << "%" << " (" << iter->second.nnz << ")";
+           << "%" << ")";
     }
 }
 
@@ -320,7 +327,7 @@ void DRLE_Manager::Encode(SpmIterOrder type, bool split_blocks)
     if (type == NONE && ((type = ChooseType()) == NONE))
         return;
 
-    SpmBld = new SPM::Builder(spm_);
+    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->max_rowptr_size_);
 
     // Transform matrix to the desired iteration order
     oldtype = spm_->type_;
@@ -330,7 +337,9 @@ void DRLE_Manager::Encode(SpmIterOrder type, bool split_blocks)
         EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row, split_blocks);
         nr_size = new_row.size();
         if (nr_size > 0) {
+            timer_start(&timers_[TIMER_ALLOC]);
             elems = SpmBld->AllocElems(nr_size);
+            timer_pause(&timers_[TIMER_ALLOC]);
             for (uint64_t i = 0; i < nr_size; ++i)
                 MakeRowElem(new_row[i], elems + i);
         }
@@ -363,7 +372,7 @@ void DRLE_Manager::Decode(SpmIterOrder type)
     spm_->Transform(type);
 
     // Do the decoding
-    SpmBld = new SPM::Builder(spm_);
+    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->max_rowptr_size_);
     for (uint64_t i = 0; i < spm_->GetNrRows(); ++i) {
         DecodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
@@ -389,17 +398,46 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
 {
     SpmIterOrder type = NONE;
     StatsMap::iterator iter;
-
-    os << "Computed window size: " << sort_window_size_ << std::endl;
+    SpmIterOrder enc_seq[22];
+    int counter = 0;
+    //double t;
+    
+    timer_start(&timers_[TIMER_TOTAL]);
+    //os << "Computed window size: " << sort_window_size_ << std::endl;
     for (;;) {
+        timer_start(&timers_[TIMER_STATS]);
         GenAllStats(split_blocks);
+        timer_pause(&timers_[TIMER_STATS]);
         OutStats(os);
         type = ChooseType();
         if (type == NONE)
             break;
+        timer_start(&timers_[TIMER_ENCODE]);
         os << "Encode to " << SpmTypesNames[type] << "\n";
         Encode(type, split_blocks);
+        enc_seq[counter++] = type;
+        timer_pause(&timers_[TIMER_ENCODE]);
     }
+    
+    timer_pause(&timers_[TIMER_TOTAL]);
+    
+    os << "Encoding sequence: ";
+    if (counter == 0)
+        os << "NONE";
+    else
+        os << SpmTypesNames[enc_seq[0]];
+        
+    for (int i = 1; i < counter; i++)
+        os << ", " << SpmTypesNames[enc_seq[i]];
+    
+    os << std::endl;
+    
+    /*
+    for (int i = 0; i < TIMER_END; i++) {
+        t = timer_secs(&timers_[i]);
+        os << timers_desc_[i] << t << std::endl;
+    }
+    */
 }
 
 void DRLE_Manager::MakeEncodeTree(bool split_blocks)
@@ -1185,7 +1223,8 @@ void DRLE_Manager::OutStats(std::ostream &os)
     DRLE_Manager::StatsMap::iterator iter;
     for (iter = stats_.begin(); iter != stats_.end(); ++iter){
          if (!iter->second.empty()) {
-             os << SpmTypesNames[iter->first] << "\t";
+             os << SpmTypesNames[iter->first] << "\ts:" 
+                << GetTypeScore(iter->first);
              DRLE_OutStats(iter->second, *(spm_), os);
              os << std::endl;
          }
