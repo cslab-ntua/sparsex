@@ -115,16 +115,22 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
         }
         
         ComputeSortSplits();
+#if 0
+        std::cout << "Window size (computed): "
+                  << sort_window_size_ << std::endl;
+        for (size_t i = 0; i < sort_splits_.size() - 1; ++i) {
+            printf("(%ld, %ld)\n", sort_splits_[i+1] - sort_splits_[i],
+                   sort_splits_nzeros_[i]);
+        }
+#endif
+
         if (samples_max_ > sort_splits_.size()) {
             samples_max_ = sort_splits_.size();
         }
 
-        stat_correction_factor_ =
-            spm_->nr_nzeros_ / (samples_max_*sort_window_size_);
         SelectSplits();
     } else {
         selected_splits_ = 0;
-        stat_correction_factor_ = 1;
     }
     
     for (int i = 0; i < TIMER_END; i++)
@@ -176,17 +182,19 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
             for (size_t i = 0; i < samples_max_; ++i) {
                 DeltaRLE::Stats w_stats;
                 uint64_t window_start = sort_splits_[selected_splits_[i]];
-                uint64_t window_size = sort_splits_[selected_splits_[i]+1] - window_start;
+                uint64_t window_size =
+                    sort_splits_[selected_splits_[i]+1] - window_start;
                 SPM *window = spm_->GetWindow(window_start, window_size);
                 
                 // std::cout << "wstart: " << window_start << std::endl;
                 // std::cout << "wsize (rows): " << window_size << std::endl;
+                // std::cout << "wsize (nnz): " << sort_splits_nzeros_[selected_splits_[i]] << std::endl;
                 // Check for empty windows, since nonzeros might be captured
                 // from previous patterns.
                 if  (!window->nr_nzeros_)
                     goto exit_loop;
                     
-                samples_nnz += window->nr_nzeros_;
+                samples_nnz += sort_splits_nzeros_[selected_splits_[i]];
                 window->Transform(type);
                 w_stats = GenerateStats(window, 0, window->GetNrRows());
                 UpdateStats(type, w_stats);
@@ -196,7 +204,7 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
                 delete window;
             }
             
-            CorrectStats(type, stat_correction_factor_);
+            CorrectStats(type, spm_->nr_nzeros_ / (double) samples_nnz);
         } else {
             spm_->Transform(type);
             stats_[type] = GenerateStats(0, spm_->GetNrRows());
@@ -403,7 +411,6 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
     //double t;
     
     timer_start(&timers_[TIMER_TOTAL]);
-    //os << "Computed window size: " << sort_window_size_ << std::endl;
     for (;;) {
         timer_start(&timers_[TIMER_STATS]);
         GenAllStats(split_blocks);
@@ -1185,16 +1192,20 @@ void DRLE_Manager::DoComputeSortSplitsByNNZ()
             nzeros_cnt = new_nzeros_cnt;
         } else {
             sort_splits_.push_back(i + 1);
+            sort_splits_nzeros_.push_back(new_nzeros_cnt);
             nzeros_cnt = 0;
         }
     }
 
     if (nzeros_cnt) {
+        uint64_t &last_split_nz = sort_splits_nzeros_.back();
+        last_split_nz += nzeros_cnt;
         if (nzeros_cnt > sort_window_size_ / 2) {
             sort_splits_.push_back(nr_rows);
         } else {
             sort_splits_.pop_back();
             sort_splits_.push_back(nr_rows);
+            
         }    
     }
 }

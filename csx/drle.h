@@ -385,10 +385,10 @@ private:
     uint64_t sort_window_size_;
     split_alg_t split_type_;
     std::vector<uint64_t> sort_splits_;
+    std::vector<uint64_t> sort_splits_nzeros_;
     size_t *selected_splits_;
     double sampling_portion_;
     uint64_t samples_max_;
-    double stat_correction_factor_;
     static const uint64_t max_sampling_tries_ = 3;
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
