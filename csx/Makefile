@@ -86,7 +86,7 @@ jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 spmv.o: spmv.cc $(spm_dir)/spm_mt.h
 	$(CXX_COMPILE) -c $<
 
-elmerif.o: elmerif.cc elmerif.h spmv.h csr.h
+elmerif.o: elmerif.cc elmerif.h spmv.h spm.h csr.h
 	$(CXX_COMPILE) -DSPM_CRS_BITS=32 -c $<
 
 main.o: main.cc spmv.h

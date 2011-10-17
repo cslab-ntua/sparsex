@@ -256,6 +256,7 @@ private:
             spm->row_start_ = row_start;
             row_start += spm->nr_rows_;
             spm->type_ = HORIZONTAL;
+            spm->max_rowptr_size_ = spm->nr_rows_ + spm->nr_cols_ + 1;
             cnt += spm->nr_nzeros_;
         }
 
