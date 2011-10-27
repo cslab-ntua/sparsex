@@ -113,13 +113,19 @@ int SplitString(char *str, char **str_buf, const char *start_sep,
 void GetOptionXform(int **xform_buf)
 {
     char *xform_orig = getenv("XFORM_CONF");
+
     *xform_buf = (int *) xmalloc(XFORM_MAX * sizeof(int));
-
     if (xform_orig && strlen(xform_orig)) {
-        int next = 0;
-        int t = atoi(strtok(xform_orig, ","));
-        char *token;
+        int next;
+        int t;
+        char *token, *xform;
 
+        // Copy environment variable to avoid being altered from strtok()
+        xform = (char *) xmalloc(strlen(xform_orig)+1);
+        strncpy(xform, xform_orig, strlen(xform_orig)+1);
+
+        next = 0;
+        t = atoi(strtok(xform, ","));
         (*xform_buf)[next] = t;
         ++next;
         while ((token = strtok(NULL, ",")) != NULL) {
@@ -129,6 +135,7 @@ void GetOptionXform(int **xform_buf)
         }
 
         (*xform_buf)[next] = -1;
+        free(xform);
     } else {
         (*xform_buf)[0] = 0;
         (*xform_buf)[1] = -1;
@@ -147,9 +154,13 @@ void GetOptionXform(int **xform_buf)
 
 void GetOptionEncodeDeltas(int ***deltas)
 {
-    char *encode_deltas_str = getenv("ENCODE_DELTAS");
+    char *encode_deltas_env = getenv("ENCODE_DELTAS");
+    if (encode_deltas_env && strlen(encode_deltas_env)) {
+        // Copy environment variable to avoid being altered from strtok()
+        char *encode_deltas_str = (char *) xmalloc(strlen(encode_deltas_env)+1);
+        strncpy(encode_deltas_str, encode_deltas_env,
+                strlen(encode_deltas_env)+1);
 
-    if (encode_deltas_str) {
         // Init matrix deltas.
         *deltas = (int **) xmalloc(XFORM_MAX * sizeof(int *));
 
@@ -191,6 +202,7 @@ void GetOptionEncodeDeltas(int ***deltas)
         }
 
         std::cout << "}" << std::endl;
+        free(encode_deltas_str);
     }
 }
 
@@ -226,6 +238,19 @@ uint64_t GetOptionSamples()
     }
 
     return samples_max;
+}
+
+int GetOptionOuterLoops()
+{
+    const char *loops_env = getenv("OUTER_LOOPS");
+    int ret = 0;
+    if (loops_env) {
+        ret = atoi(loops_env);
+        if (ret < 0)
+            ret = 0;
+    }
+    
+    return ret;
 }
 
 double GetOptionPortion()
@@ -506,10 +531,14 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 #endif
 
     getMmfHeader(mmf_name, nrows, ncols, nnz);
-    secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
-    flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-    printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n",
-           "csx", basename(mmf_name), CsxSize(spm_mt), pre_time, secs, flops);
+    int nr_outer_loops = GetOptionOuterLoops();
+    for (int i = 0; i < nr_outer_loops; ++i) {
+        secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
+        flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
+        printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf l:%d\n",
+               "csx", basename(mmf_name), CsxSize(spm_mt), pre_time, secs,
+               flops, i+1);
+    }
 
 #undef SPMV_BENCH_FN
 }
@@ -524,10 +553,12 @@ int main(int argc, char **argv)
     }
 
     for (int i = 1; i < argc; i++) {
+        std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
         spm_mt = GetSpmMt(argv[i]);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
+        std::cout << "=== END BENCHMARK ===" << std::endl;
         PutSpmMt(spm_mt);
     }
     
