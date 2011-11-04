@@ -30,10 +30,13 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 	SPM_CRS_MT_TYPE *crs_mt;
 	unsigned long cur_row, elems_limit, elems_total=0;
 
+    // set affinity of the current thread
+	mt_get_options(&nr_cpus, &cpus);
+    setaffinity_oncpu(cpus[0]);
+
 	SPM_CRS_TYPE *crs;
 	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr);
-	mt_get_options(&nr_cpus, &cpus);
-
+    
 	spm_mt = malloc(sizeof(spm_mt_t));
 	if ( !spm_mt ){
 		fprintf(stderr, "malloc failed\n");
