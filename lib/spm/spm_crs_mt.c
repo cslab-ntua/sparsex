@@ -33,7 +33,13 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 	SPM_CRS_TYPE *crs;
 	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr);
 	mt_get_options(&nr_cpus, &cpus);
-
+	
+	printf("MT_CONF: ");
+	printf("%u", cpus[0]);
+	for (i = 1; i < nr_cpus; i++) 
+        printf(",%u", cpus[i]);
+	printf("\n");
+        
 	spm_mt = malloc(sizeof(spm_mt_t));
 	if ( !spm_mt ){
 		fprintf(stderr, "malloc failed\n");

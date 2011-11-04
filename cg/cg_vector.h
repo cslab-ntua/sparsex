@@ -16,7 +16,7 @@
 #include <cstring>
 
 extern "C" {
-#include "../lib/spm/vector.h"
+#include "vector.h"
 }
 
 void vector_double_sub(vector_double_t *in1, vector_double_t *in2,

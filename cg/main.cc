@@ -14,7 +14,7 @@
 #include <cmath>
 #include <cstdlib>
 
-#include "../csx/spmv.h"
+#include "spmv.h"
 
 #include "cg.h"
 
@@ -52,24 +52,23 @@ int main(int argc, char *argv[])
     
     csx_double_t	*csx;
     csx_double_sym_t    *csx_sym;
-    
-    ///> Variables that store counting time.
-    struct timeval      cg_start, cg_end;
+
     double              cg_time;
     double              spmv_time = 0;
     double              red_time = 0;
     
     ///> Function variables.   
     void                *(*CgSideThread)(void *);
-    void                (*CgMainThread)(cg_params *, double *, double *);
+    void                (*CgMainThread)(cg_params *, double *, double *, double *);
     uint64_t            (*SpMSize)(void *);
     
     ///> Default options.
+    unsigned long       nLoops = 1;
     unsigned long       nloops = 512;
     cg_method_t         cg_method = CSR;
     
     ///> Parse Options.
-    while ((j = getopt(argc, argv, "cxsl:")) != -1) {
+    while ((j = getopt(argc, argv, "xsl:L:")) != -1) {
         switch (j) {
             case 'x':
                 if (cg_method == CSR)
@@ -86,16 +85,18 @@ int main(int argc, char *argv[])
             case 'l':
                 nloops = atol(optarg);
                 break;
+            case 'L':
+                nLoops = atol(optarg);
+                break;
 	    default:
-	        fprintf(stderr,
-	                "Usage: cg [-x -l <number of loops>] mmf_file\n");
+	        fprintf(stderr, "Usage: cg [-x -s -l <number of inside loops> -L <number of outside loops>] mmf_file\n");
 	        exit(1);
 	}
     }
     
     ///> Take input file from which matrix will be loaded.
     if (argc != optind+1) {
-        fprintf(stderr, "Usage: cg [-x -l <number of loops>] mmf_file\n");
+        //fprintf(stderr, "Usage: cg [-x -s -l <number of loops> -L <number of outside loops>] mmf_file\n");
         exit(1);
     }
     mmf_file = argv[optind];
@@ -205,115 +206,110 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    ///> Create vectors with the appropriate size.
-    x = vector_double_create(n);
-    sol = vector_double_create(n);
-    b = vector_double_create(n);
-    r = vector_double_create(n);
-    p = vector_double_create(n);
-    t = vector_double_create(n);
+    for (unsigned int loops=0; loops < nLoops; loops++) {  
+        ///> Create vectors with the appropriate size.
+        x = vector_double_create(n);
+        sol = vector_double_create(n);
+        b = vector_double_create(n);
+        r = vector_double_create(n);
+        p = vector_double_create(n);
+        t = vector_double_create(n);
     
-    if (cg_method == CSR_sym || cg_method == CSX_sym) {
-        sub_p = (vector_double_t **) 
-                   malloc(ncpus * sizeof(vector_double_t *));
-        sub_p[0] = t;
-        for (i = 1; i < ncpus; i++) {
-            sub_p[i] = vector_double_create(n);
+        if (cg_method == CSR_sym || cg_method == CSX_sym) {
+            sub_p = (vector_double_t **) 
+                       malloc(ncpus * sizeof(vector_double_t *));
+            sub_p[0] = t;
+            for (i = 1; i < ncpus; i++) {
+                sub_p[i] = vector_double_create(n);
+            }
         }
-    }
     
-    ///> Initialize partial values of doubles.
-    rr = (double *) malloc(ncpus * sizeof(double));
-    tp = (double *) malloc(ncpus * sizeof(double));
-    rr_new = (double *) malloc(ncpus * sizeof(double));
-    ai = (double *) malloc(sizeof(double));
-    bi = (double *) malloc(sizeof(double));
+        ///> Initialize partial values of doubles.
+        rr = (double *) malloc(ncpus * sizeof(double));
+        tp = (double *) malloc(ncpus * sizeof(double));
+        rr_new = (double *) malloc(ncpus * sizeof(double));
+        ai = (double *) malloc(sizeof(double));
+        bi = (double *) malloc(sizeof(double));
 
-    ///> Assign the appropriate parameters to each thread.
-    cg_params *params = (cg_params *) malloc(ncpus * sizeof(cg_params));
+        ///> Assign the appropriate parameters to each thread.
+        cg_params *params = (cg_params *) malloc(ncpus * sizeof(cg_params));
                             
-    for (i = 0; i < ncpus; i++) {
-        params[i].nloops = nloops;
-        params[i].ncpus = ncpus;
-        params[i].spm_thread = spm_mt->spm_threads+i;
-        params[i].p = p;
-        params[i].temp = t;
-        params[i].r = r;
-        params[i].x = x;
-        params[i].barrier = &barrier;
-        params[i].start = i * n / ncpus;
-        params[i].end = (i + 1) * n / ncpus;
-        params[i].rr = rr + i;
-        params[i].tp = tp + i;
-        params[i].rr_new = rr_new + i;
-        params[i].ai = ai;
-        params[i].bi = bi;
+        for (i = 0; i < ncpus; i++) {
+            params[i].nloops = nloops;
+            params[i].ncpus = ncpus;
+            params[i].spm_thread = spm_mt->spm_threads+i;
+            params[i].p = p;
+            params[i].temp = t;
+            params[i].r = r;
+            params[i].x = x;
+            params[i].barrier = &barrier;
+            params[i].start = i * n / ncpus;
+            params[i].end = (i + 1) * n / ncpus;
+            params[i].rr = rr + i;
+            params[i].tp = tp + i;
+            params[i].rr_new = rr_new + i;
+            params[i].ai = ai;
+            params[i].bi = bi;
+            if (cg_method == CSR_sym || cg_method == CSX_sym)
+                params[i].sub_vectors = sub_p;
+        }
+    
+        ///> Load vector solution with random values and calculate its distance.
+        vector_double_init_rand_range(sol, (double) -1000, (double) 1000);
+        sol_dis = vector_double_mul(sol, sol);
+        sol_dis = sqrt(sol_dis);
+    
+        ///> Find b vector for the specified solution.
         if (cg_method == CSR_sym || cg_method == CSX_sym)
-            params[i].sub_vectors = sub_p;
-    }
+            FindSymSolution(spm_mt, sol, b, t);
+        else
+            FindSolution(spm_mt, sol, b, t);
     
-    ///> Load vector solution with random values and calculate its distance.
-    vector_double_init_rand_range(sol, (double) -1000, (double) 1000);
-    sol_dis = vector_double_mul(sol, sol);
-    sol_dis = sqrt(sol_dis);
+        ///> Initialize CG method.
+        if (cg_method == CSR_sym || cg_method == CSX_sym)
+            InitializeSymCg(spm_mt, x, r, p, b, t);
+        else
+            InitializeCg(spm_mt, x, r, p, b, t);
     
-    ///> Find b vector for the specified solution.
-    if (cg_method == CSR_sym || cg_method == CSX_sym)
-        FindSymSolution(spm_mt, sol, b, t);
-    else
-        FindSolution(spm_mt, sol, b, t);
-    
-    ///> Initialize CG method.
-    if (cg_method == CSR_sym || cg_method == CSX_sym)
-        InitializeSymCg(spm_mt, x, r, p, b, t);
-    else
-        InitializeCg(spm_mt, x, r, p, b, t);
-        
-    ///> Start counting time.
-    gettimeofday(&cg_start, NULL);
-    
-    ///> Initiate side threads.
-    for (i = 1; i < ncpus; i++)
-	pthread_create(&tids[i-1], NULL, CgSideThread, (void *) &params[i]);
-
-    ///> Execute main thread.
-    CgMainThread(params, &spmv_time, &red_time);
-    
-    ///> Stop counting time.
-    gettimeofday(&cg_end, NULL);
-    cg_time = cg_end.tv_sec - cg_start.tv_sec +
-              (cg_end.tv_usec - cg_start.tv_usec) / 1000000.0;
-    
-    ///> Find relative distance.
-    vector_double_sub(sol, x, t);
-    rd = vector_double_mul(t, t);
-    rd = sqrt(rd);
-    rd /= sol_dis;
-    
-    ///> Print Results.
-    printf("m:%s l:%lu rd:%lf s:%lu st:%lf rt:%lf ct:%lf\n", basename(mmf_file), 
-           nloops, rd, SpMSize((void *) spm_mt), spmv_time, red_time, cg_time);
-    
-    ///> Release vectors.
-    vector_double_destroy(x);
-    vector_double_destroy(sol);
-    vector_double_destroy(b);
-    vector_double_destroy(r);
-    vector_double_destroy(p);
-    vector_double_destroy(t);
-    if (sub_p) {
+        ///> Initiate side threads.
         for (i = 1; i < ncpus; i++)
-            vector_double_destroy(sub_p[i]);
-        free(sub_p);
-    }
+	    pthread_create(&tids[i-1], NULL, CgSideThread, (void *) &params[i]);
+
+        ///> Execute main thread.
+        CgMainThread(params, &cg_time, &spmv_time, &red_time);
     
-    ///> Free parameters.
-    free(rr);
-    free(tp);
-    free(rr_new);
-    free(ai);
-    free(bi);
-    free(params);
+        ///> Find relative distance.
+        vector_double_sub(sol, x, t);
+        rd = vector_double_mul(t, t);
+        rd = sqrt(rd);
+        rd /= sol_dis;
+    
+        ///> Print Results.
+        printf("m:%s l:%lu rd:%lf st:%lf rt:%lf ct:%lf\n", basename(mmf_file), 
+               nloops, rd, spmv_time, red_time, cg_time);
+    
+        ///> Release vectors.
+        vector_double_destroy(x);
+        vector_double_destroy(sol);
+        vector_double_destroy(b);
+        vector_double_destroy(r);
+        vector_double_destroy(p);
+        vector_double_destroy(t);
+        if (sub_p) {
+            for (i = 1; i < ncpus; i++)
+                vector_double_destroy(sub_p[i]);
+            free(sub_p);
+        }
+    
+        ///> Free parameters.
+        free(rr);
+        free(tp);
+        free(rr_new);
+        free(ai);
+        free(bi);
+        free(params);
+    
+    }
     
     ///> Free pthreads.
     free(tids);

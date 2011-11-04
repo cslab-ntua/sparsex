@@ -167,7 +167,7 @@ void *SymCgSideThread(void *arg)
         pthread_barrier_wait(barrier);
         fn(spm_thread->spm, p, temp, sub_vectors[id]);
         pthread_barrier_wait(barrier);
-        vector_double_addmap(temp, sub_vectors, temp, spm_thread->map);
+        vector_double_add_from_map(temp, sub_vectors, temp, spm_thread->map);
         vector_double_init_from_map(sub_vectors, 0, spm_thread->map);
         pthread_barrier_wait(barrier);
         *rr = vector_double_mul_part(r, r, start, end);
@@ -187,7 +187,7 @@ void *SymCgSideThread(void *arg)
     return NULL;
 }
 
-void NormalCgMainThread(cg_params *params, double *spmv_time,
+void NormalCgMainThread(cg_params *params, double *cg_time, double *spmv_time,
                         double * red_time)
 {
     uint64_t i, j;
@@ -207,22 +207,27 @@ void NormalCgMainThread(cg_params *params, double *spmv_time,
     uint64_t start = params->start;
     uint64_t end = params->end;
     pthread_barrier_t *barrier = params->barrier;
-    struct timeval  spmv_start, spmv_end;
     
-    ///> Set thread to the appropriate cpu.
+    // Set thread to the appropriate cpu.
     setaffinity_oncpu(spm_thread->cpu);
+    
+    // Initialize timers.
+    timer_init(&cg_timer);
+    timer_init(&spmv_timer);
+    timer_init(&reduction_timer);
+    
+    // Start main timer.
+    timer_start(&cg_timer);
     
     ///> Do nr_loops.
     for (i = 0; i < nloops; i++) {
         pthread_barrier_wait(barrier);
-        gettimeofday(&spmv_start, NULL);
+        timer_start(&spmv_timer);
         
         ///> Do temp = A*p.
         fn(spm_thread->spm, p, temp);
         pthread_barrier_wait(barrier);
-        gettimeofday(&spmv_end, NULL);
-        *spmv_time += spmv_end.tv_sec - spmv_start.tv_sec +
-                      (spmv_end.tv_usec - spmv_start.tv_usec) / 1000000.0;
+        timer_pause(&spmv_timer);
         
         ///> Calculate ai.
         rr[0] = vector_double_mul_part(r, r, start, end);
@@ -253,9 +258,16 @@ void NormalCgMainThread(cg_params *params, double *spmv_time,
 	vector_double_scale_add_part(r, p, p, *bi, start, end);
         pthread_barrier_wait(barrier);
     }
+    
+    timer_pause(&cg_timer);
+    
+    *cg_time = timer_secs(&cg_timer);
+    *spmv_time = timer_secs(&spmv_timer);
+    *red_time = timer_secs(&reduction_timer);
 }
 
-void SymCgMainThread(cg_params *params, double *spmv_time, double * red_time)
+void SymCgMainThread(cg_params *params, double *cg_time, double *spmv_time,
+                     double * red_time)
 {
     uint64_t i, j;
     uint64_t nloops = params->nloops;
@@ -276,28 +288,30 @@ void SymCgMainThread(cg_params *params, double *spmv_time, double * red_time)
     vector_double_t **sub_vectors = params->sub_vectors;  
     uint64_t start = params->start;
     uint64_t end = params->end;
-    struct timeval  spmv_start, spmv_end;
-    struct timeval  red_start, red_end;
     
     ///> Set thread to the appropriate cpu.
     setaffinity_oncpu(spm_thread->cpu);
     
+    // Initialize timers.
+    timer_init(&cg_timer);
+    timer_init(&spmv_timer);
+    timer_init(&reduction_timer);
+    
+    // Start main timer.
+    timer_start(&cg_timer);
+    
     ///> Do nr_loops.
     for (i = 0; i < nloops; i++) {
         pthread_barrier_wait(barrier);
-        gettimeofday(&spmv_start, NULL);
+        timer_start(&spmv_timer);
         fn(spm_thread->spm, p, temp, sub_vectors[id]);  ///> Do temp = Ap.
         pthread_barrier_wait(barrier);
-        gettimeofday(&spmv_end, NULL);
-        *spmv_time += spmv_end.tv_sec - spmv_start.tv_sec +
-                      (spmv_end.tv_usec - spmv_start.tv_usec) / 1000000.0;
-        gettimeofday(&red_start, NULL);
-        vector_double_addmap(temp, sub_vectors, temp, spm_thread->map);
+        timer_pause(&spmv_timer);
+        timer_start(&reduction_timer);
+        vector_double_add_from_map(temp, sub_vectors, temp, spm_thread->map);
         vector_double_init_from_map(sub_vectors, 0, spm_thread->map);
         pthread_barrier_wait(barrier);
-        gettimeofday(&red_end, NULL);
-        *red_time += red_end.tv_sec - red_start.tv_sec +
-                      (red_end.tv_usec - red_start.tv_usec) / 1000000.0;
+        timer_pause(&reduction_timer);
         
         ///> Calculate ai.
         rr[0] = vector_double_mul_part(r, r, start, end);
@@ -328,6 +342,12 @@ void SymCgMainThread(cg_params *params, double *spmv_time, double * red_time)
 	vector_double_scale_add_part(r, p, p, *bi, start, end);
         pthread_barrier_wait(barrier);
     }
+    
+    timer_pause(&cg_timer);
+    
+    *cg_time = timer_secs(&cg_timer);
+    *spmv_time = timer_secs(&spmv_timer);
+    *red_time = timer_secs(&reduction_timer);
 }
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

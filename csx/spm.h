@@ -45,6 +45,9 @@ private:
     uint64_t row_start_;    ///< Row of the original matrix, where this
                             ///  sub-matrix starts.
     bool elems_mapped_;
+    
+    ///< Maximum possible rowptr_size after transformations.
+    uint64_t max_rowptr_size_;
 
     // These are mainly SPM construction classes, so make them friends
     friend class Builder;
@@ -103,6 +106,11 @@ public:
     {
         return row_start_;
     }
+    
+    uint64_t GetMaxRowPtrSize()
+    {
+        return max_rowptr_size_;
+    }
 
     void SetNrRows(uint64_t nr_rows)
     {
@@ -132,6 +140,11 @@ public:
     void SetRowPtrSize(uint64_t rowptr_size)
     {
         rowptr_size_ = rowptr_size;
+    }
+    
+    void SetMaxRowPtrSize(uint64_t max_rowptr_size)
+    {
+        max_rowptr_size_ = max_rowptr_size;
     }
     
     SpmRowElem *RowBegin(uint64_t ridx = 0);

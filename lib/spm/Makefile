@@ -14,16 +14,19 @@ dynarray_dep = $(dynarray_dir)/dynarray.o
 # This is ugly and non-portable
 # (we need a script to return CPU MhZs)
 MHZ_SH      ?= $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
+CC          ?= gcc
+LD          ?= ld
+CFLAGS      ?= -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 
-CC          ?= llvm-gcc
-CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
-CFLAGS      += -g
-DEFS        += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
-CFLAGS      += -DCPU_CORE # -DSPMV_PRFCNT # performance counters for an intel core
-DEFS        += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
+# Always add the following flags
+override CPPFLAGS += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
+override CPPFLAGS += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
+override CPPFLAGS += -I$(dynarray_dir) -I$(prfcnt_dir)
+
+# Support for performance counters
+# override CPPFLAGS    += -DCPU_CORE -DSPMV_PRFCNT # performance counters for an intel core
 LIBS         = -lm -lpthread -lnuma
-INC          = -I$(dynarray_dir) -I$(prfcnt_dir)
-COMPILE      = $(CC) $(CFLAGS) $(INC) $(DEFS)
+COMPILE      = $(CC) $(CPPFLAGS) $(CFLAGS)
 
 #ifeq ($(CPU),NIAGARA)
 #	CFLAGS += -m64
@@ -126,7 +129,7 @@ spmv.o: spmv.c
 	$(COMPILE) -c $< -o $@
 
 spmv: spmv.o libspmv.o
-	$(COMPILE) $(LIBS) $^ -o $@
+	$(CC) $(LDFLAGS) $(LIBS) $^ -o $@
 
 ## Usefull fallbacks
 %.s: %.c

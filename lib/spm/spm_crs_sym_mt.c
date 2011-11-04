@@ -68,7 +68,8 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
     }
     
     SPM_CRS_SYM_MT_NAME(_make_map)(spm_mt);
-    
+    map_size = SPM_CRS_SYM_MT_NAME(_map_size)(spm_mt);    
+
     assert(cur_row == crs->n);
     assert(elems_total == crs->nnz + crs->n);
     
@@ -231,8 +232,6 @@ void SPM_CRS_SYM_MT_NAME(_make_map)(void *spm) {
     }
     */
     
-    printf("Map Size %lu\n", SPM_CRS_SYM_MT_NAME(_map_size)(spm_mt));
-    
     ///> Free parameters.
     for (i = 0; i < ncpus; i++)
         free(initial_map[i]);
@@ -247,9 +246,9 @@ void SPM_CRS_SYM_MT_NAME(_destroy)(void *spm)
     SPM_CRS_SYM_MT_TYPE *crs_mt = (SPM_CRS_SYM_MT_TYPE *) spm_thread->spm;
     
     SPM_CRS_SYM_NAME(_destroy)(crs_mt->crs);
-    free(spm_thread->map->cpus);
-    free(spm_thread->map->elems_pos);
-    free(spm_thread->map);
+    //free(spm_thread->map->cpus);
+    //free(spm_thread->map->elems_pos);
+    //free(spm_thread->map);
     free(crs_mt);
     free(spm_thread);
     free(spm_mt);

@@ -255,8 +255,8 @@ void VECTOR_NAME(_add_part)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3,
 		v3->elements[i] = v1->elements[i] + v2->elements[i];
 }
 
-void VECTOR_NAME(_addmap)(VECTOR_TYPE *v1, VECTOR_TYPE **v2, VECTOR_TYPE *v3,
-                          map_t *map)
+void VECTOR_NAME(_add_from_map)(VECTOR_TYPE *v1, VECTOR_TYPE **v2,
+                                VECTOR_TYPE *v3, map_t *map)
 {
 	unsigned int i;
 	unsigned int *cpus = map->cpus;

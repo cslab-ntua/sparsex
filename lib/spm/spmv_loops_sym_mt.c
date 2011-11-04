@@ -41,8 +41,12 @@ static void *do_spmv_thread(void *arg)
         pthread_barrier_wait(&barrier);
         spmv_mt_sym_fn(spm_mt_thread->spm, x, y, temp[id]);
         pthread_barrier_wait(&barrier);
-        VECTOR_NAME(_addmap)(y, temp, y, spm_mt_thread->map);
+        /*for (j = 1; j < ncpus; j++)
+            VECTOR_NAME(_add_part)(y, temp[j], y, start, end);*/
+        VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
         pthread_barrier_wait(&barrier);
+        /*if (id != 0)
+            VECTOR_NAME(_init)(temp[id], 0);*/
         VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
     }
     
@@ -104,7 +108,9 @@ static void *do_spmv_thread_main_swap(void *arg)
         pthread_barrier_wait(&barrier);
         spmv_mt_sym_fn(spm_mt_thread->spm, x, y, y);
         pthread_barrier_wait(&barrier);
-        VECTOR_NAME(_addmap)(y, temp, y, spm_mt_thread->map);
+        /*for (j = 0; j < ncpus; j++)
+            VECTOR_NAME(_add_part)(y, temp[j], y, start, end);*/
+        VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
         pthread_barrier_wait(&barrier);
         VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
         SWAP(x, y);
@@ -219,8 +225,7 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
     y = VECTOR_NAME(_create)(n);
     y2 = VECTOR_NAME(_create)(n);
     temp = (VECTOR_TYPE **) malloc(ncpus * sizeof(VECTOR_TYPE *));
-    temp[0] = y;
-    for (i = 1; i < ncpus; i++)
+    for (i = 0; i < ncpus; i++)
         temp[i] = VECTOR_NAME(_create)(n);
     
     init_barrier(ncpus + 1);
@@ -246,8 +251,8 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
     
     for (i = 0; i < nloops; i++) {
         VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
-        VECTOR_NAME(_init)(y, (ELEM_TYPE) 0);
-        VECTOR_NAME(_init)(y2, (ELEM_TYPE) 21);
+        VECTOR_NAME(_init)(y, (ELEM_TYPE) 21);
+        VECTOR_NAME(_init)(y2, (ELEM_TYPE) 22);
         for (j = 1; j < ncpus; j++)
             VECTOR_NAME(_init)(temp[j], (ELEM_TYPE) 0);
         pthread_barrier_wait(&barrier);
@@ -264,7 +269,7 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
     VECTOR_NAME(_destroy)(x);
     VECTOR_NAME(_destroy)(y);
     VECTOR_NAME(_destroy)(y2);
-    for (i = 1; i < ncpus; i++)
+    for (i = 0; i < ncpus; i++)
         VECTOR_NAME(_destroy)(temp[i]);
 
 #ifdef SPMV_PRFCNT

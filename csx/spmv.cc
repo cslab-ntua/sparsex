@@ -47,6 +47,8 @@ extern "C" {
 #include "ctl_ll.h"
 #include <libgen.h>
 }
+#include <sched.h>
+
 
 ///> Max deltas that an encoding type may have. This is restricted by the
 ///  number of bits used for encoding the different patterns in CSX.
@@ -211,21 +213,21 @@ uint64_t GetOptionSamples()
     return samples_max;
 }
 
-double GetOptionProbability()
+double GetOptionPortion()
 {
-    const char *sampling_prob_str = getenv("SAMPLING_PROB");
-    double sampling_prob;
+    const char *sampling_portion_str = getenv("SAMPLING_PORTION");
+    double sampling_portion;
 
-    if (!sampling_prob_str) {
-        sampling_prob = 0.0;
-        std::cout << "Sampling prob: Not set" << std::endl;
+    if (!sampling_portion_str) {
+        sampling_portion = 0.0;
+        std::cout << "Sampling portion: Not set" << std::endl;
     }
     else {
-        sampling_prob = atof(sampling_prob_str);
-        std::cout << "Sampling prob: " << sampling_prob << std::endl;
+        sampling_portion = atof(sampling_portion_str);
+        std::cout << "Sampling portion: " << sampling_portion << std::endl;
     }
 
-    return sampling_prob;
+    return sampling_portion;
 }
 
 bool GetOptionSplitBlocks()
@@ -419,9 +421,9 @@ void *PreprocessThread(void *thread_info)
         data->buffer << "==> Thread: #" << data->thread_no << std::endl;
 
         // Initialize the DRLE manager
-        DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.1, data->wsize,
+        DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
                                   DRLE_Manager::SPLIT_BY_NNZ,
-                                  data->sampling_prob, data->samples_max);
+                                  data->sampling_portion, data->samples_max);
                                   
         // Adjust the ignore settings properly
         DrleMg->IgnoreAll();
@@ -464,9 +466,8 @@ void *PreprocessThread(void *thread_info)
         DRLE_Manager *DrleMg2;
 
         data->buffer << "==> Thread: #" << data->thread_no << std::endl;
-
-        data->spm_sym->DivideMatrix();
         
+        data->spm_sym->DivideMatrix();
         /*
         if (data->thread_no == 0) {
             std::cout << "Rows: " << data->spm_sym->GetFirstMatrix()->GetNrRows() << std::endl;
@@ -486,12 +487,12 @@ void *PreprocessThread(void *thread_info)
         
         // Initialize the DRLE manager
         DrleMg1 = new DRLE_Manager(data->spm_sym->GetFirstMatrix(), 4, 255-1, 
-                                   0.1, data->wsize, DRLE_Manager::SPLIT_BY_NNZ,
-                                   data->sampling_prob, data->samples_max);
+                                   0.05, data->wsize, DRLE_Manager::SPLIT_BY_NNZ,
+                                   data->sampling_portion, data->samples_max);
         DrleMg2 = new DRLE_Manager(data->spm_sym->GetSecondMatrix(), 4, 255-1, 
-                                   0.1, data->wsize, DRLE_Manager::SPLIT_BY_NNZ,
-                                   data->sampling_prob, data->samples_max);
-                                  
+                                   0.05, data->wsize, DRLE_Manager::SPLIT_BY_NNZ,
+                                   data->sampling_portion, data->samples_max);
+                        
         // Adjust the ignore settings properly
         DrleMg1->IgnoreAll();
         DrleMg2->IgnoreAll();
@@ -530,7 +531,6 @@ void *PreprocessThread(void *thread_info)
             //data->spm_sym->GetSecondMatrix()->PrintElems();
         }
         */
-        
         data->spm_sym->MergeMatrix();
         
         /*
@@ -541,7 +541,6 @@ void *PreprocessThread(void *thread_info)
         data->spm_sym->GetLowerMatrix()->PrintRows();
         //data->spm_sym->GetLowerMatrix()->PrintElems();
         */
-        
         csx_double_sym_t *csx = data->csxmg->MakeCsxSym();
         data->spm_encoded->spm = csx;
         data->spm_encoded->row_start = csx->lower_matrix->row_start;
@@ -567,13 +566,12 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
 
     // Get MT_CONF
     mt_get_options(&nr_threads, &threads_cpus);
-    std::cout << "MT_CONF=";
+    std::cout << "MT_CONF: ";
     for (unsigned int i = 0; i < nr_threads; i++) {
         if (i != 0)
             std::cout << ",";
         std::cout << threads_cpus[i];
     }
-
     std::cout << std::endl;
 
     // Get XFORM_CONF
@@ -588,14 +586,17 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
     // Get SAMPLES
     uint64_t samples_max = GetOptionSamples();
 
-    // Get SAMPLING_PROB
-    double sampling_prob = GetOptionProbability();
+    // Get SAMPLING_PORTION
+    double sampling_portion = GetOptionPortion();
 
     // Get SPLIT_BLOCKS
     bool split_blocks = GetOptionSplitBlocks();
     
     // Get SYMMETRIC
     bool symmetric = GetOptionSymmetric();
+
+    // Set affinity for the serial part of the preproprecessing.
+    setaffinity_oncpu(threads_cpus[0]);
 
     // Initalization of the multithreaded sparse matrix representation
     spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
@@ -621,7 +622,7 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
             MakeMap(spm_mt, spms_sym);
         }
     }
-
+    
     // Start timer for preprocessing
     xtimer_t timer;
     timer_init(&timer);
@@ -647,23 +648,23 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
         data[i].thread_no = i;
         data[i].cpu = threads_cpus[i];
         data[i].xform_buf = xform_buf;
-        data[i].sampling_prob = sampling_prob;
+        data[i].sampling_portion = sampling_portion;
         data[i].samples_max = samples_max;
         data[i].split_blocks = split_blocks;
         data[i].symmetric = symmetric;
         data[i].deltas = deltas;
         data[i].buffer.str("");
     }
-
+    
     // Start parallel preprocessing
     for (unsigned int i = 1; i < nr_threads; i++)
         pthread_create(&threads[i-1], NULL, PreprocessThread,
                        (void *) &data[i]);
-
+    
     PreprocessThread((void *) &data[0]);
 
     for (unsigned int i = 1; i < nr_threads; ++i)
-        pthread_join(threads[i-1],NULL);
+        pthread_join(threads[i-1], NULL);
 
     /*
     for (unsigned int i = 0; i < nr_threads; ++i) {
@@ -728,9 +729,8 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
 
     // Preprocessing finished; stop timer
     timer_pause(&timer);
-    std::cout << "Preprocessing time: "
-              << timer_secs(&timer) << " sec"
-              << std::endl;
+    pre_time = timer_secs(&timer);
+    
     return spm_mt;
 }
 
@@ -823,15 +823,16 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     if (!spm_mt->symmetric) {
         secs = spmv_double_bench_mt_loop(spm_mt, loops_nr, nrows, ncols, NULL);
         flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-        printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-               "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
+        printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n", "csx",
+               basename(mmf_name), CsxSize(spm_mt), pre_time, secs, flops);
     } else {
-        std::cout << "Map Size " << MapSize(spm_mt) << std::endl;
+        // std::cout << "Map Size " << MapSize(spm_mt) << std::endl;
         secs = spmv_double_bench_sym_mt_loop(spm_mt, loops_nr, nrows, ncols,
-                                             NULL);
+                                                 NULL);
         flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-        printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-               "csx", basename(mmf_name), CsxSymSize(spm_mt), secs, flops);
+        printf("m:%s f:%s ms:%lu s:%lu pt:%lf t:%lf r:%lf\n", "csx",
+               basename(mmf_name), MapSize(spm_mt), CsxSymSize(spm_mt),
+               pre_time, secs, flops);
     }
 #endif
 }

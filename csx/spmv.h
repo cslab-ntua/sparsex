@@ -23,6 +23,8 @@ extern "C" {
 #include "spm_mt.h"
 }
 
+double pre_time;
+
 ///> Thread data essential for parallel preprocessing
 typedef struct thread_info {
     unsigned int thread_no;
@@ -36,6 +38,7 @@ typedef struct thread_info {
     int *xform_buf;
     double sampling_prob;
     uint64_t samples_max;
+    double sampling_portion;
     bool split_blocks;
     bool symmetric;
     int **deltas;

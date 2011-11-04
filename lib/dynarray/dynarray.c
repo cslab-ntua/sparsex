@@ -27,22 +27,28 @@ struct dynarray {
 };
 
 static dynarray_t *do_create(unsigned long elem_size,
-                             unsigned long alloc_grain, int numa);
+                             unsigned long alloc_grain,
+                             unsigned long elems_nr,
+                             int numa);
 
 dynarray_t *dynarray_create(unsigned long elem_size,
-                            unsigned long alloc_grain)
+                            unsigned long alloc_grain,
+                            unsigned long elems_nr)
 {
-	return do_create(elem_size, alloc_grain, 0);
+	return do_create(elem_size, alloc_grain, elems_nr, 0);
 }
 
 dynarray_t *dynarray_create_numa(unsigned long elem_size,
-                                 unsigned long alloc_grain)
+                                 unsigned long alloc_grain,
+                                 unsigned long elems_nr)
 {
-	return do_create(elem_size, alloc_grain, 1);
+	return do_create(elem_size, alloc_grain, elems_nr, 1);
 }
 
 static dynarray_t *do_create(unsigned long elem_size,
-                             unsigned long alloc_grain, int numa)
+                             unsigned long alloc_grain,
+                             unsigned long elems_nr,
+                             int numa)
 {
 	struct dynarray *da;
 	int node = 0;
@@ -69,11 +75,19 @@ static dynarray_t *do_create(unsigned long elem_size,
 		fprintf(stderr, "dynarray_create: malloc\n");
 		exit(1);
 	}
-
+	
 	da->numa = numa;
 	da->next_idx = 0;
 	da->elem_size = elem_size;
-	da->elems_nr = da->alloc_grain = alloc_grain;
+	if (elems_nr <= alloc_grain) {
+	    da->elems_nr = alloc_grain;
+	} else {
+	    unsigned long rem = elems_nr % alloc_grain;
+	    da->elems_nr = elems_nr;
+	    if (rem)
+	        da->elems_nr += alloc_grain - rem;
+	}
+	da->alloc_grain = alloc_grain;
 
 	if (numa) {
 		da->elems = numa_alloc_onnode(elem_size*da->elems_nr, node);
@@ -158,7 +172,7 @@ void *dynarray_get_last(struct dynarray *da)
 static inline void dynarray_expand(struct dynarray *da)
 {
 	da->elems_nr += da->alloc_grain;
-	//printf("old addr: %p	 ", da->elems);
+    //printf("old addr: %p\n", da->elems);
 	//printf("expand realloc: %lu %lu %lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size);
 	if (da->numa) {
 		da->elems =
@@ -197,7 +211,8 @@ void dynarray_dealloc(struct dynarray *da)
 void *dynarray_alloc_nr(struct dynarray *da, unsigned long nr)
 {
 	void *ret;
-	while (da->next_idx + nr >= da->elems_nr) {
+	while (da->next_idx + nr > da->elems_nr) {
+	    printf("%lu vs %lu\n", da->next_idx, da->elems_nr);
 		dynarray_expand(da);
 	}
 
@@ -242,6 +257,11 @@ void dynarray_dealloc_all(struct dynarray *da)
 unsigned long dynarray_size(struct dynarray *da)
 {
 	return da->next_idx;
+}
+
+unsigned long dynarray_capacity(struct dynarray *da)
+{
+	return da->elems_nr;
 }
 
 void *dynarray_destroy(struct dynarray *da)

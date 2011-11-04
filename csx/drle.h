@@ -21,10 +21,28 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "spm.h"
+extern "C" {
+#include "timer.h"
+}
 
 namespace csx {
 
+enum {
+    TIMER_TOTAL = 0,
+    TIMER_STATS,
+    TIMER_ENCODE,
+    TIMER_ALLOC,
+    TIMER_END
+};
+
+const char *timers_desc_[] =
+{
+    "Total Time: ",
+    "Stats Time: ",
+    "Encode Time: ",
+    "Alloc Time: "
+};
+    
 /**
  *  Delta Run-Length Encoding Manager.
  *
@@ -53,8 +71,13 @@ public:
                  double min_perc = .1,
                  uint64_t sort_window_size = 0,
                  split_alg_t split_type = SPLIT_BY_ROWS,
-                 double sampling_probability = 1.0,
+                 double sampling_portion = 0,
                  uint64_t samples_max = std::numeric_limits<uint64_t>::max());
+
+    ~DRLE_Manager() {
+        if (selected_splits_)
+            delete selected_splits_;
+    }
 
     /**
      *  Generate pattern statistics for a sub-matrix of spm.
@@ -334,6 +357,8 @@ private:
      */
     void ComputeSortSplits();
 
+    void SelectSplits();
+
     /*
      *  The actual splitting methods.
      */
@@ -361,13 +386,16 @@ private:
     uint64_t sort_window_size_;
     split_alg_t split_type_;
     std::vector<uint64_t> sort_splits_;
-    double sampling_probability_;
+    std::vector<uint64_t> sort_splits_nzeros_;
+    size_t *selected_splits_;
+    double sampling_portion_;
     uint64_t samples_max_;
     static const uint64_t max_sampling_tries_ = 3;
     bool symmetric_;
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;
+    xtimer_t timers_[TIMER_END];
 };
 
 /**

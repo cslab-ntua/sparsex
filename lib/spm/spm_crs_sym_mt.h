@@ -22,6 +22,8 @@
 #include "spm_crs_sym.h"
 #include "spmv_method.h"
 
+uint64_t map_size;
+
 #define SPM_CRS_SYM_MT_DECLARE(__idx_bits, __elem_type) \
 struct spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt { \
     spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_t *crs; \

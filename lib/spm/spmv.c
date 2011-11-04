@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 			spmv_float_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 
-            case (4+3):
+                        case (4+3):
 			spmv_float_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 			
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 				break;
 
 				case 4:
-			    case (4+2):
+			        case (4+2):
 				t = spmv_float_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 				t = spmv_float_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 
-                case (4+3):
+                                case (4+3):
 				t = spmv_float_bench_sym_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 				
@@ -181,7 +181,11 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			double flops = (double)(loops_nr*nnz*2)/((double)1000*1000*t);
-			printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
+			if (spmv_meth->flag != 3)			
+				printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
+			else
+				printf("m:%s f:%s ms:%lu s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), map_size,
+                                        spmv_meth->size_fn(m), t, flops);
 		}
 	}
 	spmv_meth->destroy_fn(m);

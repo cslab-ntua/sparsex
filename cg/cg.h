@@ -16,12 +16,17 @@
 #include <iostream>
 
 extern "C" {
-#include "../lib/spm/mt_lib.h"
-#include "../lib/spm/spm_crs_mt.h"
-#include "../lib/spm/spm_crs_sym_mt.h"
+#include "mt_lib.h"
+#include "spm_crs_mt.h"
+#include "spm_crs_sym_mt.h"
+#include "timer.h"
 }
 
 #include "cg_vector.h"
+
+xtimer_t cg_timer;
+xtimer_t spmv_timer;
+xtimer_t reduction_timer;
 
 typedef struct cg_params
 {
@@ -58,9 +63,10 @@ void InitializeSymCg(spm_mt_t *spm_mt, vector_double_t *x, vector_double_t *r,
 void *NormalCgSideThread(void *arg);
 void *SymCgSideThread(void *arg);
 
-void NormalCgMainThread(cg_params *params, double *spmv_time,
+void NormalCgMainThread(cg_params *params, double * cg_time, double *spmv_time,
                         double * red_time);
-void SymCgMainThread(cg_params *params, double *spmv_time, double * red_time);
+void SymCgMainThread(cg_params *params, double * cg_time, double *spmv_time,
+                     double * red_time);
 
 #endif /* CG_H_ */
 

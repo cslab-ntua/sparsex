@@ -43,7 +43,7 @@ void CsxJitInitGlobal(void)
         return;
 
     assert(init == false && "wrong assignment");
-    std::cout << __FUNCTION__ << ": One-time initialization" << "\n";
+    //std::cout << __FUNCTION__ << ": One-time initialization" << "\n";
     InitializeNativeTarget();
     Mod_ = ModuleFromFile(CSX_TEMPLATE, Ctx_);
     init = true;
@@ -1105,7 +1105,7 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
                    delta == 16 ||
                    delta == 32 ||
                    delta == 64);
-            os << "type:DELTA size:" << delta << " elements:"
+            os << "type:DELTA size:" << delta << " nnz:"
                << pat_i->second.nr << std::endl;
             BB_lentry = BasicBlock::Create(GetLLVMCtx(), "lentry",
                                            BB->getParent(), BB_default);
@@ -1120,8 +1120,8 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
 
         ///< Horizontal
         case HORIZONTAL:
-            os << "type:DRLE order:HORIZONTAL delta:" << delta
-               << " elements:" << pat_i->second.nr << std::endl;
+            os << "type:HORIZONTAL delta:" << delta
+               << " nnz:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
             BB_lexit = BasicBlock::Create(GetLLVMCtx(), "lexit",
@@ -1143,8 +1143,8 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
 
         ///< Vertical
         case VERTICAL:
-            os << "type:DRLE order:VERTICAL delta:" << delta
-               << " elements:" << pat_i->second.nr << std::endl;
+            os << "type:VERTICAL delta:" << delta
+               << " nnz:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
             if (!symmetric) {
@@ -1162,8 +1162,8 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
 
         ///< Diagonal
         case DIAGONAL:
-            os << "type:DRLE order:DIAGONAL delta:" << delta
-               << " elements:" << pat_i->second.nr << std::endl;
+            os << "type:DIAGONAL delta:" << delta
+               << " nnz:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
             if (!symmetric) {
@@ -1183,8 +1183,8 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
 
         ///< Reverse Diagonal
         case REV_DIAGONAL:
-            os << "type:DRLE order:REV_DIAGONAL delta:" << delta
-               << " elements:" << pat_i->second.nr << std::endl;
+            os << "type:REV_DIAGONAL delta:" << delta
+               << " nnz:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
             if (!symmetric) {
@@ -1204,8 +1204,9 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
 
         ///< Row blocks
         case BLOCK_TYPE_START ... BLOCK_COL_START - 1:
-            os << "type:block_row: " << (type - BLOCK_TYPE_START) << "x"
-               << delta << " nnz:" << pat_i->second.nr << std::endl;
+            os << "type:" << SpmTypesNames[type]
+               << " dim:" << (type - BLOCK_TYPE_START) << "x" << delta 
+               << " nnz:" << pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
             if (!symmetric) {
@@ -1221,9 +1222,9 @@ void CsxJit::DoBodyHook(std::ostream &os, bool symmetric)
             
         ///< Column Blocks
         case BLOCK_COL_START ... BLOCK_TYPE_END:
-            os << "type:block_col: " << delta << "x"
-               << (type - BLOCK_COL_START) << " nnz:"
-               <<  pat_i->second.nr << std::endl;
+            os << "type:" << SpmTypesNames[type] 
+               << " dim:" << delta << "x" << (type - BLOCK_COL_START)
+               << " nnz:" <<  pat_i->second.nr << std::endl;
             BB_lbody = BasicBlock::Create(GetLLVMCtx(), "lbody",
                                           BB->getParent(), BB_default);
             if (!symmetric) {

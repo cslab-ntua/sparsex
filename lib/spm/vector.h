@@ -46,7 +46,7 @@ void _VNAME(vtype,init_rand_range)(_VTYPE(vtype) *v, vtype max, vtype min); \
 void _VNAME(vtype,init_from_map)(_VTYPE(vtype) **v, vtype val, map_t *map); \
 void _VNAME(vtype,add)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, _VTYPE(vtype) *v3); \
 void _VNAME(vtype,add_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, _VTYPE(vtype) *v3, unsigned long start, unsigned long end); \
-void _VNAME(vtype,addmap)(_VTYPE(vtype) *v1, _VTYPE(vtype) **v2, _VTYPE(vtype) *v3, map_t *map); \
+void _VNAME(vtype,add_from_map)(_VTYPE(vtype) *v1, _VTYPE(vtype) **v2, _VTYPE(vtype) *v3, map_t *map); \
 int _VNAME(vtype,compare)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2); \
 void _VNAME(vtype,print)(_VTYPE(vtype) *v);
 
