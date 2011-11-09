@@ -479,7 +479,7 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     void *crs;
     uint64_t nrows, ncols, nnz;
 
-    crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz);
+    crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz, NULL);
     std::cout << "Checking ... " << std::flush;
 #ifdef SPM_NUMA
 #   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
