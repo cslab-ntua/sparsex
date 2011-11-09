@@ -1,8 +1,10 @@
 SHELL = /bin/bash
+SUBDIRS = bcsr vbl
 
-.PHONY: all clean
+.PHONY: all clean $(SUBDIRS)
 
-all: libspmv.o spmv
+all: $(SUBDIRS) libspmv.o spmv
+clean: $(SUBDIRS)
 
 ## Configuration
 dynarray_dir = ../dynarray
@@ -13,10 +15,10 @@ dynarray_dep = $(dynarray_dir)/dynarray.o
 
 # This is ugly and non-portable
 # (we need a script to return CPU MhZs)
-MHZ_SH      ?= $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
-CC          ?= gcc
-LD          ?= ld
-CFLAGS      ?= -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC
+MHZ_SH      = $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
+CC          = gcc
+LD          = ld
+CFLAGS      = -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 
 # Always add the following flags
 override CPPFLAGS += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
@@ -37,15 +39,26 @@ ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	override CPPFLAGS += -DSPM_NUMA
 endif
 
+export CC
+export CFLAGS
+export CPPFLAGS
+export LD
+
+
+$(SUBDIRS):
+	 $(MAKE) -C $@ $(MAKECMDGOALS)
+
 # do this, so that it doesn't match default %.c - >%.o rules
 $(dynarray_dep):
 
 deps         = $(dynarray_dep)
 libspmv_deps = vector.o method.o mt_lib.o mmf.o  \
                spm_crs.o spm_crs_mt.o            \
+               bcsr/libbcsr.o \
+               vbl/libvbl.o \
                spmv_loops.o spmv_loops_mt.o spmv_loops_mt_numa.o
 
-libspmv.o: $(libspmv_deps) $(deps)
+libspmv.o: $(libspmv_deps) $(deps) $(SUBDIRS)
 	$(LD) -i --allow-multiple-definition $(libspmv_deps) $(deps) -o libspmv.o
 
 vector.o: vector.c vector.h

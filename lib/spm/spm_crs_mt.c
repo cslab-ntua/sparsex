@@ -21,7 +21,7 @@
 
 void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
                                  uint64_t *rows_nr, uint64_t *cols_nr,
-                                 uint64_t *nz_nr)
+                                 uint64_t *nz_nr, void *metadata)
 {
 	int i;
 	unsigned int nr_cpus, *cpus;
@@ -35,7 +35,7 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
     setaffinity_oncpu(cpus[0]);
 
 	SPM_CRS_TYPE *crs;
-	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr);
+	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr, metadata);
     
 	spm_mt = malloc(sizeof(spm_mt_t));
 	if ( !spm_mt ){
