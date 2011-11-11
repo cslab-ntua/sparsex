@@ -20,7 +20,6 @@
 struct spm_bcsr ## __idx_bits ## _ ## __elem_type ## _mt { \
 	spm_bcsr ## __idx_bits ## _ ## __elem_type ## _t    *bcsr; \
 	uint64_t row_start, row_end; \
-	uint64_t nnz_nr; \
 }; \
 typedef struct spm_bcsr ## __idx_bits ## _ ## __elem_type ## _mt spm_bcsr ## __idx_bits ## _ ## __elem_type ## _mt ## _t; \
 \

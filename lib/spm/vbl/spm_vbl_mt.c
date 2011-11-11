@@ -7,6 +7,7 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+#include <assert.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <pthread.h>
@@ -65,15 +66,14 @@ void *SPM_VBL_MT_NAME(_init_mmf)(char *mmf_file,
 	}
 
     SPM_CRS_IDX_TYPE *splits = malloc((nr_cpus+1)*sizeof(*splits));
-    SPM_CRS_IDX_TYPE *bsplits = malloc(nr_cpus*sizeof(*bsplits));
+    SPM_CRS_IDX_TYPE *bsplits = malloc((nr_cpus+1)*sizeof(*bsplits));
 
     SPM_VBL_MT_NAME(_split)(vbl, nr_cpus, splits, bsplits);
     for (i = 0; i < nr_cpus; i++) {
         vbl_mt[i].row_start = splits[i];
         vbl_mt[i].row_end = splits[i+1];
         vbl_mt[i].bstart = bsplits[i];
-        vbl_mt[i].nnz_nr =
-            vbl->row_ptr[splits[i+1]] - vbl->row_ptr[splits[i]];
+        vbl_mt[i].bend = bsplits[i+1];
         vbl_mt[i].vbl = vbl;
         spm_thread = spm_mt->spm_threads + i;
         spm_thread->cpu = cpus[i];
@@ -180,8 +180,128 @@ static void SPM_VBL_MT_NAME(_split)(SPM_VBL_TYPE *vbl,
     }
 
     splits[nr_splits] = vbl->nrows;
+    blk_splits[nr_splits] = vbl->nblocks;
 
 //	for (i = 0; i <= nr_splits; i++)
 //		printf("splits[%d] = %ld\n", i, splits[i]);
     return;
 }
+
+#ifdef SPM_NUMA
+#include <numa.h>
+#include "numa_util.h"
+
+void *SPM_VBL_MT_NAME(_numa_init_mmf)(char *mmf_file,
+                                      uint64_t *rows_nr, uint64_t *cols_nr,
+                                      uint64_t *nz_nr, void *metadata)
+{
+    spm_mt_t *spm_mt = SPM_VBL_MT_NAME(_init_mmf)(mmf_file,
+                                                  rows_nr, cols_nr,
+                                                  nz_nr, metadata);
+
+    int nr_threads = spm_mt->nr_threads;
+    size_t *values_parts = malloc(nr_threads*sizeof(*values_parts));
+    size_t *rowptr_parts = malloc(nr_threads*sizeof(*rowptr_parts));
+    size_t *bcolind_parts = malloc(nr_threads*sizeof(*bcolind_parts));
+    size_t *bsize_parts = malloc(nr_threads*sizeof(*bsize_parts));
+    int *nodes = malloc(nr_threads*sizeof(*nodes));
+
+    // just reallocate in a numa-aware fashion the data structures
+    int i;
+    SPM_VBL_TYPE *vbl = NULL;
+    for (i = 0; i < nr_threads; i++) {
+        spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+        SPM_VBL_MT_TYPE *vbl_mt = (SPM_VBL_MT_TYPE *) spm_thread->spm;
+        vbl = vbl_mt->vbl;
+        SPM_CRS_IDX_TYPE row_start = vbl_mt->row_start;
+        SPM_CRS_IDX_TYPE row_end = vbl_mt->row_end;
+        SPM_CRS_IDX_TYPE bstart = vbl_mt->bstart;
+        SPM_CRS_IDX_TYPE bend = vbl_mt->bend;
+        SPM_CRS_IDX_TYPE vstart = vbl->row_ptr[vbl_mt->row_start];
+        SPM_CRS_IDX_TYPE vend = vbl->row_ptr[vbl_mt->row_end];
+        rowptr_parts[i] = (row_end-row_start)*sizeof(*vbl->row_ptr);
+        bcolind_parts[i] = (bend-bstart)*sizeof(*vbl->bcol_ind);
+        bsize_parts[i] = (bend-bstart)*sizeof(*vbl->bsize);
+        values_parts[i] = (vend-vstart)*sizeof(*vbl->values);
+        nodes[i] = numa_node_of_cpu(spm_thread->cpu);
+        spm_thread->node = nodes[i];
+        spm_thread->row_start = row_start;
+        spm_thread->nr_rows = row_end - row_start;
+    }
+
+    // sanity check (+ get rid of compiler warning about uninit. variable)
+    assert(vbl);
+
+    SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved(vbl->nrows*sizeof(*vbl->row_ptr),
+                                                     rowptr_parts, nr_threads,
+                                                     nodes);
+
+    SPM_CRS_IDX_TYPE *new_bcolind = alloc_interleaved(vbl->nblocks*sizeof(*vbl->bcol_ind),
+                                                     bcolind_parts, nr_threads,
+                                                     nodes);
+    uint8_t *new_bsize = alloc_interleaved(vbl->nblocks*sizeof(*vbl->bsize),
+                                           bsize_parts, nr_threads, nodes);
+    ELEM_TYPE *new_values = alloc_interleaved(vbl->nz*sizeof(*vbl->values),
+                                              values_parts, nr_threads,
+                                              nodes);
+
+    // copy old data to the new one
+    memcpy(new_rowptr, vbl->row_ptr, vbl->nrows*sizeof(*vbl->row_ptr));
+    memcpy(new_bcolind, vbl->bcol_ind, vbl->nblocks*sizeof(*vbl->bcol_ind));
+    memcpy(new_bsize, vbl->bsize, vbl->nblocks*sizeof(*vbl->bsize));
+    memcpy(new_values, vbl->values, vbl->nz*sizeof(*vbl->values));
+
+    // free old data and replace with the new one
+    free(vbl->row_ptr);
+    free(vbl->bcol_ind);
+    free(vbl->bsize);
+    free(vbl->values);
+    vbl->row_ptr = new_rowptr;
+    vbl->bcol_ind = new_bcolind;
+    vbl->bsize = new_bsize;
+    vbl->values = new_values;
+
+    // free the auxiliaries
+    free(rowptr_parts);
+    free(bcolind_parts);
+    free(bsize_parts);
+    free(values_parts);
+    free(nodes);
+    return spm_mt;
+}
+
+void SPM_VBL_MT_NAME(_numa_destroy)(void *spm)
+{
+    spm_mt_t *spm_mt = (spm_mt_t *) spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	SPM_VBL_MT_TYPE *vbl_mt = (SPM_VBL_MT_TYPE *) spm_thread->spm;
+    SPM_VBL_TYPE *vbl = vbl_mt->vbl;
+    free_interleaved(vbl->row_ptr, vbl->nrows*sizeof(*vbl->row_ptr));
+    free_interleaved(vbl->bcol_ind, vbl->nblocks*sizeof(*vbl->bcol_ind));
+    free_interleaved(vbl->bsize, vbl->nblocks*sizeof(*vbl->bsize));
+    free_interleaved(vbl->values, vbl->nz*sizeof(*vbl->values));
+    free(vbl);
+    free(vbl_mt);
+    free(spm_thread);
+    free(spm_mt);
+}
+
+uint64_t SPM_VBL_MT_NAME(_numa_size)(void *spm)
+{
+    return SPM_VBL_MT_NAME(_size)(spm);
+}
+
+void SPM_VBL_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+    SPM_VBL_MT_NAME(_multiply)(spm, in, out);
+}
+
+XSPMV_MT_METH_INIT(
+ SPM_VBL_MT_NAME(_numa_multiply),
+ SPM_VBL_MT_NAME(_numa_init_mmf),
+ SPM_VBL_MT_NAME(_numa_size),
+ SPM_VBL_MT_NAME(_numa_destroy),
+ sizeof(ELEM_TYPE)
+)
+
+#endif  /* SPM_NUMA */

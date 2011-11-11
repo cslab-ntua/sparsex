@@ -148,3 +148,117 @@ static void SPM_BCSR_MT_NAME(_split)(SPM_BCSR_TYPE *mat,
     splits[nr_splits] = mat->nbrows * mat->br;
     return;
 }
+
+#ifdef SPM_NUMA
+
+#include <numa.h>
+#include "numa_util.h"
+
+void *SPM_BCSR_MT_NAME(_numa_init_mmf)(char *mmf_file,
+                                      uint64_t *rows_nr, uint64_t *cols_nr,
+                                      uint64_t *nz_nr, void *metadata)
+{
+
+    spm_mt_t *spm_mt = SPM_BCSR_MT_NAME(_init_mmf)(mmf_file,
+                                                  rows_nr, cols_nr,
+                                                  nz_nr, metadata);
+    int nr_threads = spm_mt->nr_threads;
+    size_t *bvalues_parts = malloc(nr_threads*sizeof(*bvalues_parts));
+    size_t *browptr_parts = malloc(nr_threads*sizeof(*browptr_parts));
+    size_t *bcolind_parts = malloc(nr_threads*sizeof(*bcolind_parts));
+    int *nodes = malloc(nr_threads*sizeof(*nodes));
+
+    // just reallocate in a numa-aware fashion the data structures
+    int i;
+    SPM_BCSR_TYPE *bcsr = NULL;
+    for (i = 0; i < nr_threads; i++) {
+        spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+        SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *) spm_thread->spm;
+        bcsr = bcsr_mt->bcsr;
+        SPM_CRS_IDX_TYPE row_start = bcsr_mt->row_start;
+        SPM_CRS_IDX_TYPE row_end = bcsr_mt->row_end;
+        SPM_CRS_IDX_TYPE brow_start = row_start / bcsr->br;
+        SPM_CRS_IDX_TYPE brow_end = row_end / bcsr->br;
+        SPM_CRS_IDX_TYPE vstart = bcsr->brow_ptr[brow_start];
+        SPM_CRS_IDX_TYPE vend = bcsr->brow_ptr[brow_end];
+        SPM_CRS_IDX_TYPE nblocks_part = (vend - vstart) / (bcsr->br*bcsr->bc);
+        browptr_parts[i] = (brow_end-brow_start)*sizeof(*bcsr->brow_ptr);
+        bcolind_parts[i] = nblocks_part*sizeof(*bcsr->bcol_ind);
+        bvalues_parts[i] = (vend-vstart)*sizeof(*bcsr->bvalues);
+        nodes[i] = numa_node_of_cpu(spm_thread->cpu);
+        spm_thread->node = nodes[i];
+        spm_thread->row_start = row_start;
+        spm_thread->nr_rows = row_end - row_start;
+    }
+
+    // sanity check (+ get rid of compiler warning about uninit. variable)
+    assert(bcsr);
+
+    SPM_CRS_IDX_TYPE nr_values = bcsr->nblocks*bcsr->br*bcsr->bc;
+    SPM_CRS_IDX_TYPE *new_browptr = alloc_interleaved(bcsr->nbrows*sizeof(*bcsr->brow_ptr),
+                                                      browptr_parts, nr_threads,
+                                                      nodes);
+
+    SPM_CRS_IDX_TYPE *new_bcolind = alloc_interleaved(bcsr->nblocks*sizeof(*bcsr->bcol_ind),
+                                                      bcolind_parts, nr_threads,
+                                                      nodes);
+    ELEM_TYPE *new_bvalues = alloc_interleaved(nr_values*sizeof(*bcsr->bvalues),
+                                               bvalues_parts, nr_threads,
+                                               nodes);
+
+    // copy old data to the new one
+    memcpy(new_browptr, bcsr->brow_ptr, bcsr->nbrows*sizeof(*bcsr->brow_ptr));
+    memcpy(new_bcolind, bcsr->bcol_ind, bcsr->nblocks*sizeof(*bcsr->bcol_ind));
+    memcpy(new_bvalues, bcsr->bvalues, nr_values*sizeof(*bcsr->bvalues));
+
+    // free old data and replace with the new one
+    free(bcsr->brow_ptr);
+    free(bcsr->bcol_ind);
+    free(bcsr->bvalues);
+    bcsr->brow_ptr = new_browptr;
+    bcsr->bcol_ind = new_bcolind;
+    bcsr->bvalues = new_bvalues;
+
+    // free the auxiliaries
+    free(browptr_parts);
+    free(bcolind_parts);
+    free(bvalues_parts);
+    free(nodes);
+	return spm_mt;
+}
+
+void SPM_BCSR_MT_NAME(_numa_destroy)(void *spm)
+{
+    spm_mt_t *spm_mt = (spm_mt_t *) spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *) spm_thread->spm;
+    SPM_BCSR_TYPE *bcsr = bcsr_mt->bcsr;
+    SPM_CRS_IDX_TYPE nr_values = bcsr->nblocks*bcsr->br*bcsr->bc;
+    free_interleaved(bcsr->brow_ptr, bcsr->nbrows*sizeof(*bcsr->brow_ptr));
+    free_interleaved(bcsr->bcol_ind, bcsr->nblocks*sizeof(*bcsr->bcol_ind));
+    free_interleaved(bcsr->bvalues, nr_values*sizeof(*bcsr->bvalues));
+    free(bcsr);
+    free(bcsr_mt);
+    free(spm_thread);
+    free(spm_mt);
+}
+
+uint64_t SPM_BCSR_MT_NAME(_numa_size)(void *spm)
+{
+    return SPM_BCSR_MT_NAME(_size)(spm);
+}
+
+void SPM_BCSR_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+    SPM_BCSR_MT_NAME(_multiply)(spm, in, out);
+}
+
+XSPMV_MT_METH_INIT(
+ SPM_BCSR_MT_NAME(_numa_multiply),
+ SPM_BCSR_MT_NAME(_numa_init_mmf),
+ SPM_BCSR_MT_NAME(_numa_size),
+ SPM_BCSR_MT_NAME(_numa_destroy),
+ sizeof(ELEM_TYPE)
+)
+
+#endif /* SPM_NUMA */

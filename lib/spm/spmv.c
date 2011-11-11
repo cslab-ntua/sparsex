@@ -19,6 +19,14 @@
 #include "spmv_method.h"
 #include "spmv_loops.h"
 #include "spmv_loops_mt.h"
+#ifdef SPM_NUMA
+#   include "spmv_loops_mt_numa.h"
+#   define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop_numa
+#   define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop_numa
+#else
+#   define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop
+#   define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop
+#endif
 #include "bcsr/export.h"
 
 static char *progname = NULL;
@@ -137,13 +145,14 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 
+
 		switch (elem_size + spmv_meth->mt_flag){
 			case 8:
 			spmv_double_check_loop(m1, m, meth1->fn, meth->fn, 1, nrows, ncols, nnz);
 			break;
 
 			case (8+1):
-			spmv_double_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
+			SPMV_DOUBLE_CHECK_MT_LOOP(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 
 			case 4:
@@ -172,7 +181,7 @@ int main(int argc, char **argv)
 				break;
 
 				case (8+1):
-				t = spmv_double_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
+				t = SPMV_DOUBLE_BENCH_MT_LOOP(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 
 				case 4:

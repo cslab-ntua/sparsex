@@ -20,8 +20,8 @@
 struct spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt { \
 	spm_vbl ## __idx_bits ## _ ## __elem_type ## _t    *vbl; \
 	uint64_t row_start, row_end; \
-	uint64_t nnz_nr; \
     uint64_t bstart; \
+    uint64_t bend;   \
 }; \
 typedef struct spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt ## _t; \
 \

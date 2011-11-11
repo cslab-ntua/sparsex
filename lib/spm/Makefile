@@ -56,7 +56,8 @@ libspmv_deps = vector.o method.o mt_lib.o mmf.o  \
                spm_crs.o spm_crs_mt.o            \
                bcsr/libbcsr.o \
                vbl/libvbl.o \
-               spmv_loops.o spmv_loops_mt.o spmv_loops_mt_numa.o
+               spmv_loops.o spmv_loops_mt.o spmv_loops_mt_numa.o \
+               numa_util.o
 
 libspmv.o: $(libspmv_deps) $(deps) $(SUBDIRS)
 	$(LD) -i --allow-multiple-definition $(libspmv_deps) $(deps) -o libspmv.o
@@ -110,6 +111,9 @@ spmv_loops_mt_numa.o: spmv_loops_mt_numa.c spmv_loops_mt_numa.h spmv_method.h ve
 	$(LD) -i spmv_loops_mt_numa_{float,double}.o -o spmv_loops_mt_numa.o
 
 spmv.o: spmv.c
+	$(COMPILE) -c $< -o $@
+
+%.o: %.c %.h
 	$(COMPILE) -c $< -o $@
 
 spmv: spmv.o libspmv.o
