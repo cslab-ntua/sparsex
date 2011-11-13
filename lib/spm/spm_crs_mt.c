@@ -37,7 +37,7 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 	printf("MT_CONF: ");
 	printf("%u", cpus[0]);
 	for (i = 1; i < nr_cpus; i++) 
-        printf(",%u", cpus[i]);
+        	printf(",%u", cpus[i]);
 	printf("\n");
         
 	spm_mt = malloc(sizeof(spm_mt_t));

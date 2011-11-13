@@ -24,6 +24,12 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
     
     crs = (SPM_CRS_SYM_TYPE *) SPM_CRS_SYM_NAME(_init_mmf)(mmf_file, nrows, ncols, nnz);
     mt_get_options(&ncpus, &cpus);
+
+    printf("MT_CONF: ");
+    printf("%u", cpus[0]);
+    for (i = 1; i < ncpus; i++)
+        printf(",%u", cpus[i]);
+    printf("\n");
     
     spm_mt = (spm_mt_t *) malloc(sizeof(spm_mt_t));
     if (!spm_mt) {

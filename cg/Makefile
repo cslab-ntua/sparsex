@@ -46,7 +46,7 @@ cg_vector.o: cg_vector.cc cg_vector.h $(spm_dir)/vector.h
 cg.o: cg.cc cg.h cg_vector.h
 	$(CXX_COMPILE) $< -c -o $@
     
-cg: main.cc cg.o cg_vector.o
+cg: main.cc cg.o cg_vector.o $(OBJS)
 	$(LINK) $(LIBS) $(OBJS) $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
     
 clean:
