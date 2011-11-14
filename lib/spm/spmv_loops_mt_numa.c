@@ -125,16 +125,19 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 			spm->spmv_fn = fn;
 	}
 
+#if 0
 	printf("Old parts:\n");
 	for (i = 0; i < spm_mt->nr_threads; i++) {
 		printf("parts[%d] = %zd must be on node %d\n", i, parts[i],
 		       spm_mt->spm_threads[i].node);
 	}
+#endif
 
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
 	                                     nodes);
 	VECTOR_NAME(_init)(y, 0);
+#if 0
 	printf("New parts:\n");
 	size_t part_start = 0;
 	for (i = 0; i < spm_mt->nr_threads; i++) {
@@ -155,6 +158,7 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 		}
 		printf("x is on node %d\n", node);
 	}
+#endif
 
 	for (i = 1; i < spm_mt->nr_threads; i++)
 		pthread_create(tids + i, NULL, do_spmv_thread, spm_mt->spm_threads + i);

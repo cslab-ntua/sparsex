@@ -40,8 +40,12 @@ extern "C" {
 #include "spmv_loops_sym_mt.h"
 #ifdef SPM_NUMA
 #   include "spmv_loops_mt_numa.h"
+#   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
+#   define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
 #else
 #   include "spmv_loops_mt.h"
+#   define SPMV_CHECK_FN spmv_double_check_mt_loop
+#   define SPMV_BENCH_FN spmv_double_bench_mt_loop
 #endif
 #include "timer.h"
 #include "ctl_ll.h"
@@ -98,13 +102,19 @@ int SplitString(char *str, char **str_buf, const char *start_sep,
 void GetOptionXform(int **xform_buf)
 {
     char *xform_orig = getenv("XFORM_CONF");
+
     *xform_buf = (int *) xmalloc(XFORM_MAX * sizeof(int));
-
     if (xform_orig && strlen(xform_orig)) {
-        int next = 0;
-        int t = atoi(strtok(xform_orig, ","));
-        char *token;
+        int next;
+        int t;
+        char *token, *xform;
 
+        // Copy environment variable to avoid being altered from strtok()
+        xform = (char *) xmalloc(strlen(xform_orig)+1);
+        strncpy(xform, xform_orig, strlen(xform_orig)+1);
+
+        next = 0;
+        t = atoi(strtok(xform, ","));
         (*xform_buf)[next] = t;
         ++next;
         while ((token = strtok(NULL, ",")) != NULL) {
@@ -114,6 +124,7 @@ void GetOptionXform(int **xform_buf)
         }
 
         (*xform_buf)[next] = -1;
+        free(xform);
     } else {
         (*xform_buf)[0] = 0;
         (*xform_buf)[1] = -1;
@@ -132,9 +143,13 @@ void GetOptionXform(int **xform_buf)
 
 void GetOptionEncodeDeltas(int ***deltas)
 {
-    char *encode_deltas_str = getenv("ENCODE_DELTAS");
+    char *encode_deltas_env = getenv("ENCODE_DELTAS");
+    if (encode_deltas_env && strlen(encode_deltas_env)) {
+        // Copy environment variable to avoid being altered from strtok()
+        char *encode_deltas_str = (char *) xmalloc(strlen(encode_deltas_env)+1);
+        strncpy(encode_deltas_str, encode_deltas_env,
+                strlen(encode_deltas_env)+1);
 
-    if (encode_deltas_str) {
         // Init matrix deltas.
         *deltas = (int **) xmalloc(XFORM_MAX * sizeof(int *));
 
@@ -176,6 +191,7 @@ void GetOptionEncodeDeltas(int ***deltas)
         }
 
         std::cout << "}" << std::endl;
+        free(encode_deltas_str);
     }
 }
 
@@ -211,6 +227,20 @@ uint64_t GetOptionSamples()
     }
 
     return samples_max;
+}
+
+int GetOptionOuterLoops()
+{
+    const char *loops_env = getenv("OUTER_LOOPS");
+    int ret = 1;
+    
+    if (loops_env) {
+        ret = atoi(loops_env);
+        if (ret < 0)
+            ret = 0;
+    }
+    
+    return ret;
 }
 
 double GetOptionPortion()
@@ -745,22 +775,17 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     void *crs;
     uint64_t nrows, ncols, nnz;
 
-    crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz);
-    std::cout << "Checking ... " << std::flush;
-
-#ifdef SPM_NUMA
-    spmv_double_check_mt_loop_numa(crs, spm_mt, spm_crs32_double_multiply, 2,
-                                   nrows, ncols, NULL);
-#else
+    crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz, NULL);
+    
     if (!spm_mt->symmetric)
-        spmv_double_check_mt_loop(crs, spm_mt, spm_crs32_double_multiply, 2,
-                                  nrows, ncols, NULL);
+        SPMV_CHECK_FN(crs, spm_mt, spm_crs32_double_multiply, 2, nrows, ncols,
+                      NULL);
     else
         spmv_double_check_sym_mt_loop(crs, spm_mt, spm_crs32_double_multiply, 2,
                                       nrows, ncols, NULL);
-#endif
+
     spm_crs32_double_destroy(crs);
-    std::cout << "Check Passed" << std::endl << std::flush;
+    std::cout << "Check Passed" << std::endl;
 }
 
 uint64_t CsxSize(void *spm_mt)
@@ -804,7 +829,7 @@ unsigned long CsxSymSize(spm_mt_t *spm_mt)
     }
 
     return ret;
-}
+}    
 
 void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
@@ -813,28 +838,23 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     long loops_nr = 128;
 
     getMmfHeader(mmf_name, nrows, ncols, nnz);
-
-#ifdef SPM_NUMA
-    secs = spmv_double_bench_mt_loop_numa(spm_mt, loops_nr, nrows, ncols, NULL);
-    flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-    printf("m:%s f:%s s:%lu t:%lf r:%lf\n",
-           "csx", basename(mmf_name), CsxSize(spm_mt), secs, flops);
-#else
-    if (!spm_mt->symmetric) {
-        secs = spmv_double_bench_mt_loop(spm_mt, loops_nr, nrows, ncols, NULL);
-        flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-        printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n", "csx",
-               basename(mmf_name), CsxSize(spm_mt), pre_time, secs, flops);
-    } else {
-        // std::cout << "Map Size " << MapSize(spm_mt) << std::endl;
-        secs = spmv_double_bench_sym_mt_loop(spm_mt, loops_nr, nrows, ncols,
-                                                 NULL);
-        flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-        printf("m:%s f:%s ms:%lu s:%lu pt:%lf t:%lf r:%lf\n", "csx",
-               basename(mmf_name), MapSize(spm_mt), CsxSymSize(spm_mt),
-               pre_time, secs, flops);
+    int nr_outer_loops = GetOptionOuterLoops();
+    for (int i = 0; i < nr_outer_loops; ++i) {
+	if (!spm_mt->symmetric) {
+            secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
+            flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
+            printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n", "csx",
+                   basename(mmf_name), CsxSize(spm_mt), pre_time, secs,
+                   flops);
+        } else {
+            secs = spmv_double_bench_sym_mt_loop(spm_mt, loops_nr, nrows,
+                                                 ncols, NULL);
+            flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
+            printf("m:%s f:%s ms:%lu s:%lu pt:%lf t:%lf r:%lf\n", "csx-sym",
+                   basename(mmf_name), MapSize(spm_mt), CsxSymSize(spm_mt),
+                   pre_time, secs, flops);
+        }        
     }
-#endif
 }
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

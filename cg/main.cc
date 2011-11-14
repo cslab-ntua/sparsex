@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
     switch(cg_method) {
         case(CSR) :
             spm_mt = (spm_mt_t *) spm_crs32_double_mt_init_mmf(mmf_file, &nrows,
-                                                               &ncols, &nnz);
+                                                               &ncols, &nnz, NULL);
 	    meth = method_get((char *) "spm_crs32_double_mt_multiply");
             for (i = 0; i < spm_mt->nr_threads; i++)
                 spm_mt->spm_threads[i].spmv_fn = meth->fn;

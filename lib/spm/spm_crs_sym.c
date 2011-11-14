@@ -46,7 +46,7 @@ void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
     double val;
     uint64_t row_i=0, val_i=0;
 
-    crs->row_ptr[row_i++] = val_i;
+    crs->row_ptr[row_i++] = (SPM_CRS_SYM_IDX_TYPE) val_i;
     row_prev = 0;
     while (mmf_get_next(mmf, &row, &col, &val)) {
         
@@ -54,10 +54,10 @@ void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
             continue;
 	        
 	if (col == row) {
-	    crs->dvalues[row] = val;
+	    crs->dvalues[row] = (ELEM_TYPE) val;
 	    continue;
 	}
-	
+
 	assert(col < row);
 	assert(row >= row_prev);
 	assert(row < crs->n);
@@ -68,7 +68,7 @@ void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
 	    uint64_t i;
 	    
             for (i = 0; i < row-row_prev; i++)
-                crs->row_ptr[row_i++] = val_i;
+                crs->row_ptr[row_i++] = (SPM_CRS_SYM_IDX_TYPE) val_i;
 	    row_prev = row;
 	}
         
@@ -77,7 +77,7 @@ void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
         val_i++;
     }
     
-    crs->row_ptr[row_i++] = val_i;
+    crs->row_ptr[row_i++] = (SPM_CRS_SYM_IDX_TYPE) val_i;
 
     assert(row_i == crs->n + 1);
     assert(val_i == crs->nnz);

@@ -20,7 +20,6 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         spm_mt = GetSpmMt(argv[i]);
         CheckLoop(spm_mt, argv[i]);
-        std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
         PutSpmMt(spm_mt);
     }

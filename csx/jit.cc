@@ -38,15 +38,9 @@ static Module *Mod_ = NULL;
 
 void CsxJitInitGlobal(void)
 {
-    static bool init = false;
-    if (init)
-        return;
-
-    assert(init == false && "wrong assignment");
     //std::cout << __FUNCTION__ << ": One-time initialization" << "\n";
     InitializeNativeTarget();
     Mod_ = ModuleFromFile(CSX_TEMPLATE, Ctx_);
-    init = true;
 }
 
 void CsxJitOptmize(void)
