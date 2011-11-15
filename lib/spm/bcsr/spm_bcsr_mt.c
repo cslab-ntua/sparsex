@@ -195,7 +195,7 @@ void *SPM_BCSR_MT_NAME(_numa_init_mmf)(char *mmf_file,
     assert(bcsr);
 
     SPM_CRS_IDX_TYPE nr_values = bcsr->nblocks*bcsr->br*bcsr->bc;
-    SPM_CRS_IDX_TYPE *new_browptr = alloc_interleaved(bcsr->nbrows*sizeof(*bcsr->brow_ptr),
+    SPM_CRS_IDX_TYPE *new_browptr = alloc_interleaved((bcsr->nbrows+1)*sizeof(*bcsr->brow_ptr),
                                                       browptr_parts, nr_threads,
                                                       nodes);
 
@@ -207,7 +207,7 @@ void *SPM_BCSR_MT_NAME(_numa_init_mmf)(char *mmf_file,
                                                nodes);
 
     // copy old data to the new one
-    memcpy(new_browptr, bcsr->brow_ptr, bcsr->nbrows*sizeof(*bcsr->brow_ptr));
+    memcpy(new_browptr, bcsr->brow_ptr, (bcsr->nbrows+1)*sizeof(*bcsr->brow_ptr));
     memcpy(new_bcolind, bcsr->bcol_ind, bcsr->nblocks*sizeof(*bcsr->bcol_ind));
     memcpy(new_bvalues, bcsr->bvalues, nr_values*sizeof(*bcsr->bvalues));
 
@@ -234,7 +234,7 @@ void SPM_BCSR_MT_NAME(_numa_destroy)(void *spm)
 	SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *) spm_thread->spm;
     SPM_BCSR_TYPE *bcsr = bcsr_mt->bcsr;
     SPM_CRS_IDX_TYPE nr_values = bcsr->nblocks*bcsr->br*bcsr->bc;
-    free_interleaved(bcsr->brow_ptr, bcsr->nbrows*sizeof(*bcsr->brow_ptr));
+    free_interleaved(bcsr->brow_ptr, (bcsr->nbrows+1)*sizeof(*bcsr->brow_ptr));
     free_interleaved(bcsr->bcol_ind, bcsr->nblocks*sizeof(*bcsr->bcol_ind));
     free_interleaved(bcsr->bvalues, nr_values*sizeof(*bcsr->bvalues));
     free(bcsr);

@@ -19,11 +19,18 @@ MHZ_SH      = $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
 CC          = gcc
 LD          = ld
 CFLAGS      = -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC
+MAKE_LDFLAGS = 
 
 # Always add the following flags
-override CPPFLAGS += -DCPU_MHZ_SH=\"$(MHZ_SH)\"
-override CPPFLAGS += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
-override CPPFLAGS += -I$(dynarray_dir) -I$(prfcnt_dir)
+MAKE_CPPFLAGS = -DCPU_MHZ_SH=\"$(MHZ_SH)\"
+MAKE_CPPFLAGS += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
+MAKE_CPPFLAGS += -I$(dynarray_dir) -I$(prfcnt_dir)
+ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
+	override MAKE_CPPFLAGS += -DSPM_NUMA
+endif
+
+override CPPFLAGS += $(MAKE_CPPFLAGS)
+override LDFLAGS += $(MAKE_LDFLAGS)
 
 # Support for performance counters
 # override CPPFLAGS    += -DCPU_CORE -DSPMV_PRFCNT # performance counters for an intel core
@@ -35,15 +42,11 @@ COMPILE      = $(CC) $(CPPFLAGS) $(CFLAGS)
 #	LD = ld -melf64_sparc
 #endif
 #
-ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
-	override CPPFLAGS += -DSPM_NUMA
-endif
-
 export CC
 export CFLAGS
-export CPPFLAGS
+export MAKE_CPPFLAGS
 export LD
-
+export MAKE_LDFLAGS
 
 $(SUBDIRS):
 	 $(MAKE) -C $@ $(MAKECMDGOALS)

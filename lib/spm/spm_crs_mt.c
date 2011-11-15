@@ -184,7 +184,7 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
     // sanity check (+ get rid of compiler warning about uninit. variable)
     assert(crs);
 
-    SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved(crs->nrows*sizeof(*crs->row_ptr),
+    SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved((crs->nrows+1)*sizeof(*crs->row_ptr),
                                                      rowptr_parts, nr_threads,
                                                      nodes);
 
@@ -196,7 +196,7 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
                                               nodes);
 
     // copy old data to the new one
-    memcpy(new_rowptr, crs->row_ptr, crs->nrows*sizeof(*crs->row_ptr));
+    memcpy(new_rowptr, crs->row_ptr, (crs->nrows+1)*sizeof(*crs->row_ptr));
     memcpy(new_colind, crs->col_ind, crs->nz*sizeof(*crs->col_ind));
     memcpy(new_values, crs->values, crs->nz*sizeof(*crs->values));
 
@@ -222,7 +222,7 @@ void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
 	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *) spm_thread->spm;
     SPM_CRS_TYPE *crs = crs_mt->crs;
-    free_interleaved(crs->row_ptr, crs->nrows*sizeof(*crs->row_ptr));
+    free_interleaved(crs->row_ptr, (crs->nrows+1)*sizeof(*crs->row_ptr));
     free_interleaved(crs->col_ind, crs->nz*sizeof(*crs->col_ind));
     free_interleaved(crs->values, crs->nz*sizeof(*crs->values));
     free(crs);
