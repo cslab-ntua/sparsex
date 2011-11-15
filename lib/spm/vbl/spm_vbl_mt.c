@@ -232,7 +232,7 @@ void *SPM_VBL_MT_NAME(_numa_init_mmf)(char *mmf_file,
     // sanity check (+ get rid of compiler warning about uninit. variable)
     assert(vbl);
 
-    SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved(vbl->nrows*sizeof(*vbl->row_ptr),
+    SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved((vbl->nrows+1)*sizeof(*vbl->row_ptr),
                                                      rowptr_parts, nr_threads,
                                                      nodes);
 
@@ -246,7 +246,7 @@ void *SPM_VBL_MT_NAME(_numa_init_mmf)(char *mmf_file,
                                               nodes);
 
     // copy old data to the new one
-    memcpy(new_rowptr, vbl->row_ptr, vbl->nrows*sizeof(*vbl->row_ptr));
+    memcpy(new_rowptr, vbl->row_ptr, (vbl->nrows+1)*sizeof(*vbl->row_ptr));
     memcpy(new_bcolind, vbl->bcol_ind, vbl->nblocks*sizeof(*vbl->bcol_ind));
     memcpy(new_bsize, vbl->bsize, vbl->nblocks*sizeof(*vbl->bsize));
     memcpy(new_values, vbl->values, vbl->nz*sizeof(*vbl->values));
@@ -276,7 +276,7 @@ void SPM_VBL_MT_NAME(_numa_destroy)(void *spm)
 	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
 	SPM_VBL_MT_TYPE *vbl_mt = (SPM_VBL_MT_TYPE *) spm_thread->spm;
     SPM_VBL_TYPE *vbl = vbl_mt->vbl;
-    free_interleaved(vbl->row_ptr, vbl->nrows*sizeof(*vbl->row_ptr));
+    free_interleaved(vbl->row_ptr, (vbl->nrows+1)*sizeof(*vbl->row_ptr));
     free_interleaved(vbl->bcol_ind, vbl->nblocks*sizeof(*vbl->bcol_ind));
     free_interleaved(vbl->bsize, vbl->nblocks*sizeof(*vbl->bsize));
     free_interleaved(vbl->values, vbl->nz*sizeof(*vbl->values));

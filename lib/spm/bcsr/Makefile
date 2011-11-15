@@ -1,4 +1,6 @@
-override CPPFLAGS += -I./ -I../
+override MAKE_CPPFLAGS += -I./ -I../
+override CPPFLAGS += $(MAKE_CPPFLAGS)
+override LDFLAGS += $(MAKE_LDFLAGS)
 
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS)
 
