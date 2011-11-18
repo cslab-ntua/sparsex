@@ -8,7 +8,7 @@ numa_test=$(mktemp)
 is_numa()
 {
     nr_mem_nodes=$(ls -d /sys/devices/system/node/node* 2> /dev/null | wc -l)
-    if [ $nr_mem_nodes -gt 100 ]; then
+    if [ $nr_mem_nodes -gt 1 ]; then
         return 0
     else
         return 1

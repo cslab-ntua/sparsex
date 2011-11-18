@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 			break;
 			
 			case (8+3):
-			SPMV_DOUBLE_CHECK_SYM_MT_LOOP(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
+			spmv_double_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 
 			case 4:
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 				break;
 				
 				case (8+3):
-				t = SPMV_DOUBLE_BENCH_SYM_MT_LOOP(m, loops_nr, nrows, ncols, meth->fn);
+				t = spmv_double_bench_sym_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 
 				case 4:
