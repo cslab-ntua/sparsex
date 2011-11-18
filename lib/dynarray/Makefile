@@ -6,10 +6,9 @@ common_dir = ../
 
 ## Configuration
 CC          ?= gcc
-CFLAGS      ?= -Wall -Winline -O3 -Wdisabled-optimization -fPIC
-CFLAGS      += -g
-COMPILE      = $(CC) $(CFLAGS) $(INC) $(DEFS)
-INC          = -I$(common_dir)
+CFLAGS      ?= -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC
+override CPPFLAGS += -I$(common_dir)
+COMPILE      = $(CC) $(CPPFLAGS) $(CFLAGS)
 
 dynarray.o: dynarray.c dynarray.h
 	$(COMPILE) -c $< -o $@

@@ -20,7 +20,7 @@
 
 typedef void spmv_double_fn_t(void *matrix, vector_double_t *in, vector_double_t *out);
 typedef void spmv_float_fn_t(void *matrix, vector_float_t *in, vector_float_t *out);
-typedef void *spm_load_fn_t(char *mmf, uint64_t *nrows, uint64_t *ncols, uint64_t *nnz);
+typedef void *spm_load_fn_t(char *mmf, uint64_t *nrows, uint64_t *ncols, uint64_t *nnz, void *metadata);
 
 typedef uint64_t spm_size_fn_t(void *matrix);
 typedef void spm_destroy_fn_t(void *matrix);
@@ -33,15 +33,13 @@ typedef struct {
 	unsigned          mt_flag:1; // multithreaded flag
 } spmv_method_t;
 
-
-
-#define __SPMV_METH_INIT(_mmf_init, _size, _destroy, _elem_size, _mt) \
+#define __SPMV_METH_INIT(_mmf_init, _size, _destroy, _elem_size, _mt)  \
 {                                      \
 	.mmf_init_fn  = _mmf_init,     \
 	.size_fn      = _size,         \
 	.destroy_fn   = _destroy,      \
 	.elem_size    = _elem_size,    \
-	.mt_flag      = _mt            \
+    .mt_flag      = _mt,           \
 }
 
 #define _SPMV_METH_INIT(a, b, c, d)    __SPMV_METH_INIT(a, b, c, d, 0)

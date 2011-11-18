@@ -37,7 +37,11 @@ extern "C" {
 #include "spm_mt.h"
 #ifdef SPM_NUMA
 #   include "spmv_loops_mt_numa.h"
+#   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
+#   define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
 #else
+#   define SPMV_CHECK_FN spmv_double_check_mt_loop
+#   define SPMV_BENCH_FN spmv_double_bench_mt_loop
 #   include "spmv_loops_mt.h"
 #endif
 #include "timer.h"
@@ -479,20 +483,14 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     void *crs;
     uint64_t nrows, ncols, nnz;
 
-    crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz);
+    crs = spm_crs32_double_init_mmf(mmf_name, &nrows, &ncols, &nnz, NULL);
     std::cout << "Checking ... " << std::flush;
-#ifdef SPM_NUMA
-#   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
-#else
-#   define SPMV_CHECK_FN spmv_double_check_mt_loop
-#endif
     SPMV_CHECK_FN(crs, spm_mt,
                   spm_crs32_double_multiply, 2,
                   nrows, ncols,
                   NULL);
     spm_crs32_double_destroy(crs);
     std::cout << "Check Passed" << std::endl << std::flush;
-#undef SPMV_CHECK_FN
 }
 
 /**
@@ -524,12 +522,6 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     double secs, flops;
     long loops_nr = 128;
 
-#ifdef SPM_NUMA
-#   define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
-#else
-#   define SPMV_BENCH_FN spmv_double_bench_mt_loop
-#endif
-
     getMmfHeader(mmf_name, nrows, ncols, nnz);
     int nr_outer_loops = GetOptionOuterLoops();
     for (int i = 0; i < nr_outer_loops; ++i) {
@@ -539,8 +531,6 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
                "csx", basename(mmf_name), CsxSize(spm_mt), pre_time, secs,
                flops, i+1);
     }
-
-#undef SPMV_BENCH_FN
 }
 
 int main(int argc, char **argv)
