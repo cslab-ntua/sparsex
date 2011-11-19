@@ -124,7 +124,7 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 		if (fn)
 			spm->spmv_fn = fn;
 	}
-
+	
 #if 0
 	printf("Old parts:\n");
 	for (i = 0; i < spm_mt->nr_threads; i++) {

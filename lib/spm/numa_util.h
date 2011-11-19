@@ -29,5 +29,6 @@ void *alloc_interleaved(size_t size,
                         const int *nodes);
 
 void free_interleaved(void *addr, size_t length);
-
+void print_interleaved(void *addr, size_t length, unsigned int size,
+                       size_t *parts, size_t nr_parts, const int *nodes);
 #endif  /* __NUMA_UTIL_H__ */
