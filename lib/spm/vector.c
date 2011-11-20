@@ -109,58 +109,8 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
 
 	v->size = size;
 	v->alloc_type = ALLOC_MMAP;
-	v->elements = mmap(NULL, sizeof(ELEM_TYPE)*size,
-	                   PROT_READ | PROT_WRITE,
-	                   MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-	if (v->elements == (void *) -1) {
-		perror("mmap");
-		exit(1);
-	}
-
-	struct bitmask *nodemask = numa_bitmask_alloc(numa_num_configured_cpus());
-#define PAGE_ALIGN(addr) (void *)((unsigned long) addr & ~(pagesize-1))
-	/*
-	 * Bind parts to specific nodes
-	 * All parts must be page aligned
-	 */
-	ELEM_TYPE *curr_part = v->elements;
-	int i;
-	size_t new_part_size = 0;
-	for (i = 0; i < nr_parts; i++) {
-		size_t	part_size = parts[i]*sizeof(ELEM_TYPE);
-		size_t	rem = part_size % pagesize;
-		if (part_size < pagesize) {
-			new_part_size += part_size;
-			if (new_part_size < pagesize) {
-				parts[i] = 0;
-				continue;
-			} else {
-				part_size = new_part_size;
-			}
-		} else {
-			while (rem < pagesize / 2 && i < nr_parts - 1) {
-				/* Leave the page for the next partition */
-				part_size -= sizeof(ELEM_TYPE);
-				rem = part_size % pagesize;
-			}
-		}
-
-		numa_bitmask_setbit(nodemask, nodes[i]);
-		if (mbind(PAGE_ALIGN(curr_part), part_size,
-			      MPOL_BIND, nodemask->maskp, nodemask->size, 0) < 0) {
-			perror("mbind");
-			exit(1);
-		}
-
-		/* Clear the mask for the next round */
-		numa_bitmask_clearbit(nodemask, nodes[i]);
-		parts[i] = part_size / sizeof(ELEM_TYPE);
-		curr_part += parts[i];
-		new_part_size = 0;
-	}
-
-#undef PAGE_ALIGN
-	numa_bitmask_free(nodemask);
+	v->elements = (ELEM_TYPE *) alloc_interleaved(size * sizeof(ELEM_TYPE),
+	                                              parts, nr_parts, nodes);
 	return v;
 }
 

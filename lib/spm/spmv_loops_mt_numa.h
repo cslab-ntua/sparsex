@@ -12,6 +12,7 @@
 
 #include "spmv_method.h"
 #include "spm_mt.h"
+#include "numa_util.h"
 
 float spmv_double_bench_mt_loop_numa(spm_mt_t *spm_mt,
                                      unsigned long loops,
