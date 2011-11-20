@@ -23,6 +23,23 @@ static pthread_barrier_t barrier;
 static unsigned long loops_nr = 0;
 static float secs = 0.0;
 
+static void *do_spmv_thread(void *arg)
+{
+	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
+	SPMV_NAME(_fn_t) *spmv_mt_fn = spm_mt_thread->spmv_fn;
+	setaffinity_oncpu(spm_mt_thread->cpu);
+
+	int i;
+	
+	for (i = 0; i < loops_nr; i++) {
+		pthread_barrier_wait(&barrier);
+		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
+		pthread_barrier_wait(&barrier);
+	}
+
+	return NULL;
+}
+
 static void *do_spmv_thread_main(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
@@ -33,35 +50,18 @@ static void *do_spmv_thread_main(void *arg)
 	tsc_t tsc;
 	tsc_init(&tsc);
 	tsc_start(&tsc);
+	
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-		VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-		                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
 		pthread_barrier_wait(&barrier);
 	}
+
 	tsc_pause(&tsc);
 	secs = tsc_getsecs(&tsc);
 	tsc_shut(&tsc);
-	return (void *) 0;
-}
 
-static void *do_spmv_thread(void *arg)
-{
-	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
-	SPMV_NAME(_fn_t) *spmv_mt_fn = spm_mt_thread->spmv_fn;
-	setaffinity_oncpu(spm_mt_thread->cpu);
-
-	int i;
-	for (i = 0; i < loops_nr; i++) {
-		pthread_barrier_wait(&barrier);
-		VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-		                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
-		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
-		pthread_barrier_wait(&barrier);
-	}
-
-	return (void *) 0;
+	return NULL;
 }
 
 float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
@@ -231,7 +231,7 @@ void SPMV_NAME(_check_mt_loop_numa)(void *spm_serial,
 			}
 		}
 
-		parts[i] = spm->nr_rows;
+		parts[i] = spm->nr_rows * sizeof(*y->elements);
 		nodes[i] = node;
 		spm->data = xs[node];
 		if (mt_fn)

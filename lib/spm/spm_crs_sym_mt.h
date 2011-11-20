@@ -41,11 +41,17 @@ spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_init_mmf( \
 void \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_make_map(void *spm); \
 \
+void \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_make_map(void *spm); \
+\
 uint64_t \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_size(void *spm); \
 \
 uint64_t \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_map_size(void *spm); \
+\
+uint64_t \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_map_size(void *spm); \
 \
 spmv_ ## __elem_type ## _sym_fn_t spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_multiply;
 

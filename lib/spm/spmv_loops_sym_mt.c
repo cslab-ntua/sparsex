@@ -38,6 +38,9 @@ static void *do_spmv_thread(void *arg)
     end = ((id + 1) * n) / ncpus;
     
     for (i = 0; i < nloops; i++) {
+        /*if (id != 0)
+            VECTOR_NAME(_init)(temp[id], 0);*/
+        VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
         pthread_barrier_wait(&barrier);
         spmv_mt_sym_fn(spm_mt_thread->spm, x, y, temp[id]);
         pthread_barrier_wait(&barrier);
@@ -45,9 +48,6 @@ static void *do_spmv_thread(void *arg)
             VECTOR_NAME(_add_part)(y, temp[j], y, start, end);*/
         VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
         pthread_barrier_wait(&barrier);
-        /*if (id != 0)
-            VECTOR_NAME(_init)(temp[id], 0);*/
-        VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
     }
     
 #ifdef SPMV_PRFCNT
@@ -105,6 +105,7 @@ static void *do_spmv_thread_main_swap(void *arg)
     end = ((id + 1) * n) / ncpus;
     
     for (i = 0; i < nloops; i++) {
+        VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
         pthread_barrier_wait(&barrier);
         spmv_mt_sym_fn(spm_mt_thread->spm, x, y, y);
         pthread_barrier_wait(&barrier);
@@ -112,7 +113,6 @@ static void *do_spmv_thread_main_swap(void *arg)
             VECTOR_NAME(_add_part)(y, temp[j], y, start, end);*/
         VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
         pthread_barrier_wait(&barrier);
-        VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
         SWAP(x, y);
     }
     tsc_pause(&tsc);
@@ -227,14 +227,14 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
     temp = (VECTOR_TYPE **) malloc(ncpus * sizeof(VECTOR_TYPE *));
     for (i = 0; i < ncpus; i++)
         temp[i] = VECTOR_NAME(_create)(n);
-    
+
     init_barrier(ncpus + 1);
     tids = (pthread_t *) malloc(ncpus * sizeof(pthread_t));
     if (!tids) {
         fprintf(stderr, "malloc failed");
         exit(1);
     }
-    
+
     for (i = 0; i < ncpus; i++) {
         if (mt_fn != NULL)
             spm_mt->spm_threads[i].spmv_fn = mt_fn;
@@ -248,7 +248,7 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
 #endif
         pthread_create(tids+i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
     }
-    
+
     for (i = 0; i < nloops; i++) {
         VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
         VECTOR_NAME(_init)(y, (ELEM_TYPE) 21);
@@ -262,10 +262,10 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
         if (VECTOR_NAME(_compare)(y2, y) < 0)
             exit(1);
     }
-    
+
     for (i = 0; i < spm_mt->nr_threads; i++)
         pthread_join(tids[i], NULL);
-    
+
     VECTOR_NAME(_destroy)(x);
     VECTOR_NAME(_destroy)(y);
     VECTOR_NAME(_destroy)(y2);

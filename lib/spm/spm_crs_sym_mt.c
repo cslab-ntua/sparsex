@@ -22,7 +22,8 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
     SPM_CRS_SYM_MT_TYPE *crs_mt;
     SPM_CRS_SYM_TYPE *crs;
     
-    crs = (SPM_CRS_SYM_TYPE *) SPM_CRS_SYM_NAME(_init_mmf)(mmf_file, nrows, ncols, nnz);
+    crs = (SPM_CRS_SYM_TYPE *) SPM_CRS_SYM_NAME(_init_mmf)(mmf_file, nrows,
+                                                           ncols, nnz);
     mt_get_options(&ncpus, &cpus);
 
     printf("MT_CONF: ");
@@ -38,13 +39,15 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
     }
     
     spm_mt->nr_threads = ncpus;
-    spm_mt->spm_threads = (spm_mt_thread_t *) malloc(ncpus * sizeof(spm_mt_thread_t));
+    spm_mt->spm_threads = (spm_mt_thread_t *)
+                              malloc(ncpus * sizeof(spm_mt_thread_t));
     if (!spm_mt->spm_threads) {
         fprintf(stderr, "malloc failed\n");
         exit(1);
     }
     
-    crs_mt = (SPM_CRS_SYM_MT_TYPE *) malloc(ncpus * sizeof(SPM_CRS_SYM_MT_TYPE));
+    crs_mt = (SPM_CRS_SYM_MT_TYPE *)
+                 malloc(ncpus * sizeof(SPM_CRS_SYM_MT_TYPE));
     if (!crs_mt ) {
         fprintf(stderr, "malloc failed\n");
         exit(1);
@@ -324,5 +327,205 @@ XSPMV_SYM_MT_METH_INIT(
     SPM_CRS_SYM_MT_NAME(_destroy),
     sizeof(ELEM_TYPE)
 )
+
+#ifdef SPM_NUMA
+
+#include <numa.h>
+#include "numa_util.h"
+
+void *SPM_CRS_SYM_MT_NAME(_numa_init_mmf)(char *mmf_file, uint64_t *nrows,
+                                          uint64_t *ncols, uint64_t *nnz)
+{
+    spm_mt_t *spm_mt = SPM_CRS_SYM_MT_NAME(_init_mmf)(mmf_file, nrows, ncols,
+                                                      nnz);
+
+    int nr_threads = spm_mt->nr_threads;
+    size_t *values_parts = malloc(nr_threads * sizeof(*values_parts));
+    size_t *rowptr_parts = malloc(nr_threads * sizeof(*rowptr_parts));
+    size_t *colind_parts = malloc(nr_threads * sizeof(*colind_parts));
+    size_t *dvalues_parts = malloc(nr_threads * sizeof(*dvalues_parts));
+    int *nodes = malloc(nr_threads*sizeof(*nodes));
+
+    // just reallocate in a numa-aware fashion the data structures
+    int i;
+    SPM_CRS_SYM_TYPE *crs = NULL;
+    for (i = 0; i < nr_threads; i++) {
+        spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+        SPM_CRS_SYM_MT_TYPE *crs_mt = (SPM_CRS_SYM_MT_TYPE *) spm_thread->spm;
+        crs = crs_mt->crs;
+        SPM_CRS_SYM_IDX_TYPE row_start = crs_mt->row_start;
+        SPM_CRS_SYM_IDX_TYPE row_end = crs_mt->row_end;
+        SPM_CRS_SYM_IDX_TYPE v = crs->row_ptr[row_end] - 
+                                 crs->row_ptr[row_start];
+        rowptr_parts[i] = (row_end-row_start) * sizeof(*crs->row_ptr);
+        colind_parts[i] = v * sizeof(*crs->col_ind);
+        values_parts[i] = v * sizeof(*crs->values);
+        dvalues_parts[i] = (row_end-row_start) * sizeof(*crs->dvalues);
+        nodes[i] = numa_node_of_cpu(spm_thread->cpu);
+        spm_thread->node = nodes[i];
+        spm_thread->row_start = row_start;
+        spm_thread->nr_rows = row_end - row_start;
+    }
+    rowptr_parts[nr_threads-1] += sizeof(*crs->row_ptr); 
+
+    // sanity check (+ get rid of compiler warning about uninit. variable)
+    assert(crs);
+
+    SPM_CRS_SYM_IDX_TYPE *new_rowptr = 
+                             alloc_interleaved((crs->n + 1) *
+                                               sizeof(*crs->row_ptr),
+	                                       rowptr_parts, nr_threads, nodes);
+	                                       
+    SPM_CRS_SYM_IDX_TYPE *new_colind =
+                             alloc_interleaved(crs->nnz * sizeof(*crs->col_ind),
+                                               colind_parts, nr_threads, nodes);
+                                           
+    ELEM_TYPE *new_values = alloc_interleaved(crs->nnz * sizeof(*crs->values),
+                                              values_parts, nr_threads, nodes);
+    
+    ELEM_TYPE *new_dvalues = alloc_interleaved(crs->n * sizeof(*crs->dvalues),
+                                               dvalues_parts, nr_threads,
+                                               nodes);
+
+    // copy old data to the new one
+    memcpy(new_rowptr, crs->row_ptr, (crs->n + 1) * sizeof(*crs->row_ptr));
+    memcpy(new_colind, crs->col_ind, crs->nnz * sizeof(*crs->col_ind));
+    memcpy(new_values, crs->values, crs->nnz * sizeof(*crs->values));
+    memcpy(new_dvalues, crs->dvalues, crs->n * sizeof(*crs->dvalues));
+
+    // free old data and replace with the new one
+    free(crs->row_ptr);
+    free(crs->col_ind);
+    free(crs->values);
+    free(crs->dvalues);
+
+    crs->row_ptr = new_rowptr;
+    crs->col_ind = new_colind;
+    crs->values = new_values;
+    crs->dvalues = new_dvalues;
+    
+    printf("check for allocation of row_ptr field\n");
+    print_interleaved((void *) crs->row_ptr, crs->n + 1, sizeof(*crs->row_ptr), 
+                      rowptr_parts, nr_threads, nodes);
+
+    printf("check for allocation of col_ind field\n"); 
+    print_interleaved((void *) crs->col_ind, crs->nnz, sizeof(*crs->col_ind),
+                      colind_parts, nr_threads, nodes);
+
+    printf("check for allocation of values field\n");
+    print_interleaved((void *) crs->values, crs->nnz, sizeof(*crs->values),
+                      values_parts, nr_threads, nodes);
+
+    printf("check for allocation of dvalues field\n");
+    print_interleaved((void *) crs->dvalues, crs->n, sizeof(*crs->dvalues),
+                      dvalues_parts, nr_threads, nodes);
+
+    // free the auxiliaries
+    free(rowptr_parts);
+    free(colind_parts);
+    free(values_parts);
+    free(dvalues_parts);
+    free(nodes);
+    
+    SPM_CRS_SYM_MT_NAME(_numa_make_map)(spm_mt);
+    map_size = SPM_CRS_SYM_MT_NAME(_numa_map_size)(spm_mt);
+
+    return spm_mt;
+}
+
+void SPM_CRS_SYM_MT_NAME(_numa_make_map)(void * spm)
+{
+    int i;
+    spm_mt_t *spm_mt = (spm_mt_t *) spm;
+    spm_mt_thread_t *spm_mt_thread;
+    map_t *map;
+    map_t *temp_map;
+    int node, length;
+    int ncpus = spm_mt->nr_threads;
+    
+    SPM_CRS_SYM_MT_NAME(_make_map)(spm);
+    
+    for (i = 0; i < ncpus; i++) {
+        spm_mt_thread = spm_mt->spm_threads + i;
+        node = spm_mt_thread->node;
+        map = spm_mt_thread->map;
+        length = map->length;
+        
+        temp_map = numa_alloc_onnode(sizeof(map_t), node);
+        temp_map->length = length;
+        temp_map->cpus = numa_alloc_onnode(length * sizeof(unsigned int), node);
+        temp_map->elems_pos = 
+            numa_alloc_onnode(length * sizeof(unsigned int), node);
+        
+        memcpy(temp_map->cpus, map->cpus, length * sizeof(unsigned int));
+        memcpy(temp_map->elems_pos, map->elems_pos, 
+               length * sizeof(unsigned int));
+        
+        // free(map->cpus);
+        // free(map->elems_pos);
+        // free(map);
+        
+        spm_mt_thread->map = temp_map;
+    }
+    
+    printf("check for allocation in map\n");
+    for (i = 0; i < ncpus; i++) {
+        spm_mt_thread = spm_mt->spm_threads + i;
+        node = spm_mt_thread->node;
+        map = spm_mt_thread->map;
+        length = map->length;
+        
+        size_t parts = length * sizeof(unsigned int);
+        
+        print_interleaved(map->cpus, length, sizeof(unsigned int), &parts, 1,
+                          &node);
+        print_interleaved(map->elems_pos, length, sizeof(unsigned int), &parts,
+                          1, &node);
+    }
+}
+
+void SPM_CRS_SYM_MT_NAME(_numa_destroy)(void *spm)
+{
+    spm_mt_t *spm_mt = (spm_mt_t *) spm;
+    spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+    SPM_CRS_SYM_MT_TYPE *crs_mt = (SPM_CRS_SYM_MT_TYPE *) spm_thread->spm;
+    SPM_CRS_SYM_TYPE *crs = crs_mt->crs;
+    
+    free_interleaved(crs->row_ptr, (crs->n + 1) * sizeof(*crs->row_ptr));
+    free_interleaved(crs->col_ind, crs->nnz * sizeof(*crs->col_ind));
+    free_interleaved(crs->values, crs->nnz * sizeof(*crs->values));
+    free_interleaved(crs->dvalues, crs->n * sizeof(*crs->dvalues));
+
+    free(crs);
+    free(crs_mt);
+    free(spm_thread);
+    free(spm_mt);
+}
+
+uint64_t SPM_CRS_SYM_MT_NAME(_numa_size)(void *spm)
+{
+    return SPM_CRS_SYM_MT_NAME(_size)(spm);
+}
+
+uint64_t SPM_CRS_SYM_MT_NAME(_numa_map_size)(void *spm)
+{
+    return SPM_CRS_SYM_MT_NAME(_map_size)(spm);
+}
+
+void SPM_CRS_SYM_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in, 
+                                         VECTOR_TYPE *out, VECTOR_TYPE *temp)
+{
+    SPM_CRS_SYM_MT_NAME(_multiply)(spm, in, out, temp);
+}
+
+XSPMV_SYM_MT_METH_INIT(
+ SPM_CRS_SYM_MT_NAME(_numa_multiply),
+ SPM_CRS_SYM_MT_NAME(_numa_init_mmf),
+ SPM_CRS_SYM_MT_NAME(_numa_size),
+ SPM_CRS_SYM_MT_NAME(_numa_destroy),
+ sizeof(ELEM_TYPE)
+)
+
+#endif /* SPM_NUMA */
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

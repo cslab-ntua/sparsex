@@ -21,14 +21,17 @@
 #include "spmv_loops_mt.h"
 #include "spmv_loops_sym_mt.h"
 #ifdef SPM_NUMA
-#   include "spmv_loops_mt_numa.h"
-#   define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop_numa
-#   define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop_numa
+  #include "spmv_loops_mt_numa.h"
+  #include "spmv_loops_sym_mt_numa.h"
+  #define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop_numa
+  #define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop_numa
+  #define SPMV_DOUBLE_CHECK_SYM_MT_LOOP spmv_double_check_sym_mt_loop_numa
+  #define SPMV_DOUBLE_BENCH_SYM_MT_LOOP spmv_double_bench_sym_mt_loop_numa
 #else
-#   define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop
-#   define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop
-#   define SPMV_DOUBLE_CHECK_SYM_MT_LOOP spmv_double_check_sym_mt_loop
-#   define SPMV_DOUBLE_BENCH_SYM_MT_LOOP spmv_double_bench_sym_mt_loop
+  #define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop
+  #define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop
+  #define SPMV_DOUBLE_CHECK_SYM_MT_LOOP spmv_double_check_sym_mt_loop
+  #define SPMV_DOUBLE_BENCH_SYM_MT_LOOP spmv_double_bench_sym_mt_loop
 #endif
 #include "bcsr/export.h"
 
@@ -55,7 +58,6 @@ static void parse_block_dims(const char *arg, int *r, int *c)
 
 int main(int argc, char **argv)
 {
-
 	progname = argv[0];
 
 	// parse options
@@ -148,7 +150,6 @@ int main(int argc, char **argv)
 		}
 
 		switch (elem_size + spmv_meth->flag){
-			
 			case 8:
 			case (8+2):
 			spmv_double_check_loop(m1, m, meth1->fn, meth->fn, 1, nrows, ncols, nnz);
@@ -159,7 +160,7 @@ int main(int argc, char **argv)
 			break;
 			
 			case (8+3):
-			spmv_double_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
+			SPMV_DOUBLE_CHECK_SYM_MT_LOOP(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 
 			case 4:
@@ -171,7 +172,7 @@ int main(int argc, char **argv)
 			spmv_float_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 
-                        case (4+3):
+			case (4+3):
 			spmv_float_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 			
@@ -198,11 +199,11 @@ int main(int argc, char **argv)
 				break;
 				
 				case (8+3):
-				t = spmv_double_bench_sym_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
+				t = SPMV_DOUBLE_BENCH_SYM_MT_LOOP(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 
-				case 4:
-			        case (4+2):
+				case (4):
+				case (4+2):
 				t = spmv_float_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 
@@ -210,7 +211,7 @@ int main(int argc, char **argv)
 				t = spmv_float_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 
-                                case (4+3):
+				case (4+3):
 				t = spmv_float_bench_sym_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 				
@@ -223,7 +224,7 @@ int main(int argc, char **argv)
 				printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
 			else
 				printf("m:%s f:%s ms:%lu s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), map_size,
-                                        spmv_meth->size_fn(m), t, flops);
+				       spmv_meth->size_fn(m), t, flops);
 		}
 	}
 	spmv_meth->destroy_fn(m);

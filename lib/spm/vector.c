@@ -78,7 +78,7 @@ VECTOR_TYPE *VECTOR_NAME(_create_onnode)(unsigned long size, int node)
 		perror("numa_alloc_onnode");
 		exit(1);
 	}
-
+	
 	v->size = size;
 	v->alloc_type = ALLOC_NUMA;
 	v->elements = numa_alloc_onnode(sizeof(ELEM_TYPE)*size, node);
@@ -109,7 +109,8 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
 
 	v->size = size;
 	v->alloc_type = ALLOC_MMAP;
-	v->elements = (ELEM_TYPE *) alloc_interleaved(size * sizeof(ELEM_TYPE),
+	v->elements = (ELEM_TYPE *) alloc_interleaved(size * 
+	                                              sizeof(*v->elements),
 	                                              parts, nr_parts, nodes);
 	return v;
 }

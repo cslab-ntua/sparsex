@@ -124,5 +124,5 @@ void print_interleaved(void *addr, size_t length, unsigned int size,
 		}
 	}
 	assert(cur_part == nr_parts - 1);
-	assert(cur_size > parts[cur_part] && cur_size - parts[cur_part] < pagesize);
+	assert(cur_size >= parts[cur_part] && cur_size - parts[cur_part] < pagesize);
 }

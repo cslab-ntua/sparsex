@@ -33,7 +33,7 @@ typedef struct map map_t;
 typedef struct { \
 	vtype *elements; \
 	unsigned long size; \
-    int alloc_type;     \
+	int alloc_type;     \
 } _VTYPE(vtype); \
 \
 _VTYPE(vtype) *_VNAME(vtype,create)(unsigned long size); \
