@@ -12,6 +12,7 @@
 #define __VECTOR_H__
 
 #include "macros.h"
+#include "numa_util.h"
 
 /* helpers for cpp abuse */
 #ifndef ELEM_TYPE

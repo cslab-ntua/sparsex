@@ -118,7 +118,7 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 			}
 		}
 
-		parts[i] = spm->nr_rows;
+		parts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
 		nodes[i] = spm->node;
 		spm->data = xs[spm->node];
 		if (fn)
@@ -126,10 +126,16 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 	}
 	
 #if 0
-	printf("Old parts:\n");
-	for (i = 0; i < spm_mt->nr_threads; i++) {
-		printf("parts[%d] = %zd must be on node %d\n", i, parts[i],
-		       spm_mt->spm_threads[i].node);
+	printf("check for allocation of x vector\n");
+	for (i = 0; i < nr_nodes; i++) {
+		if (xs[i]) {
+			size_t xparts = rows_nr * sizeof(*xs[i]->elements);
+			int xnodes = i;
+			
+			print_interleaved(xs[i]->elements, rows_nr,
+			                  sizeof(*xs[i]->elements), &xparts,
+			                  1, &xnodes);
+		}
 	}
 #endif
 
@@ -137,27 +143,11 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
 	                                     nodes);
 	VECTOR_NAME(_init)(y, 0);
-#if 0
-	printf("New parts:\n");
-	size_t part_start = 0;
-	for (i = 0; i < spm_mt->nr_threads; i++) {
-		int node;
-		if (get_mempolicy(&node, 0, 0, &y->elements[part_start],
-			              MPOL_F_ADDR | MPOL_F_NODE) < 0) {
-			perror("get_mempolicy");
-			exit(1);
-		}
-		printf("parts[%d] (%p) = %zd is on node %d\n", i,
-		       &y->elements[part_start], parts[i], node);
-		part_start += parts[i];
-		spm_mt_thread_t *spm = &(spm_mt->spm_threads[i]);
-		if (get_mempolicy(&node, 0, 0, &((VECTOR_TYPE *) spm->data)->elements,
-			              MPOL_F_ADDR | MPOL_F_NODE) < 0) {
-			perror("get_mempolicy");
-			exit(1);
-		}
-		printf("x is on node %d\n", node);
-	}
+
+#if 0	
+	printf("check for allocation of y vector\n");
+	print_interleaved(y->elements, rows_nr, sizeof(*y->elements), parts,
+	                  spm_mt->nr_threads, nodes);
 #endif
 
 	for (i = 1; i < spm_mt->nr_threads; i++)
