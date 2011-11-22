@@ -469,7 +469,7 @@ void SPM_CRS_SYM_MT_NAME(_numa_make_map)(void * spm)
         spm_mt_thread->map = temp_map;
     }
     
-    printf("check for allocation in map\n");
+    printf("check for allocation of map\n");
     for (i = 0; i < ncpus; i++) {
         spm_mt_thread = spm_mt->spm_threads + i;
         node = spm_mt_thread->node;

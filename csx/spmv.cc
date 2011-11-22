@@ -36,16 +36,20 @@ extern "C" {
 #include "spmv_method.h"
 #include "spm_crs.h"
 #include "spm_mt.h"
-#include "spmv_loops_mt.h"
-#include "spmv_loops_sym_mt.h"
 #ifdef SPM_NUMA
 #   include "spmv_loops_mt_numa.h"
+#   include "spmv_loops_sym_mt_numa.h"
 #   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
 #   define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
+#   define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop_numa
+#   define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop_numa
 #else
 #   include "spmv_loops_mt.h"
+#   include "spmv_loops_sym_mt.h"
 #   define SPMV_CHECK_FN spmv_double_check_mt_loop
 #   define SPMV_BENCH_FN spmv_double_bench_mt_loop
+#   define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop
+#   define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop
 #endif
 #include "timer.h"
 #include "ctl_ll.h"
@@ -296,6 +300,9 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
     uint32_t start, end, col, total_count, temp_count, limit;
     uint32_t ncpus = spm_mt->nr_threads;
     uint32_t n = spm_sym->GetLowerMatrix()->GetNrCols();
+#ifdef SPM_NUMA
+    int node;
+#endif
     
     ///> Init initial_map.
     count = (unsigned int *) xmalloc(n * sizeof(unsigned int));
@@ -349,8 +356,14 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
     end = 0;
     for (unsigned int i = 0; i < ncpus - 1; i++) {
         spm_thread = spm_mt->spm_threads + i;
+#ifdef SPM_NUMA
+        node = spm_thread->node;
+
+        map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
+#else
         map = (map_t *) xmalloc(sizeof(map_t));
-        
+#endif
+
         start = end;
         limit = total_count / (ncpus - i);
         temp_count = 0;
@@ -360,9 +373,18 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
         /*std::cout << "Thread " << i << std::endl;
         std::cout << start << " -> " << end << std::endl;*/
         map->length = temp_count;
+#ifdef SPM_NUMA
+        map->cpus = (unsigned int *) 
+                        numa_alloc_onnode(temp_count * sizeof(unsigned int),
+                                          node);
+        map->elems_pos = (unsigned int *)
+                             numa_alloc_onnode(temp_count *
+                                               sizeof(unsigned int), node);
+#else
         map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
         map->elems_pos = 
             (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
+#endif        
         temp_count = 0;
         for (unsigned int j = start; j < end; j++) {
             for (unsigned int k = 0; k < ncpus; k++) {
@@ -381,14 +403,23 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
     temp_count = total_count;
     
     spm_thread = spm_mt->spm_threads + ncpus - 1;
+
+#ifdef SPM_NUMA
+    node = spm_thread->node;
+
+    map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
+    map->cpus = (unsigned int *)
+                    numa_alloc_onnode(temp_count * sizeof(unsigned int), node);
+    map->elems_pos = (unsigned int *)
+                         numa_alloc_onnode(temp_count * sizeof(unsigned int),
+                                           node);
+#else
     map = (map_t *) xmalloc(sizeof(map_t));
-    
-    /*std::cout << "Thread " << ncpus - 1 << std::endl;
-    std::cout << start << " -> " << end << std::endl;*/
-    
-    map->length = temp_count;
     map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
     map->elems_pos = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
+#endif
+
+    map->length = temp_count;
     temp_count = 0;
     for (unsigned int j = start; j < end; j++) {
         for (unsigned int k = 0; k < ncpus; k++) {
@@ -401,7 +432,17 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
     assert(temp_count == map->length);
     
     spm_thread->map = map;
-    
+#ifdef SPM_NUMA
+    std::cout << "check for allocation of map" << std::endl;
+    for (unsigned int i = 0; i < ncpus; i++) {
+        node = spm_mt->spm_threads[i].node;
+        map = spm_mt->spm_threads[i].map;
+        
+        check_onnode(map, sizeof(map_t), node);
+        check_onnode(map->cpus, map->length * sizeof(unsigned int), node);
+        check_onnode(map->elems_pos, map->length * sizeof(unsigned int), node);
+    }
+#endif
     ///> Print final map.
     /*
     for (unsigned int i = 0; i < ncpus; i++) {
@@ -575,7 +616,28 @@ void *PreprocessThread(void *thread_info)
         data->spm_encoded->spm = csx;
         data->spm_encoded->row_start = csx->lower_matrix->row_start;
         data->spm_encoded->nr_rows = csx->lower_matrix->nrows;
-        
+
+#ifdef SPM_NUMA
+        /*
+	data->buffer << "check for allocation of csx" << std::endl;
+	check_onnode(csx, sizeof(*csx), data->spm_encoded->node);
+	*/
+	data->buffer << "check for allocation of ctl field" << std::endl;
+	check_onnode(csx->lower_matrix->ctl,
+	             csx->lower_matrix->ctl_size * sizeof(uint8_t),
+	             data->spm_encoded->node);
+	             
+	data->buffer << "check for allocation of values field" << std::endl;
+	check_onnode(csx->lower_matrix->values,
+	             csx->lower_matrix->nnz * sizeof(double),
+	             data->spm_encoded->node);
+	             
+	data->buffer << "check for allocation of dvalues field" << std::endl;
+	check_onnode(csx->dvalues,
+	             csx->lower_matrix->nrows * sizeof(double),
+	             data->spm_encoded->node);
+#endif
+
         delete DrleMg1;
         delete DrleMg2;
     }
@@ -780,8 +842,8 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
         SPMV_CHECK_FN(crs, spm_mt, spm_crs32_double_multiply, 2, nrows, ncols,
                       NULL);
     else
-        spmv_double_check_sym_mt_loop(crs, spm_mt, spm_crs32_double_multiply, 2,
-                                      nrows, ncols, NULL);
+        SPMV_CHECK_SYM_FN(crs, spm_mt, spm_crs32_double_multiply, 2, nrows,
+                          ncols, NULL);
 
     spm_crs32_double_destroy(crs);
     std::cout << "Check Passed" << std::endl;
@@ -846,8 +908,7 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
                    basename(mmf_name), CsxSize(spm_mt), pre_time, secs,
                    flops);
         } else {
-            secs = spmv_double_bench_sym_mt_loop(spm_mt, loops_nr, nrows,
-                                                 ncols, NULL);
+            secs = SPMV_BENCH_SYM_FN(spm_mt, loops_nr, nrows, ncols, NULL);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
             printf("m:%s f:%s ms:%lu s:%lu pt:%lf t:%lf r:%lf\n", "csx-sym",
                    basename(mmf_name), MapSize(spm_mt), CsxSymSize(spm_mt),

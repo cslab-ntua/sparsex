@@ -82,10 +82,29 @@ csx_double_sym_t *CsxManager::MakeCsxSym()
     uint64_t diagonal_size = spm_sym_->GetDiagonalSize();
     
     spm_ = spm_sym_->GetLowerMatrix();
-    
+
+#ifdef SPM_NUMA
+    int cpu = sched_getcpu();
+    if (cpu < 0) {
+        perror("sched_getcpu() failed");
+        exit(1);
+    }
+
+    int node = numa_node_of_cpu(cpu);
+    if (node < 0) {
+        perror("numa_node_of_cpu() failed");
+        exit(1);
+    }
+
+    csx = (csx_double_sym_t *) numa_alloc_onnode(sizeof(csx_double_sym_t),
+                                                 node);
+    csx->dvalues = (double *) numa_alloc_onnode(diagonal_size * sizeof(double),
+                                                node);
+#else  
     csx = (csx_double_sym_t *) malloc(sizeof(csx_double_sym_t));
     csx->dvalues = (double *) malloc(diagonal_size * sizeof(double));
-    
+#endif
+
     for (uint64_t i = 0; i < diagonal_size; i++)
         csx->dvalues[i] = diagonal[i];
     csx->lower_matrix = MakeCsx(true);
