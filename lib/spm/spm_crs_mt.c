@@ -213,14 +213,17 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
 	crs->col_ind = new_colind;
 	crs->values = new_values;
 
-#if 0
 	printf("check for allocation of row_ptr field\n");
-	print_interleaved((void *) crs->row_ptr, crs->nrows+1, sizeof(*crs->row_ptr), rowptr_parts, nr_threads, nodes);
+	check_interleaved((void *) crs->row_ptr,
+	                  (crs->nrows+1) * sizeof(*crs->row_ptr), rowptr_parts,
+	                  nr_threads, nodes);
 	printf("check for allocation of col_ind field\n"); 
-	print_interleaved((void *) crs->col_ind, crs->nz, sizeof(*crs->col_ind), colind_parts, nr_threads, nodes);
+	check_interleaved((void *) crs->col_ind,
+	                  crs->nz * sizeof(*crs->col_ind), colind_parts,
+	                  nr_threads, nodes);
 	printf("check for allocation of values field\n");
-	print_interleaved((void *) crs->values, crs->nz, sizeof(*crs->values), values_parts, nr_threads, nodes);
-#endif
+	check_interleaved((void *) crs->values, crs->nz * sizeof(*crs->values),
+                          values_parts, nr_threads, nodes);
 
 	// free the auxiliaries
 	free(rowptr_parts);

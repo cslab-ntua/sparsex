@@ -476,21 +476,21 @@ void *PreprocessThread(void *thread_info)
         data->spm_encoded->spm = csx;
         data->spm_encoded->nr_rows = csx->nrows;
         data->spm_encoded->row_start = csx->row_start;
+
 #ifdef SPM_NUMA
-        int node;
-        if (get_mempolicy(&node, 0, 0, csx->values,
-                          MPOL_F_ADDR | MPOL_F_NODE) < 0) {
-            perror("get_mempolicy");
-            exit(1);
-        }
-
-        data->buffer << "csx part " << data->thread_no
-                     << " is on node " << node
-                     << " and must be on node "
-                     << data->spm_encoded->node << std::endl;
-
+	/*
+	data->buffer << "check for allocation of csx" << std::endl;
+	check_onnode(csx, sizeof(*csx), data->spm_encoded->node);
+	*/
+	data->buffer << "check for allocation of ctl field" << std::endl;
+	check_onnode(csx->ctl, csx->ctl_size * sizeof(uint8_t),
+	             data->spm_encoded->node);
+	data->buffer << "check for allocation of values field" << std::endl;
+	check_onnode(csx->values, csx->nnz * sizeof(*csx->values),
+	             data->spm_encoded->node);
 #endif
-        delete DrleMg;
+        
+	delete DrleMg;
     } else {
         DRLE_Manager *DrleMg1;
         DRLE_Manager *DrleMg2;
@@ -579,7 +579,6 @@ void *PreprocessThread(void *thread_info)
         delete DrleMg1;
         delete DrleMg2;
     }
-    
     return 0;
 }
 

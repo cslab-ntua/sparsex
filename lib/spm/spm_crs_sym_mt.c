@@ -405,19 +405,20 @@ void *SPM_CRS_SYM_MT_NAME(_numa_init_mmf)(char *mmf_file, uint64_t *nrows,
     crs->dvalues = new_dvalues;
     
     printf("check for allocation of row_ptr field\n");
-    print_interleaved((void *) crs->row_ptr, crs->n + 1, sizeof(*crs->row_ptr), 
-                      rowptr_parts, nr_threads, nodes);
+    check_interleaved((void *) crs->row_ptr,
+                      (crs->n + 1) * sizeof(*crs->row_ptr), rowptr_parts,
+                      nr_threads, nodes);
 
     printf("check for allocation of col_ind field\n"); 
-    print_interleaved((void *) crs->col_ind, crs->nnz, sizeof(*crs->col_ind),
+    check_interleaved((void *) crs->col_ind, crs->nnz * sizeof(*crs->col_ind),
                       colind_parts, nr_threads, nodes);
 
     printf("check for allocation of values field\n");
-    print_interleaved((void *) crs->values, crs->nnz, sizeof(*crs->values),
+    check_interleaved((void *) crs->values, crs->nnz * sizeof(*crs->values),
                       values_parts, nr_threads, nodes);
 
     printf("check for allocation of dvalues field\n");
-    print_interleaved((void *) crs->dvalues, crs->n, sizeof(*crs->dvalues),
+    check_interleaved((void *) crs->dvalues, crs->n * sizeof(*crs->dvalues),
                       dvalues_parts, nr_threads, nodes);
 
     // free the auxiliaries
@@ -475,12 +476,8 @@ void SPM_CRS_SYM_MT_NAME(_numa_make_map)(void * spm)
         map = spm_mt_thread->map;
         length = map->length;
         
-        size_t parts = length * sizeof(unsigned int);
-        
-        print_interleaved(map->cpus, length, sizeof(unsigned int), &parts, 1,
-                          &node);
-        print_interleaved(map->elems_pos, length, sizeof(unsigned int), &parts,
-                          1, &node);
+        check_onnode(map->cpus, length * sizeof(unsigned int), node);
+        check_onnode(map->elems_pos, length * sizeof(unsigned int), node);
     }
 }
 

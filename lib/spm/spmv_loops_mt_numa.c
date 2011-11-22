@@ -125,30 +125,20 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 			spm->spmv_fn = fn;
 	}
 	
-#if 0
 	printf("check for allocation of x vector\n");
-	for (i = 0; i < nr_nodes; i++) {
-		if (xs[i]) {
-			size_t xparts = rows_nr * sizeof(*xs[i]->elements);
-			int xnodes = i;
-			
-			print_interleaved(xs[i]->elements, rows_nr,
-			                  sizeof(*xs[i]->elements), &xparts,
-			                  1, &xnodes);
-		}
-	}
-#endif
+	for (i = 0; i < nr_nodes; i++)
+		if (xs[i])
+			check_onnode(xs[i]->elements,
+			             cols_nr * sizeof(ELEM_TYPE), i);
 
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
 	                                     nodes);
 	VECTOR_NAME(_init)(y, 0);
 
-#if 0	
 	printf("check for allocation of y vector\n");
-	print_interleaved(y->elements, rows_nr, sizeof(*y->elements), parts,
+	check_interleaved(y->elements, rows_nr * sizeof(*y->elements), parts,
 	                  spm_mt->nr_threads, nodes);
-#endif
 
 	for (i = 1; i < spm_mt->nr_threads; i++)
 		pthread_create(tids + i, NULL, do_spmv_thread, spm_mt->spm_threads + i);

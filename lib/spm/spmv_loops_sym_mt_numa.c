@@ -155,23 +155,17 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	}
 	
 	printf("check for allocation of x vector\n");
-	for (i = 0; i < nr_nodes; i++) {
-		if (xs[i]) {
-			size_t xparts = n * sizeof(*xs[i]->elements);
-			int xnodes = i;
-			
-			print_interleaved(xs[i]->elements, n,
-			                  sizeof(*xs[i]->elements), &xparts,
-			                  1, &xnodes);
-		}
-	}
+	for (i = 0; i < nr_nodes; i++)
+		if (xs[i])
+			check_onnode(xs[i]->elements,
+			             n  * sizeof(*xs[i]->elements), i);
 
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(n, parts, ncpus, nodes);
 	VECTOR_NAME(_init)(y, 0);
 	
 	printf("check for allocation of y vector\n");
-	print_interleaved(y->elements, n, sizeof(*y->elements), parts, ncpus,
+	check_interleaved(y->elements, n * sizeof(*y->elements), parts, ncpus,
 	                  nodes);
 
 	/* Allocate temporary buffers */
@@ -190,11 +184,10 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	
 	printf("check for allocation of temp vectors\n");
 	for (i = 1; i < ncpus; i++) {
-		size_t tparts = n * sizeof(*temp[i]->elements);
-		int tnodes = spm_mt->spm_threads[i].node;
+		int tnode = spm_mt->spm_threads[i].node;
 		
-        print_interleaved(temp[i]->elements, n, sizeof(*temp[i]->elements),
-                          &tparts, 1, &tnodes);
+        	check_onnode(temp[i]->elements, n * sizeof(*temp[i]->elements),
+		             tnode);
 	}
     
 	for (i = 1; i < ncpus; i++)
@@ -292,29 +285,13 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 		if (mt_fn)
 			spm->spmv_fn = mt_fn;
 	}
-
-    printf("check for allocation of x vector\n");
-	for (i = 0; i < nr_nodes; i++) {
-		if (xs[i]) {
-			size_t xparts = n * sizeof(*xs[i]->elements);
-			int xnodes = i;
-			
-			print_interleaved(xs[i]->elements, n,
-			                  sizeof(*xs[i]->elements), &xparts,
-			                  1, &xnodes);
-		}
-	}
-
+	
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(n, parts, ncpus, nodes);
 	y2 = VECTOR_NAME(_create)(n);
 	VECTOR_NAME(_init)(y, 0);
 	VECTOR_NAME(_init)(y2, 0);
 
-    printf("check for allocation of y vector\n");
-	print_interleaved(y->elements, n, sizeof(*y->elements), parts, ncpus,
-	                  nodes);
-	                  	
 	/* Allocate temporary buffers */
 	temp = malloc(ncpus * sizeof(*temp));
 	temp[0] = y;
@@ -330,15 +307,6 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 	        temp[i]->elements[j] = 0;
 	}
 	
-	printf("check for allocation of temp vectors\n");
-	for (i = 1; i < ncpus; i++) {
-		size_t tparts = n * sizeof(*temp[i]->elements);
-		int tnodes = spm_mt->spm_threads[i].node;
-		
-        print_interleaved(temp[i]->elements, n, sizeof(*temp[i]->elements),
-                          &tparts, 1, &tnodes);
-	}
-    
 	for (i = 0; i < ncpus; i++)
 		pthread_create(tids + i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
 
