@@ -247,7 +247,7 @@ uint64_t GetOptionSamples()
 int GetOptionOuterLoops()
 {
     const char *loops_env = getenv("OUTER_LOOPS");
-    int ret = 0;
+    int ret = 1;
     if (loops_env) {
         ret = atoi(loops_env);
         if (ret < 0)
@@ -325,19 +325,20 @@ void *PreprocessThread(void *thread_info)
     data->spm_encoded->spm = csx;
     data->spm_encoded->nr_rows = csx->nrows;
     data->spm_encoded->row_start = csx->row_start;
-#ifdef SPM_NUMA
-    int node;
-    if (get_mempolicy(&node, 0, 0, csx->values,
-                      MPOL_F_ADDR | MPOL_F_NODE) < 0) {
-        perror("get_mempolicy");
-        exit(1);
-    }
-
-    data->buffer << "csx part " << data->thread_no << " is on node " << node
-                 << " and must be on node "
-                 << data->spm_encoded->node << std::endl;
-
-#endif
+    
+    #ifdef SPM_NUMA
+    /*
+    data->buffer << "check for allocation of csx" << std::endl;
+    check_onnode(csx, sizeof(*csx), data->spm_encoded->node);
+    */
+    data->buffer << "check for allocation of ctl field" << std::endl;
+    check_onnode(csx->ctl, csx->ctl_size * sizeof(uint8_t),
+                 data->spm_encoded->node);
+    data->buffer << "check for allocation of values field" << std::endl;
+    check_onnode(csx->values, csx->nnz * sizeof(*csx->values),
+                 data->spm_encoded->node);
+    #endif
+    
     delete DrleMg;
     return 0;
 }
