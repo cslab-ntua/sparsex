@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv csx_llvm_tmpl.llvm.bc
+all: spmv csx_llvm_tmpl.llvm.bc newjit_test
 
 ## Configuration
 llvmconf     = llvm-config
@@ -9,7 +9,7 @@ dynarray_dir = ../lib/dynarray
 spm_dir      = ../lib/spm
 prfcnt_dir   = ../lib/prfcnt
 script_dir   = ../scripts
-csx_template = $(shell pwd)/csx_llvm_tmpl.llvm.bc
+csx_template = $(shell pwd)/csx_spmv_tmpl.c
 llvm_dir     = $(shell $(llvmconf) --includedir)
 
 CC          ?= gcc
@@ -17,7 +17,7 @@ CXX         ?= g++
 LD			 = $(CXX)
 CFLAGS       = -Wall
 CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC
-LIBS		 = -lnuma -lpthread
+LIBS		 = -lnuma -lpthread -lboost_regex
 
 # Always add the following flags
 override CPPFLAGS += -DCSX_TEMPLATE=\"$(csx_template)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE -D__STDC_FORMAT_MACROS
@@ -29,13 +29,14 @@ CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
 CAIROMM_LIBS    = $(shell pkg-config cairomm-1.0 --libs)
 
 #llvm
-llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter
+llvm_deps       = core analysis executionengine jit native bitreader ipo linker bitwriter asmparser
 LLVM_CC         = llvm-gcc
 LLVM_CPPFLAGS	=
 LLVM_CFLAGS     = -O0
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 LLVM_COMPILE	= $(LLVM_CC) $(CPPFLAGS) $(LLVM_CPPFLAGS) $(CFLAGS) $(LLVM_CFLAGS)
 dynarray_dep    = $(dynarray_dir)/dynarray.o
+CLANG_LDFLAGS   = -Wl,--start-group -lclangAnalysis -lclangAST -lclangBasic -lclangCodeGen -lclangDriver -lclangFrontend -lclangFrontendTool -lclangIndex -lclangLex -lclangParse -lclangRewrite -lclangSema -lclangSerialization -lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangStaticAnalyzerFrontend -Wl,--end-group
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	override CPPFLAGS += -DSPM_NUMA
@@ -85,10 +86,19 @@ jit.o: jit.cc jit.h spm.h drle.h llvm_jit_help.h
 spmv.o: spmv.cc $(spm_dir)/spm_mt.h
 	$(CXX_COMPILE) -c $<
 
+%.o: %.cc %.h
+	$(CXX_COMPILE) -c $<
+
+newjit.o: spm.h csx.h drle.h template_text.h compiler.h jit_util.h
+compiler.o: jit_util.h
+
 # -Xlinker --allow-multiple-definition is set because
 # dynarray code is also included in libspmv.o.
 spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(spm_dir)/libspmv.o
 	$(LINK) $(LIBS) $^ $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
+
+newjit_test: newjit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(dynarray_dep) $(spm_dir)/libspmv.o template_text.o jit_util.o compiler.o
+	$(LINK) $(LIBS) $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) -o $@
 
 clean:
 	rm -f *.o spmv csx_llvm_tmpl.llvm.bc

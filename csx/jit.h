@@ -100,8 +100,8 @@ private:
 
 
 public:
-    CsxJit(CsxManager *CsxMg, unsigned int id=0);
-    void GenCode(std::ostream &os);
+    CsxJit(CsxManager *CsxMg, unsigned int id = 0);
+    void GenCode(std::ostream &log);
     void *GetSpmvFn();
 
 private:
