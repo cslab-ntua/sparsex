@@ -16,6 +16,8 @@
 #include <clang/Frontend/DiagnosticOptions.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <llvm/Module.h>
+#include <iostream>
+#include <cassert>
 
 using namespace clang;
 using namespace llvm;
@@ -46,10 +48,17 @@ public:
         keep_temporaries_ = keep;
     }
 
+    void SetLogStream(std::ostream *log)
+    {
+        assert(log && "passed ostream is NULL");
+        log_stream_ = log;
+    }
+
 private:
     OwningPtr<CompilerInvocation> invocation_;
     OwningPtr<CompilerInstance> compiler_;
     bool keep_temporaries_;
+    std::ostream *log_stream_;
 };
 
 #endif // COMPILER_H__

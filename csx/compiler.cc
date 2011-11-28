@@ -28,7 +28,8 @@ static std::string GetClangResourcePath(const char *prefix)
 
 ClangCompiler::ClangCompiler(const char *prefix)
     : invocation_(new CompilerInvocation()),
-      compiler_(new CompilerInstance()), keep_temporaries_(false)
+      compiler_(new CompilerInstance()), keep_temporaries_(false),
+      log_stream_(&std::cerr)
 {
     // Set-up the clang compiler
     TextDiagnosticPrinter *diag_client =
@@ -70,6 +71,7 @@ Module *ClangCompiler::Compile(const std::string &source,
     // write the source to a temporary file and invoke the compiler
     std::string temp_tmpl = ".tmp_XXXXXX";
     const char *tmpfile = UniqueFilename(temp_tmpl);
+    //const char *tmpfile = "temp.c";
 
     SourceToFile(tmpfile, source);
 
@@ -83,16 +85,16 @@ Module *ClangCompiler::Compile(const std::string &source,
     const char *const dummy_argv[] = { "" };
     compiler_->createDiagnostics(1, dummy_argv);
     if (!compiler_->hasDiagnostics()) {
-        std::cerr << "createDiagnostics() failed\n";
-        exit(1);
+        *log_stream_ << "createDiagnostics() failed\n";
+        return 0;
     }
 
     // Compile and emit LLVM IR
     OwningPtr<CodeGenAction> llvm_codegen(new EmitLLVMOnlyAction(context));
     if (!compiler_->ExecuteAction(*llvm_codegen)) {
-        std::cerr << "compilation failed: "
-                  << "generated source is in " << tmpfile << "\n";
-        exit(1);
+        *log_stream_ << "compilation failed: "
+                     << "generated source is in " << tmpfile << "\n";
+        return 0;
     }
 
     // Remove input file and return the compiled module

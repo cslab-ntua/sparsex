@@ -13,6 +13,7 @@
 #define JIT_UTIL_H__
 
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <cstdio>
 #include <cstdlib>
@@ -39,6 +40,14 @@ void RemoveFile(const char *path)
         perror("RemoveFile()");
         exit(1);
     }
+}
+
+template<typename T>
+std::string Stringify(const T& t)
+{
+    std::stringstream ss;
+    ss << t;
+    return ss.str();
 }
 
 #endif  // JIT_UTIL_H__

@@ -25,7 +25,6 @@
 #include "csx.h"
 #include "drle.h"
 #include "jit.h"
-#include "llvm_jit_help.h"
 
 #include <numa.h>
 #include <numaif.h>
@@ -342,7 +341,7 @@ void *PreprocessThread(void *thread_info)
     return 0;
 }
 
-static spm_mt_t *GetSpmMt(char *mmf_fname)
+static spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
 {
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
@@ -351,7 +350,6 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     int **deltas = NULL;
     thread_info_t *data;
     pthread_t *threads;
-    CsxJit **Jits;
 
     // Get MT_CONF
     mt_get_options(&nr_threads, &threads_cpus);
@@ -433,22 +431,18 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     for (unsigned int i = 1; i < nr_threads; ++i)
         pthread_join(threads[i-1], NULL);
 
-    // CSX matrix construction and JIT compilation
-    CsxJitInitGlobal();
-    Jits = (CsxJit **) xmalloc(nr_threads * sizeof(CsxJit *));
-
+    // CSX JIT compilation
+    CsxJit **Jits = new CsxJit*[nr_threads];
     for (unsigned int i = 0; i < nr_threads; ++i) {
-        Jits[i] = new CsxJit(data[i].csxmg, i);
+        Jits[i] = new CsxJit(data[i].csxmg, &engine, i);
         Jits[i]->GenCode(data[i].buffer);
         std::cout << data[i].buffer.str();
     }
 
-    // Optimize generated code and assign it to every thread
-    CsxJitOptmize();
     for (unsigned int i = 0; i < nr_threads; i++) {
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->GetSpmvFn();
-        delete Jits[i];
     }
+
 
     // Cleanup.
     free(Jits);
@@ -542,9 +536,11 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // Initialize the CSX JIT execution engine
+    CsxExecutionEngine &engine = CsxJitInit();
     for (int i = 1; i < argc; i++) {
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        spm_mt = GetSpmMt(argv[i]);
+        spm_mt = GetSpmMt(argv[i], engine);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
