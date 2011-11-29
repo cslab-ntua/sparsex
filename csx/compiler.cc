@@ -15,9 +15,11 @@
 
 #include <clang/Basic/Version.h>
 #include <clang/CodeGen/CodeGenAction.h>
+#include <clang/Frontend/CodeGenOptions.h>
 #include <clang/Frontend/HeaderSearchOptions.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <llvm/ADT/StringRef.h>
+#include "llvm/Target/TargetOptions.h"
 #include <fstream>
 
 static std::string GetClangResourcePath(const char *prefix)
@@ -29,7 +31,7 @@ static std::string GetClangResourcePath(const char *prefix)
 ClangCompiler::ClangCompiler(const char *prefix)
     : invocation_(new CompilerInvocation()),
       compiler_(new CompilerInstance()), keep_temporaries_(false),
-      log_stream_(&std::cerr)
+      debug_mode_(false), log_stream_(&std::cerr)
 {
     // Set-up the clang compiler
     TextDiagnosticPrinter *diag_client =
@@ -58,11 +60,13 @@ ClangCompiler::ClangCompiler(const char *prefix)
                           true /* user supplied */, false, false);
 
     // Setup diagnostic options
-    DiagnosticOptions &diag_options =
-        invocation_->getDiagnosticOpts();
+    DiagnosticOptions &diag_options = invocation_->getDiagnosticOpts();
     diag_options.Warnings.push_back("all");     // -Wall
     diag_options.Pedantic = 1;                  // -pedantic
     diag_options.ShowColors = 1;                // be fancy ;)
+
+    // Setup code generation options
+    SetCodeGenOptions();
 }
 
 Module *ClangCompiler::Compile(const std::string &source,
@@ -101,4 +105,27 @@ Module *ClangCompiler::Compile(const std::string &source,
     if (!keep_temporaries_)
         RemoveFile(tmpfile);
     return llvm_codegen->takeModule();
+}
+
+void ClangCompiler::SetCodeGenOptions()
+{
+    CodeGenOptions &codegen_options = invocation_->getCodeGenOpts();
+    codegen_options.OptimizationLevel = (debug_mode_) ? 0 : 4;
+    codegen_options.DebugInfo = debug_mode_;
+    codegen_options.DataSections = debug_mode_;
+    codegen_options.FunctionSections = debug_mode_;
+    codegen_options.EmitDeclMetadata = debug_mode_;
+    codegen_options.UnrollLoops = !debug_mode_;
+    codegen_options.RelaxedAliasing = !debug_mode_;
+    codegen_options.Inlining = (debug_mode_) ? CodeGenOptions::NoInlining :
+        CodeGenOptions::NormalInlining;
+    codegen_options.RelaxedAliasing = !debug_mode_;
+    // Enable debugging from GDB
+    JITEmitDebugInfo = debug_mode_; // llvm global
+
+    if (debug_mode_) {
+        PreprocessorOptions &preproc_options =
+            invocation_->getPreprocessorOpts();
+        preproc_options.addMacroDef("CSX_DEBUG");
+    }
 }

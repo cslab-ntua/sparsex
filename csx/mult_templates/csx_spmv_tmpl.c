@@ -19,12 +19,26 @@
 
 #define CSX_SPMV_FN_MAX CTL_PATTERNS_MAX
 
+#define ALIGN(buf,a) (void *) (((unsigned long) (buf) + (a-1)) & ~(a-1))
+static void align_ptr(uint8_t **ctl, int align)
+{
+	*ctl = ALIGN(*ctl, align);
+}
+
+#ifdef CSX_DEBUG
 static void ctl_print(uint8_t *ctl, uint64_t start, uint64_t end,
                       const char *descr)
 {
-    for (uint8_t i = start; i < end; i++)
-        printf("%s: ctl[%d] = %d\n", descr, i, ctl[i]);
+    for (uint64_t i = start; i < end; i++)
+        printf("%s: ctl[%ld] = %d\n", descr, i, ctl[i]);
 }
+
+static void deref(void *ptr)
+{
+    volatile unsigned long val = *((unsigned long *) ptr);
+    val++;
+}
+#endif
 
 typedef double (csx_spmv_fn_t)(uint8_t **ctl, uint8_t size, double **values,
                                double **x, double **y);
@@ -32,8 +46,7 @@ typedef double (csx_spmv_fn_t)(uint8_t **ctl, uint8_t size, double **values,
 ${spmv_func_definitions}
 
 static csx_spmv_fn_t *mult_table[] = {
-    ${spmv_func_entries}
-};
+${spmv_func_entries}};
 
 void spm_csx32_double_multiply(void *spm, vector_double_t *in, vector_double_t *out)
 {
@@ -50,26 +63,22 @@ void spm_csx32_double_multiply(void *spm, vector_double_t *in, vector_double_t *
     uint64_t i;
     uint8_t patt_id;
 
-    for (i = 0; i < csx->nrows; i++) {
+    for (i = 0; i < csx->nrows; i++)
         y_curr[i] = 0;
-    }
-
-//    ctl_print(ctl, 0, csx->ctl_size, "all");
 
     do {
         flags = *ctl++;
         size = *ctl++;
-        if (test_bit(&flags, CTL_NR_BIT)){
+        if (test_bit(&flags, CTL_NR_BIT)) {
             *y_curr += yr;
             yr = 0;
             ${new_row_hook}
             x_curr = x;
         }
         
-//        ctl_print(ctl, 0, 1, "before patt_id");
+        x_curr += ul_get(&ctl);
         patt_id = flags & CTL_PATTERN_MASK;
         yr += mult_table[patt_id](&ctl, size, &v, &x_curr, &y_curr);
-//        ctl_print(ctl, 0, 1, "after patt_id");
     } while (ctl < ctl_end);
 
     *y_curr += yr;

@@ -445,10 +445,10 @@ static spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
 
 
     // Cleanup.
-    free(Jits);
     free(threads);
     free(threads_cpus);
     free(xform_buf);
+    delete[] Jits;
     delete[] Spms;
     delete[] data;
 

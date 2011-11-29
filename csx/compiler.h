@@ -54,10 +54,24 @@ public:
         log_stream_ = log;
     }
 
+    bool DebugMode()
+    {
+        return debug_mode_;
+    }
+
+    void SetDebugMode(bool debug)
+    {
+        debug_mode_ = debug;
+        SetCodeGenOptions();
+    }
+
 private:
+    // Set up the code generation options depending on debug mode
+    void SetCodeGenOptions();
     OwningPtr<CompilerInvocation> invocation_;
     OwningPtr<CompilerInstance> compiler_;
     bool keep_temporaries_;
+    bool debug_mode_;
     std::ostream *log_stream_;
 };
 

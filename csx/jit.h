@@ -86,6 +86,9 @@ private:
     // Compile C99 source code into an LLVM module
     Module *DoCompile(const std::string &source) const;
 
+    //
+    // Obsolete -- all code optimizations are handled by ClangCompiler
+    // 
     void DoOptimizeModule();
 
     void DoNewRowHook(std::map<std::string, std::string> &hooks,

@@ -14,6 +14,7 @@
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Target/TargetData.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/Support/StandardPasses.h"
 
@@ -69,6 +70,11 @@ std::string CsxJit::DoGenDeltaCase(int delta_bits)
     TemplateText *tmpl = GetMultTemplate(NONE);
     std::map<std::string, std::string> subst_map;
     subst_map["bits"] = Stringify(delta_bits);
+    int delta_bytes = delta_bits / 8;
+    if (delta_bytes > 1)
+        subst_map["align_ctl"] =
+            "align_ptr(ctl," + Stringify(delta_bytes) + ");";
+
     return tmpl->Substitute(subst_map);
 }
 
@@ -83,9 +89,13 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
 {
     CsxManager::PatMap::iterator i_patt = csxmg_->patterns.begin();
     CsxManager::PatMap::iterator i_patt_end = csxmg_->patterns.end();
-    std::string patt_code, patt_func_entry;
+    std::map<long, std::string> func_entries;
+
     uint64_t delta;
+    assert(!csxmg_->HasRowJmps());
     for (; i_patt != i_patt_end; ++i_patt) {
+        std::string patt_code, patt_func_entry;
+        long patt_id = i_patt->second.flag;
         SpmIterOrder type =
             static_cast<SpmIterOrder>(i_patt->first / CSX_PID_OFFSET);
         delta = i_patt->first % CSX_PID_OFFSET;
@@ -105,8 +115,16 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
         }
 
         hooks["spmv_func_definitions"] += patt_code + "\n";
-        hooks["spmv_func_entries"] += patt_func_entry + ",";
+        func_entries[patt_id] = patt_func_entry;
     }
+
+    // Add function table entries in the correct order
+    std::map<long, std::string>::const_iterator i_fentry =
+        func_entries.begin();
+    std::map<long, std::string>::const_iterator fentries_end =
+        func_entries.end();
+    for (; i_fentry != fentries_end; ++i_fentry)
+        hooks["spmv_func_entries"] += "\t" + i_fentry->second + ",\n";
 }
 
 void CsxJit::GenCode(std::ostream &log)
@@ -121,19 +139,18 @@ void CsxJit::GenCode(std::ostream &log)
 
     // Substitute and compile into an LLVM module
     compiler_->SetLogStream(&log);
+    //compiler_->SetDebugMode(true);
     module_ = DoCompile(source_tmpl.Substitute(hooks));
     if (!module_) {
         log << "compilation failed for thread " << thread_id_ << "\n";
         exit(1);
     }
-
-    // Optimize the code
-    DoOptimizeModule();
 }
 
 Module *CsxJit::DoCompile(const std::string &source) const
 {
-    //compiler_->KeepTemporaries(true);
+    if (compiler_->DebugMode())
+        compiler_->KeepTemporaries(true);
     return compiler_->Compile(source, context_);
 }
 
