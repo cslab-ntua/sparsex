@@ -57,6 +57,10 @@ TemplateText *CsxJit::GetMultTemplate(SpmIterOrder type)
         ret = new TemplateText(SourceFromFile(DeltaTemplateSource));
         mult_templates_[type] = ret;
         break;
+    case HORIZONTAL:
+        ret = new TemplateText(SourceFromFile(HorizTemplateSource));
+        mult_templates_[type] = ret;
+        break;
     default:
         assert(0 && "unknown pattern type");
     };
@@ -75,6 +79,14 @@ std::string CsxJit::DoGenDeltaCase(int delta_bits)
         subst_map["align_ctl"] =
             "align_ptr(ctl," + Stringify(delta_bytes) + ");";
 
+    return tmpl->Substitute(subst_map);
+}
+
+std::string CsxJit::DoGenHorizCase(int delta)
+{
+    TemplateText *tmpl = GetMultTemplate(HORIZONTAL);
+    std::map<std::string, std::string> subst_map;
+    subst_map["delta"] = Stringify(delta);
     return tmpl->Substitute(subst_map);
 }
 
@@ -110,6 +122,12 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
             patt_code = DoGenDeltaCase(delta);
             patt_func_entry = "delta" + Stringify(delta) + "_case";
             break;
+        case HORIZONTAL:
+            log << "type:HORIZONTAL delta:" << delta
+                << " nnz:" << i_patt->second.nr << std::endl;
+            patt_code = DoGenHorizCase(delta);
+            patt_func_entry = "horiz" + Stringify(delta) + "_case";
+            break;
         default:
             assert(0 && "unknown type");
         }
@@ -123,8 +141,12 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
         func_entries.begin();
     std::map<long, std::string>::const_iterator fentries_end =
         func_entries.end();
-    for (; i_fentry != fentries_end; ++i_fentry)
+    for (; i_fentry != fentries_end; ++i_fentry) {
         hooks["spmv_func_entries"] += "\t" + i_fentry->second + ",\n";
+        // hooks["spmv_func_entries"] += "\t[" + Stringify(i_fentry->first+64) + "] = " + i_fentry->second + ",\n";
+        // hooks["spmv_func_entries"] += "\t[" + Stringify(i_fentry->first+128) + "] = " + i_fentry->second + ",\n";
+        // hooks["spmv_func_entries"] += "\t[" + Stringify(i_fentry->first+196) + "] = " + i_fentry->second + ",\n";
+    }
 }
 
 void CsxJit::GenCode(std::ostream &log)

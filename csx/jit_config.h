@@ -24,7 +24,12 @@
 #   define DELTA_TEMPLATE MULT_TEMPLATE_DIR "/delta_tmpl.c"
 #endif
 
+#ifndef HORIZ_TEMPLATE
+#   define HORIZ_TEMPLATE MULT_TEMPLATE_DIR "/horiz_tmpl.c"
+#endif
+
 const std::string CsxTemplateSource = CSX_TEMPLATE;
 const std::string DeltaTemplateSource = DELTA_TEMPLATE;
+const std::string HorizTemplateSource = HORIZ_TEMPLATE;
 
 #endif // JIT_CONFIG_H__

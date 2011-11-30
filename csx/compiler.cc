@@ -123,9 +123,10 @@ void ClangCompiler::SetCodeGenOptions()
     // Enable debugging from GDB
     JITEmitDebugInfo = debug_mode_; // llvm global
 
+    PreprocessorOptions &preproc_options = invocation_->getPreprocessorOpts();
     if (debug_mode_) {
-        PreprocessorOptions &preproc_options =
-            invocation_->getPreprocessorOpts();
         preproc_options.addMacroDef("CSX_DEBUG");
+    } else {
+        preproc_options.addMacroDef("NDEBUG");
     }
 }

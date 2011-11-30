@@ -100,7 +100,7 @@ private:
     //  Code generation functions for each pattern type
     // 
     std::string DoGenDeltaCase(int delta_bits);
-    void DoGenHorizCase(int delta, std::string &code);
+    std::string DoGenHorizCase(int delta);
     void DoGenVertCase(int delta, std::string &code);
     void DoGenDiagCase(int delta, std::string &code);
     void DoGenRDiagCase(int delta, std::string &code);
