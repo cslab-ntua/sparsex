@@ -100,12 +100,8 @@ private:
     //  Code generation functions for each pattern type
     // 
     std::string DoGenDeltaCase(int delta_bits);
-    std::string DoGenHorizCase(int delta);
-    std::string DoGenVertCase(int delta);
-    std::string DoGenDiagCase(int delta);
-    std::string DoGenRDiagCase(int delta);
-    std::string DoGenBlockRowCase(int r, int c);
-    std::string DoGenBlockColCase(int r, int c);
+    std::string DoGenLinearCase(SpmIterOrder type, int delta);
+    std::string DoGenBlockCase(SpmIterOrder type, int r, int c);
     TemplateText *GetMultTemplate(SpmIterOrder type);
 
     CsxManager  *csxmg_;
