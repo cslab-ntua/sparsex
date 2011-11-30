@@ -32,9 +32,19 @@
 #   define VERT_TEMPLATE MULT_TEMPLATE_DIR "/vert_tmpl.c"
 #endif
 
+#ifndef BLOCK_ROW_TEMPLATE
+#   define BLOCK_ROW_TEMPLATE MULT_TEMPLATE_DIR "/block_row_tmpl.c"
+#endif
+
+#ifndef BLOCK_COL_TEMPLATE
+#   define BLOCK_COL_TEMPLATE MULT_TEMPLATE_DIR "/block_col_tmpl.c"
+#endif
+
 const std::string CsxTemplateSource = CSX_TEMPLATE;
 const std::string DeltaTemplateSource = DELTA_TEMPLATE;
 const std::string HorizTemplateSource = HORIZ_TEMPLATE;
 const std::string VertTemplateSource = VERT_TEMPLATE;
+const std::string BlockRowTemplateSource = BLOCK_ROW_TEMPLATE;
+const std::string BlockColTemplateSource = BLOCK_COL_TEMPLATE;
 
 #endif // JIT_CONFIG_H__

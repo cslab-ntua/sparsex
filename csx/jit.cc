@@ -45,32 +45,34 @@ CsxJit::CsxJit(CsxManager *csxmg, CsxExecutionEngine *engine, unsigned int tid)
 
 TemplateText *CsxJit::GetMultTemplate(SpmIterOrder type)
 {
-    TemplateText *ret;
-
-    if (mult_templates_.count(type)) {
-        ret = mult_templates_[type];
+    if (mult_templates_.count(type))
         goto exit;
-    }
 
     switch (type) {
     case NONE:
-        ret = new TemplateText(SourceFromFile(DeltaTemplateSource));
-        mult_templates_[type] = ret;
+        mult_templates_[type] =
+            new TemplateText(SourceFromFile(DeltaTemplateSource));
         break;
     case HORIZONTAL:
-        ret = new TemplateText(SourceFromFile(HorizTemplateSource));
-        mult_templates_[type] = ret;
+        mult_templates_[type] =
+            new TemplateText(SourceFromFile(HorizTemplateSource));
         break;
     case VERTICAL:
-        ret = new TemplateText(SourceFromFile(VertTemplateSource));
-        mult_templates_[type] = ret;
+        mult_templates_[type] =
+            new TemplateText(SourceFromFile(VertTemplateSource));
+        break;
+    case BLOCK_R1 ... BLOCK_COL_START-1:
+        // Set the same template for all block row patterns
+        for (int t = BLOCK_R1; t <= BLOCK_COL_START-1; ++t)
+            mult_templates_[static_cast<SpmIterOrder>(t)] =
+                new TemplateText(SourceFromFile(BlockRowTemplateSource));
         break;
     default:
         assert(0 && "unknown pattern type");
     };
 
 exit:
-    return ret;
+    return mult_templates_[type];
 }
 
 std::string CsxJit::DoGenDeltaCase(int delta_bits)
@@ -86,19 +88,20 @@ std::string CsxJit::DoGenDeltaCase(int delta_bits)
     return tmpl->Substitute(subst_map);
 }
 
-std::string CsxJit::DoGenHorizCase(int delta)
+std::string CsxJit::DoGenLinearCase(SpmIterOrder type, int delta)
 {
-    TemplateText *tmpl = GetMultTemplate(HORIZONTAL);
+    TemplateText *tmpl = GetMultTemplate(type);
     std::map<std::string, std::string> subst_map;
     subst_map["delta"] = Stringify(delta);
     return tmpl->Substitute(subst_map);
 }
 
-std::string CsxJit::DoGenVertCase(int delta)
+std::string CsxJit::DoGenBlockCase(SpmIterOrder type, int r, int c)
 {
-    TemplateText *tmpl = GetMultTemplate(VERTICAL);
+    TemplateText *tmpl = GetMultTemplate(type);
     std::map<std::string, std::string> subst_map;
-    subst_map["delta"] = Stringify(delta);
+    subst_map["r"] = Stringify(r);
+    subst_map["c"] = Stringify(c);
     return tmpl->Substitute(subst_map);
 }
 
@@ -123,13 +126,17 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
     CsxManager::PatMap::iterator i_patt_end = csxmg_->patterns.end();
     std::map<long, std::string> func_entries;
 
-    uint64_t delta;
+    uint64_t delta, r, c;
     for (; i_patt != i_patt_end; ++i_patt) {
         std::string patt_code, patt_func_entry;
         long patt_id = i_patt->second.flag;
         SpmIterOrder type =
             static_cast<SpmIterOrder>(i_patt->first / CSX_PID_OFFSET);
         delta = i_patt->first % CSX_PID_OFFSET;
+
+        // Relevant only for block types
+        r = type - BLOCK_TYPE_START;
+        c = delta;
         switch (type) {
         case NONE:
             assert(delta ==  8 ||
@@ -137,21 +144,29 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
                    delta == 32 ||
                    delta == 64);
             log << "type:DELTA size:" << delta << " nnz:"
-                << i_patt ->second.nr << "\n";
+                << i_patt ->second.nr << std::endl;
             patt_code = DoGenDeltaCase(delta);
             patt_func_entry = "delta" + Stringify(delta) + "_case";
             break;
         case HORIZONTAL:
             log << "type:HORIZONTAL delta:" << delta
                 << " nnz:" << i_patt->second.nr << std::endl;
-            patt_code = DoGenHorizCase(delta);
+            patt_code = DoGenLinearCase(type, delta);
             patt_func_entry = "horiz" + Stringify(delta) + "_case";
             break;
         case VERTICAL:
             log << "type:VERTICAL delta:" << delta
                 << " nnz:" << i_patt->second.nr << std::endl;
-            patt_code = DoGenVertCase(delta);
+            patt_code = DoGenLinearCase(type, delta);
             patt_func_entry = "vert" + Stringify(delta) + "_case";
+            break;
+        case BLOCK_R1 ... BLOCK_COL_START - 1:
+            log << "type:" << SpmTypesNames[type]
+                << " dim:" << r << "x" << c
+                << " nnz:" << i_patt->second.nr << std::endl;
+            patt_code = DoGenBlockCase(type, r, c);
+            patt_func_entry = "block_row_" + Stringify(r) + "x" +
+                Stringify(c) + "_case";
             break;
         default:
             assert(0 && "unknown type");
