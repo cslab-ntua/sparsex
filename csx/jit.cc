@@ -63,9 +63,15 @@ TemplateText *CsxJit::GetMultTemplate(SpmIterOrder type)
         break;
     case BLOCK_R1 ... BLOCK_COL_START-1:
         // Set the same template for all block row patterns
-        for (int t = BLOCK_R1; t <= BLOCK_COL_START-1; ++t)
+        for (int t = BLOCK_R1; t < BLOCK_COL_START; ++t)
             mult_templates_[static_cast<SpmIterOrder>(t)] =
                 new TemplateText(SourceFromFile(BlockRowTemplateSource));
+        break;
+    case BLOCK_COL_START ... BLOCK_TYPE_END-1:
+        // Set the same template for all block row patterns
+        for (int t = BLOCK_C1; t < BLOCK_TYPE_END; ++t)
+            mult_templates_[static_cast<SpmIterOrder>(t)] =
+                new TemplateText(SourceFromFile(BlockColTemplateSource));
         break;
     default:
         assert(0 && "unknown pattern type");
@@ -134,9 +140,6 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
             static_cast<SpmIterOrder>(i_patt->first / CSX_PID_OFFSET);
         delta = i_patt->first % CSX_PID_OFFSET;
 
-        // Relevant only for block types
-        r = type - BLOCK_TYPE_START;
-        c = delta;
         switch (type) {
         case NONE:
             assert(delta ==  8 ||
@@ -161,11 +164,23 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
             patt_func_entry = "vert" + Stringify(delta) + "_case";
             break;
         case BLOCK_R1 ... BLOCK_COL_START - 1:
+            r = type - BLOCK_TYPE_START;
+            c = delta;
             log << "type:" << SpmTypesNames[type]
                 << " dim:" << r << "x" << c
                 << " nnz:" << i_patt->second.nr << std::endl;
             patt_code = DoGenBlockCase(type, r, c);
             patt_func_entry = "block_row_" + Stringify(r) + "x" +
+                Stringify(c) + "_case";
+            break;
+        case BLOCK_COL_START ... BLOCK_TYPE_END - 1:
+            r = delta;
+            c = type - BLOCK_COL_START;
+            log << "type:" << SpmTypesNames[type] 
+                << " dim:" << r << "x" << c
+                << " nnz:" << i_patt->second.nr << std::endl;
+            patt_code = DoGenBlockCase(type, r, c);
+            patt_func_entry = "block_col_" + Stringify(r) + "x" +
                 Stringify(c) + "_case";
             break;
         default:
