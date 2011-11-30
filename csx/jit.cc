@@ -65,6 +65,14 @@ TemplateText *CsxJit::GetMultTemplate(SpmIterOrder type)
         ret = new TemplateText(SourceFromFile(VertTemplateSource));
         mult_templates_[type] = ret;
         break;
+    case DIAGONAL:
+        ret = new TemplateText(SourceFromFile(DiagTemplateSource));
+        mult_templates_[type] = ret;
+        break;
+    case REV_DIAGONAL:
+        ret = new TemplateText(SourceFromFile(RDiagTemplateSource));
+        mult_templates_[type] = ret;
+        break;
     default:
         assert(0 && "unknown pattern type");
     };
@@ -97,6 +105,22 @@ std::string CsxJit::DoGenHorizCase(int delta)
 std::string CsxJit::DoGenVertCase(int delta)
 {
     TemplateText *tmpl = GetMultTemplate(VERTICAL);
+    std::map<std::string, std::string> subst_map;
+    subst_map["delta"] = Stringify(delta);
+    return tmpl->Substitute(subst_map);
+}
+
+std::string CsxJit::DoGenDiagCase(int delta)
+{
+    TemplateText *tmpl = GetMultTemplate(DIAGONAL);
+    std::map<std::string, std::string> subst_map;
+    subst_map["delta"] = Stringify(delta);
+    return tmpl->Substitute(subst_map);
+}
+
+std::string CsxJit::DoGenRDiagCase(int delta)
+{
+    TemplateText *tmpl = GetMultTemplate(REV_DIAGONAL);
     std::map<std::string, std::string> subst_map;
     subst_map["delta"] = Stringify(delta);
     return tmpl->Substitute(subst_map);
@@ -153,6 +177,18 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
             patt_code = DoGenVertCase(delta);
             patt_func_entry = "vert" + Stringify(delta) + "_case";
             break;
+        case DIAGONAL:
+            log << "type:DIAGONAL delta:" << delta
+                << " nnz:" << i_patt->second.nr << std::endl;
+            patt_code = DoGenDiagCase(delta);
+            patt_func_entry = "diag" + Stringify(delta) + "_case";
+            break;
+	case REV_DIAGONAL:
+            log << "type:DIAGONAL delta:" << delta
+                << " nnz:" << i_patt->second.nr << std::endl;
+            patt_code = DoGenRDiagCase(delta);
+            patt_func_entry = "rdiag" + Stringify(delta) + "_case";
+            break;
         default:
             assert(0 && "unknown type");
         }
@@ -204,7 +240,7 @@ void CsxJit::GenCode(std::ostream &log)
 
     // Substitute and compile into an LLVM module
     compiler_->SetLogStream(&log);
-    //compiler_->SetDebugMode(true);
+    // compiler_->SetDebugMode(true);
     module_ = DoCompile(source_tmpl.Substitute(hooks));
     if (!module_) {
         log << "compilation failed for thread " << thread_id_ << "\n";

@@ -32,9 +32,19 @@
 #   define VERT_TEMPLATE MULT_TEMPLATE_DIR "/vert_tmpl.c"
 #endif
 
+#ifndef DIAG_TEMPLATE
+#   define DIAG_TEMPLATE MULT_TEMPLATE_DIR "/diag_tmpl.c"
+#endif
+
+#ifndef RDIAG_TEMPLATE
+#   define RDIAG_TEMPLATE MULT_TEMPLATE_DIR "/rdiag_tmpl.c"
+#endif
+
 const std::string CsxTemplateSource = CSX_TEMPLATE;
 const std::string DeltaTemplateSource = DELTA_TEMPLATE;
 const std::string HorizTemplateSource = HORIZ_TEMPLATE;
 const std::string VertTemplateSource = VERT_TEMPLATE;
+const std::string DiagTemplateSource = DIAG_TEMPLATE;
+const std::string RDiagTemplateSource = RDIAG_TEMPLATE;
 
 #endif // JIT_CONFIG_H__
