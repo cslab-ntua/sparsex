@@ -8,6 +8,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <assert.h>
 
@@ -78,7 +79,7 @@ void spm_csx32_double_multiply(void *spm, vector_double_t *in, vector_double_t *
         
         x_curr += ul_get(&ctl);
         patt_id = flags & CTL_PATTERN_MASK;
-        yr += mult_table[patt_id](&ctl, size, &v, &x_curr, &y_curr);
+        ${body_hook}
     } while (ctl < ctl_end);
 
     *y_curr += yr;

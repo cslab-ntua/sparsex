@@ -61,6 +61,10 @@ TemplateText *CsxJit::GetMultTemplate(SpmIterOrder type)
         ret = new TemplateText(SourceFromFile(HorizTemplateSource));
         mult_templates_[type] = ret;
         break;
+    case VERTICAL:
+        ret = new TemplateText(SourceFromFile(VertTemplateSource));
+        mult_templates_[type] = ret;
+        break;
     default:
         assert(0 && "unknown pattern type");
     };
@@ -90,10 +94,26 @@ std::string CsxJit::DoGenHorizCase(int delta)
     return tmpl->Substitute(subst_map);
 }
 
-void CsxJit::DoNewRowHook(std::map<std::string, std::string> &hooks,
-                          std::ostream &log) const
+std::string CsxJit::DoGenVertCase(int delta)
 {
-    hooks["new_row_hook"] = "y_curr++;";
+    TemplateText *tmpl = GetMultTemplate(VERTICAL);
+    std::map<std::string, std::string> subst_map;
+    subst_map["delta"] = Stringify(delta);
+    return tmpl->Substitute(subst_map);
+}
+
+void CsxJit::DoNewRowHook(std::map<std::string, std::string> &hooks,
+                          std::ostream &log, bool rowjmp) const
+{
+    if (rowjmp) {
+        hooks["new_row_hook"] =
+            "if (test_bit(&flags, CTL_RJMP_BIT))\n"
+            "\t\t\t\ty_curr += ul_get(&ctl);\n"
+            "\t\t\telse\n"
+            "\t\t\t\ty_curr++;";
+    } else {
+        hooks["new_row_hook"] = "y_curr++;";
+    };
 }
 
 void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
@@ -104,7 +124,6 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
     std::map<long, std::string> func_entries;
 
     uint64_t delta;
-    assert(!csxmg_->HasRowJmps());
     for (; i_patt != i_patt_end; ++i_patt) {
         std::string patt_code, patt_func_entry;
         long patt_id = i_patt->second.flag;
@@ -128,6 +147,12 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
             patt_code = DoGenHorizCase(delta);
             patt_func_entry = "horiz" + Stringify(delta) + "_case";
             break;
+        case VERTICAL:
+            log << "type:VERTICAL delta:" << delta
+                << " nnz:" << i_patt->second.nr << std::endl;
+            patt_code = DoGenVertCase(delta);
+            patt_func_entry = "vert" + Stringify(delta) + "_case";
+            break;
         default:
             assert(0 && "unknown type");
         }
@@ -141,11 +166,29 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
         func_entries.begin();
     std::map<long, std::string>::const_iterator fentries_end =
         func_entries.end();
-    for (; i_fentry != fentries_end; ++i_fentry) {
+
+    if (func_entries.size() == 1) {
+        // Don't switch, just call the pattern-specific mult. routine
         hooks["spmv_func_entries"] += "\t" + i_fentry->second + ",\n";
-        // hooks["spmv_func_entries"] += "\t[" + Stringify(i_fentry->first+64) + "] = " + i_fentry->second + ",\n";
-        // hooks["spmv_func_entries"] += "\t[" + Stringify(i_fentry->first+128) + "] = " + i_fentry->second + ",\n";
-        // hooks["spmv_func_entries"] += "\t[" + Stringify(i_fentry->first+196) + "] = " + i_fentry->second + ",\n";
+        hooks["body_hook"] =
+            "yr += mult_table[" + Stringify(i_fentry->first) + "]"
+            "(&ctl, size, &v, &x_curr, &y_curr);";
+    } else {
+        hooks["body_hook"] = "switch (patt_id) {\n";
+        for (; i_fentry != fentries_end; ++i_fentry) {
+            hooks["spmv_func_entries"] += "\t" + i_fentry->second + ",\n";
+            hooks["body_hook"] +=
+                "\t\tcase " + Stringify(i_fentry->first) + ":\n"
+                "\t\t\tyr += mult_table[" + Stringify(i_fentry->first) + "]"
+                "(&ctl, size, &v, &x_curr, &y_curr);\n"
+                "\t\t\tbreak;\n";
+        }
+    
+        // Add default statement
+        hooks["body_hook"] += "\t\tdefault:\n"
+            "\t\t\tfprintf(stderr, \"[BUG] unknown pattern\\n\");\n"
+            "\t\t\texit(1);\n"
+            "\t\t};";
     }
 }
 
@@ -156,7 +199,7 @@ void CsxJit::GenCode(std::ostream &log)
 
     // Fill in the hooks
     std::map<std::string, std::string> hooks;
-    DoNewRowHook(hooks, log);
+    DoNewRowHook(hooks, log, csxmg_->HasRowJmps());
     DoSpmvFnHook(hooks, log);
 
     // Substitute and compile into an LLVM module

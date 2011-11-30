@@ -92,7 +92,7 @@ private:
     void DoOptimizeModule();
 
     void DoNewRowHook(std::map<std::string, std::string> &hooks,
-                      std::ostream &log) const;
+                      std::ostream &log, bool rowjmp) const;
     void DoSpmvFnHook(std::map<std::string, std::string> &hooks,
                       std::ostream &log);
 
@@ -101,11 +101,11 @@ private:
     // 
     std::string DoGenDeltaCase(int delta_bits);
     std::string DoGenHorizCase(int delta);
-    void DoGenVertCase(int delta, std::string &code);
-    void DoGenDiagCase(int delta, std::string &code);
-    void DoGenRDiagCase(int delta, std::string &code);
-    void DoGenBlockRowCase(int r, int c, std::string &code);
-    void DoGenBlockColCase(int r, int c, std::string &code);
+    std::string DoGenVertCase(int delta);
+    std::string DoGenDiagCase(int delta);
+    std::string DoGenRDiagCase(int delta);
+    std::string DoGenBlockRowCase(int r, int c);
+    std::string DoGenBlockColCase(int r, int c);
     TemplateText *GetMultTemplate(SpmIterOrder type);
 
     CsxManager  *csxmg_;
