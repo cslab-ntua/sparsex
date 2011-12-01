@@ -1114,11 +1114,9 @@ void DRLE_Manager::SelectSplits()
         return;
     }
 
-    size_t start = 0;
     if (nr_samples > nr_splits / 2) {
         for (size_t i = 0; i < nr_splits/2; ++i)
             selected_splits_[i] = i;
-        start = nr_splits / 2;
         nr_samples -= nr_splits / 2;
         nr_splits -= nr_splits / 2;
     }
