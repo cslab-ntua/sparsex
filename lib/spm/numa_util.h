@@ -24,10 +24,11 @@
  *
  *  @return pointer to the newly allocated area. Free with free_interleaved().
  */ 
-void *alloc_interleaved(size_t size,
-                        size_t *parts, size_t nr_parts,
+void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
                         const int *nodes);
-
 void free_interleaved(void *addr, size_t length);
+int check_interleaved(void *addr, size_t size, size_t *parts, size_t nr_parts,
+                       const int *nodes);
+int check_onnode(void *addr, size_t size, const int node);
 
 #endif  /* __NUMA_UTIL_H__ */

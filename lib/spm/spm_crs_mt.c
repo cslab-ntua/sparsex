@@ -32,9 +32,14 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 	SPM_CRS_MT_TYPE *crs_mt;
 	unsigned long cur_row, elems_limit, elems_total=0;
 
-    // set affinity of the current thread
+	// set affinity of the current thread
 	mt_get_options(&nr_cpus, &cpus);
-    setaffinity_oncpu(cpus[0]);
+	setaffinity_oncpu(cpus[0]);
+	
+	printf("MT_CONF:%d", cpus[0]);
+	for (i = 1; i < nr_cpus; i++)
+		printf(",%d", cpus[i]);
+	printf("\n");
 
 	SPM_CRS_TYPE *crs;
 	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr, metadata);
@@ -150,95 +155,107 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
                                       uint64_t *rows_nr, uint64_t *cols_nr,
                                       uint64_t *nz_nr, void *metadata)
 {
+	spm_mt_t *spm_mt = SPM_CRS_MT_NAME(_init_mmf)(mmf_file,
+	                                              rows_nr, cols_nr,
+	                                              nz_nr, metadata);
 
-    spm_mt_t *spm_mt = SPM_CRS_MT_NAME(_init_mmf)(mmf_file,
-                                                  rows_nr, cols_nr,
-                                                  nz_nr, metadata);
+	int nr_threads = spm_mt->nr_threads;
+	size_t *values_parts = malloc(nr_threads*sizeof(*values_parts));
+	size_t *rowptr_parts = malloc(nr_threads*sizeof(*rowptr_parts));
+	size_t *colind_parts = malloc(nr_threads*sizeof(*colind_parts));
+	int *nodes = malloc(nr_threads*sizeof(*nodes));
 
-    int nr_threads = spm_mt->nr_threads;
-    size_t *values_parts = malloc(nr_threads*sizeof(*values_parts));
-    size_t *rowptr_parts = malloc(nr_threads*sizeof(*rowptr_parts));
-    size_t *colind_parts = malloc(nr_threads*sizeof(*colind_parts));
-    int *nodes = malloc(nr_threads*sizeof(*nodes));
+	// just reallocate in a numa-aware fashion the data structures
+	int i;
+	SPM_CRS_TYPE *crs = NULL;
+	for (i = 0; i < nr_threads; i++) {
+		spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+		SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *) spm_thread->spm;
+		crs = crs_mt->crs;
+		SPM_CRS_IDX_TYPE row_start = crs_mt->row_start;
+		SPM_CRS_IDX_TYPE row_end = crs_mt->row_end;
+		SPM_CRS_IDX_TYPE vstart = crs->row_ptr[crs_mt->row_start];
+		SPM_CRS_IDX_TYPE vend = crs->row_ptr[crs_mt->row_end];
+		rowptr_parts[i] = (row_end-row_start)*sizeof(*crs->row_ptr);
+		colind_parts[i] = (vend-vstart)*sizeof(*crs->col_ind);
+		values_parts[i] = (vend-vstart)*sizeof(*crs->values);
+		nodes[i] = numa_node_of_cpu(spm_thread->cpu);
+		spm_thread->node = nodes[i];
+		spm_thread->row_start = row_start;
+		spm_thread->nr_rows = row_end - row_start;
+	}
+	rowptr_parts[nr_threads-1] += sizeof(*crs->row_ptr); 
 
-    // just reallocate in a numa-aware fashion the data structures
-    int i;
-    SPM_CRS_TYPE *crs = NULL;
-    for (i = 0; i < nr_threads; i++) {
-        spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
-        SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *) spm_thread->spm;
-        crs = crs_mt->crs;
-        SPM_CRS_IDX_TYPE row_start = crs_mt->row_start;
-        SPM_CRS_IDX_TYPE row_end = crs_mt->row_end;
-        SPM_CRS_IDX_TYPE vstart = crs->row_ptr[crs_mt->row_start];
-        SPM_CRS_IDX_TYPE vend = crs->row_ptr[crs_mt->row_end];
-        rowptr_parts[i] = (row_end-row_start)*sizeof(*crs->row_ptr);
-        colind_parts[i] = (vend-vstart)*sizeof(*crs->col_ind);
-        values_parts[i] = (vend-vstart)*sizeof(*crs->values);
-        nodes[i] = numa_node_of_cpu(spm_thread->cpu);
-        spm_thread->node = nodes[i];
-        spm_thread->row_start = row_start;
-        spm_thread->nr_rows = row_end - row_start;
-    }
+	// sanity check (+ get rid of compiler warning about uninit. variable)
+	assert(crs);
 
-    // sanity check (+ get rid of compiler warning about uninit. variable)
-    assert(crs);
+	SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved((crs->nrows+1)*sizeof(*crs->row_ptr),
+	                                                 rowptr_parts, nr_threads,
+	                                                 nodes);
+	SPM_CRS_IDX_TYPE *new_colind = alloc_interleaved(crs->nz*sizeof(*crs->col_ind),
+	                                                 colind_parts, nr_threads,
+	                                                 nodes);
+	ELEM_TYPE *new_values = alloc_interleaved(crs->nz*sizeof(*crs->values),
+	                                          values_parts, nr_threads,
+	                                          nodes);
 
-    SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved((crs->nrows+1)*sizeof(*crs->row_ptr),
-                                                     rowptr_parts, nr_threads,
-                                                     nodes);
+	// copy old data to the new one
+	memcpy(new_rowptr, crs->row_ptr, (crs->nrows+1)*sizeof(*crs->row_ptr));
+	memcpy(new_colind, crs->col_ind, crs->nz*sizeof(*crs->col_ind));
+	memcpy(new_values, crs->values, crs->nz*sizeof(*crs->values));
 
-    SPM_CRS_IDX_TYPE *new_colind = alloc_interleaved(crs->nz*sizeof(*crs->col_ind),
-                                                     colind_parts, nr_threads,
-                                                     nodes);
-    ELEM_TYPE *new_values = alloc_interleaved(crs->nz*sizeof(*crs->values),
-                                              values_parts, nr_threads,
-                                              nodes);
+	// free old data and replace with the new one
+	free(crs->row_ptr);
+	free(crs->col_ind);
+	free(crs->values);
+	crs->row_ptr = new_rowptr;
+	crs->col_ind = new_colind;
+	crs->values = new_values;
 
-    // copy old data to the new one
-    memcpy(new_rowptr, crs->row_ptr, (crs->nrows+1)*sizeof(*crs->row_ptr));
-    memcpy(new_colind, crs->col_ind, crs->nz*sizeof(*crs->col_ind));
-    memcpy(new_values, crs->values, crs->nz*sizeof(*crs->values));
+	printf("check for allocation of row_ptr field\n");
+	check_interleaved((void *) crs->row_ptr,
+	                  (crs->nrows+1) * sizeof(*crs->row_ptr), rowptr_parts,
+	                  nr_threads, nodes);
+	printf("check for allocation of col_ind field\n"); 
+	check_interleaved((void *) crs->col_ind,
+	                  crs->nz * sizeof(*crs->col_ind), colind_parts,
+	                  nr_threads, nodes);
+	printf("check for allocation of values field\n");
+	check_interleaved((void *) crs->values, crs->nz * sizeof(*crs->values),
+                          values_parts, nr_threads, nodes);
 
-    // free old data and replace with the new one
-    free(crs->row_ptr);
-    free(crs->col_ind);
-    free(crs->values);
-    crs->row_ptr = new_rowptr;
-    crs->col_ind = new_colind;
-    crs->values = new_values;
-
-    // free the auxiliaries
-    free(rowptr_parts);
-    free(colind_parts);
-    free(values_parts);
-    free(nodes);
+	// free the auxiliaries
+	free(rowptr_parts);
+	free(colind_parts);
+	free(values_parts);
+	free(nodes);
 	return spm_mt;
 }
 
 void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 {
-    spm_mt_t *spm_mt = (spm_mt_t *) spm;
+	spm_mt_t *spm_mt = (spm_mt_t *) spm;
 	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
 	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *) spm_thread->spm;
-    SPM_CRS_TYPE *crs = crs_mt->crs;
-    free_interleaved(crs->row_ptr, (crs->nrows+1)*sizeof(*crs->row_ptr));
-    free_interleaved(crs->col_ind, crs->nz*sizeof(*crs->col_ind));
-    free_interleaved(crs->values, crs->nz*sizeof(*crs->values));
-    free(crs);
-    free(crs_mt);
-    free(spm_thread);
-    free(spm_mt);
+	SPM_CRS_TYPE *crs = crs_mt->crs;
+	
+	free_interleaved(crs->row_ptr, (crs->nrows+1)*sizeof(*crs->row_ptr));
+	free_interleaved(crs->col_ind, crs->nz*sizeof(*crs->col_ind));
+	free_interleaved(crs->values, crs->nz*sizeof(*crs->values));
+	free(crs);
+	free(crs_mt);
+	free(spm_thread);
+	free(spm_mt);
 }
 
 uint64_t SPM_CRS_MT_NAME(_numa_size)(void *spm)
 {
-    return SPM_CRS_MT_NAME(_size)(spm);
+	return SPM_CRS_MT_NAME(_size)(spm);
 }
 
 void SPM_CRS_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
-    SPM_CRS_MT_NAME(_multiply)(spm, in, out);
+	SPM_CRS_MT_NAME(_multiply)(spm, in, out);
 }
 
 XSPMV_MT_METH_INIT(
@@ -251,3 +268,4 @@ XSPMV_MT_METH_INIT(
 
 #endif /* SPM_NUMA */
 
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
