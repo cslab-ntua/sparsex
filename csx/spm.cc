@@ -197,6 +197,7 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
     dst.y = src_y - dst.x + 1;
 }
 
+DEFINE_BLOCK_ROW_MAP_FN(1)
 DEFINE_BLOCK_ROW_MAP_FN(2)
 DEFINE_BLOCK_ROW_MAP_FN(3)
 DEFINE_BLOCK_ROW_MAP_FN(4)
@@ -205,6 +206,7 @@ DEFINE_BLOCK_ROW_MAP_FN(6)
 DEFINE_BLOCK_ROW_MAP_FN(7)
 DEFINE_BLOCK_ROW_MAP_FN(8)
 
+DEFINE_BLOCK_ROW_RMAP_FN(1)
 DEFINE_BLOCK_ROW_RMAP_FN(2)
 DEFINE_BLOCK_ROW_RMAP_FN(3)
 DEFINE_BLOCK_ROW_RMAP_FN(4)
@@ -213,6 +215,7 @@ DEFINE_BLOCK_ROW_RMAP_FN(6)
 DEFINE_BLOCK_ROW_RMAP_FN(7)
 DEFINE_BLOCK_ROW_RMAP_FN(8)
 
+DEFINE_BLOCK_COL_MAP_FN(1)
 DEFINE_BLOCK_COL_MAP_FN(2)
 DEFINE_BLOCK_COL_MAP_FN(3)
 DEFINE_BLOCK_COL_MAP_FN(4)
@@ -221,6 +224,7 @@ DEFINE_BLOCK_COL_MAP_FN(6)
 DEFINE_BLOCK_COL_MAP_FN(7)
 DEFINE_BLOCK_COL_MAP_FN(8)
 
+DEFINE_BLOCK_COL_RMAP_FN(1)
 DEFINE_BLOCK_COL_RMAP_FN(2)
 DEFINE_BLOCK_COL_RMAP_FN(3)
 DEFINE_BLOCK_COL_RMAP_FN(4)
@@ -558,6 +562,9 @@ inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
     case REV_DIAGONAL:
         ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, nr_cols_);
         break;
+    case BLOCK_ROW_TYPE_NAME(1):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
+        break;
     case BLOCK_ROW_TYPE_NAME(2):
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
         break;
@@ -578,6 +585,9 @@ inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
         break;
     case BLOCK_ROW_TYPE_NAME(8):
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(8), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(1):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
         break;
     case BLOCK_COL_TYPE_NAME(2):
         ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
@@ -625,6 +635,9 @@ inline TransformFn SPM::GetXformFn(SpmIterOrder type)
     case REV_DIAGONAL:
         ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, nr_cols_);
         break;
+    case BLOCK_ROW_TYPE_NAME(1):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(1), bll::_1, bll::_1);
+        break;
     case BLOCK_ROW_TYPE_NAME(2):
         ret = bll::bind(BLOCK_ROW_MAP_NAME(2), bll::_1, bll::_1);
         break;
@@ -645,6 +658,9 @@ inline TransformFn SPM::GetXformFn(SpmIterOrder type)
         break;
     case BLOCK_ROW_TYPE_NAME(8):
         ret = bll::bind(BLOCK_ROW_MAP_NAME(8), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(1):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(1), bll::_1, bll::_1);
         break;
     case BLOCK_COL_TYPE_NAME(2):
         ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);
