@@ -325,18 +325,22 @@ void *PreprocessThread(void *thread_info)
     data->spm_encoded->nr_rows = csx->nrows;
     data->spm_encoded->row_start = csx->row_start;
     
-    #ifdef SPM_NUMA
-    /*
-    data->buffer << "check for allocation of csx" << std::endl;
-    check_onnode(csx, sizeof(*csx), data->spm_encoded->node);
-    */
-    data->buffer << "check for allocation of ctl field" << std::endl;
-    check_onnode(csx->ctl, csx->ctl_size * sizeof(uint8_t),
-                 data->spm_encoded->node);
-    data->buffer << "check for allocation of values field" << std::endl;
-    check_onnode(csx->values, csx->nnz * sizeof(*csx->values),
-                 data->spm_encoded->node);
-    #endif
+#ifdef SPM_NUMA
+    int alloc_err = 0;
+    alloc_err = check_region(csx->ctl, csx->ctl_size * sizeof(uint8_t),
+                             data->spm_encoded->node);
+    data->buffer << "allocation check for ctl field... "
+                 << ((alloc_err) ?
+                     "FAILED (see above for more info)" : "DONE")
+                 << std::endl;
+
+    alloc_err = check_region(csx->values, csx->nnz * sizeof(*csx->values),
+                             data->spm_encoded->node);
+    data->buffer << "allocation check for values field... "
+                 << ((alloc_err) ?
+                     "FAILED (see above for more info)" : "DONE")
+                 << std::endl;
+#endif
     
     delete DrleMg;
     return 0;
