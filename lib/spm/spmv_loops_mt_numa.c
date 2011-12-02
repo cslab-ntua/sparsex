@@ -221,7 +221,7 @@ void SPMV_NAME(_check_mt_loop_numa)(void *spm_serial,
 			}
 		}
 
-		parts[i] = spm->nr_rows;
+		parts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
 		nodes[i] = node;
 		spm->data = xs[node];
 		if (mt_fn)
