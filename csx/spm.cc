@@ -377,10 +377,8 @@ void SPM::Print(std::ostream &out)
 void SPM::PrintElems(std::ostream &out)
 {
     SPM::PntIter p, p_start, p_end;
-    uint64_t y0;
     static int cnt = 1;
 
-    y0 = row_start_;
     p_start = PointsBegin();
     p_end = PointsEnd();
     for (p = p_start; p != p_end; ++p) {
