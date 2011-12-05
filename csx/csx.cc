@@ -65,11 +65,12 @@ uint8_t CsxManager::GetFlag(long pattern_id, uint64_t nnz)
         ret = flag_avail_++;
         assert(ret <= CTL_PATTERNS_MAX && "too many patterns");
 
-        CsxManager::PatInfo pat_info(ret, nnz);
+        CsxManager::PatInfo pat_info(ret, 1, nnz);
 
         this->patterns[pattern_id] = pat_info;
     } else {
         ret = pi->second.flag;
+        pi->second.npatterns++;
         pi->second.nr += nnz;
     }
 

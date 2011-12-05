@@ -71,7 +71,8 @@ public:
                  uint64_t sort_window_size = 0,
                  split_alg_t split_type = SPLIT_BY_ROWS,
                  double sampling_probability = 1.0,
-                 uint64_t samples_max = std::numeric_limits<uint64_t>::max());
+                 uint64_t samples_max = std::numeric_limits<uint64_t>::max(),
+                 bool split_blocks = false);
 
     ~DRLE_Manager() {
         if (selected_splits_)
@@ -91,11 +92,8 @@ public:
     /**
      *  Generate statistics for all available patterns for the matrix owned by
      *  this DRLE_Manager.
-     *
-     *  @param split_blocks determines whether or not to use the extra function
-     *                      of spliting blocks.
      */
-    void GenAllStats(bool split_blocks);
+    void GenAllStats();
 
     /**
      *  Output statistics to a specified output stream.
@@ -167,10 +165,8 @@ public:
      *  Encode all the patterns of the specified type.
      *
      *  @param type         type of patterns to be encoded.
-     *  @param split_blocks determines whether or not the extra function of
-     *                      spliting blocks is used.
      */
-    void Encode(SpmIterOrder type = NONE, bool split_blocks = false);
+    void Encode(SpmIterOrder type = NONE);
 
     /**
      *  Decode, i.e., restore to their original form, all the matrix elements of
@@ -186,30 +182,23 @@ public:
      *  stream.
      *
      *  @param os           the output stream, where to send the output.
-     *  @param split_blocks determines whether or not the extra function of
-     *                      spliting blocks is used.
      *  @see Encode()
      */
-    void EncodeAll(std::ostream &os, bool split_blocks);
+    void EncodeAll(std::ostream &os);
 
     /**
      *  Search for and output all the encoding sequences of the matrix owned
      *  by this DRLE_Manager.
-     *
-     *  @param split_blocks determines whether or not the extra function of
-     *                      spliting blocks is used.
      */
-    void MakeEncodeTree(bool operate);
+    void MakeEncodeTree();
 
     /**
      *  Encode patterns of a series of types explicitly specified by the user.
      *
      *  @param xform        array of types_id.
      *  @param deltas       deltas that match to the corresponding types.
-     *  @param split_blocks determines whether or not the extra function of
-     *                      spliting blocks is used.
      */
-    void EncodeSerial(int *xform, int **deltas, bool operate);
+    void EncodeSerial(int *xform, int **deltas);
 
     /**
      *  Output the split points of the sorting windows, if windows are used for
@@ -230,13 +219,11 @@ private:
      *  @param vs           the values of elements to be encoded. This vector
      *                      will be cleared at exit.
      *  @param encoded      vector to append the encoded elements.
-     *  @param split_blocks determines whether or not the extra function of
-     *                      spliting blocks is used.
      *  @see DoEncodeBlock()
      *  @see DoEncodeBlockAlt()
      */
     void DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
-                  std::vector<SpmRowElem> &encoded, bool split_blocks);
+                  std::vector<SpmRowElem> &encoded);
 
     /**
      *  Encode elements for a block type of patterns.
@@ -249,7 +236,7 @@ private:
                        std::vector<SpmRowElem> &encoded);
 
     /**
-     *  Encode elements from a block when the split_blocks function is active.
+     *  Encode elements from a block when the split_blocks_ function is active.
      *
      *  @param xs      deltas of elements that are going to be encoded.
      *  @param vs      values of elements that are going to be encoded.
@@ -271,11 +258,9 @@ private:
      *  @param rstart first element of row.
      *  @param rend   last element of row.
      *  @param newrow vector to append the encoded elements.
-     *  @param split_blocks determines whether or not the extra function of
-     *                      spliting blocks is used.
      */
     void EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
-                   std::vector<SpmRowElem> &newrow, bool split_blocks);
+                   std::vector<SpmRowElem> &newrow);
 
     /**
      *  Decode the elements of a row.
@@ -293,7 +278,7 @@ private:
      *  @param stats       stats of the matrix.
      *  @param block_align block's main dimension.
      */
-    void CutMaxLimit(DeltaRLE::Stats *stats, uint64_t block_align);
+    void CorrectBlockStats(DeltaRLE::Stats *stats, uint64_t block_align);
 
     /**
      *  Update stats taking into account the split block function.
@@ -390,6 +375,7 @@ private:
     double sampling_portion_;
     uint64_t samples_max_;
     static const uint64_t max_sampling_tries_ = 3;
+    bool split_blocks_;
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;

@@ -302,9 +302,10 @@ void *PreprocessThread(void *thread_info)
     data->buffer << "==> Thread: #" << data->thread_no << std::endl;
     
     // Initialize the DRLE manager
-    DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
+    DrleMg = new DRLE_Manager(data->spm, 4, 255, 0.05, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_portion,
-                              data->samples_max);
+                              data->samples_max, data->split_blocks);
+    
     // Adjust the ignore settings properly
     DrleMg->IgnoreAll();
     for (int i = 0; data->xform_buf[i] != -1; ++i)
@@ -315,9 +316,9 @@ void *PreprocessThread(void *thread_info)
      // in XFORM_CONF, choose the best choise, encode it and proceed likewise
      // until there is no satisfying encoding.
     if (data->deltas)
-        DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
+        DrleMg->EncodeSerial(data->xform_buf, data->deltas);
     else
-        DrleMg->EncodeAll(data->buffer, data->split_blocks);
+        DrleMg->EncodeAll(data->buffer);
     // DrleMg->MakeEncodeTree(data->split_blocks);
 
     csx_double_t *csx = data->csxmg->MakeCsx();

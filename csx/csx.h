@@ -52,11 +52,13 @@ public:
      *  Pattern information that is essential for the construction of CSX.
      */
     struct PatInfo {
-        PatInfo(uint8_t flag_, uint64_t nr_): flag(flag_), nr(nr_) {}
-        PatInfo(): flag(0), nr(0) {}
+        PatInfo(uint8_t flag_, uint64_t npatterns_, uint64_t nr_): 
+                flag(flag_), npatterns(npatterns_), nr(nr_) {}
+        PatInfo(): flag(0), npatterns(0), nr(0) {}
 
-        uint8_t flag;  ///< A unique CSX ID assigned to this pattern.
-        uint64_t nr;   ///< Number of non-zero elements of this pattern.
+        uint8_t flag;       ///< A unique CSX ID assigned to this pattern.
+        uint64_t npatterns; ///< Number of patterns of this kind.
+        uint64_t nr;        ///< Number of non-zero elements of this pattern.
     };
 
     typedef std::map<long,PatInfo> PatMap;

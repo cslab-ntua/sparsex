@@ -155,31 +155,36 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
                    delta == 16 ||
                    delta == 32 ||
                    delta == 64);
-            log << "type:DELTA size:" << delta << " nnz:"
-                << i_patt ->second.nr << std::endl;
+            log << "type:DELTA size:" << delta << " npatterns:"
+                << i_patt->second.npatterns << " nnz:"
+                << i_patt->second.nr << std::endl;
             patt_code = DoGenDeltaCase(delta);
             patt_func_entry = "delta" + Stringify(delta) + "_case";
             break;
         case HORIZONTAL:
             log << "type:HORIZONTAL delta:" << delta
+                << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             patt_code = DoGenLinearCase(type, delta);
             patt_func_entry = "horiz" + Stringify(delta) + "_case";
             break;
         case VERTICAL:
             log << "type:VERTICAL delta:" << delta
+                << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             patt_code = DoGenLinearCase(type, delta);
             patt_func_entry = "vert" + Stringify(delta) + "_case";
             break;
         case DIAGONAL:
             log << "type:DIAGONAL delta:" << delta
+                << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             patt_code = DoGenLinearCase(type, delta);
             patt_func_entry = "diag" + Stringify(delta) + "_case";
             break;
 	case REV_DIAGONAL:
             log << "type:REV_DIAGONAL delta:" << delta
+                << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             patt_code = DoGenLinearCase(type, delta);
             patt_func_entry = "rdiag" + Stringify(delta) + "_case";
@@ -189,6 +194,7 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
             c = delta;
             log << "type:" << SpmTypesNames[type]
                 << " dim:" << r << "x" << c
+                << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             patt_code = DoGenBlockCase(type, r, c);
             patt_func_entry = "block_row_" + Stringify(r) + "x" +
@@ -199,6 +205,7 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
             c = type - BLOCK_COL_START;
             log << "type:" << SpmTypesNames[type] 
                 << " dim:" << r << "x" << c
+                << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             patt_code = DoGenBlockCase(type, r, c);
             patt_func_entry = "block_col_" + Stringify(r) + "x" +

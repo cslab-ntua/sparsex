@@ -15,10 +15,10 @@ llvm_prefix  = $(shell $(llvmconf) --prefix)
 
 CC          ?= gcc
 CXX         ?= g++
-LD			 = $(CXX)
+LD           = $(CXX)
 CFLAGS       = -Wall
 CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC
-LIBS		 = -lnuma -lpthread -lboost_regex
+LIBS         = -lnuma -lpthread -lboost_regex
 
 # Always add the following flags
 override CPPFLAGS += -DMULT_TEMPLATE_DIR=\"$(mult_template_dir)\" -DCLANG_PREFIX=\"$(llvm_prefix)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE -D__STDC_FORMAT_MACROS
