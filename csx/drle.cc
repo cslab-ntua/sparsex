@@ -217,10 +217,8 @@ void DRLE_Manager::GenAllStats()
 
         uint64_t block_align = IsBlockType(type);
         
-        if (block_align && split_blocks_) {
+        if (block_align && split_blocks_)
             CorrectBlockStats(sp, block_align);
-            // HandleStats(sp, spm_->nr_nzeros_, block_align);
-        }
         
         for (iter = sp->begin(); iter != sp->end(); ) {
             tmp = iter++;
@@ -782,10 +780,9 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
             // Split Blocks to Match the Appropriate Sizes for Encode
             uint64_t other_dim = nr_elem / block_align;
 
-            for (std::set<uint64_t>::iterator i = deltas_set->end();
-                                              i != deltas_set->begin(); ) {
-                i--;
-                while (other_dim >= (*i)) {
+            for (std::set<uint64_t>::reverse_iterator i = deltas_set->rbegin();
+                                              i != deltas_set->rend(); ++i) {
+                while (other_dim >= *i) {
                     //We have a new block RLE
                     uint64_t nr_elem_block = block_align * (*i);
                     
@@ -793,7 +790,7 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
                     rle_start += nr_elem_block;
                     encoded.push_back(elem);
                     last_elem = &encoded.back();
-                    last_elem->pattern = new BlockRLE(nr_elem_block,(*i),
+                    last_elem->pattern = new BlockRLE(nr_elem_block, *i,
                                                       spm_->type_);
                     last_elem->vals = new double[nr_elem_block];
                     std::copy(vi, vi + nr_elem_block, last_elem->vals);
@@ -893,16 +890,11 @@ void DRLE_Manager::DecodeRow(const SpmRowElem *rstart,
 
 void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
 {
-    uint64_t max_block_dim;
     DeltaRLE::Stats temp;
+    uint64_t max_block_dim;
     DeltaRLE::Stats::iterator tmp;
     DeltaRLE::Stats::reverse_iterator iter, rtmp;
 
-/*
-    for (iter = sp->begin(); iter != sp->end(); ++iter)
-        std::cout << "Dimension: " << iter->first
-                  << " Elements: " << iter->second.nnz << std::endl;
-*/
     max_block_dim = max_limit_ / block_align;
     temp[max_block_dim].nnz = 0;
     temp[max_block_dim].npatterns = 0;
@@ -945,43 +937,34 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
         }
     }
     
-    sp->clear();
-        
-    for (iter = temp.rbegin(); iter != temp.rend(); ++iter)
-        sp->insert(std::pair<const long unsigned int, csx::DeltaRLE::StatsVal>
-                   (iter->first, iter->second));
-  
-    for (iter = sp->rbegin(); iter != sp->rend(); ++iter) {
-        assert(iter->first * block_align <= max_limit_)
-      
-    // Split Blocks
     uint64_t div_factor, mod_factor;
     
     rtmp = sp->rbegin();
     for (iter = sp->rbegin(); iter != sp->rend(); ++iter) {
-        if (((double) iter->second.nnz) / ((double) spm_->nr_nzeros_)
-            >= min_perc_) {
+        tmp = temp.find(iter->first);
+        if (((double) tmp->second.nnz) / ((double) spm_->nr_nzeros_) >= 
+            min_perc_) {
             for ( ; rtmp != iter; ++rtmp) {
                 div_factor = rtmp->first / iter->first;
                 mod_factor = rtmp->first % iter->first;
-                
+                    
                 iter->second.npatterns += div_factor * rtmp->second.npatterns;
                 iter->second.nnz +=
                     div_factor * (rtmp->second.nnz/rtmp->first) * iter->first;
-                
+                    
                 if (mod_factor >= 2) {
                     tmp = sp->find(mod_factor);
-                    if (tmp == temp.end()) {
-                        temp[mod_factor].npatterns = tmp->second.npatterns;
-                        temp[mod_factor].nnz =
-                            (tmp->second.nnz/tmp->first) * mod_factor;
+                    if (tmp == sp->end()) {
+                        (*sp)[mod_factor].npatterns = rtmp->second.npatterns;
+                        (*sp)[mod_factor].nnz =
+                            (rtmp->second.nnz/rtmp->first) * mod_factor;
                     } else {
-                        temp[mod_factor].npatterns += tmp->second.npatterns;
-                        temp[mod_factor].nnz +=
-                            (tmp->second.nnz/tmp->first) * mod_factor;
+                        tmp->second.npatterns += rtmp->second.npatterns;
+                        tmp->second.nnz +=
+                            (rtmp->second.nnz/rtmp->first) * mod_factor;
                     }
                 }
-                
+                    
                 rtmp->second.npatterns = 0;
                 rtmp->second.nnz = 0;
             }
@@ -1083,12 +1066,8 @@ void DRLE_Manager::UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
     FOREACH(RLE<uint64_t> &rle, rles) {
         if (rle.freq >= min_limit_) {
             stats[rle.val].nnz += rle.freq;
-            if (split_blocks_)
-                stats[rle.val].npatterns += rle.freq / max_limit_ +
-                                            (rle.freq % max_limit_ != 0);
-            else
-                stats[rle.val].npatterns++;
-                
+            stats[rle.val].npatterns += rle.freq / max_limit_ +
+                                        (rle.freq % max_limit_ != 0);
         }
     }
     xs.clear();
@@ -1118,15 +1097,13 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
             uint64_t skip_front;
 
             if (unit_start == 1) {
+                skip_front = 0;
                 nr_elem = rle.freq;
-                if (nr_elem >= block_align)
-                    skip_front = 0;
-                else
-                    skip_front = rle.freq;
             } else {
+                skip_front = (unit_start-2) % block_align;
+                if (skip_front != 0)
+                    skip_front = block_align - skip_front;
                 nr_elem = rle.freq + 1;
-                skip_front =
-                    (block_align - (unit_start-2) % block_align) % block_align;
             }
             
             if (nr_elem > skip_front)
@@ -1134,7 +1111,7 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
             else
                 nr_elem = 0;
 
-            uint64_t other_dim = nr_elem / (uint64_t) block_align;
+            uint64_t other_dim = nr_elem / block_align;
 
             if (other_dim >= 2) {
                 stats[other_dim].nnz += other_dim * block_align;
