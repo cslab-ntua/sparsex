@@ -35,8 +35,6 @@ static void *do_spmv_thread_main(void *arg)
 	tsc_start(&tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-		VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-		                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
 		pthread_barrier_wait(&barrier);
 	}
@@ -55,8 +53,6 @@ static void *do_spmv_thread(void *arg)
 	int i;
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-		VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-		                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
 		pthread_barrier_wait(&barrier);
 	}
@@ -136,8 +132,7 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
 	                                     nodes);
-	VECTOR_NAME(_init)(y, 0);
-
+    VECTOR_NAME(_init)(y, 0);
 	alloc_err = check_interleaved(y->elements, parts, spm_mt->nr_threads,
 	                              nodes);
 	print_alloc_status("output vector", alloc_err);
@@ -235,7 +230,7 @@ void SPMV_NAME(_check_mt_loop_numa)(void *spm_serial,
 	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
 	                                     nodes);
 	y2 = VECTOR_NAME(_create)(rows_nr);
-	VECTOR_NAME(_init)(y, 0);
+	VECTOR_NAME(_init)(y, 21);
 	VECTOR_NAME(_init)(y2, 0);
 
 	for (i = 0; i < spm_mt->nr_threads; i++)

@@ -13,7 +13,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include <linux/types.h>
+//#include <linux/types.h>
 
 typedef void cpuid_fn_t(unsigned int index, unsigned int *results);
 

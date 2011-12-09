@@ -23,6 +23,7 @@
 
 #ifdef SPM_NUMA
 #   include <numa.h>
+#   include "numa_util.h"
 #   define DYNARRAY_CREATE  dynarray_create_numa
 #else
 #   define DYNARRAY_CREATE  dynarray_create
@@ -94,9 +95,9 @@ csx_double_t *CsxManager::MakeCsx()
         exit(1);
     }
 
-    csx = (csx_double_t *) numa_alloc_onnode(sizeof(csx_double_t), node);
-    values_ = (double *) numa_alloc_onnode(sizeof(double)*spm_->nr_nzeros_,
-                                           node);
+    csx = (csx_double_t *) alloc_onnode(sizeof(csx_double_t), node);
+    values_ = (double *) alloc_onnode(sizeof(double)*spm_->nr_nzeros_,
+                                      node);
 #else    
     csx = (csx_double_t *) malloc(sizeof(csx_double_t));
     values_ = (double *) malloc(sizeof(double)*spm_->nr_nzeros_);

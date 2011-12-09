@@ -140,6 +140,11 @@ exit:
 	return ret;
 }
 
+void *alloc_onnode(size_t size, int node)
+{
+    return alloc_interleaved(size, &size, 1, &node);
+}
+
 void free_interleaved(void *addr, size_t length)
 {
 	if (munmap(addr, length) < 0) {
