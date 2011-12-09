@@ -147,7 +147,7 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
 	                                     nodes);
-    VECTOR_NAME(_init)(y, 0);
+	VECTOR_NAME(_init)(y, 0);
 	alloc_err = check_interleaved(y->elements, parts, spm_mt->nr_threads,
 	                              nodes);
 	print_alloc_status("output vector", alloc_err);
@@ -161,9 +161,6 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 	for (i = 1; i < spm_mt->nr_threads; i++){
 		pthread_join(tids[i], NULL);
 	}
-
-	for (i = 0; i < spm_mt->nr_threads; i++)
-		printf("Thread %u -> %lf\n", i, spm_mt->spm_threads[i].secs);
 
 	/* Destroy vectors */
 	for (i = 0; i < nr_nodes; i++) {

@@ -172,6 +172,7 @@ void DRLE_Manager::GenAllStats()
     DeltaRLE::Stats *sp;
     
     stats_.clear();
+    deltas_to_encode_.clear();
     for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
         if (xforms_ignore_[t])
             continue;
@@ -890,14 +891,14 @@ void DRLE_Manager::DecodeRow(const SpmRowElem *rstart,
 
 void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
 {
-    DeltaRLE::Stats temp;
+    DeltaRLE::Stats temp, temp2;
     uint64_t max_block_dim;
     DeltaRLE::Stats::iterator tmp;
     DeltaRLE::Stats::reverse_iterator iter, rtmp;
-
+/*
     for (rtmp = sp->rbegin(); rtmp != sp->rend(); ++rtmp)
-	std::cout << rtmp->first << ":" << rtmp->second.npatterns << std::endl;
-
+        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl;
+*/
     max_block_dim = max_limit_ / block_align;
     temp[max_block_dim].nnz = 0;
     temp[max_block_dim].npatterns = 0;
@@ -908,17 +909,17 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
         uint64_t mod_factor = iter->first % max_block_dim;
         uint64_t max_block_size = max_block_dim * block_align;
         uint64_t block_patterns = div_factor * iter->second.npatterns;
-        
+        uint64_t remaining_nnz;
         temp[max_block_dim].nnz += block_patterns * max_block_size;
         temp[max_block_dim].npatterns += block_patterns;
-        iter->second.nnz -= block_patterns * max_block_size;
+        remaining_nnz = iter->second.nnz - block_patterns * max_block_size;
         if (mod_factor >= 2) {
             tmp = temp.find(mod_factor);
             if (tmp == temp.end()) {
-                temp[mod_factor].nnz = iter->second.nnz;
+                temp[mod_factor].nnz = remaining_nnz;
                 temp[mod_factor].npatterns = iter->second.npatterns;
             } else {
-                temp[mod_factor].nnz += iter->second.nnz;
+                temp[mod_factor].nnz += remaining_nnz;
                 temp[mod_factor].npatterns += iter->second.npatterns;
             }
         }
@@ -939,47 +940,51 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
             temp[iter->first].npatterns += iter->second.npatterns;
         }
     }
-    
+/*  
     for (rtmp = temp.rbegin(); rtmp != temp.rend(); ++rtmp)
-        std::cout << rtmp->first << ":" << rtmp->second.npatterns << std::endl;
-
+        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl;
+*/
     uint64_t div_factor, mod_factor;
     
     rtmp = sp->rbegin();
-    for (iter = sp->rbegin(); iter != sp->rend(); ++iter) {
-        tmp = temp.find(iter->first);
-        if (((double) tmp->second.nnz) / ((double) spm_->nr_nzeros_) >= 
+    for (iter = temp.rbegin(); iter != temp.rend(); ++iter) {
+        if (((double) iter->second.nnz) / ((double) spm_->nr_nzeros_) >= 
             min_perc_) {
-            for ( ; rtmp != iter; ++rtmp) {
+            for ( ; rtmp != sp->rend() && rtmp->first >= iter->first; ++rtmp) {
                 div_factor = rtmp->first / iter->first;
                 mod_factor = rtmp->first % iter->first;
-                    
-                iter->second.npatterns += div_factor * rtmp->second.npatterns;
-                iter->second.nnz +=
-                    div_factor * (rtmp->second.nnz/rtmp->first) * iter->first;
-                    
+               
+                tmp = temp2.find(iter->first);
+                if (tmp == temp2.end()) {
+                    temp2[iter->first].npatterns = div_factor * rtmp->second.npatterns;
+                    temp2[iter->first].nnz =
+                        div_factor * (rtmp->second.nnz / rtmp->first) * iter->first;
+                } else {   
+                    tmp->second.npatterns += div_factor * rtmp->second.npatterns;
+                    tmp->second.nnz +=
+                        div_factor * (rtmp->second.nnz / rtmp->first) * iter->first;
+                }
+
                 if (mod_factor >= 2) {
-                    tmp = sp->find(mod_factor);
-                    if (tmp == sp->end()) {
-                        (*sp)[mod_factor].npatterns = rtmp->second.npatterns;
-                        (*sp)[mod_factor].nnz =
-                            (rtmp->second.nnz/rtmp->first) * mod_factor;
+                    tmp = temp2.find(mod_factor);
+                    if (tmp == temp2.end()) {
+                        temp2[mod_factor].npatterns = rtmp->second.npatterns;
+                        temp2[mod_factor].nnz =
+                            (rtmp->second.nnz / rtmp->first) * mod_factor;
                     } else {
                         tmp->second.npatterns += rtmp->second.npatterns;
                         tmp->second.nnz +=
-                            (rtmp->second.nnz/rtmp->first) * mod_factor;
+                            (rtmp->second.nnz / rtmp->first) * mod_factor;
                     }
                 }
-                    
-                rtmp->second.npatterns = 0;
-                rtmp->second.nnz = 0;
             }
-            ++rtmp;
         }
     }
+    sp->clear();
+    *sp = temp2;
 /*
     for (rtmp = sp->rbegin(); rtmp != sp->rend(); ++rtmp)
-        std::cout << rtmp->first << ":" << rtmp->second.npatterns << std::endl; 
+        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl; 
 */
 }
 
