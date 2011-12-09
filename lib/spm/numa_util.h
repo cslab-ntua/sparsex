@@ -13,6 +13,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  *  Custom interleaved allocation.
  *
@@ -26,10 +30,15 @@
  */ 
 void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
                         const int *nodes);
+void *alloc_onnode(size_t size, int node);
 void free_interleaved(void *addr, size_t length);
 int check_interleaved(void *addr, const size_t *parts,
                       size_t nr_parts, const int *nodes);
 int check_region(void *addr, size_t size, int node);
 void print_alloc_status(const char *data_descr, int err);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* __NUMA_UTIL_H__ */

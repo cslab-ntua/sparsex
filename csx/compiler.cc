@@ -110,7 +110,7 @@ Module *ClangCompiler::Compile(const std::string &source,
 void ClangCompiler::SetCodeGenOptions()
 {
     CodeGenOptions &codegen_options = invocation_->getCodeGenOpts();
-    codegen_options.OptimizationLevel = (debug_mode_) ? 0 : 4;
+    codegen_options.OptimizationLevel = (debug_mode_) ? 0 : 3;
     codegen_options.DebugInfo = debug_mode_;
     codegen_options.DataSections = debug_mode_;
     codegen_options.FunctionSections = debug_mode_;
