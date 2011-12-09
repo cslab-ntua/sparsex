@@ -895,6 +895,9 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
     DeltaRLE::Stats::iterator tmp;
     DeltaRLE::Stats::reverse_iterator iter, rtmp;
 
+    for (rtmp = sp->rbegin(); rtmp != sp->rend(); ++rtmp)
+	std::cout << rtmp->first << ":" << rtmp->second.npatterns << std::endl;
+
     max_block_dim = max_limit_ / block_align;
     temp[max_block_dim].nnz = 0;
     temp[max_block_dim].npatterns = 0;
@@ -937,6 +940,9 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
         }
     }
     
+    for (rtmp = temp.rbegin(); rtmp != temp.rend(); ++rtmp)
+        std::cout << rtmp->first << ":" << rtmp->second.npatterns << std::endl;
+
     uint64_t div_factor, mod_factor;
     
     rtmp = sp->rbegin();
@@ -971,6 +977,10 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
             ++rtmp;
         }
     }
+/*
+    for (rtmp = sp->rbegin(); rtmp != sp->rend(); ++rtmp)
+        std::cout << rtmp->first << ":" << rtmp->second.npatterns << std::endl; 
+*/
 }
 
 void DRLE_Manager::HandleStats(DeltaRLE::Stats *sp, uint64_t size,

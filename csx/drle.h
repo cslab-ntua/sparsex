@@ -45,7 +45,7 @@ const char *timers_desc_[] =
 /**
  *  Delta Run-Length Encoding Manager.
  *
- *  This class is responsible for searching for patters inside the matrix and
+ *  This class is responsible for searching for patterns inside the matrix and
  *  encoding the matrix.
  */
 class DRLE_Manager

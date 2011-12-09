@@ -16,6 +16,7 @@
 #include "mt_lib.h"
 #include "spmv_loops_mt_numa.h"
 #include "tsc.h"
+#include "timer.h"
 #include "vector.h"
 
 static VECTOR_TYPE *y = NULL;
@@ -30,19 +31,24 @@ static void *do_spmv_thread_main(void *arg)
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	int i;
-	tsc_t tsc;
-	tsc_init(&tsc);
-	tsc_start(&tsc);
+	tsc_t total_tsc, thread_tsc;
+
+	tsc_init(&total_tsc);
+	tsc_init(&thread_tsc);
+
+	tsc_start(&total_tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-		VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-		                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
+		tsc_start(&thread_tsc);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
+		tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 	}
-	tsc_pause(&tsc);
-	secs = tsc_getsecs(&tsc);
-	tsc_shut(&tsc);
+	tsc_pause(&total_tsc);
+	spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
+	secs = tsc_getsecs(&total_tsc);
+	tsc_shut(&thread_tsc);
+	tsc_shut(&total_tsc);
 	return (void *) 0;
 }
 
@@ -53,13 +59,18 @@ static void *do_spmv_thread(void *arg)
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	int i;
+	tsc_t thread_tsc;
+
+	tsc_init(&thread_tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-		VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-		                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
+                tsc_start(&thread_tsc);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
+                tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 	}
+	spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
+	tsc_shut(&thread_tsc);
 
 	return (void *) 0;
 }
@@ -151,6 +162,9 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 	for (i = 1; i < spm_mt->nr_threads; i++){
 		pthread_join(tids[i], NULL);
 	}
+
+	for (i = 0; i < spm_mt->nr_threads; i++)
+		printf("Thread %u -> %lf\n", i, spm_mt->spm_threads[i].secs);
 
 	/* Destroy vectors */
 	for (i = 0; i < nr_nodes; i++) {

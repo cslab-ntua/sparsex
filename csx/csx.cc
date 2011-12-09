@@ -286,8 +286,10 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     ctl_flags = (uint8_t *) dynarray_alloc_nr(ctl_da_, 2);
     *ctl_flags = GetFlag(pat_id, pat_size);
     ctl_size = ctl_flags + 1;
-    assert(pat_size + (jmp ? 1 : 0) <= CTL_SIZE_MAX);
-    *ctl_size = pat_size + (jmp ? 1 : 0);
+    if (pat_size > CTL_SIZE_MAX)
+	std::cout << pat_size << std::endl;
+    assert(pat_size <= CTL_SIZE_MAX);
+    *ctl_size = pat_size;
     UpdateNewRow(ctl_flags);
     ujmp = jmp ? jmp : elem.x - last_col_;
     if (debug)
