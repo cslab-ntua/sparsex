@@ -232,13 +232,13 @@ void *SPM_VBL_MT_NAME(_numa_init_mmf)(char *mmf_file,
     // sanity check (+ get rid of compiler warning about uninit. variable)
     assert(vbl);
 
-    SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved((vbl->nrows+1)*sizeof(*vbl->row_ptr),
-                                                     rowptr_parts, nr_threads,
-                                                     nodes);
+    SPM_CRS_IDX_TYPE *new_rowptr =
+        alloc_interleaved((vbl->nrows+1)*sizeof(*vbl->row_ptr),
+                          rowptr_parts, nr_threads, nodes);
 
-    SPM_CRS_IDX_TYPE *new_bcolind = alloc_interleaved(vbl->nblocks*sizeof(*vbl->bcol_ind),
-                                                     bcolind_parts, nr_threads,
-                                                     nodes);
+    SPM_CRS_IDX_TYPE *new_bcolind =
+        alloc_interleaved(vbl->nblocks*sizeof(*vbl->bcol_ind),
+                          bcolind_parts, nr_threads, nodes);
     uint8_t *new_bsize = alloc_interleaved(vbl->nblocks*sizeof(*vbl->bsize),
                                            bsize_parts, nr_threads, nodes);
     ELEM_TYPE *new_values = alloc_interleaved(vbl->nz*sizeof(*vbl->values),
@@ -250,6 +250,18 @@ void *SPM_VBL_MT_NAME(_numa_init_mmf)(char *mmf_file,
     memcpy(new_bcolind, vbl->bcol_ind, vbl->nblocks*sizeof(*vbl->bcol_ind));
     memcpy(new_bsize, vbl->bsize, vbl->nblocks*sizeof(*vbl->bsize));
     memcpy(new_values, vbl->values, vbl->nz*sizeof(*vbl->values));
+
+    // check allocation
+	int alloc_err;
+	alloc_err = check_interleaved((void *) new_rowptr, rowptr_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("VBL rowptr", alloc_err);
+	alloc_err = check_interleaved((void *) new_bcolind,  bcolind_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("VBL bcolind", alloc_err);
+	alloc_err = check_interleaved((void *) new_values, values_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("VBL values", alloc_err);
 
     // free old data and replace with the new one
     free(vbl->row_ptr);

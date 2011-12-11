@@ -25,7 +25,6 @@
 #include "csx.h"
 #include "drle.h"
 #include "jit.h"
-#include "llvm_jit_help.h"
 
 #include <numa.h>
 #include <numaif.h>
@@ -303,9 +302,10 @@ void *PreprocessThread(void *thread_info)
     data->buffer << "==> Thread: #" << data->thread_no << std::endl;
     
     // Initialize the DRLE manager
-    DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
+    DrleMg = new DRLE_Manager(data->spm, 4, 255, 0.05, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_portion,
-                              data->samples_max);
+                              data->samples_max, data->split_blocks);
+    
     // Adjust the ignore settings properly
     DrleMg->IgnoreAll();
     for (int i = 0; data->xform_buf[i] != -1; ++i)
@@ -316,9 +316,9 @@ void *PreprocessThread(void *thread_info)
      // in XFORM_CONF, choose the best choise, encode it and proceed likewise
      // until there is no satisfying encoding.
     if (data->deltas)
-        DrleMg->EncodeSerial(data->xform_buf, data->deltas, data->split_blocks);
+        DrleMg->EncodeSerial(data->xform_buf, data->deltas);
     else
-        DrleMg->EncodeAll(data->buffer, data->split_blocks);
+        DrleMg->EncodeAll(data->buffer);
     // DrleMg->MakeEncodeTree(data->split_blocks);
 
     csx_double_t *csx = data->csxmg->MakeCsx();
@@ -326,24 +326,28 @@ void *PreprocessThread(void *thread_info)
     data->spm_encoded->nr_rows = csx->nrows;
     data->spm_encoded->row_start = csx->row_start;
     
-    #ifdef SPM_NUMA
-    /*
-    data->buffer << "check for allocation of csx" << std::endl;
-    check_onnode(csx, sizeof(*csx), data->spm_encoded->node);
-    */
-    data->buffer << "check for allocation of ctl field" << std::endl;
-    check_onnode(csx->ctl, csx->ctl_size * sizeof(uint8_t),
-                 data->spm_encoded->node);
-    data->buffer << "check for allocation of values field" << std::endl;
-    check_onnode(csx->values, csx->nnz * sizeof(*csx->values),
-                 data->spm_encoded->node);
-    #endif
+#ifdef SPM_NUMA
+    int alloc_err = 0;
+    alloc_err = check_region(csx->ctl, csx->ctl_size * sizeof(uint8_t),
+                             data->spm_encoded->node);
+    data->buffer << "allocation check for ctl field... "
+                 << ((alloc_err) ?
+                     "FAILED (see above for more info)" : "DONE")
+                 << std::endl;
+
+    alloc_err = check_region(csx->values, csx->nnz * sizeof(*csx->values),
+                             data->spm_encoded->node);
+    data->buffer << "allocation check for values field... "
+                 << ((alloc_err) ?
+                     "FAILED (see above for more info)" : "DONE")
+                 << std::endl;
+#endif
     
     delete DrleMg;
     return 0;
 }
 
-static spm_mt_t *GetSpmMt(char *mmf_fname)
+static spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
 {
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
@@ -352,7 +356,6 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     int **deltas = NULL;
     thread_info_t *data;
     pthread_t *threads;
-    CsxJit **Jits;
 
     // Get MT_CONF
     mt_get_options(&nr_threads, &threads_cpus);
@@ -434,28 +437,24 @@ static spm_mt_t *GetSpmMt(char *mmf_fname)
     for (unsigned int i = 1; i < nr_threads; ++i)
         pthread_join(threads[i-1], NULL);
 
-    // CSX matrix construction and JIT compilation
-    CsxJitInitGlobal();
-    Jits = (CsxJit **) xmalloc(nr_threads * sizeof(CsxJit *));
-
+    // CSX JIT compilation
+    CsxJit **Jits = new CsxJit*[nr_threads];
     for (unsigned int i = 0; i < nr_threads; ++i) {
-        Jits[i] = new CsxJit(data[i].csxmg, i);
+        Jits[i] = new CsxJit(data[i].csxmg, &engine, i);
         Jits[i]->GenCode(data[i].buffer);
         std::cout << data[i].buffer.str();
     }
 
-    // Optimize generated code and assign it to every thread
-    CsxJitOptmize();
     for (unsigned int i = 0; i < nr_threads; i++) {
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->GetSpmvFn();
-        delete Jits[i];
     }
 
+
     // Cleanup.
-    free(Jits);
     free(threads);
     free(threads_cpus);
     free(xform_buf);
+    delete[] Jits;
     delete[] Spms;
     delete[] data;
 
@@ -525,6 +524,7 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 
     getMmfHeader(mmf_name, nrows, ncols, nnz);
     int nr_outer_loops = GetOptionOuterLoops();
+    
     for (int i = 0; i < nr_outer_loops; ++i) {
         secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
         flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
@@ -543,9 +543,11 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // Initialize the CSX JIT execution engine
+    CsxExecutionEngine &engine = CsxJitInit();
     for (int i = 1; i < argc; i++) {
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        spm_mt = GetSpmMt(argv[i]);
+        spm_mt = GetSpmMt(argv[i], engine);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);

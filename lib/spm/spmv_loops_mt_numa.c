@@ -16,6 +16,7 @@
 #include "mt_lib.h"
 #include "spmv_loops_mt_numa.h"
 #include "tsc.h"
+#include "timer.h"
 #include "vector.h"
 
 static VECTOR_TYPE *y = NULL;
@@ -30,19 +31,24 @@ static void *do_spmv_thread_main(void *arg)
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	int i;
-	tsc_t tsc;
-	tsc_init(&tsc);
-	tsc_start(&tsc);
+	tsc_t total_tsc, thread_tsc;
+
+	tsc_init(&total_tsc);
+	tsc_init(&thread_tsc);
+
+	tsc_start(&total_tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-		VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-		                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
+		tsc_start(&thread_tsc);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
+		tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 	}
-	tsc_pause(&tsc);
-	secs = tsc_getsecs(&tsc);
-	tsc_shut(&tsc);
+	tsc_pause(&total_tsc);
+	spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
+	secs = tsc_getsecs(&total_tsc);
+	tsc_shut(&thread_tsc);
+	tsc_shut(&total_tsc);
 	return (void *) 0;
 }
 
@@ -53,13 +59,18 @@ static void *do_spmv_thread(void *arg)
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	int i;
+	tsc_t thread_tsc;
+
+	tsc_init(&thread_tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-		VECTOR_NAME(_init_part)(y, spm_mt_thread->row_start,
-		                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
+                tsc_start(&thread_tsc);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
+                tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 	}
+	spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
+	tsc_shut(&thread_tsc);
 
 	return (void *) 0;
 }
@@ -124,24 +135,26 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 		if (fn)
 			spm->spmv_fn = fn;
 	}
-	
-	printf("check for allocation of x vector\n");
-	for (i = 0; i < nr_nodes; i++)
-		if (xs[i])
-			check_onnode(xs[i]->elements,
-			             cols_nr * sizeof(ELEM_TYPE), i);
 
+	int alloc_err = 0;
+	for (i = 0; i < nr_nodes; i++) {
+		if (xs[i])
+			if (check_region(xs[i]->elements, cols_nr*sizeof(ELEM_TYPE), i))
+				alloc_err = 1;
+	}
+
+	print_alloc_status("input vector", alloc_err);
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
 	                                     nodes);
 	VECTOR_NAME(_init)(y, 0);
-
-	printf("check for allocation of y vector\n");
-	check_interleaved(y->elements, rows_nr * sizeof(*y->elements), parts,
-	                  spm_mt->nr_threads, nodes);
+	alloc_err = check_interleaved(y->elements, parts, spm_mt->nr_threads,
+	                              nodes);
+	print_alloc_status("output vector", alloc_err);
 
 	for (i = 1; i < spm_mt->nr_threads; i++)
-		pthread_create(tids + i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
+		pthread_create(tids + i, NULL, do_spmv_thread,
+                       spm_mt->spm_threads + i);
 
 	do_spmv_thread_main(spm_mt->spm_threads);
 
@@ -221,7 +234,7 @@ void SPMV_NAME(_check_mt_loop_numa)(void *spm_serial,
 			}
 		}
 
-		parts[i] = spm->nr_rows;
+		parts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
 		nodes[i] = node;
 		spm->data = xs[node];
 		if (mt_fn)
@@ -232,7 +245,7 @@ void SPMV_NAME(_check_mt_loop_numa)(void *spm_serial,
 	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
 	                                     nodes);
 	y2 = VECTOR_NAME(_create)(rows_nr);
-	VECTOR_NAME(_init)(y, 0);
+	VECTOR_NAME(_init)(y, 21);
 	VECTOR_NAME(_init)(y2, 0);
 
 	for (i = 0; i < spm_mt->nr_threads; i++)

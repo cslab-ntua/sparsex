@@ -90,13 +90,15 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
                            double min_perc, uint64_t sort_window_size,
                            split_alg_t split_type,
                            double sampling_portion,
-                           uint64_t samples_max)
+                           uint64_t samples_max,
+                           bool split_blocks)
     : spm_(spm), min_limit_(min_limit),
       max_limit_(max_limit), min_perc_(min_perc),
       sort_window_size_(sort_window_size),
       split_type_(split_type),
       sampling_portion_(sampling_portion),
-      samples_max_(samples_max)
+      samples_max_(samples_max),
+      split_blocks_(split_blocks)
 {
     // These are delimiters, ignore them by default.
     AddIgnore(BLOCK_TYPE_START);
@@ -164,12 +166,13 @@ DeltaRLE::Stats DRLE_Manager::GenerateStats(SPM *spm, uint64_t rs, uint64_t re)
     return stats;
 }
 
-void DRLE_Manager::GenAllStats(bool split_blocks)
+void DRLE_Manager::GenAllStats()
 {
     DeltaRLE::Stats::iterator iter, tmp;
     DeltaRLE::Stats *sp;
-
+    
     stats_.clear();
+    deltas_to_encode_.clear();
     for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
         if (xforms_ignore_[t])
             continue;
@@ -214,12 +217,10 @@ void DRLE_Manager::GenAllStats(bool split_blocks)
         sp = &stats_[type];
 
         uint64_t block_align = IsBlockType(type);
-
-        if (block_align && split_blocks) {
-            CutMaxLimit(sp, block_align);
-            HandleStats(sp, spm_->nr_nzeros_, block_align);
-        }
-
+        
+        if (block_align && split_blocks_)
+            CorrectBlockStats(sp, block_align);
+        
         for (iter = sp->begin(); iter != sp->end(); ) {
             tmp = iter++;
 
@@ -324,7 +325,7 @@ uint64_t DRLE_Manager::GetTypeScore(SpmIterOrder type)
     return ret;
 }
 
-void DRLE_Manager::Encode(SpmIterOrder type, bool split_blocks)
+void DRLE_Manager::Encode(SpmIterOrder type)
 {
     SPM::Builder *SpmBld;
     SpmIterOrder oldtype;
@@ -342,7 +343,7 @@ void DRLE_Manager::Encode(SpmIterOrder type, bool split_blocks)
     spm_->Transform(type);
 
     for (uint64_t i = 0; i < spm_->GetNrRows(); ++i) {
-        EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row, split_blocks);
+        EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
         if (nr_size > 0) {
             timer_start(&timers_[TIMER_ALLOC]);
@@ -402,7 +403,7 @@ void DRLE_Manager::Decode(SpmIterOrder type)
     RemoveIgnore(type);
 }
 
-void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
+void DRLE_Manager::EncodeAll(std::ostream &os)
 {
     SpmIterOrder type = NONE;
     StatsMap::iterator iter;
@@ -413,7 +414,7 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
     timer_start(&timers_[TIMER_TOTAL]);
     for (;;) {
         timer_start(&timers_[TIMER_STATS]);
-        GenAllStats(split_blocks);
+        GenAllStats();
         timer_pause(&timers_[TIMER_STATS]);
         OutStats(os);
         type = ChooseType();
@@ -421,7 +422,7 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
             break;
         timer_start(&timers_[TIMER_ENCODE]);
         os << "Encode to " << SpmTypesNames[type] << "\n";
-        Encode(type, split_blocks);
+        Encode(type);
         enc_seq[counter++] = type;
         timer_pause(&timers_[TIMER_ENCODE]);
     }
@@ -447,7 +448,7 @@ void DRLE_Manager::EncodeAll(std::ostream &os, bool split_blocks)
     */
 }
 
-void DRLE_Manager::MakeEncodeTree(bool split_blocks)
+void DRLE_Manager::MakeEncodeTree()
 {
     uint32_t i,j;
     uint32_t count = 0;
@@ -460,7 +461,7 @@ void DRLE_Manager::MakeEncodeTree(bool split_blocks)
         for (i = 0; nodes[0].type_ignore_[i] != NONE; ++i)
             AddIgnore(nodes[0].type_ignore_[i]);
             
-        GenAllStats(split_blocks);
+        GenAllStats();
         for (i = 0; nodes[0].type_ignore_[i] != NONE; ++i)
             RemoveIgnore(nodes[0].type_ignore_[i]);
             
@@ -478,7 +479,7 @@ void DRLE_Manager::MakeEncodeTree(bool split_blocks)
         }
 
         if (it != nodes.begin()) {
-            Encode(nodes[1].type_path_[nodes[1].depth_-1], split_blocks);
+            Encode(nodes[1].type_path_[nodes[1].depth_-1]);
         } else {
             nodes[0].PrintNode();
             ++count;
@@ -490,7 +491,7 @@ void DRLE_Manager::MakeEncodeTree(bool split_blocks)
                      Decode(nodes[0].type_path_[nodes[0].depth_-j]);
                      
                 while (i < nodes[1].depth_) {
-                    Encode(nodes[1].type_path_[i], split_blocks);
+                    Encode(nodes[1].type_path_[i]);
                     ++i;
                 }
             } else {
@@ -508,7 +509,7 @@ void DRLE_Manager::MakeEncodeTree(bool split_blocks)
     exit(0);
 }
 
-void DRLE_Manager::EncodeSerial(int *xform_buf, int **deltas, bool split_blocks)
+void DRLE_Manager::EncodeSerial(int *xform_buf, int **deltas)
 {
     for (uint32_t i = 0; i < XFORM_MAX; ++i)
         AddIgnore((SpmIterOrder) i);
@@ -520,7 +521,7 @@ void DRLE_Manager::EncodeSerial(int *xform_buf, int **deltas, bool split_blocks)
         for (int j = 0; deltas[i][j] != -1; ++j)
             deltas_to_encode_[t].insert(deltas[i][j]);
             
-        Encode(t, split_blocks);
+        Encode(t);
         AddIgnore(t);
     }
 }
@@ -539,7 +540,7 @@ void DRLE_Manager::OutputSortSplits(std::ostream& out)
 }
 
 void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
-                            std::vector<SpmRowElem> &encoded, bool split_blocks)
+                            std::vector<SpmRowElem> &encoded)
 {
     uint64_t col;
     std::vector< RLE<uint64_t> > rles;
@@ -548,7 +549,7 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
     SpmRowElem elem;
 
     if (IsBlockType(spm_->type_)) {
-        if (!split_blocks)
+        if (!split_blocks_)
             DoEncodeBlock(xs, vs, encoded);
         else
             DoEncodeBlockAlt(xs, vs, encoded);
@@ -671,8 +672,7 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
             }
 
             // Align max_limit
-            uint64_t max_limit = 
-                (max_limit_ / (2 * block_align)) * (2 * block_align);
+            uint64_t max_limit = max_limit_ / block_align * block_align;
             uint64_t nr_blocks = nr_elem / max_limit;
             uint64_t nr_elem_block = std::min(max_limit, nr_elem);
 
@@ -701,7 +701,6 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
-
         } else {
             // add individual elements
             for (int i = 0; i < rle.freq; ++i) {
@@ -782,10 +781,9 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
             // Split Blocks to Match the Appropriate Sizes for Encode
             uint64_t other_dim = nr_elem / block_align;
 
-            for (std::set<uint64_t>::iterator i = deltas_set->end();
-                                              i != deltas_set->begin(); ) {
-                i--;
-                while (other_dim >= (*i)) {
+            for (std::set<uint64_t>::reverse_iterator i = deltas_set->rbegin();
+                                              i != deltas_set->rend(); ++i) {
+                while (other_dim >= *i) {
                     //We have a new block RLE
                     uint64_t nr_elem_block = block_align * (*i);
                     
@@ -793,7 +791,7 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
                     rle_start += nr_elem_block;
                     encoded.push_back(elem);
                     last_elem = &encoded.back();
-                    last_elem->pattern = new BlockRLE(nr_elem_block,(*i),
+                    last_elem->pattern = new BlockRLE(nr_elem_block, *i,
                                                       spm_->type_);
                     last_elem->vals = new double[nr_elem_block];
                     std::copy(vi, vi + nr_elem_block, last_elem->vals);
@@ -848,7 +846,7 @@ void DRLE_Manager::DoDecode(const SpmRowElem *elem,
 }
 
 void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
-                             std::vector<SpmRowElem> &newrow, bool split_blocks)
+                             std::vector<SpmRowElem> &newrow)
 {
     std::vector<uint64_t> xs;
     std::vector<double> vs;
@@ -863,7 +861,7 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
         }
 
         if (xs.size() != 0)
-            DoEncode(xs, vs, newrow, split_blocks);
+            DoEncode(xs, vs, newrow);
 
         newrow.push_back(*e);
         
@@ -873,7 +871,7 @@ void DRLE_Manager::EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
 
     // Encode any remaining elements
     if (xs.size() != 0)
-        DoEncode(xs, vs, newrow, split_blocks);
+        DoEncode(xs, vs, newrow);
 }
 
 void DRLE_Manager::DecodeRow(const SpmRowElem *rstart,
@@ -891,45 +889,103 @@ void DRLE_Manager::DecodeRow(const SpmRowElem *rstart,
     }
 }
 
-void DRLE_Manager::CutMaxLimit(DeltaRLE::Stats *sp, uint64_t block_align)
+void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
 {
-    uint64_t max_block;
-    DeltaRLE::Stats temp;
-    DeltaRLE::Stats::iterator iter,tmp;
+    DeltaRLE::Stats temp, temp2;
+    uint64_t max_block_dim;
+    DeltaRLE::Stats::iterator tmp;
+    DeltaRLE::Stats::reverse_iterator iter, rtmp;
+/*
+    for (rtmp = sp->rbegin(); rtmp != sp->rend(); ++rtmp)
+        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl;
+*/
+    max_block_dim = max_limit_ / block_align;
+    temp[max_block_dim].nnz = 0;
+    temp[max_block_dim].npatterns = 0;
+    for (iter = sp->rbegin(); iter != sp->rend() &&
+         iter->first * block_align > (unsigned) max_limit_; ++iter) {
+        
+        uint64_t div_factor = iter->first / max_block_dim;
+        uint64_t mod_factor = iter->first % max_block_dim;
+        uint64_t max_block_size = max_block_dim * block_align;
+        uint64_t block_patterns = div_factor * iter->second.npatterns;
+        uint64_t remaining_nnz;
+        temp[max_block_dim].nnz += block_patterns * max_block_size;
+        temp[max_block_dim].npatterns += block_patterns;
+        remaining_nnz = iter->second.nnz - block_patterns * max_block_size;
+        if (mod_factor >= 2) {
+            tmp = temp.find(mod_factor);
+            if (tmp == temp.end()) {
+                temp[mod_factor].nnz = remaining_nnz;
+                temp[mod_factor].npatterns = iter->second.npatterns;
+            } else {
+                temp[mod_factor].nnz += remaining_nnz;
+                temp[mod_factor].npatterns += iter->second.npatterns;
+            }
+        }
+    }
+    
+    if (temp[max_block_dim].npatterns == 0) {
+        assert(temp[max_block_dim].nnz == 0);
+        temp.erase(max_block_dim);
+    }
+    
+    for ( ; iter != sp->rend(); ++iter) {
+        tmp = temp.find(iter->first);
+        if (tmp == temp.end()) {
+            temp[iter->first].nnz = iter->second.nnz;
+            temp[iter->first].npatterns = iter->second.npatterns;
+        } else {
+            temp[iter->first].nnz += iter->second.nnz;
+            temp[iter->first].npatterns += iter->second.npatterns;
+        }
+    }
+/*  
+    for (rtmp = temp.rbegin(); rtmp != temp.rend(); ++rtmp)
+        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl;
+*/
+    uint64_t div_factor, mod_factor;
+    
+    rtmp = sp->rbegin();
+    for (iter = temp.rbegin(); iter != temp.rend(); ++iter) {
+        if (((double) iter->second.nnz) / ((double) spm_->nr_nzeros_) >= 
+            min_perc_) {
+            for ( ; rtmp != sp->rend() && rtmp->first >= iter->first; ++rtmp) {
+                div_factor = rtmp->first / iter->first;
+                mod_factor = rtmp->first % iter->first;
+               
+                tmp = temp2.find(iter->first);
+                if (tmp == temp2.end()) {
+                    temp2[iter->first].npatterns = div_factor * rtmp->second.npatterns;
+                    temp2[iter->first].nnz =
+                        div_factor * (rtmp->second.nnz / rtmp->first) * iter->first;
+                } else {   
+                    tmp->second.npatterns += div_factor * rtmp->second.npatterns;
+                    tmp->second.nnz +=
+                        div_factor * (rtmp->second.nnz / rtmp->first) * iter->first;
+                }
 
-    iter = sp->begin();
-    if (iter->first * block_align > (unsigned) max_limit_) {
-        max_block = max_limit_ / block_align;
-        temp[max_block].nnz = 0;
-        temp[max_block].npatterns = 0;
-        for (iter = sp->begin(); iter != sp->end(); ++iter) {
-            uint64_t div_factor = iter->first / max_block;
-            uint64_t mod_factor = iter->first % max_block;
-            uint64_t block_size = max_block * block_align;
-            uint64_t block_patterns = div_factor * iter->second.npatterns;
-
-            temp[max_block].nnz += block_patterns * block_size;
-            temp[max_block].npatterns += block_patterns;
-            iter->second.nnz -= block_patterns * block_size;
-            if (mod_factor >= 2) {
-                tmp = temp.find(mod_factor);
-                if (tmp == temp.end()) {
-                    temp[mod_factor].nnz = iter->second.nnz;
-                    temp[mod_factor].npatterns = iter->second.npatterns;
-                } else {
-                    temp[mod_factor].nnz += iter->second.nnz;
-                    temp[mod_factor].npatterns += iter->second.npatterns;
+                if (mod_factor >= 2) {
+                    tmp = temp2.find(mod_factor);
+                    if (tmp == temp2.end()) {
+                        temp2[mod_factor].npatterns = rtmp->second.npatterns;
+                        temp2[mod_factor].nnz =
+                            (rtmp->second.nnz / rtmp->first) * mod_factor;
+                    } else {
+                        tmp->second.npatterns += rtmp->second.npatterns;
+                        tmp->second.nnz +=
+                            (rtmp->second.nnz / rtmp->first) * mod_factor;
+                    }
                 }
             }
         }
-
-        for (iter = sp->begin(); iter != sp->end(); ++iter)
-            sp->erase(iter);
-
-        for (iter = temp.begin(); iter != temp.end(); ++iter)
-            sp->insert(std::pair<const long unsigned int,
-                       csx::DeltaRLE::StatsVal>(iter->first,iter->second));
     }
+    sp->clear();
+    *sp = temp2;
+/*
+    for (rtmp = sp->rbegin(); rtmp != sp->rend(); ++rtmp)
+        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl; 
+*/
 }
 
 void DRLE_Manager::HandleStats(DeltaRLE::Stats *sp, uint64_t size,
@@ -1025,10 +1081,10 @@ void DRLE_Manager::UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
     FOREACH(RLE<uint64_t> &rle, rles) {
         if (rle.freq >= min_limit_) {
             stats[rle.val].nnz += rle.freq;
-            stats[rle.val].npatterns++;
+            stats[rle.val].npatterns += rle.freq / max_limit_ +
+                                        (rle.freq % max_limit_ != 0);
         }
     }
-
     xs.clear();
 }
 
@@ -1056,15 +1112,13 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
             uint64_t skip_front;
 
             if (unit_start == 1) {
+                skip_front = 0;
                 nr_elem = rle.freq;
-                if (nr_elem >= block_align)
-                    skip_front = 0;
-                else
-                    skip_front = rle.freq;
             } else {
+                skip_front = (unit_start-2) % block_align;
+                if (skip_front != 0)
+                    skip_front = block_align - skip_front;
                 nr_elem = rle.freq + 1;
-                skip_front =
-                    (block_align - (unit_start-2) % block_align) % block_align;
             }
             
             if (nr_elem > skip_front)
@@ -1072,7 +1126,7 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
             else
                 nr_elem = 0;
 
-            uint64_t other_dim = nr_elem / (uint64_t) block_align;
+            uint64_t other_dim = nr_elem / block_align;
 
             if (other_dim >= 2) {
                 stats[other_dim].nnz += other_dim * block_align;
@@ -1114,11 +1168,9 @@ void DRLE_Manager::SelectSplits()
         return;
     }
 
-    size_t start = 0;
     if (nr_samples > nr_splits / 2) {
         for (size_t i = 0; i < nr_splits/2; ++i)
             selected_splits_[i] = i;
-        start = nr_splits / 2;
         nr_samples -= nr_splits / 2;
         nr_splits -= nr_splits / 2;
     }

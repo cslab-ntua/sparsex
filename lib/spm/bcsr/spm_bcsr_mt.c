@@ -195,21 +195,34 @@ void *SPM_BCSR_MT_NAME(_numa_init_mmf)(char *mmf_file,
     assert(bcsr);
 
     SPM_CRS_IDX_TYPE nr_values = bcsr->nblocks*bcsr->br*bcsr->bc;
-    SPM_CRS_IDX_TYPE *new_browptr = alloc_interleaved((bcsr->nbrows+1)*sizeof(*bcsr->brow_ptr),
-                                                      browptr_parts, nr_threads,
-                                                      nodes);
+    SPM_CRS_IDX_TYPE *new_browptr =
+        alloc_interleaved((bcsr->nbrows+1)*sizeof(*bcsr->brow_ptr),
+                          browptr_parts, nr_threads, nodes);
 
-    SPM_CRS_IDX_TYPE *new_bcolind = alloc_interleaved(bcsr->nblocks*sizeof(*bcsr->bcol_ind),
-                                                      bcolind_parts, nr_threads,
-                                                      nodes);
-    ELEM_TYPE *new_bvalues = alloc_interleaved(nr_values*sizeof(*bcsr->bvalues),
-                                               bvalues_parts, nr_threads,
-                                               nodes);
+    SPM_CRS_IDX_TYPE *new_bcolind =
+        alloc_interleaved(bcsr->nblocks*sizeof(*bcsr->bcol_ind),
+                          bcolind_parts, nr_threads, nodes);
+    ELEM_TYPE *new_bvalues =
+        alloc_interleaved(nr_values*sizeof(*bcsr->bvalues),
+                          bvalues_parts, nr_threads, nodes);
 
     // copy old data to the new one
-    memcpy(new_browptr, bcsr->brow_ptr, (bcsr->nbrows+1)*sizeof(*bcsr->brow_ptr));
+    memcpy(new_browptr, bcsr->brow_ptr,
+           (bcsr->nbrows+1)*sizeof(*bcsr->brow_ptr));
     memcpy(new_bcolind, bcsr->bcol_ind, bcsr->nblocks*sizeof(*bcsr->bcol_ind));
     memcpy(new_bvalues, bcsr->bvalues, nr_values*sizeof(*bcsr->bvalues));
+
+    // check allocation
+	int alloc_err;
+	alloc_err = check_interleaved((void *) new_browptr, browptr_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("BCSR browptr", alloc_err);
+	alloc_err = check_interleaved((void *) new_bcolind,  bcolind_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("BCSR bcolind", alloc_err);
+	alloc_err = check_interleaved((void *) new_bvalues, bvalues_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("BCSR bvalues", alloc_err);
 
     // free old data and replace with the new one
     free(bcsr->brow_ptr);

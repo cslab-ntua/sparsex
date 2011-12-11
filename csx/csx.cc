@@ -23,6 +23,7 @@
 
 #ifdef SPM_NUMA
 #   include <numa.h>
+#   include "numa_util.h"
 #   define DYNARRAY_CREATE  dynarray_create_numa
 #else
 #   define DYNARRAY_CREATE  dynarray_create
@@ -65,11 +66,12 @@ uint8_t CsxManager::GetFlag(long pattern_id, uint64_t nnz)
         ret = flag_avail_++;
         assert(ret <= CTL_PATTERNS_MAX && "too many patterns");
 
-        CsxManager::PatInfo pat_info(ret, nnz);
+        CsxManager::PatInfo pat_info(ret, 1, nnz);
 
         this->patterns[pattern_id] = pat_info;
     } else {
         ret = pi->second.flag;
+        pi->second.npatterns++;
         pi->second.nr += nnz;
     }
 
@@ -93,9 +95,9 @@ csx_double_t *CsxManager::MakeCsx()
         exit(1);
     }
 
-    csx = (csx_double_t *) numa_alloc_onnode(sizeof(csx_double_t), node);
-    values_ = (double *) numa_alloc_onnode(sizeof(double)*spm_->nr_nzeros_,
-                                           node);
+    csx = (csx_double_t *) alloc_onnode(sizeof(csx_double_t), node);
+    values_ = (double *) alloc_onnode(sizeof(double)*spm_->nr_nzeros_,
+                                      node);
 #else    
     csx = (csx_double_t *) malloc(sizeof(csx_double_t));
     values_ = (double *) malloc(sizeof(double)*spm_->nr_nzeros_);
@@ -285,8 +287,10 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     ctl_flags = (uint8_t *) dynarray_alloc_nr(ctl_da_, 2);
     *ctl_flags = GetFlag(pat_id, pat_size);
     ctl_size = ctl_flags + 1;
-    assert(pat_size + (jmp ? 1 : 0) <= CTL_SIZE_MAX);
-    *ctl_size = pat_size + (jmp ? 1 : 0);
+    if (pat_size > CTL_SIZE_MAX)
+	std::cout << pat_size << std::endl;
+    assert(pat_size <= CTL_SIZE_MAX);
+    *ctl_size = pat_size;
     UpdateNewRow(ctl_flags);
     ujmp = jmp ? jmp : elem.x - last_col_;
     if (debug)

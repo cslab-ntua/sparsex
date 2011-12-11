@@ -11,8 +11,8 @@ ifneq ($(MAKECMDGOALS), clean)
 endif
 
 MHZ_SH  ?= $(scripts)/cpu_mhz.sh
-DEFS    += -DCPU_$(CPU) -DCPU_MHZ_SH=\"$(MHZ_SH)\"
-COMPILE  = $(CC) $(CFLAGS) $(INC) $(DEFS)
+override CPPFLAGS += -DCPU_$(CPU) -DCPU_MHZ_SH=\"$(MHZ_SH)\"
+COMPILE  = $(CC) $(CPPFLAGS) $(CFLAGS)
 
 ifeq ($(CPU),NIAGARA)
 	CFLAGS += -m64
@@ -24,7 +24,7 @@ progs := $(patsubst %.c,%,$(wildcard *.c))
 all: $(progs)
 
 % : %.c
-	$(COMPILE) -o $* $<
+	$(COMPILE) $(LDFLAGS) -o $* $<
 
 %.s: %.c
 	$(COMPILE) -S $<

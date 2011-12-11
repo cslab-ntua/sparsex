@@ -16,10 +16,12 @@ struct spm_mt_thread {
 	void *spm;
 	void *spmv_fn;
 	unsigned int cpu;
-    int node;
-    uint64_t row_start;
-    uint64_t nr_rows;
-    void *data;
+	int node;
+	uint64_t row_start;
+	uint64_t nr_rows;
+	uint64_t size_assigned;
+	double secs;
+	void *data;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
 
