@@ -262,7 +262,7 @@ void CsxJit::GenCode(std::ostream &log)
 
     // Substitute and compile into an LLVM module
     compiler_->SetLogStream(&log);
-    // compiler_->SetDebugMode(true);
+    //compiler_->SetDebugMode(true);
     module_ = DoCompile(source_tmpl.Substitute(hooks));
     if (!module_) {
         log << "compilation failed for thread " << thread_id_ << "\n";
@@ -283,7 +283,7 @@ void CsxJit::DoOptimizeModule()
     pm.add(new TargetData(module_));
     createStandardModulePasses(
         &pm,
-        /* -O4 */ 4,
+        /* -O3 */ 3,
         /* OptimizeSize */ false,
         /* UnitAtATime      */  true,
         /* UnrollLoops      */  true,

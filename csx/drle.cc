@@ -104,8 +104,8 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
     AddIgnore(BLOCK_TYPE_START);
     AddIgnore(BLOCK_COL_START);
     AddIgnore(BLOCK_TYPE_END);
-    AddIgnore(BLOCK_ROW_TYPE_NAME(1));
-    AddIgnore(BLOCK_COL_TYPE_NAME(1));
+    // AddIgnore(BLOCK_ROW_TYPE_NAME(1));
+    // AddIgnore(BLOCK_COL_TYPE_NAME(1));
     
     assert(sampling_portion_ >= 0 && sampling_portion_ <= 1 &&
            "invalid sampling portion");
@@ -265,10 +265,14 @@ void DRLE_Manager::IgnoreAll()
 void DRLE_Manager::RemoveIgnore(SpmIterOrder type)
 {
     // the following types are always ignored
+    // if (type <= NONE || type == BLOCK_TYPE_START ||
+    //     type == BLOCK_ROW_TYPE_NAME(1) || type == BLOCK_COL_START ||
+    //     type == BLOCK_COL_TYPE_NAME(1) || type == BLOCK_TYPE_END ||
+    //     type >= XFORM_MAX)
     if (type <= NONE || type == BLOCK_TYPE_START ||
-        type == BLOCK_ROW_TYPE_NAME(1) || type == BLOCK_COL_START ||
-	type == BLOCK_COL_TYPE_NAME(1) || type == BLOCK_TYPE_END ||
-	type >= XFORM_MAX)
+        type == BLOCK_COL_START ||
+        type == BLOCK_TYPE_END ||
+        type >= XFORM_MAX)
         return;
     xforms_ignore_.reset(type);
 }
