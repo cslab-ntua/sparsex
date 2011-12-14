@@ -91,21 +91,25 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
                            split_alg_t split_type,
                            double sampling_portion,
                            uint64_t samples_max,
-                           bool split_blocks)
+                           bool split_blocks,
+                           bool onedim_blocks)
     : spm_(spm), min_limit_(min_limit),
       max_limit_(max_limit), min_perc_(min_perc),
       sort_window_size_(sort_window_size),
       split_type_(split_type),
       sampling_portion_(sampling_portion),
       samples_max_(samples_max),
-      split_blocks_(split_blocks)
+      split_blocks_(split_blocks),
+      onedim_blocks_(onedim_blocks)
 {
     // These are delimiters, ignore them by default.
     AddIgnore(BLOCK_TYPE_START);
     AddIgnore(BLOCK_COL_START);
     AddIgnore(BLOCK_TYPE_END);
-    // AddIgnore(BLOCK_ROW_TYPE_NAME(1));
-    // AddIgnore(BLOCK_COL_TYPE_NAME(1));
+    if (!onedim_blocks_) {
+        AddIgnore(BLOCK_ROW_TYPE_NAME(1));
+        AddIgnore(BLOCK_COL_TYPE_NAME(1));
+    }
     
     assert(sampling_portion_ >= 0 && sampling_portion_ <= 1 &&
            "invalid sampling portion");
@@ -223,10 +227,12 @@ void DRLE_Manager::GenAllStats()
         
         for (iter = sp->begin(); iter != sp->end(); ) {
             tmp = iter++;
-
             double p = (double) tmp->second.nnz / (double) spm_->nr_nzeros_;
-
-            if (p < min_perc_ || tmp->first >= CSX_PID_OFFSET)
+            if (block_align == 1 && tmp->first < min_limit_)
+                // the dimension of one-dimensional blocks must exceed
+                // min_limit_
+                sp->erase(tmp);
+            else if (p < min_perc_ || tmp->first >= CSX_PID_OFFSET)
                 sp->erase(tmp);
             else
                 deltas_to_encode_[type].insert(tmp->first);
@@ -265,12 +271,10 @@ void DRLE_Manager::IgnoreAll()
 void DRLE_Manager::RemoveIgnore(SpmIterOrder type)
 {
     // the following types are always ignored
-    // if (type <= NONE || type == BLOCK_TYPE_START ||
-    //     type == BLOCK_ROW_TYPE_NAME(1) || type == BLOCK_COL_START ||
-    //     type == BLOCK_COL_TYPE_NAME(1) || type == BLOCK_TYPE_END ||
-    //     type >= XFORM_MAX)
     if (type <= NONE || type == BLOCK_TYPE_START ||
+        (type == BLOCK_ROW_TYPE_NAME(1) && !onedim_blocks_) ||
         type == BLOCK_COL_START ||
+        (type == BLOCK_COL_TYPE_NAME(1) && !onedim_blocks_) ||
         type == BLOCK_TYPE_END ||
         type >= XFORM_MAX)
         return;

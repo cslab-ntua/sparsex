@@ -304,7 +304,7 @@ void *PreprocessThread(void *thread_info)
     // Initialize the DRLE manager
     DrleMg = new DRLE_Manager(data->spm, 4, 255, 0.05, data->wsize,
                               DRLE_Manager::SPLIT_BY_NNZ, data->sampling_portion,
-                              data->samples_max, data->split_blocks);
+                              data->samples_max, data->split_blocks, false);
     
     // Adjust the ignore settings properly
     DrleMg->IgnoreAll();
@@ -425,6 +425,8 @@ static spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
         data[i].split_blocks = split_blocks;
         data[i].deltas = deltas;
         data[i].buffer.str("");
+        // use less aggressive compression to gain in computation
+        data[i].csxmg->SetFullColumnIndices(true);
     }
     
     // Start parallel preprocessing

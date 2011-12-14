@@ -72,13 +72,17 @@ TemplateText *CsxJit::GetMultTemplate(SpmIterOrder type)
         break;
     case BLOCK_R1 ... BLOCK_COL_START-1:
         // Set the same template for all block row patterns
-        for (int t = BLOCK_R1; t < BLOCK_COL_START; ++t)
+        mult_templates_[BLOCK_R1] =
+            new TemplateText(SourceFromFile(BlockRowOneTemplateSource));
+        for (int t = BLOCK_R2; t < BLOCK_COL_START; ++t)
             mult_templates_[static_cast<SpmIterOrder>(t)] =
                 new TemplateText(SourceFromFile(BlockRowTemplateSource));
         break;
     case BLOCK_COL_START ... BLOCK_TYPE_END-1:
         // Set the same template for all block row patterns
-        for (int t = BLOCK_C1; t < BLOCK_TYPE_END; ++t)
+        mult_templates_[BLOCK_C1] =
+            new TemplateText(SourceFromFile(BlockColOneTemplateSource));
+        for (int t = BLOCK_C2; t < BLOCK_TYPE_END; ++t)
             mult_templates_[static_cast<SpmIterOrder>(t)] =
                 new TemplateText(SourceFromFile(BlockColTemplateSource));
         break;
@@ -121,9 +125,9 @@ std::string CsxJit::DoGenBlockCase(SpmIterOrder type, int r, int c)
 }
 
 void CsxJit::DoNewRowHook(std::map<std::string, std::string> &hooks,
-                          std::ostream &log, bool rowjmp) const
+                          std::ostream &log) const
 {
-    if (rowjmp) {
+    if (csxmg_->HasRowJmps()) {
         hooks["new_row_hook"] =
             "if (test_bit(&flags, CTL_RJMP_BIT))\n"
             "\t\t\t\ty_curr += ul_get(&ctl);\n"
@@ -132,6 +136,12 @@ void CsxJit::DoNewRowHook(std::map<std::string, std::string> &hooks,
     } else {
         hooks["new_row_hook"] = "y_curr++;";
     };
+
+    if (csxmg_->HasFullColumnIndices()) {
+        hooks["next_x"] = "x_curr = x + u32_get(&ctl);";
+    } else {
+        hooks["next_x"] = "x_curr += ul_get(&ctl);";
+    }
 }
 
 void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
@@ -227,17 +237,15 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
 
     if (func_entries.size() == 1) {
         // Don't switch, just call the pattern-specific mult. routine
-        hooks["spmv_func_entries"] += "\t" + i_fentry->second + ",\n";
         hooks["body_hook"] =
-            "yr += mult_table[" + Stringify(i_fentry->first) + "]"
+            "\t\t\tyr += " + Stringify(i_fentry->second) +
             "(&ctl, size, &v, &x_curr, &y_curr);";
     } else {
         hooks["body_hook"] = "switch (patt_id) {\n";
         for (; i_fentry != fentries_end; ++i_fentry) {
-            hooks["spmv_func_entries"] += "\t" + i_fentry->second + ",\n";
             hooks["body_hook"] +=
                 "\t\tcase " + Stringify(i_fentry->first) + ":\n"
-                "\t\t\tyr += mult_table[" + Stringify(i_fentry->first) + "]"
+                "\t\t\tyr += " + Stringify(i_fentry->second) +
                 "(&ctl, size, &v, &x_curr, &y_curr);\n"
                 "\t\t\tbreak;\n";
         }
@@ -257,7 +265,7 @@ void CsxJit::GenCode(std::ostream &log)
 
     // Fill in the hooks
     std::map<std::string, std::string> hooks;
-    DoNewRowHook(hooks, log, csxmg_->HasRowJmps());
+    DoNewRowHook(hooks, log);
     DoSpmvFnHook(hooks, log);
 
     // Substitute and compile into an LLVM module
