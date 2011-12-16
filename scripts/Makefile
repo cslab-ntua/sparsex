@@ -1,21 +1,21 @@
 .PHONY: all
 .PHONY: clean
 
-CC=gcc
+CC = gcc
 
-CFLAGS= -Wall -O2 -g
+CFLAGS = -Wall -O2 -g
 progs := $(patsubst %.c,%,$(wildcard *.c))
 
 all: $(progs) 
 
 % : %.c
-	$(CC) $(CFLAGS) -o $* $< 
+	$(CC) $(CPPFLAGS) $(LDFLAGS) -o $* $< 
 
 %.s: %.c
-	$(CC) $(CFLAGS) $(INC) $(DEFS) -S $< 
+	$(CC) $(CPPFLAGS) -S $< 
 
 %.i: %.c
-	$(CC) $(CFLAGS) $(INC) $(DEFS) -E $< | indent -kr > $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -E $< | indent -kr > $@
 
 clean:
 	rm -rf $(progs) 

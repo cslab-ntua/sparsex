@@ -28,70 +28,71 @@ static float secs = 0.0;
 
 static void *do_spmv_thread(void *arg)
 {
-    
-    spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
-    SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
-    int id = spm_mt_thread->id;
-    int i; // j, start, end;
-    
-    setaffinity_oncpu(spm_mt_thread->cpu);
-    // start = (id * n) / ncpus;
-    // end = ((id + 1) * n) / ncpus;
-    
-    for (i = 0; i < nloops; i++) {
-        /*
-	if (id != 0)
-            VECTOR_NAME(_init)(temp[id], 0);
-        */
-	VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
-        pthread_barrier_wait(&barrier);
-        spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y, temp[id]);
-        pthread_barrier_wait(&barrier);
-        /*
-	for (j = 1; j < ncpus; j++)
-            VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
-        */
-	VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
-        pthread_barrier_wait(&barrier);
-    }
+	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
+	SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
+	int id = spm_mt_thread->id;
+	int i; // j, start, end;
 
-    return NULL;
+	setaffinity_oncpu(spm_mt_thread->cpu);
+	// start = (id * n) / ncpus;
+	// end = ((id + 1) * n) / ncpus;
+
+	for (i = 0; i < nloops; i++) {
+		/*
+		if (id != 0)
+			VECTOR_NAME(_init)(temp[id], 0);
+		*/
+		VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
+		pthread_barrier_wait(&barrier);
+		spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y,
+		               temp[id]);
+		pthread_barrier_wait(&barrier);
+		/*
+		for (j = 1; j < ncpus; j++)
+			VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
+		*/
+		VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
+		pthread_barrier_wait(&barrier);
+	}
+
+	return NULL;
 }
 
 static void *do_spmv_thread_main(void *arg)
 {
-    spm_mt_thread_t *spm_mt_thread = arg;
-    SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
-    int id = spm_mt_thread->id;
-    
-    setaffinity_oncpu(spm_mt_thread->cpu);
+	spm_mt_thread_t *spm_mt_thread = arg;
+	SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
 
-    tsc_t tsc;
-    tsc_init(&tsc);
-    tsc_start(&tsc);
-    
-    int i; // , j, start, end;
-    
-    // start = (id * n) / ncpus;
-    // end = ((id + 1) * n) / ncpus;
-    
-    for (i = 0; i < nloops; i++) {
-        VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
-        pthread_barrier_wait(&barrier);
-        spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y, y);
-        pthread_barrier_wait(&barrier);
-        /* for (j = 0; j < ncpus; j++)
-            VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
-        */
-	VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
-        pthread_barrier_wait(&barrier);
-    }
-    
-    tsc_pause(&tsc);
-    secs = tsc_getsecs(&tsc);
-    tsc_shut(&tsc);
-    
-    return NULL;
+	setaffinity_oncpu(spm_mt_thread->cpu);
+
+	tsc_t tsc;
+
+	tsc_init(&tsc);
+	tsc_start(&tsc);
+
+	int i; // , j, start, end;
+
+	// start = (id * n) / ncpus;
+	// end = ((id + 1) * n) / ncpus;
+
+	for (i = 0; i < nloops; i++) {
+		VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
+		pthread_barrier_wait(&barrier);
+		spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y, y);
+		pthread_barrier_wait(&barrier);
+		/*
+		for (j = 0; j < ncpus; j++)
+			VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
+		*/
+		VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
+		pthread_barrier_wait(&barrier);
+	}
+
+	tsc_pause(&tsc);
+	secs = tsc_getsecs(&tsc);
+	tsc_shut(&tsc);
+
+	return NULL;
 }
 
 float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
@@ -159,26 +160,28 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 			spm->spmv_fn = fn;
 	}
 	
-	printf("check for allocation of x vector\n");
+	int alloc_err = 0;
+
 	for (i = 0; i < nr_nodes; i++)
 		if (xs[i])
-			check_onnode(xs[i]->elements,
-			             n  * sizeof(*xs[i]->elements), i);
+			if (check_region(xs[i]->elements,
+			                 n * sizeof(ELEM_TYPE), i))
+				alloc_err = 1;
+	print_alloc_status("input vector", alloc_err);
 
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(n, parts, ncpus, nodes);
 	VECTOR_NAME(_init)(y, 0);
 	
-	printf("check for allocation of y vector\n");
-	check_interleaved(y->elements, n * sizeof(*y->elements), parts, ncpus,
-	                  nodes);
+	alloc_err = check_interleaved(y->elements, parts, ncpus, nodes);
+	print_alloc_status("output vector", alloc_err);
 
 	/* Allocate temporary buffers */
 	temp = malloc(ncpus * sizeof(*temp));
 	temp[0] = y;
 	for (i = 1; i < ncpus; i++) {
 		int tnode = spm_mt->spm_threads[i].node;
-	    temp[i] = VECTOR_NAME(_create_onnode)(n, tnode);
+		temp[i] = VECTOR_NAME(_create_onnode)(n, tnode);
 	}
 	
 	for (i = 1; i < ncpus; i++) {
@@ -187,13 +190,14 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	        temp[i]->elements[j] = 0;
 	}
 	
-	printf("check for allocation of temp vectors\n");
+	alloc_err = 0;
 	for (i = 1; i < ncpus; i++) {
 		int tnode = spm_mt->spm_threads[i].node;
 		
-        	check_onnode(temp[i]->elements, n * sizeof(*temp[i]->elements),
-		             tnode);
+		alloc_err += check_region(temp[i]->elements,
+		                         n * sizeof(ELEM_TYPE), tnode);
 	}
+	print_alloc_status("temporary buffers", alloc_err);
     
 	for (i = 1; i < ncpus; i++)
 		pthread_create(tids + i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
@@ -213,7 +217,7 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 
 	VECTOR_NAME(_destroy)(y);
 
-    for (i = 1; i < ncpus; i++) {
+	for (i = 1; i < ncpus; i++) {
 		VECTOR_NAME(_destroy)(temp[i]);
 	}
 	free(temp);

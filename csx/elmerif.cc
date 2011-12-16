@@ -36,7 +36,8 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
         mt_get_options(&nr_threads, &cpus);
         spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
             (rowptr_, colind_, values_, n_, n_, false, nr_threads);
-        *tuned = spm_mt = GetSpmMt(NULL, spms);
+        csx::CsxExecutionEngine &engine = csx::CsxJitInit();
+        *tuned = spm_mt = GetSpmMt(NULL, engine, spms);
     } else {
         spm_mt = (spm_mt_t *) *tuned;
     }

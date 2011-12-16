@@ -15,7 +15,6 @@
 #include <cstdlib>
 
 #include "spmv.h"
-
 #include "cg.h"
 
 using namespace std;
@@ -66,6 +65,8 @@ int main(int argc, char *argv[])
     unsigned long       nLoops = 1;
     unsigned long       nloops = 512;
     cg_method_t         cg_method = CSR;
+    
+    csx::CsxExecutionEngine &engine = csx::CsxJitInit();
     
     ///> Parse Options.
     while ((j = getopt(argc, argv, "xsl:L:")) != -1) {
@@ -140,8 +141,8 @@ int main(int argc, char *argv[])
             symmetric = getenv("SYMMETRIC");
             assert(symmetric == NULL && 
                    "environment variable SYMMETRIC must not be set");
-            
-            spm_mt = GetSpmMt(mmf_file);
+
+            spm_mt = GetSpmMt(mmf_file, engine);
             
             csx = (csx_double_t *) spm_mt->spm_threads[0].spm;
             ncols = csx->ncols;
@@ -166,7 +167,7 @@ int main(int argc, char *argv[])
             assert(symmetric != NULL && 
                    "environment variable SYMMETRIC must be set");
             
-            spm_mt = GetSpmMt(mmf_file);
+            spm_mt = GetSpmMt(mmf_file, engine);
             
             csx_sym = (csx_double_sym_t *) spm_mt->spm_threads[0].spm;
             csx = (csx_double_t *) csx_sym->lower_matrix;

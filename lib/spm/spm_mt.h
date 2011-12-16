@@ -28,6 +28,8 @@ struct spm_mt_thread {
 	void *data;
 	map_t *map;
 	VECTOR_TYPE *x, *y;
+	uint64_t size_assigned;
+	double secs;
 };
 
 typedef struct spm_mt_thread spm_mt_thread_t;

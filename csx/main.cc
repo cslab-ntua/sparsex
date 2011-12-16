@@ -17,10 +17,15 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // Initialize the CSX JIT execution engine
+    csx::CsxExecutionEngine &engine = csx::CsxJitInit();
     for (int i = 1; i < argc; i++) {
-        spm_mt = GetSpmMt(argv[i]);
+        std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
+        spm_mt = GetSpmMt(argv[i], engine);
         CheckLoop(spm_mt, argv[i]);
+        std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
+        std::cout << "=== END BENCHMARK ===" << std::endl;
         PutSpmMt(spm_mt);
     }
 

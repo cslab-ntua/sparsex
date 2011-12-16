@@ -9,53 +9,7 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#include <cstdlib>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/time.h>
-#include <pthread.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <numa.h>
-
-#include "spm.h"
-#include "mmf.h"
-#include "csx.h"
-#include "drle.h"
-#include "jit.h"
-#include "llvm_jit_help.h"
 #include "spmv.h"
-
-#include <numa.h>
-#include <numaif.h>
-
-extern "C" {
-#include "mt_lib.h"
-#include "spmv_method.h"
-#include "spm_crs.h"
-#include "spm_mt.h"
-#ifdef SPM_NUMA
-#   include "spmv_loops_mt_numa.h"
-#   include "spmv_loops_sym_mt_numa.h"
-#   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
-#   define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
-#   define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop_numa
-#   define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop_numa
-#else
-#   include "spmv_loops_mt.h"
-#   include "spmv_loops_sym_mt.h"
-#   define SPMV_CHECK_FN spmv_double_check_mt_loop
-#   define SPMV_BENCH_FN spmv_double_bench_mt_loop
-#   define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop
-#   define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop
-#endif
-#include "timer.h"
-#include "ctl_ll.h"
-#include <libgen.h>
-}
-#include <sched.h>
 
 
 ///> Max deltas that an encoding type may have. This is restricted by the
@@ -358,7 +312,6 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
         spm_thread = spm_mt->spm_threads + i;
 #ifdef SPM_NUMA
         node = spm_thread->node;
-
         map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
 #else
         map = (map_t *) xmalloc(sizeof(map_t));
@@ -429,19 +382,26 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
             }
         }
     }
-    assert(temp_count == map->length);
-    
+    assert(temp_count == map->length); 
     spm_thread->map = map;
 #ifdef SPM_NUMA
-    std::cout << "check for allocation of map" << std::endl;
+    int alloc_err = 0;
     for (unsigned int i = 0; i < ncpus; i++) {
         node = spm_mt->spm_threads[i].node;
         map = spm_mt->spm_threads[i].map;
         
-        check_onnode(map, sizeof(map_t), node);
-        check_onnode(map->cpus, map->length * sizeof(unsigned int), node);
-        check_onnode(map->elems_pos, map->length * sizeof(unsigned int), node);
+        alloc_err += check_region(map, sizeof(map_t), node);
+        alloc_err += check_region(map->cpus, 
+                                    map->length * sizeof(unsigned int), node);
+        alloc_err += check_region(map->elems_pos,
+                                    map->length * sizeof(unsigned int), node);
     }
+    
+    std::cout << "allocation check for map... "
+              << ((alloc_err) ?
+                 "FAILED (see above for more info)" : "DONE")
+              << std::endl;
+
 #endif
     ///> Print final map.
     /*
@@ -494,7 +454,8 @@ void *PreprocessThread(void *thread_info)
         // Initialize the DRLE manager
         DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
                                   DRLE_Manager::SPLIT_BY_NNZ,
-                                  data->sampling_portion, data->samples_max);
+                                  data->sampling_portion, data->samples_max,
+                                  data->split_blocks);
                                   
         // Adjust the ignore settings properly
         DrleMg->IgnoreAll();
@@ -506,12 +467,11 @@ void *PreprocessThread(void *thread_info)
         // types in XFORM_CONF, choose the best choise, encode it and proceed 
         // likewise until there is no satisfying encoding.
         if (data->deltas)
-            DrleMg->EncodeSerial(data->xform_buf, data->deltas,
-                                 data->split_blocks);
+            DrleMg->EncodeSerial(data->xform_buf, data->deltas);
         else
-            DrleMg->EncodeAll(data->buffer, data->split_blocks);
+            DrleMg->EncodeAll(data->buffer);
 
-        // DrleMg->MakeEncodeTree(data->split_blocks);
+        // DrleMg->MakeEncodeTree();
 
         csx_double_t *csx = data->csxmg->MakeCsx(false);
         data->spm_encoded->spm = csx;
@@ -519,18 +479,22 @@ void *PreprocessThread(void *thread_info)
         data->spm_encoded->row_start = csx->row_start;
 
 #ifdef SPM_NUMA
-	/*
-	data->buffer << "check for allocation of csx" << std::endl;
-	check_onnode(csx, sizeof(*csx), data->spm_encoded->node);
-	*/
-	data->buffer << "check for allocation of ctl field" << std::endl;
-	check_onnode(csx->ctl, csx->ctl_size * sizeof(uint8_t),
-	             data->spm_encoded->node);
-	data->buffer << "check for allocation of values field" << std::endl;
-	check_onnode(csx->values, csx->nnz * sizeof(*csx->values),
-	             data->spm_encoded->node);
+        int alloc_err = 0;
+        alloc_err = check_region(csx->ctl, csx->ctl_size * sizeof(uint8_t),
+                                 data->spm_encoded->node);
+        data->buffer << "allocation check for ctl field... "
+                     << ((alloc_err) ?
+                        "FAILED (see above for more info)" : "DONE")
+                     << std::endl;
+
+        alloc_err = check_region(csx->values, csx->nnz * sizeof(*csx->values),
+                                 data->spm_encoded->node);
+        data->buffer << "allocation check for values field... "
+                     << ((alloc_err) ?
+                        "FAILED (see above for more info)" : "DONE")
+                     << std::endl;
 #endif
-        
+ 
 	delete DrleMg;
     } else {
         DRLE_Manager *DrleMg1;
@@ -577,13 +541,11 @@ void *PreprocessThread(void *thread_info)
         // types in XFORM_CONF, choose the best choise, encode it and proceed 
         // likewise until there is no satisfying encoding.
         if (data->deltas) {
-            DrleMg1->EncodeSerial(data->xform_buf, data->deltas,
-                                  data->split_blocks);
-            DrleMg2->EncodeSerial(data->xform_buf, data->deltas,
-                                  data->split_blocks);
+            DrleMg1->EncodeSerial(data->xform_buf, data->deltas);
+            DrleMg2->EncodeSerial(data->xform_buf, data->deltas);
         } else {
-            DrleMg1->EncodeAll(data->buffer, data->split_blocks);
-            DrleMg2->EncodeAll(data->buffer, data->split_blocks);
+            DrleMg1->EncodeAll(data->buffer);
+            DrleMg2->EncodeAll(data->buffer);
         }
         
         /*
@@ -618,24 +580,31 @@ void *PreprocessThread(void *thread_info)
         data->spm_encoded->nr_rows = csx->lower_matrix->nrows;
 
 #ifdef SPM_NUMA
-        /*
-	data->buffer << "check for allocation of csx" << std::endl;
-	check_onnode(csx, sizeof(*csx), data->spm_encoded->node);
-	*/
-	data->buffer << "check for allocation of ctl field" << std::endl;
-	check_onnode(csx->lower_matrix->ctl,
-	             csx->lower_matrix->ctl_size * sizeof(uint8_t),
-	             data->spm_encoded->node);
-	             
-	data->buffer << "check for allocation of values field" << std::endl;
-	check_onnode(csx->lower_matrix->values,
-	             csx->lower_matrix->nnz * sizeof(double),
-	             data->spm_encoded->node);
-	             
-	data->buffer << "check for allocation of dvalues field" << std::endl;
-	check_onnode(csx->dvalues,
-	             csx->lower_matrix->nrows * sizeof(double),
-	             data->spm_encoded->node);
+        int alloc_err;
+        
+        alloc_err = check_region(csx->lower_matrix->ctl,
+                                 csx->lower_matrix->ctl_size * sizeof(uint8_t),
+                                 data->spm_encoded->node);
+        data->buffer << "allocation check for ctl field... "
+                     << ((alloc_err) ?
+                        "FAILED (see above for more info)" : "DONE")
+                     << std::endl;
+
+        alloc_err = check_region(csx->lower_matrix->values,
+                                 csx->lower_matrix->nnz * sizeof(double),
+                                 data->spm_encoded->node);
+        data->buffer << "allocation check for values field... "
+                     << ((alloc_err) ?
+                        "FAILED (see above for more info)" : "DONE")
+                     << std::endl;
+                     
+	alloc_err = check_region(csx->dvalues,
+	                         csx->lower_matrix->nrows * sizeof(double),
+	                         data->spm_encoded->node);
+        data->buffer << "allocation check for dvalues field... "
+                     << ((alloc_err) ?
+                        "FAILED (see above for more info)" : "DONE")
+                     << std::endl;
 #endif
 
         delete DrleMg1;
@@ -644,7 +613,8 @@ void *PreprocessThread(void *thread_info)
     return 0;
 }
 
-spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
+spm_mt_t *GetSpmMt(char *mmf_fname, csx::CsxExecutionEngine &engine,
+                   csx::SPM *spms)
 {
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
@@ -652,7 +622,6 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
     int **deltas = NULL;
     thread_info_t *data;
     pthread_t *threads;
-    CsxJit **Jits;
     SPMSym *spms_sym = NULL;
 
     // Get MT_CONF
@@ -728,8 +697,7 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
             data[i].spm = spms + i;
             data[i].spm_sym = NULL;
             data[i].csxmg = new CsxManager(data[i].spm);
-        }
-        else {
+        } else {
             data[i].spm = NULL;
             data[i].spm_sym = spms_sym + i;
             data[i].csxmg = new CsxManager(spms_sym + i);
@@ -793,28 +761,23 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *spms)
     }
     */
         
-    // CSX matrix construction and JIT compilation
-    CsxJitInitGlobal();
-    Jits = (CsxJit **) xmalloc(nr_threads * sizeof(CsxJit *));
-
+    // CSX JIT compilation
+    CsxJit **Jits = new CsxJit*[nr_threads];
     for (unsigned int i = 0; i < nr_threads; ++i) {
-        Jits[i] = new CsxJit(data[i].csxmg, i, symmetric);
-        Jits[i]->GenCode(data[i].buffer, symmetric);
+        Jits[i] = new CsxJit(data[i].csxmg, &engine, i, symmetric);
+        Jits[i]->GenCode(data[i].buffer);
         std::cout << data[i].buffer.str();
     }
 
-    // Optimize generated code and assign it to every thread
-    CsxJitOptmize();
     for (unsigned int i = 0; i < nr_threads; i++) {
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->GetSpmvFn();
-        delete Jits[i];
     }
     
     // Cleanup.
-    free(Jits);
     free(threads);
     free(threads_cpus);
     free(xform_buf);
+    
     delete[] spms;
     delete[] data;
 
@@ -900,6 +863,7 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 
     getMmfHeader(mmf_name, nrows, ncols, nnz);
     int nr_outer_loops = GetOptionOuterLoops();
+    
     for (int i = 0; i < nr_outer_loops; ++i) {
 	if (!spm_mt->symmetric) {
             secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);

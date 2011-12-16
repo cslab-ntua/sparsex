@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 			if (spmv_meth->flag != 3)			
 				printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
 			else
-				printf("m:%s f:%s ms:%lu s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), map_size,
+				printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file),// map_size,
 				       spmv_meth->size_fn(m), t, flops);
 		}
 	}

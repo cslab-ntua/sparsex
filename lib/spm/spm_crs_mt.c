@@ -35,7 +35,7 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 	// set affinity of the current thread
 	mt_get_options(&nr_cpus, &cpus);
 	setaffinity_oncpu(cpus[0]);
-	
+
 	printf("MT_CONF:%d", cpus[0]);
 	for (i = 1; i < nr_cpus; i++)
 		printf(",%d", cpus[i]);
@@ -43,7 +43,7 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 
 	SPM_CRS_TYPE *crs;
 	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr, metadata);
-    
+
 	spm_mt = malloc(sizeof(spm_mt_t));
 	if ( !spm_mt ){
 		fprintf(stderr, "malloc failed\n");
@@ -213,17 +213,16 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
 	crs->col_ind = new_colind;
 	crs->values = new_values;
 
-	printf("check for allocation of row_ptr field\n");
-	check_interleaved((void *) crs->row_ptr,
-	                  (crs->nrows+1) * sizeof(*crs->row_ptr), rowptr_parts,
-	                  nr_threads, nodes);
-	printf("check for allocation of col_ind field\n"); 
-	check_interleaved((void *) crs->col_ind,
-	                  crs->nz * sizeof(*crs->col_ind), colind_parts,
-	                  nr_threads, nodes);
-	printf("check for allocation of values field\n");
-	check_interleaved((void *) crs->values, crs->nz * sizeof(*crs->values),
-                          values_parts, nr_threads, nodes);
+	int alloc_err;
+	alloc_err = check_interleaved((void *) crs->row_ptr, rowptr_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("CSR rowptr", alloc_err);
+	alloc_err = check_interleaved((void *) crs->col_ind,  colind_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("CSR colind", alloc_err);
+	alloc_err = check_interleaved((void *) crs->values, values_parts,
+	                              nr_threads, nodes);
+	print_alloc_status("CSR values", alloc_err);
 
 	// free the auxiliaries
 	free(rowptr_parts);
@@ -239,8 +238,7 @@ void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
 	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *) spm_thread->spm;
 	SPM_CRS_TYPE *crs = crs_mt->crs;
-	
-	free_interleaved(crs->row_ptr, (crs->nrows+1)*sizeof(*crs->row_ptr));
+
 	free_interleaved(crs->col_ind, crs->nz*sizeof(*crs->col_ind));
 	free_interleaved(crs->values, crs->nz*sizeof(*crs->values));
 	free(crs);

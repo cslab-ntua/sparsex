@@ -12,15 +12,52 @@
 #ifndef SPMV_H__
 #define SPMV_H__
 
-#include <stdint.h>
+#include <cstdlib>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
 #include <pthread.h>
+#include <iostream>
+#include <fstream>
 #include <sstream>
+#include <string>
+#include <numa.h>
+#include <sched.h>
 
 #include "spm.h"
+#include "mmf.h"
 #include "csx.h"
+#include "drle.h"
+#include "jit.h"
+#include "llvm_jit_help.h"
+#include "spmv.h"
+
+#include <numa.h>
+#include <numaif.h>
 
 extern "C" {
+#include <libgen.h>
+#include "mt_lib.h"
+#include "spmv_method.h"
+#include "spm_crs.h"
 #include "spm_mt.h"
+#ifdef SPM_NUMA
+#   include "spmv_loops_mt_numa.h"
+#   include "spmv_loops_sym_mt_numa.h"
+#   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
+#   define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
+#   define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop_numa
+#   define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop_numa
+#else
+#   include "spmv_loops_mt.h"
+#   include "spmv_loops_sym_mt.h"
+#   define SPMV_CHECK_FN spmv_double_check_mt_loop
+#   define SPMV_BENCH_FN spmv_double_bench_mt_loop
+#   define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop
+#   define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop
+#endif
+#include "timer.h"
+#include "ctl_ll.h"
 }
 
 double pre_time;
@@ -72,12 +109,8 @@ void *PreprocessThread(void *thread_info);
  */
 void MakeMap(spm_mt_t *spm_mt, csx::SPMSym *spm_sym);
 uint64_t MapSize(void *spm);
-
-#ifdef __cplusplus                  /* included in a C++ program */
-spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms = 0);
-#else                               /* included in a C program */
-spm_mt_t *GetSpmMt(char *mmf_fname, csx::SPM *Spms = 0);
-#endif
+spm_mt_t *GetSpmMt(char *mmf_fname, csx::CsxExecutionEngine &engine, 
+                   csx::SPM *spms = NULL);
 void PutSpmMt(spm_mt_t *spm_mt);
 
 /**
