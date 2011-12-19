@@ -1,5 +1,5 @@
 /*
- * spmv.cc -- Main program for invoking CSX.
+ * spmv.cc -- Front-end utilities for invoking CSX.
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -347,7 +347,7 @@ void *PreprocessThread(void *thread_info)
     return 0;
 }
 
-static spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
+spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
 {
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
@@ -467,20 +467,13 @@ static spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
     return spm_mt;
 }
 
-static void PutSpmMt(spm_mt_t *spm_mt)
+void PutSpmMt(spm_mt_t *spm_mt)
 {
     free(spm_mt->spm_threads);
     free(spm_mt);
 }
 
-/**
- *  Check the CSX SpMV result against the baseline single-thread CSR
- *  implementation.
- *
- *  @param the (mulithreaded) CSX matrix.
- *  @param the MMF input file.
- */
-static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
+void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     void *crs;
     uint64_t nrows, ncols, nnz;
@@ -500,6 +493,7 @@ static void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
  *
  *  @parame spm_mt  the sparse matrix in CSX format.
  */
+
 static unsigned long CsxSize(spm_mt_t *spm_mt)
 {
     unsigned long ret;
@@ -515,10 +509,7 @@ static unsigned long CsxSize(spm_mt_t *spm_mt)
     return ret;
 }
 
-/**
- *  Run CSX SpMV and record the performance information.
- */
-static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
+void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     uint64_t nrows, ncols, nnz;
     double secs, flops;
@@ -535,29 +526,3 @@ static void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
                flops, i+1);
     }
 }
-
-int main(int argc, char **argv)
-{   
-    spm_mt_t *spm_mt;
-    
-    if (argc < 2){
-        std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
-        exit(1);
-    }
-
-    // Initialize the CSX JIT execution engine
-    CsxExecutionEngine &engine = CsxJitInit();
-    for (int i = 1; i < argc; i++) {
-        std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        spm_mt = GetSpmMt(argv[i], engine);
-        CheckLoop(spm_mt, argv[i]);
-        std::cerr.flush();
-        BenchLoop(spm_mt, argv[i]);
-        std::cout << "=== END BENCHMARK ===" << std::endl;
-        PutSpmMt(spm_mt);
-    }
-    
-    return 0;
-}
-
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

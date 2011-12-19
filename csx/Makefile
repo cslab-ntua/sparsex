@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv
+all: spmv libcsx.a libcsx.so
 
 ## Configuration
 llvmconf     = llvm-config
@@ -16,9 +16,11 @@ llvm_prefix  = $(shell $(llvmconf) --prefix)
 CC          ?= gcc
 CXX         ?= g++
 LD           = $(CXX)
-CFLAGS       = -Wall
+CFLAGS      ?= -Wall -O3 -fPIC
 CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC
 LIBS         = -lnuma -lpthread -lboost_regex
+AR           = ar
+AR_FLAGS     = cru
 
 # Always add the following flags
 override CPPFLAGS += -DMULT_TEMPLATE_DIR=\"$(mult_template_dir)\" -DCLANG_PREFIX=\"$(llvm_prefix)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE -D__STDC_FORMAT_MACROS
@@ -39,12 +41,15 @@ LLVM_COMPILE	= $(LLVM_CC) $(CPPFLAGS) $(LLVM_CPPFLAGS) $(CFLAGS) $(LLVM_CFLAGS)
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 CLANG_LDFLAGS   = -Wl,--start-group -lclangAnalysis -lclangAST -lclangBasic -lclangCodeGen -lclangDriver -lclangFrontend -lclangFrontendTool -lclangIndex -lclangLex -lclangParse -lclangRewrite -lclangSema -lclangSerialization -lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangStaticAnalyzerFrontend -Wl,--end-group
 
+CSX_OBJECTS = spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o template_text.o jit_util.o compiler.o $(spm_dir)/libspmv.o
+
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	override CPPFLAGS += -DSPM_NUMA
 endif
 
 CXX_COMPILE = $(CXX) $(CPPFLAGS) $(CXXFLAGS)
 LINK        = $(LD) $(LDFLAGS)
+ARCHIVE     = $(AR) $(AR_FLAGS)
 
 # define __STDC_FORMAT_MACROS, so that we can use PRIu64
 draw.o: draw.cc spm.h draw.h
@@ -73,14 +78,16 @@ compiler.o: jit_util.h
 spmv.o: spm.h mmf.h csx.h drle.h jit.h ctl_ll.h ../lib/spm/mt_lib.h ../lib/spm/spmv_method.h ../lib/spm/spm_crs.h ../lib/spm/spm_mt.h ../lib/prfcnt/timer.h
 spm.o: mmf.h ../lib/dynarray/dynarray.h
 drle.o: spm.h
+main.o: spmv.h
 
-# -Xlinker --allow-multiple-definition is set because
-# dynarray code is also included in libspmv.o.
-spmv: spmv.o jit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o template_text.o jit_util.o compiler.o $(spm_dir)/libspmv.o
+libcsx.so: $(CSX_OBJECTS)
+	$(LINK) -shared $^ $(dynarray_dep) -o $@
+
+libcsx.a: $(CSX_OBJECTS)
+	$(ARCHIVE) $@ $^
+
+spmv: main.o libcsx.a
 	$(LINK) $(LIBS) $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
 
-newjit_test: newjit.o llvm_jit_help.o mmf.o spm.o csx.o drle.o $(dynarray_dep) $(spm_dir)/libspmv.o template_text.o jit_util.o compiler.o
-	$(LINK) $(LIBS) $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) -o $@
-
 clean:
-	rm -f *.o spmv csx_llvm_tmpl.llvm.bc
+	rm -f *.o libcsx.so libcsx.a spmv
