@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
+ * Copyright (C) 2011,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -17,10 +18,12 @@ struct spm_mt_thread {
 	void *spm;
 	void *spmv_fn;
 	unsigned int cpu;
-    int node;
-    uint64_t row_start;
-    uint64_t nr_rows;
-    void *data;
+	int node;
+	uint64_t row_start;
+	uint64_t nr_rows;
+	uint64_t size_assigned;
+	double secs;
+	void *data;
     VECTOR_TYPE *x, *y;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;

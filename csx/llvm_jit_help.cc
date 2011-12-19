@@ -3,13 +3,12 @@
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C)      2011, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#include <iostream>
-#include <fstream>
-#include <cstring>
+#include "llvm_jit_help.h"
 
 #include "llvm/Module.h"
 #include "llvm/Type.h"
@@ -29,30 +28,38 @@
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StandardPasses.h"
+#include "llvm/Support/system_error.h"
 
-#include "llvm_jit_help.h"
+#include <iostream>
+#include <fstream>
+#include <cstring>
 
 /*
- * LLVM (v2.7) helpers for JIT compilation
+ * LLVM (v2.9) helpers for JIT compilation
  */
 
 using namespace llvm;
 
 Module *ModuleFromFile(const char *file, LLVMContext &Ctx)
 {
-    std::string Error;
-    MemoryBuffer *MB = MemoryBuffer::getFile(file, &Error);
-    if (!MB){
-        std::cerr << " MemoryBuffer::getFile " << Error << " " << file << "\n";
-        exit(1);
-    }
-    Module *M = ParseBitcodeFile(MB, Ctx, &Error);
-    if (!M){
-        std::cerr << "ParseBitCodeFile:" << Error << "\n";
+    OwningPtr<MemoryBuffer> membuff;
+    error_code err = MemoryBuffer::getFile(StringRef(file), membuff);
+
+    if (err) {
+        std::cerr << __FUNCTION__ << "(" __FILE__ << ":" << __LINE__ << "):"
+                  << err.message() << std::endl;
         exit(1);
     }
 
-    return M;
+    std::string err_msg;
+    Module *mod = ParseBitcodeFile(membuff.get(), Ctx, &err_msg);
+    if (!mod){
+        std::cerr << __FUNCTION__ << "(" __FILE__ << ":" << __LINE__ << "):"
+                  << err_msg << std::endl;
+        exit(1);
+    }
+
+    return mod;
 }
 
 void ModuleToFile(Module *M, const char *file)
@@ -136,7 +143,8 @@ bool InlineAndRemoveFn(Function *Fn)
     Value::use_iterator ue = Fn->use_end();
     for (; ui != ue; ){
         CallInst *CI = cast<CallInst>(*ui++);
-        InlineFunction(CI);
+        InlineFunctionInfo ifi;
+        InlineFunction(CI, ifi);
     }
     std::string FnName = Fn->getName();
     Module *M = Fn->getParent();
@@ -154,8 +162,9 @@ bool InlineFntoFn(Function *Callee, Function *Caller)
     for (; ui != ue; ){
         CallInst *CI = cast<CallInst>(*ui++);
         if (CI->getParent()->getParent() == Caller){
-            if ( !InlineFunction(CI) ){
-                std::cout << __FUNCTION__ << ": Function not inlined\n";
+            InlineFunctionInfo ifi;
+            if ( !InlineFunction(CI, ifi) ){
+                std::cerr << __FUNCTION__ << ": Function not inlined\n";
                 return false;
             }
             return true;

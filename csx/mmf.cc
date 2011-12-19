@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2011,      Vasileios Karakasis
- * Copyright (C) 2011,      Theodors Goudouvas
+ * Copyright (C) 2011,      Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.

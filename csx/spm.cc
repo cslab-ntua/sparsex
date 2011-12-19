@@ -4,7 +4,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2011,      Theodors Goudouvas
+ * Copyright (C) 2011,      Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -197,6 +197,7 @@ static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
     dst.y = src_y - dst.x + 1;
 }
 
+DEFINE_BLOCK_ROW_MAP_FN(1)
 DEFINE_BLOCK_ROW_MAP_FN(2)
 DEFINE_BLOCK_ROW_MAP_FN(3)
 DEFINE_BLOCK_ROW_MAP_FN(4)
@@ -205,6 +206,7 @@ DEFINE_BLOCK_ROW_MAP_FN(6)
 DEFINE_BLOCK_ROW_MAP_FN(7)
 DEFINE_BLOCK_ROW_MAP_FN(8)
 
+DEFINE_BLOCK_ROW_RMAP_FN(1)
 DEFINE_BLOCK_ROW_RMAP_FN(2)
 DEFINE_BLOCK_ROW_RMAP_FN(3)
 DEFINE_BLOCK_ROW_RMAP_FN(4)
@@ -213,6 +215,7 @@ DEFINE_BLOCK_ROW_RMAP_FN(6)
 DEFINE_BLOCK_ROW_RMAP_FN(7)
 DEFINE_BLOCK_ROW_RMAP_FN(8)
 
+DEFINE_BLOCK_COL_MAP_FN(1)
 DEFINE_BLOCK_COL_MAP_FN(2)
 DEFINE_BLOCK_COL_MAP_FN(3)
 DEFINE_BLOCK_COL_MAP_FN(4)
@@ -221,6 +224,7 @@ DEFINE_BLOCK_COL_MAP_FN(6)
 DEFINE_BLOCK_COL_MAP_FN(7)
 DEFINE_BLOCK_COL_MAP_FN(8)
 
+DEFINE_BLOCK_COL_RMAP_FN(1)
 DEFINE_BLOCK_COL_RMAP_FN(2)
 DEFINE_BLOCK_COL_RMAP_FN(3)
 DEFINE_BLOCK_COL_RMAP_FN(4)
@@ -339,10 +343,8 @@ void SPM::Print(std::ostream &out)
 void SPM::PrintElems(std::ostream &out)
 {
     SPM::PntIter p, p_start, p_end;
-    uint64_t y0;
     static int cnt = 1;
 
-    y0 = row_start_;
     p_start = PointsBegin();
     p_end = PointsEnd();
     for (p = p_start; p != p_end; ++p) {
@@ -522,6 +524,9 @@ inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
     case REV_DIAGONAL:
         ret = bll::bind(pnt_rmap_rD, bll::_1, bll::_1, nr_cols_);
         break;
+    case BLOCK_ROW_TYPE_NAME(1):
+        ret = bll::bind(BLOCK_ROW_RMAP_NAME(1), bll::_1, bll::_1);
+        break;
     case BLOCK_ROW_TYPE_NAME(2):
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(2), bll::_1, bll::_1);
         break;
@@ -542,6 +547,9 @@ inline TransformFn SPM::GetRevXformFn(SpmIterOrder type)
         break;
     case BLOCK_ROW_TYPE_NAME(8):
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(8), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(1):
+        ret = bll::bind(BLOCK_COL_RMAP_NAME(1), bll::_1, bll::_1);
         break;
     case BLOCK_COL_TYPE_NAME(2):
         ret = bll::bind(BLOCK_COL_RMAP_NAME(2), bll::_1, bll::_1);
@@ -589,6 +597,9 @@ inline TransformFn SPM::GetXformFn(SpmIterOrder type)
     case REV_DIAGONAL:
         ret = bll::bind(pnt_map_rD, bll::_1, bll::_1, nr_cols_);
         break;
+    case BLOCK_ROW_TYPE_NAME(1):
+        ret = bll::bind(BLOCK_ROW_MAP_NAME(1), bll::_1, bll::_1);
+        break;
     case BLOCK_ROW_TYPE_NAME(2):
         ret = bll::bind(BLOCK_ROW_MAP_NAME(2), bll::_1, bll::_1);
         break;
@@ -609,6 +620,9 @@ inline TransformFn SPM::GetXformFn(SpmIterOrder type)
         break;
     case BLOCK_ROW_TYPE_NAME(8):
         ret = bll::bind(BLOCK_ROW_MAP_NAME(8), bll::_1, bll::_1);
+        break;
+    case BLOCK_COL_TYPE_NAME(1):
+        ret = bll::bind(BLOCK_COL_MAP_NAME(1), bll::_1, bll::_1);
         break;
     case BLOCK_COL_TYPE_NAME(2):
         ret = bll::bind(BLOCK_COL_MAP_NAME(2), bll::_1, bll::_1);

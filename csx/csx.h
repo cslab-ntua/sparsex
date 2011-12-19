@@ -5,7 +5,7 @@
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2011,      Vasileios Karakasis
- * Copyright (C) 2011,      Theodors Goudouvas
+ * Copyright (C) 2011,      Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -52,11 +52,13 @@ public:
      *  Pattern information that is essential for the construction of CSX.
      */
     struct PatInfo {
-        PatInfo(uint8_t flag_, uint64_t nr_): flag(flag_), nr(nr_) {}
-        PatInfo(): flag(0), nr(0) {}
+        PatInfo(uint8_t flag_, uint64_t npatterns_, uint64_t nr_): 
+                flag(flag_), npatterns(npatterns_), nr(nr_) {}
+        PatInfo(): flag(0), npatterns(0), nr(0) {}
 
-        uint8_t flag;  ///< A unique CSX ID assigned to this pattern.
-        uint64_t nr;   ///< Number of non-zero elements of this pattern.
+        uint8_t flag;       ///< A unique CSX ID assigned to this pattern.
+        uint64_t npatterns; ///< Number of patterns of this kind.
+        uint64_t nr;        ///< Number of non-zero elements of this pattern.
     };
 
     typedef std::map<long,PatInfo> PatMap;
@@ -66,6 +68,7 @@ public:
         : spm_(spm),
           flag_avail_(0),
           row_jmps_(false),
+          full_column_indices_(false),
           ctl_da_(NULL),
           last_col_(0), empty_rows_(0) {}
 
@@ -97,6 +100,17 @@ public:
     {
         return row_jmps_;
     }
+
+    bool HasFullColumnIndices()
+    {
+        return full_column_indices_;
+    }
+
+    void SetFullColumnIndices(bool val)
+    {
+        full_column_indices_ = val;
+    }
+
 private:
     /**
      *  Transform a row of the matrix into CSX form.
@@ -138,6 +152,8 @@ private:
     SPM *spm_;
     uint8_t flag_avail_;    ///< Current available flags for pattern id mapping.
     bool row_jmps_;         ///< Whether or not row jumps included.
+    bool full_column_indices_;  ///< use full 32-bit indices instead of
+                                /// deltas
 
     double *values_;
     uint64_t values_idx_;

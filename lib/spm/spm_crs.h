@@ -24,9 +24,9 @@ typedef struct { \
 } CRS_TYPE(val_type, ci_bits); \
 \
 void *\
-CRS_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
-                                    uint64_t *rows_nr, uint64_t *cols_nr, \
-				    uint64_t *nz_nr); \
+CRS_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file,                  \
+                                       uint64_t *rows_nr, uint64_t *cols_nr, \
+                                       uint64_t *nz_nr, void *metadata); \
 void CRS_NAME(val_type, ci_bits, _destroy)(void *crs); \
 uint64_t CRS_NAME(val_type, ci_bits, _size)(void *spm); \
 spmv_  ## val_type ## _fn_t CRS_NAME(val_type, ci_bits, _multiply);

@@ -64,6 +64,15 @@ static inline int test_bit(uint8_t *byte, int bit)
 #define CTL_LL_STATIC static inline
 #endif
 
+/*
+ *  put a 32-bit integer unencoded
+ */
+static inline void da_put_u32(dynarray_t *da, uint32_t val)
+{
+    uint32_t *uc = (uint32_t *) dynarray_alloc_nr(da, sizeof(val));
+    *uc = val;
+}
+
 /* put an encoded unsigned long in a dynarray */
 static inline void da_put_ul(dynarray_t *da, unsigned long val)
 {

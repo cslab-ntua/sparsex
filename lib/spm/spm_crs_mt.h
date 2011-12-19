@@ -20,7 +20,6 @@
 struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt { \
 	spm_crs ## __idx_bits ## _ ## __elem_type ## _t    *crs; \
 	uint64_t row_start, row_end; \
-	uint64_t nnz_nr; \
 }; \
 typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt spm_crs ## __idx_bits ## _ ## __elem_type ## _mt ## _t; \
 \
@@ -28,7 +27,7 @@ void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_init_mmf( \
 	char *mmf_file, \
 	uint64_t *rows_nr, uint64_t *cols_nr, \
-	uint64_t *nz_nr); \
+	uint64_t *nz_nr, void *metadata);     \
 \
 /* XXX: Destroy */ \
 \

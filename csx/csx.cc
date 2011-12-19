@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2010-2011, Theodors Goudouvas
+ * Copyright (C) 2010-2011, Theodoros Gkountouvas
  * Copyright (C) 2011,      Vasileios Karakasis
  * All rights reserved.
  *
@@ -23,6 +23,7 @@
 
 #ifdef SPM_NUMA
 #   include <numa.h>
+#   include "numa_util.h"
 #   define DYNARRAY_CREATE  dynarray_create_numa
 #else
 #   define DYNARRAY_CREATE  dynarray_create
@@ -65,11 +66,12 @@ uint8_t CsxManager::GetFlag(long pattern_id, uint64_t nnz)
         ret = flag_avail_++;
         assert(ret <= CTL_PATTERNS_MAX && "too many patterns");
 
-        CsxManager::PatInfo pat_info(ret, nnz);
+        CsxManager::PatInfo pat_info(ret, 1, nnz);
 
         this->patterns[pattern_id] = pat_info;
     } else {
         ret = pi->second.flag;
+        pi->second.npatterns++;
         pi->second.nr += nnz;
     }
 
@@ -93,9 +95,9 @@ csx_double_t *CsxManager::MakeCsx()
         exit(1);
     }
 
-    csx = (csx_double_t *) numa_alloc_onnode(sizeof(csx_double_t), node);
-    values_ = (double *) numa_alloc_onnode(sizeof(double)*spm_->nr_nzeros_,
-                                           node);
+    csx = (csx_double_t *) alloc_onnode(sizeof(csx_double_t), node);
+    values_ = (double *) alloc_onnode(sizeof(double)*spm_->nr_nzeros_,
+                                      node);
 #else    
     csx = (csx_double_t *) malloc(sizeof(csx_double_t));
     values_ = (double *) malloc(sizeof(double)*spm_->nr_nzeros_);
@@ -146,7 +148,6 @@ csx_double_t *CsxManager::MakeCsx()
     csx->values = values_;
     values_ = NULL;
     values_idx_ = 0;
-
     return csx;
 }
 
@@ -218,6 +219,7 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     // Do delta encoding.
     xs_size = xs.size();
     last_col = xs[xs_size-1];
+    uint64_t x_start = xs[0];
     DeltaEncode(xs.begin(), xs.end(), last_col_);
     last_col_ = last_col;
 
@@ -244,7 +246,10 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     UpdateNewRow(ctl_flags);
 
     // Add jmp and deltas.
-    da_put_ul(ctl_da_, xs[0]);
+    if (full_column_indices_)
+        da_put_u32(ctl_da_, x_start-1);
+    else
+        da_put_ul(ctl_da_, xs[0]);
 
     // Add deltas (if needed).
     if (xs_size > 1) {
@@ -285,14 +290,23 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     ctl_flags = (uint8_t *) dynarray_alloc_nr(ctl_da_, 2);
     *ctl_flags = GetFlag(pat_id, pat_size);
     ctl_size = ctl_flags + 1;
-    assert(pat_size + (jmp ? 1 : 0) <= CTL_SIZE_MAX);
-    *ctl_size = pat_size + (jmp ? 1 : 0);
+    assert(pat_size <= CTL_SIZE_MAX);
+    *ctl_size = pat_size;
     UpdateNewRow(ctl_flags);
-    ujmp = jmp ? jmp : elem.x - last_col_;
+
+    if (full_column_indices_)
+        ujmp = jmp ? jmp : elem.x;
+    else
+        ujmp = jmp ? jmp : elem.x - last_col_;
+        
     if (debug)
         std::cerr << "AddPattern ujmp " << ujmp << "\n";
 
-    da_put_ul(ctl_da_, ujmp);
+    if (full_column_indices_)
+        da_put_u32(ctl_da_, ujmp-1);
+    else
+        da_put_ul(ctl_da_, ujmp);
+
     last_col_ = elem.pattern->ColIncreaseJmp(spm_->type_, elem.x);
     if (debug)
         std::cerr << "last_col:" << last_col_ << "\n";

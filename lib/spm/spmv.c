@@ -9,6 +9,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <inttypes.h> /* PRIu64 */
 #include <libgen.h>
@@ -18,14 +19,35 @@
 #include "spmv_method.h"
 #include "spmv_loops.h"
 #include "spmv_loops_mt.h"
+#ifdef SPM_NUMA
+#   include "spmv_loops_mt_numa.h"
+#   define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop_numa
+#   define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop_numa
+#else
+#   define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop
+#   define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop
+#endif
+#include "bcsr/export.h"
 
 static char *progname = NULL;
 extern int optind;
 
 static void help()
 {
-	fprintf(stderr, "Usage: %s [ -h -c -b [-l nr_loops] [-L outer_loops]] mmf_file [method]\n", progname);
+	fprintf(stderr, "Usage: %s [ -h -c -b [-l nr_loops] [-L outer_loops] -d [block_dims]] mmf_file [method]\n", progname);
 	method_fprint(stderr, "available methods:\n", "\t", "\n", "");
+}
+
+static void parse_block_dims(const char *arg, int *r, int *c)
+{
+	// copy arg first to work with strtok
+	char *dims = malloc(strlen(arg)+1);
+	dims = strncpy(dims, arg, strlen(arg)+1);
+	char *r_str = strtok(dims, "x");
+	char *c_str = strtok(NULL, "x");
+	*r = atoi(r_str);
+	*c = atoi(c_str);
+	free(dims);
 }
 
 int main(int argc, char **argv)
@@ -39,29 +61,34 @@ int main(int argc, char **argv)
 	int loops_nr = 128;
 	int outer_loops = 4;
 	int c;
-	while ((c = getopt(argc, argv, "hcbl:L:")) != -1){
+	int br = 0, bc = 0;
+	while ((c = getopt(argc, argv, "hcbl:L:d:")) != -1){
 		switch (c) {
-			case 'c':
+		case 'c':
 			opt_check = 1;
 			break;
 
-			case 'b':
+		case 'b':
 			opt_bench = 1;
 			break;
 
-			case 'h':
+		case 'h':
 			method_fprint(stdout, "", " ", "\n", "");
 			exit(0);
 
-			case 'L':
+		case 'L':
 			outer_loops = atol(optarg);
 			break;
 
-			case 'l':
+		case 'l':
 			loops_nr = atol(optarg);
 			break;
 
-			default:
+		case 'd':
+			parse_block_dims(optarg, &br, &bc);
+			break;
+
+		default:
 			fprintf(stderr, "Error parsing arguments: -%c-\n", c);
 			help();
 			exit(1);
@@ -88,11 +115,19 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	// Setup init metadata (required for blocked methods)
+	void *init_metadata = NULL;
+	if (!strncmp(method, "spm_bcsr32_double", strlen("spm_bcsr32_double"))) {
+		assert(br && bc);
+		bcsr_metadata_t bcsr_metadata = { br, bc };
+		init_metadata = &bcsr_metadata;
+	}
+
 	spmv_method_t *spmv_meth = meth->data;
 	//spm_size_fn_t *size_fn = spmv_meth->size_fn;
 
 	uint64_t nrows, ncols, nnz;
-	void *m = spmv_meth->mmf_init_fn(mmf_file, &nrows, &ncols, &nnz);
+	void *m = spmv_meth->mmf_init_fn(mmf_file, &nrows, &ncols, &nnz, init_metadata);
 	int elem_size = spmv_meth->elem_size;
 	assert(elem_size == 8 || elem_size == 4);
 
@@ -104,11 +139,12 @@ int main(int argc, char **argv)
 		char *meth1_str = (elem_size == 8) ? "spm_crs32_double_multiply" : "spm_crs32_float_multiply";
 		meth1 = method_get(meth1_str);
 		spmv_meth1 = (spmv_method_t *)meth1->data;
-		m1 = spmv_meth1->mmf_init_fn(mmf_file, &nrows1, &ncols1, &nnz1);
+		m1 = spmv_meth1->mmf_init_fn(mmf_file, &nrows1, &ncols1, &nnz1, NULL);
 		if (nrows != nrows1 || ncols != ncols1 || nnz != nnz1){
 			fprintf(stderr, "sizes do not match (f:%s) (m:%s)\n", mmf_file, method);
 			exit(1);
 		}
+
 
 		switch (elem_size + spmv_meth->mt_flag){
 			case 8:
@@ -116,7 +152,7 @@ int main(int argc, char **argv)
 			break;
 
 			case (8+1):
-			spmv_double_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
+			SPMV_DOUBLE_CHECK_MT_LOOP(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 
 			case 4:
@@ -145,7 +181,7 @@ int main(int argc, char **argv)
 				break;
 
 				case (8+1):
-				t = spmv_double_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
+				t = SPMV_DOUBLE_BENCH_MT_LOOP(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 
 				case 4:
@@ -161,7 +197,7 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			double flops = (double)(loops_nr*nnz*2)/((double)1000*1000*t);
-			printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
+			printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf b:%dx%d\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops, br, bc);
 		}
 	}
 	spmv_meth->destroy_fn(m);
