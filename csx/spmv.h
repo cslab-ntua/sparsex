@@ -19,7 +19,8 @@ extern "C" {
 
 using namespace csx;
 
-spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine);
+spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine,
+                   SPM *spms = NULL);
 
 void PutSpmMt(spm_mt_t *spm_mt);
 

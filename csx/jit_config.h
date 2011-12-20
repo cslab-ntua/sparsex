@@ -56,6 +56,10 @@
 #   define BLOCK_COL_ONE_TEMPLATE MULT_TEMPLATE_DIR "/block_col_one_tmpl.c"
 #endif
 
+#ifndef CSX_PREFIX
+#   define CSX_PREFIX "/usr/local/"
+#endif
+
 const std::string CsxTemplateSource = CSX_TEMPLATE;
 const std::string DeltaTemplateSource = DELTA_TEMPLATE;
 const std::string HorizTemplateSource = HORIZ_TEMPLATE;

@@ -60,6 +60,7 @@ libspmv_deps = vector.o method.o mt_lib.o mmf.o  \
                bcsr/libbcsr.o \
                vbl/libvbl.o \
                spmv_loops.o spmv_loops_mt.o spmv_loops_mt_numa.o \
+               spmv_matvec_mt.o \
                numa_util.o
 
 libspmv.o: $(libspmv_deps) $(deps) $(SUBDIRS)

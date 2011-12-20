@@ -12,6 +12,7 @@
 #include <cfloat>
 #include "spm.h"
 #include "spmv.h"
+#include "jit.h"
 
 extern "C" {
 #include "elmerif.h"
@@ -154,8 +155,10 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
         timer_pause(&timers[TIMER_CONSTRUCT_INTERN]);
 
         timer_start(&timers[TIMER_CONSTRUCT_CSX]);
-        spm_mt = GetSpmMt(NULL, spms);
+        CsxExecutionEngine &engine = CsxJitInit();
+        spm_mt = GetSpmMt(NULL, engine, spms);
         timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
+        delete[] spms;
 #endif        
         *tuned = spm_mt;
     } else {

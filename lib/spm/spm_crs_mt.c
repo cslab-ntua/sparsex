@@ -53,7 +53,6 @@ spm_mt_t *SPM_CRS_MT_NAME(_get_spm)(SPM_CRS_IDX_TYPE *rowptr,
             csr_mts[split_cnt].crs = csr;
             csr_mts[split_cnt].row_start = row_start;
             csr_mts[split_cnt].row_end = i+1;
-            csr_mts[split_cnt].nnz_nr = curr_nnz;
             ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
             ret->spm_threads[split_cnt].spmv_fn =
                 SPM_CRS_MT_NAME(_multiply_base_one);
@@ -71,7 +70,6 @@ spm_mt_t *SPM_CRS_MT_NAME(_get_spm)(SPM_CRS_IDX_TYPE *rowptr,
         csr_mts[split_cnt].crs = csr;
         csr_mts[split_cnt].row_start = row_start;
         csr_mts[split_cnt].row_end = i;
-        csr_mts[split_cnt].nnz_nr = curr_nnz;
         ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
         ret->spm_threads[split_cnt].spmv_fn =
             SPM_CRS_MT_NAME(_multiply_base_one);

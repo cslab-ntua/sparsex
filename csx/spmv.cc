@@ -75,8 +75,25 @@ using namespace csx;
 
 double pre_time;
 
-int SplitString(char *str, char **str_buf, const char *start_sep,
-                const char *end_sep)
+///> Thread data essential for parallel preprocessing
+typedef struct thread_info {
+    unsigned int thread_no;
+    unsigned int cpu;
+    SPM * spm;
+    spm_mt_thread_t *spm_encoded;
+    CsxManager *csxmg;
+    uint64_t wsize;
+    std::ostringstream buffer;
+    int *xform_buf;
+    double sampling_portion;
+    uint64_t samples_max;
+    bool split_blocks;
+    int **deltas;
+} thread_info_t;
+
+
+static int SplitString(char *str, char **str_buf, const char *start_sep,
+                       const char *end_sep)
 {
     char *token = strtok(str, start_sep);
     int next = 0;
@@ -97,7 +114,7 @@ int SplitString(char *str, char **str_buf, const char *start_sep,
     return next;
 }
 
-void GetOptionXform(int **xform_buf)
+static void GetOptionXform(int **xform_buf)
 {
     char *xform_orig = getenv("XFORM_CONF");
 
@@ -139,7 +156,7 @@ void GetOptionXform(int **xform_buf)
     std::cout << std::endl;
 }
 
-void GetOptionEncodeDeltas(int ***deltas)
+static void GetOptionEncodeDeltas(int ***deltas)
 {
     char *encode_deltas_env = getenv("ENCODE_DELTAS");
     if (encode_deltas_env && strlen(encode_deltas_env)) {
@@ -193,7 +210,7 @@ void GetOptionEncodeDeltas(int ***deltas)
     }
 }
 
-uint64_t GetOptionWindowSize()
+static uint64_t GetOptionWindowSize()
 {
     const char *wsize_str = getenv("WINDOW_SIZE");
     uint64_t wsize;
@@ -210,7 +227,7 @@ uint64_t GetOptionWindowSize()
     return wsize;
 }
 
-uint64_t GetOptionSamples()
+static uint64_t GetOptionSamples()
 {
     const char *samples = getenv("SAMPLES");
     uint64_t samples_max;
@@ -227,7 +244,7 @@ uint64_t GetOptionSamples()
     return samples_max;
 }
 
-int GetOptionOuterLoops()
+static int GetOptionOuterLoops()
 {
     const char *loops_env = getenv("OUTER_LOOPS");
     int ret = 1;
@@ -240,7 +257,7 @@ int GetOptionOuterLoops()
     return ret;
 }
 
-double GetOptionPortion()
+static double GetOptionPortion()
 {
     const char *sampling_portion_str = getenv("SAMPLING_PORTION");
     double sampling_portion;
@@ -257,7 +274,7 @@ double GetOptionPortion()
     return sampling_portion;
 }
 
-bool GetOptionSplitBlocks()
+static bool GetOptionSplitBlocks()
 {
     const char *split_blocks_str = getenv("SPLIT_BLOCKS");
     bool split_blocks;
@@ -270,7 +287,7 @@ bool GetOptionSplitBlocks()
     return split_blocks;
 }
 
-void *PreprocessThread(void *thread_info)
+static void *PreprocessThread(void *thread_info)
 {
     thread_info_t *data = (thread_info_t *) thread_info;
     DRLE_Manager *DrleMg;
@@ -326,10 +343,11 @@ void *PreprocessThread(void *thread_info)
     return 0;
 }
 
-spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
+spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
 {
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
+    bool own_spms = !spms;
     int *xform_buf = NULL;
     int **deltas = NULL;
     thread_info_t *data;
@@ -380,8 +398,8 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
     }
 
     // Load the appropriate sub-matrix to each thread
-    if (!Spms)
-        Spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
+    if (!spms)
+        spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
 
     // Start timer for preprocessing
     xtimer_t timer;
@@ -393,9 +411,9 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
 
     data = new thread_info_t[nr_threads];
     for (unsigned int i = 0; i < nr_threads; i++) {
-        data[i].spm = &Spms[i];
+        data[i].spm = &spms[i];
         data[i].spm_encoded = &spm_mt->spm_threads[i];
-        data[i].csxmg = new CsxManager(&Spms[i]);
+        data[i].csxmg = new CsxManager(&spms[i]);
         data[i].wsize = wsize;
         data[i].thread_no = i;
         data[i].cpu = threads_cpus[i];
@@ -437,8 +455,9 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine)
     free(threads_cpus);
     free(xform_buf);
     delete[] Jits;
-    delete[] Spms;
     delete[] data;
+    if (own_spms)
+        delete[] spms;
 
     // Preprocessing finished; stop timer
     timer_pause(&timer);

@@ -41,6 +41,9 @@ CsxJit::CsxJit(CsxManager *csxmg, CsxExecutionEngine *engine, unsigned int tid)
 {
     context_ = new LLVMContext();
     compiler_ = new ClangCompiler();
+    compiler_->AddHeaderSearchPath(CSX_PREFIX "/csx");
+    compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/spm");
+    compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/dynarray");
 };
 
 
