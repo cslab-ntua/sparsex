@@ -76,8 +76,8 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
         crs_mt[i].crs = crs;
     }
     
-    // SPM_CRS_SYM_MT_NAME(_make_map)(spm_mt);
-    // map_size = SPM_CRS_SYM_MT_NAME(_map_size)(spm_mt);    
+    SPM_CRS_SYM_MT_NAME(_make_map)(spm_mt);
+    map_size = SPM_CRS_SYM_MT_NAME(_map_size)(spm_mt);    
 
     assert(cur_row == crs->n);
     assert(elems_total == crs->nnz + crs->n);
@@ -255,9 +255,9 @@ void SPM_CRS_SYM_MT_NAME(_destroy)(void *spm)
     SPM_CRS_SYM_MT_TYPE *crs_mt = (SPM_CRS_SYM_MT_TYPE *) spm_thread->spm;
     
     SPM_CRS_SYM_NAME(_destroy)(crs_mt->crs);
-    //free(spm_thread->map->cpus);
-    //free(spm_thread->map->elems_pos);
-    //free(spm_thread->map);
+    free(spm_thread->map->cpus);
+    free(spm_thread->map->elems_pos);
+    free(spm_thread->map);
     free(crs_mt);
     free(spm_thread);
     free(spm_mt);
@@ -307,11 +307,12 @@ void SPM_CRS_SYM_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in,
     ///> Parallel multiplications.
     for (i = row_start; i < row_end; i++) {
         yr = (ELEM_TYPE) 0;
+        /*
         for (j = row_ptr[i]; j < row_ptr[i+1]; j++) {
             yr += values[j] * x[col_ind[j]];
             t[col_ind[j]] += values[j] * x[i];
         }
-        /*
+        */
         for (j = row_ptr[i]; col_ind[j] < row_start && j < row_ptr[i+1]; j++) {
             yr += values[j] * x[col_ind[j]];
             t[col_ind[j]] += values[j] * x[i];
@@ -320,7 +321,6 @@ void SPM_CRS_SYM_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in,
             yr += values[j] * x[col_ind[j]];
             y[col_ind[j]] += values[j] * x[i];
         }
-        */
         yr += dvalues[i] * x[i];
         y[i] = yr;
     }
@@ -469,9 +469,9 @@ void SPM_CRS_SYM_MT_NAME(_numa_make_map)(void * spm)
         memcpy(temp_map->elems_pos, map->elems_pos, 
                length * sizeof(unsigned int));
         
-        // free(map->cpus);
-        // free(map->elems_pos);
-        // free(map);
+        free(map->cpus);
+        free(map->elems_pos);
+        free(map);
         
         spm_mt_thread->map = temp_map;
     }

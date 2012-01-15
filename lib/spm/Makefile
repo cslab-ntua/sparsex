@@ -26,7 +26,7 @@ MAKE_CPPFLAGS = -DCPU_MHZ_SH=\"$(MHZ_SH)\"
 MAKE_CPPFLAGS += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
 MAKE_CPPFLAGS += -I$(dynarray_dir) -I$(prfcnt_dir)
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
-	override MAKE_CPPFLAGS += -DSPM_NUMA
+	MAKE_CPPFLAGS += -DSPM_NUMA
 endif
 
 override CPPFLAGS += $(MAKE_CPPFLAGS)

@@ -53,7 +53,7 @@ draw.o: draw.cc spm.h draw.h
 draw: draw.cc spm.h draw.h spm.o mmf.o
 	$(LINK) $(CAIROMM_FLAGS) $(CAIROMM_LIBS) $(dynarray_dep) spm.o mmf.o $<  -o $@
 
-csx.o: csx.cc csx.h spm.h delta.h ../lib/spm/numa_util.h ../lib/dynarray/dynarray.h
+csx.o: csx.cc csx.h spm.h delta.h ../lib/spm/numa_util.h ../lib/dynarray/dynarray.h ctl_ll.h
 	$(CXX_COMPILE) -I$(dynarray_dir) $< -c -o $@
 
 test.o: test.cc drle.h spm.h

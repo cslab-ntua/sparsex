@@ -73,7 +73,8 @@ public:
                  split_alg_t split_type = SPLIT_BY_ROWS,
                  double sampling_probability = 1.0,
                  uint64_t samples_max = std::numeric_limits<uint64_t>::max(),
-                 bool split_blocks = false);
+                 bool split_blocks = false,
+                 bool onedim_blocks = false);
 
     ~DRLE_Manager() {
         if (selected_splits_)
@@ -208,6 +209,11 @@ public:
      *  @param out the output stream, where output is to be sent.
      */
     void OutputSortSplits(std::ostream& out);
+
+    void EnableOneDimBlocks(bool enable)
+    {
+        onedim_blocks_ = enable;
+    }
 
 private:
     /**
@@ -378,6 +384,7 @@ private:
     static const uint64_t max_sampling_tries_ = 3;
     bool symmetric_;
     bool split_blocks_;
+    bool onedim_blocks_;
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;

@@ -21,7 +21,7 @@ void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
 {
     SPM_CRS_SYM_TYPE *crs;
     
-    crs = malloc(sizeof(SPM_CRS_SYM_TYPE));
+    crs = (SPM_CRS_SYM_TYPE *) malloc(sizeof(SPM_CRS_SYM_TYPE));
     if (!crs) {
         fprintf(stderr, "malloc failed\n");
         exit(1);
@@ -35,8 +35,10 @@ void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
     
     crs->dvalues = (ELEM_TYPE *) malloc(crs->n * sizeof(ELEM_TYPE));
     crs->values = (ELEM_TYPE *) malloc(crs->nnz * sizeof(ELEM_TYPE));
-    crs->col_ind = (SPM_CRS_SYM_IDX_TYPE *) malloc(crs->nnz * sizeof(SPM_CRS_SYM_IDX_TYPE));
-    crs->row_ptr = (SPM_CRS_SYM_IDX_TYPE *) malloc((crs->n + 1) * sizeof(SPM_CRS_SYM_IDX_TYPE));
+    crs->col_ind = (SPM_CRS_SYM_IDX_TYPE *)
+        malloc(crs->nnz * sizeof(SPM_CRS_SYM_IDX_TYPE));
+    crs->row_ptr = (SPM_CRS_SYM_IDX_TYPE *)
+        malloc((crs->n + 1) * sizeof(SPM_CRS_SYM_IDX_TYPE));
     if (!crs->dvalues || !crs->values || !crs->col_ind || !crs->row_ptr) {
         fprintf(stderr, "malloc failed\n");
         exit(1);
@@ -67,7 +69,7 @@ void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
 	if (row != row_prev) {
 	    uint64_t i;
 	    
-            for (i = 0; i < row-row_prev; i++)
+            for (i = 0; i < row - row_prev; i++)
                 crs->row_ptr[row_i++] = (SPM_CRS_SYM_IDX_TYPE) val_i;
 	    row_prev = row;
 	}
@@ -82,7 +84,7 @@ void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
     assert(row_i == crs->n + 1);
     assert(val_i == crs->nnz);
     fclose(mmf);
-
+    
     return crs;
 }
 
@@ -115,8 +117,9 @@ void SPM_CRS_SYM_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
     ELEM_TYPE *y = out->elements;
     ELEM_TYPE *x = in->elements;
     ELEM_TYPE *values = crs->values;
-    SPM_CRS_SYM_IDX_TYPE *row_ptr = crs->row_ptr;
-    SPM_CRS_SYM_IDX_TYPE *col_ind = crs->col_ind;
+    ELEM_TYPE *dvalues = crs->dvalues;
+    SPM_CRS_SYM_IDX_TYPE *row_ptr = (SPM_CRS_SYM_IDX_TYPE *) crs->row_ptr;
+    SPM_CRS_SYM_IDX_TYPE *col_ind = (SPM_CRS_SYM_IDX_TYPE *) crs->col_ind;
     uint64_t n = crs->n;
     register ELEM_TYPE yr;
     uint64_t i, j;
@@ -127,17 +130,17 @@ void SPM_CRS_SYM_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
             yr += values[j] * x[col_ind[j]];
             y[col_ind[j]] += values[j] * x[i];
         }
-        yr += crs->dvalues[i] * x[i];
+        yr += dvalues[i] * x[i];
         y[i] = yr;
     }
 }
 
 XSPMV_SYM_METH_INIT(
-    SPM_CRS_SYM_NAME(_multiply),
-    SPM_CRS_SYM_NAME(_init_mmf),
-    SPM_CRS_SYM_NAME(_size),
-    SPM_CRS_SYM_NAME(_destroy),
-    sizeof(ELEM_TYPE)
+ SPM_CRS_SYM_NAME(_multiply),
+ SPM_CRS_SYM_NAME(_init_mmf),
+ SPM_CRS_SYM_NAME(_size),
+ SPM_CRS_SYM_NAME(_destroy),
+ sizeof(ELEM_TYPE)
 )
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

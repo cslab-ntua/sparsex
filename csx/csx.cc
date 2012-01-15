@@ -211,7 +211,6 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
     csx->values = values_;
     values_ = NULL;
     values_idx_ = 0;
-
     return csx;
 }
 
@@ -352,6 +351,7 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     // Do delta encoding.
     xs_size = xs.size();
     last_col = xs[xs_size-1];
+    uint64_t x_start = xs[0];
     DeltaEncode(xs.begin(), xs.end(), last_col_);
     last_col_ = last_col;
 
@@ -378,7 +378,10 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     UpdateNewRow(ctl_flags);
 
     // Add jmp and deltas.
-    da_put_ul(ctl_da_, xs[0]);
+    if (full_column_indices_)
+        da_put_u32(ctl_da_, x_start-1);
+    else
+        da_put_ul(ctl_da_, xs[0]);
 
     // Add deltas (if needed).
     if (xs_size > 1) {
@@ -419,16 +422,23 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     ctl_flags = (uint8_t *) dynarray_alloc_nr(ctl_da_, 2);
     *ctl_flags = GetFlag(pat_id, pat_size);
     ctl_size = ctl_flags + 1;
-    if (pat_size > CTL_SIZE_MAX)
-	std::cout << pat_size << std::endl;
     assert(pat_size <= CTL_SIZE_MAX);
     *ctl_size = pat_size;
     UpdateNewRow(ctl_flags);
-    ujmp = jmp ? jmp : elem.x - last_col_;
+
+    if (full_column_indices_)
+        ujmp = jmp ? jmp : elem.x;
+    else
+        ujmp = jmp ? jmp : elem.x - last_col_;
+        
     if (debug)
         std::cerr << "AddPattern ujmp " << ujmp << "\n";
 
-    da_put_ul(ctl_da_, ujmp);
+    if (full_column_indices_)
+        da_put_u32(ctl_da_, ujmp-1);
+    else
+        da_put_ul(ctl_da_, ujmp);
+
     last_col_ = elem.pattern->ColIncreaseJmp(spm_->type_, elem.x);
     if (debug)
         std::cerr << "last_col:" << last_col_ << "\n";

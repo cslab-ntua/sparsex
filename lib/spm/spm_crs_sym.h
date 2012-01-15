@@ -20,6 +20,7 @@
 #include "vector.h"
 #include "mmf.h"
 #include "spmv_method.h"
+#include "spm_crs.h"
 
 #define CRS_SYM_NAME(val_type, ci_bits, name) spm_crs ## ci_bits ## _ ## val_type ## _sym ## name
 #define CRS_SYM_TYPE(val_type, ci_bits) CRS_SYM_NAME(val_type, ci_bits, _t)

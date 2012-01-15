@@ -41,7 +41,7 @@ typedef struct {
 	.size_fn      = _size,         \
 	.destroy_fn   = _destroy,      \
 	.elem_size    = _elem_size,    \
-	.flag      = _mt + 2 * _sym \
+	.flag         = _mt + 2 * _sym \
 }
 
 #define _SPMV_METH_INIT(a, b, c, d)    __SPMV_METH_INIT(a, b, c, d, 0, 0)

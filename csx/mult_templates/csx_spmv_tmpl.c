@@ -52,9 +52,6 @@ typedef double (csx_spmv_fn_t)(uint8_t **ctl, uint8_t size, double **values,
 
 ${spmv_func_definitions}
 
-static csx_spmv_fn_t *mult_table[] = {
-${spmv_func_entries}};
-
 void spm_csx32_double_multiply(void *spm, vector_double_t *in, vector_double_t *out)
 {
 	csx_double_t *csx = (csx_double_t *) spm;
@@ -83,7 +80,7 @@ void spm_csx32_double_multiply(void *spm, vector_double_t *in, vector_double_t *
 			x_curr = x;
 		}
 
-		x_curr += ul_get(&ctl);
+		${next_x}
 		patt_id = flags & CTL_PATTERN_MASK;
 		${body_hook}
 	} while (ctl < ctl_end);

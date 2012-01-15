@@ -93,7 +93,7 @@ private:
     void DoOptimizeModule();
 
     void DoNewRowHook(std::map<std::string, std::string> &hooks,
-                      std::ostream &log, bool rowjmp) const;
+                      std::ostream &log) const;
     void DoSpmvFnHook(std::map<std::string, std::string> &hooks,
                       std::ostream &log);
 

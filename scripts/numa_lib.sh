@@ -44,7 +44,7 @@ int main(void)
 EOF
 chmod u+x $numa_test
 
-$CC -xc -lnuma $numa_test_src -o $numa_test 2> /dev/null && \
+$CC $CPPFLAGS $LDFLAGS -xc -lnuma $numa_test_src -o $numa_test 2> /dev/null && \
     eval "$numa_test" && is_numa && echo -n $1 && exit_success
 
 exit_failure
