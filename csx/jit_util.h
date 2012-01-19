@@ -50,4 +50,13 @@ std::string Stringify(const T& t)
     return ss.str();
 }
 
+std::string Tabify(int num)
+{
+    std::stringstream ss;
+    
+    for (int i = 0; i < num; i++)
+        ss << "\t";
+    
+    return ss.str();
+}
 #endif  // JIT_UTIL_H__

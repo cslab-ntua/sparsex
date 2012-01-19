@@ -379,24 +379,25 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
         for (; i_fentry != fentries_end; ++i_fentry) {
             if (!symmetric_) {    
                 hooks["body_hook"] +=
-                    "\t\tcase " + Stringify(i_fentry->first) + ":\n"
-                    "\t\t\tyr += " + Stringify(i_fentry->second) +
-                    "(&ctl, size, &v, &x_curr, &y_curr);\n"
-                    "\t\t\tbreak;\n";
+                    Tabify(2) + "case " + Stringify(i_fentry->first) + ":\n" +
+                    Tabify(3) + "yr += " + Stringify(i_fentry->second) +
+                    "(&ctl, size, &v, &x_curr, &y_curr);\n" +
+                    Tabify(3) + "break;\n";
             } else {
                 hooks["body_hook"] +=
-                    "\t\tcase " + Stringify(i_fentry->first) + ":\n"
-                    "\t\t\tyr += " + Stringify(i_fentry->second) +
-                    "(&ctl, size, &v, x, y, cur, &x_indx, &y_indx);\n"
-                    "\t\t\tbreak;\n";
+                    Tabify(2) + "case " + Stringify(i_fentry->first) + ":\n" +
+                    Tabify(3) + "yr += " + Stringify(i_fentry->second) +
+                    "(&ctl, size, &v, x, y, cur, &x_indx, &y_indx);\n" +
+                    Tabify(3) + "break;\n";
             }
         }
         
         // Add default statement
-        hooks["body_hook"] += "\t\tdefault:\n"
-            "\t\t\tfprintf(stderr, \"[BUG] unknown pattern\\n\");\n"
-            "\t\t\texit(1);\n"
-            "\t\t};";
+        hooks["body_hook"] +=
+            Tabify(2) + "default:\n" +
+            Tabify(3) + "fprintf(stderr, \"[BUG] unknown pattern\\n\");\n" +
+            Tabify(3) + "exit(1);\n" +
+            Tabify(2) + "};";
     }
 }
 
