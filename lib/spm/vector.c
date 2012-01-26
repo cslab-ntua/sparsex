@@ -73,14 +73,14 @@ VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 
 VECTOR_TYPE *VECTOR_NAME(_create_onnode)(unsigned long size, int node)
 {
-	VECTOR_TYPE *v = alloc_onnode(sizeof(VECTOR_TYPE), node);
+	VECTOR_TYPE *v = malloc(sizeof(VECTOR_TYPE));
 	if (!v) {
 		perror("numa_alloc_onnode");
 		exit(1);
 	}
 	
 	v->size = size;
-	v->alloc_type = ALLOC_NUMA;
+	v->alloc_type = ALLOC_MMAP;
 	v->elements = alloc_onnode(sizeof(ELEM_TYPE)*size, node);
 	if (!v->elements) {
 		perror("numa_alloc_onnode");

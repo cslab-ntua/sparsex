@@ -331,7 +331,7 @@ void SymCgMainThread(cg_params *params, double *cg_time, double *spmv_time,
         pthread_barrier_wait(barrier);
         
         ///> Calculate bi.
-	rr_new[0] = vector_double_mul_part(r, r, start, end);
+        rr_new[0] = vector_double_mul_part(r, r, start, end);
         pthread_barrier_wait(barrier);
         for (j = 1; j < ncpus; j++)
             rr_new[0] += rr_new[j];
@@ -339,7 +339,7 @@ void SymCgMainThread(cg_params *params, double *cg_time, double *spmv_time,
         pthread_barrier_wait(barrier);
         
         ///> Do p = r + bi*p.
-	vector_double_scale_add_part(r, p, p, *bi, start, end);
+        vector_double_scale_add_part(r, p, p, *bi, start, end);
         pthread_barrier_wait(barrier);
     }
     

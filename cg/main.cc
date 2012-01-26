@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     cg_method_t         cg_method = CSR;
     
     csx::CsxExecutionEngine &engine = csx::CsxJitInit();
-    
+
     ///> Parse Options.
     while ((j = getopt(argc, argv, "xsl:L:")) != -1) {
         switch (j) {
@@ -105,9 +105,18 @@ int main(int argc, char *argv[])
     ///> Load matrix in appropriate format.
     switch(cg_method) {
         case(CSR) :
+#ifndef SPM_NUMA
             spm_mt = (spm_mt_t *) spm_crs32_double_mt_init_mmf(mmf_file, &nrows,
-                                                               &ncols, &nnz, NULL);
+                                                               &ncols, &nnz,
+                                                               NULL);
 	    meth = method_get((char *) "spm_crs32_double_mt_multiply");
+#else
+            spm_mt = (spm_mt_t *) spm_crs32_double_mt_numa_init_mmf(mmf_file,
+                                                                    &nrows,
+                                                                    &ncols,
+                                                                    &nnz, NULL);
+	    meth = method_get((char *) "spm_crs32_double_mt_numa_multiply");
+#endif
             for (i = 0; i < spm_mt->nr_threads; i++)
                 spm_mt->spm_threads[i].spmv_fn = meth->fn;
             
@@ -121,10 +130,17 @@ int main(int argc, char *argv[])
             break;
         
         case(CSR_sym) :
+#ifndef SPM_NUMA
             spm_mt = (spm_mt_t *)
                 spm_crs32_double_sym_mt_init_mmf(mmf_file, &nrows, &ncols,
                                                  &nnz);
 	    meth = method_get((char *) "spm_crs32_double_sym_mt_multiply");
+#else
+            spm_mt = (spm_mt_t *)
+                spm_crs32_double_sym_mt_numa_init_mmf(mmf_file, &nrows, &ncols,
+                                                      &nnz);
+	    meth = method_get((char *) "spm_crs32_double_sym_mt_numa_multiply");
+#endif
             for (i = 0; i < spm_mt->nr_threads; i++)
                 spm_mt->spm_threads[i].spmv_fn = meth->fn;
             
@@ -195,7 +211,21 @@ int main(int argc, char *argv[])
     }
     
     ncpus = spm_mt->nr_threads;
-            
+
+#ifdef SPM_NUMA
+    size_t *parts = (size_t *) malloc(ncpus * sizeof(*parts));
+    size_t *matrix_parts = (size_t *) malloc(ncpus * sizeof(*matrix_parts));
+    int *nodes = (int *) malloc(ncpus * sizeof(*nodes));
+    
+    for (i = 0; i < ncpus; i++) {
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+	
+	parts[i] = ((i + 1) * n / ncpus - i * n / ncpus) * sizeof(double);
+	matrix_parts[i] = spm_thread->nr_rows * sizeof(double);
+	nodes[i] = numa_node_of_cpu(spm_thread->cpu);
+    }
+#endif
+
     ///> Init pthreads.
     tids = (pthread_t *) malloc((ncpus - 1) * sizeof(pthread_t));
     if (!tids) {
@@ -209,21 +239,37 @@ int main(int argc, char *argv[])
 
     for (unsigned int loops=0; loops < nLoops; loops++) {  
         ///> Create vectors with the appropriate size.
-        x = vector_double_create(n);
         sol = vector_double_create(n);
         b = vector_double_create(n);
+#ifndef SPM_NUMA
+        x = vector_double_create(n);
         r = vector_double_create(n);
         p = vector_double_create(n);
         t = vector_double_create(n);
-    
+
+        if (cg_method == CSR_sym || cg_method == CSX_sym) {
+            sub_p = (vector_double_t **)
+                        malloc(ncpus * sizeof(vector_double_t *));
+            sub_p[0] = t;
+            for (i = 1; i < ncpus; i++)
+                sub_p[i] = vector_double_create(n);
+        }
+#else
+        x = vector_double_create_interleaved(n, parts, ncpus, nodes);
+        r = vector_double_create_interleaved(n, parts, ncpus, nodes);
+        p = vector_double_create_interleaved(n, parts, ncpus, nodes);
+        t = vector_double_create_interleaved(n, matrix_parts, ncpus, nodes);
+        
         if (cg_method == CSR_sym || cg_method == CSX_sym) {
             sub_p = (vector_double_t **) 
                        malloc(ncpus * sizeof(vector_double_t *));
             sub_p[0] = t;
-            for (i = 1; i < ncpus; i++) {
-                sub_p[i] = vector_double_create(n);
-            }
+            for (i = 1; i < ncpus; i++)
+                sub_p[i] = vector_double_create_onnode(n, nodes[i]);
         }
+#endif
+        for (i = 0; i < ncpus; i++) 
+            vector_double_init(sub_p[i], 0);
     
         ///> Initialize partial values of doubles.
         rr = (double *) malloc(ncpus * sizeof(double));
@@ -271,14 +317,38 @@ int main(int argc, char *argv[])
             InitializeSymCg(spm_mt, x, r, p, b, t);
         else
             InitializeCg(spm_mt, x, r, p, b, t);
-    
+
         ///> Initiate side threads.
         for (i = 1; i < ncpus; i++)
 	    pthread_create(&tids[i-1], NULL, CgSideThread, (void *) &params[i]);
 
         ///> Execute main thread.
         CgMainThread(params, &cg_time, &spmv_time, &red_time);
-    
+
+#ifdef SPM_NUMA	
+        int alloc_err;
+
+	alloc_err = check_interleaved(x->elements, parts, ncpus, nodes);
+	print_alloc_status("x", alloc_err);
+
+	alloc_err = check_interleaved(r->elements, parts, ncpus, nodes);
+	print_alloc_status("r", alloc_err);
+
+	alloc_err = check_interleaved(p->elements, parts, ncpus, nodes);
+	print_alloc_status("p", alloc_err);
+
+	alloc_err = check_interleaved(t->elements, matrix_parts, ncpus, nodes);
+	print_alloc_status("t", alloc_err);
+	
+	if (cg_method == CSR_sym || cg_method == CSX_sym) {
+	    alloc_err = 0;
+	    for (i = 1; i < ncpus; i++)
+	        alloc_err += check_region(sub_p[i]->elements,
+		                          n * sizeof(double), nodes[i]);
+	    print_alloc_status("temporary buffers", alloc_err);
+        }
+#endif
+
         ///> Find relative distance.
         vector_double_sub(sol, x, t);
         rd = vector_double_mul(t, t);
@@ -296,12 +366,14 @@ int main(int argc, char *argv[])
         vector_double_destroy(r);
         vector_double_destroy(p);
         vector_double_destroy(t);
-        if (sub_p) {
+        /*
+        if (cg_method == CSR_sym || cg_method == CSX_sym) {
             for (i = 1; i < ncpus; i++)
                 vector_double_destroy(sub_p[i]);
             free(sub_p);
         }
-    
+        */
+        
         ///> Free parameters.
         free(rr);
         free(tp);

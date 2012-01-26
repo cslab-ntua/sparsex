@@ -681,6 +681,7 @@ spm_mt_t *GetSpmMt(char *mmf_fname, csx::CsxExecutionEngine &engine,
     } else {
         if (!spms_sym) {
             spms_sym = SPMSym::LoadMMF_mt(mmf_fname, nr_threads);
+            // Switch Reduction Phase
             MakeMap(spm_mt, spms_sym);
         }
     }
@@ -878,6 +879,7 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
         } else {
             secs = SPMV_BENCH_SYM_FN(spm_mt, loops_nr, nrows, ncols, NULL);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
+            // Switch Reduction Phase
             printf("m:%s f:%s ms:%lu s:%lu pt:%lf t:%lf r:%lf\n", "csx-sym",
                    basename(mmf_name), MapSize(spm_mt), CsxSymSize(spm_mt),
                    pre_time, secs, flops);

@@ -41,6 +41,33 @@ SPM_CRS_MT_DECLARE(64, double)
 SPM_CRS_MT_DECLARE(32, float)
 SPM_CRS_MT_DECLARE(64, float)
 
+#ifdef SPM_NUMA
+#define SPM_CRS_MT_NUMA_DECLARE(__idx_bits, __elem_type) \
+struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa { \
+	spm_crs ## __idx_bits ## _ ## __elem_type ## _t    *crs; \
+	uint64_t row_start, row_end; \
+}; \
+typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa ## _t; \
+\
+void * \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_init_mmf( \
+	char *mmf_file, \
+	uint64_t *rows_nr, uint64_t *cols_nr, \
+	uint64_t *nz_nr, void *metadata);     \
+\
+uint64_t \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_size(void *spm); \
+\
+/* XXX: Destroy */ \
+\
+spmv_ ## __elem_type ## _fn_t spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_multiply;
+
+SPM_CRS_MT_NUMA_DECLARE(32, double)
+SPM_CRS_MT_NUMA_DECLARE(64, double)
+SPM_CRS_MT_NUMA_DECLARE(32, float)
+SPM_CRS_MT_NUMA_DECLARE(64, float)
+#endif
+
 #include "macros.h"
 #define SPM_CRS_MT_NAME(name) CON6(spm_crs, SPM_CRS_BITS, _,ELEM_TYPE,_mt,name)
 #define SPM_CRS_MT_TYPE SPM_CRS_MT_NAME(_t)

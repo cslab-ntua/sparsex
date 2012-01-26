@@ -30,23 +30,33 @@ static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
 	SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
-	int id = spm_mt_thread->id;
-	int i/*, j, start, end*/;
-
+	
 	setaffinity_oncpu(spm_mt_thread->cpu);
-	// start = (id * n) / ncpus;
-	// end = ((id + 1) * n) / ncpus;
+	
+	int id = spm_mt_thread->id;
 
+	// Switch Reduction Phase
+	int i/*, j, start, end*/;
+	/*
+	start = (id * n) / ncpus;
+	end = ((id + 1) * n) / ncpus;
+	*/
 	for (i = 0; i < nloops; i++) { 
-		// if (id != 0)
-		//	VECTOR_NAME(_init)(temp[id], 0);
+		// Switch Reduction Phase
+		/*
+		if (id != 0)
+			VECTOR_NAME(_init)(temp[id], 0);
+		*/
 		VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
 		pthread_barrier_wait(&barrier);
 		spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y,
 		               temp[id]);
 		pthread_barrier_wait(&barrier);
-		// for (j = 1; j < ncpus; j++)
-		//	VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
+		// Switch Reduction Phase
+		/*
+		for (j = 1; j < ncpus; j++)
+			VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
+		*/
 		VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
 		pthread_barrier_wait(&barrier);
 	}
@@ -66,18 +76,23 @@ static void *do_spmv_thread_main(void *arg)
 	tsc_init(&tsc);
 	tsc_start(&tsc);
 
+	// Switch Reduction Phase
 	int i/*, j, start, end*/;
-
-	// start = 0;
-	// end = n / ncpus;
-
+	/*
+	start = 0;
+	end = n / ncpus;
+	*/
 	for (i = 0; i < nloops; i++) {
+		// Switch Reduction Phase
 		VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
 		pthread_barrier_wait(&barrier);
 		spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y, y);
 		pthread_barrier_wait(&barrier);
-		// for (j = 0; j < ncpus; j++)
-		// 	VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
+		// Switch Reduction Phase
+		/*
+		for (j = 0; j < ncpus; j++)
+		 	VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
+		*/
 		VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
 		pthread_barrier_wait(&barrier);
 	}
@@ -194,7 +209,8 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	print_alloc_status("temporary buffers", alloc_err);
     
 	for (i = 1; i < ncpus; i++)
-		pthread_create(tids + i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
+		pthread_create(tids + i, NULL, do_spmv_thread,
+		               spm_mt->spm_threads + i);
 
 	do_spmv_thread_main(spm_mt->spm_threads);
 

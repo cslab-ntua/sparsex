@@ -47,10 +47,6 @@ static void deref(void *ptr)
 }
 #endif
 
-typedef double (csx_sym_spmv_fn_t)(uint8_t **ctl, uint8_t size, double **values,
-                                   double *x, double *y, double *cur,
-                                   uint64_t *x_indx, uint64_t *y_indx);
-
 ${spmv_func_definitions}
 
 void spm_csx32_double_sym_multiply(void *spm, vector_double_t *in,
@@ -85,10 +81,12 @@ void spm_csx32_double_sym_multiply(void *spm, vector_double_t *in,
 			${new_row_hook}
 			yr = 0;
 			x_indx = 0;
+			// Switch Reduction Phase
 			cur = tmp;
 		}
 		
 		${next_x}
+		// Switch Reduction Phase
 		if (cur != y && x_indx >= csx->row_start)
 			cur = y;
 		patt_id = flags & CTL_PATTERN_MASK;
