@@ -268,8 +268,9 @@ int main(int argc, char *argv[])
                 sub_p[i] = vector_double_create_onnode(n, nodes[i]);
         }
 #endif
-        for (i = 0; i < ncpus; i++) 
-            vector_double_init(sub_p[i], 0);
+        if (cg_method == CSR_sym || cg_method == CSX_sym)
+            for (i = 1; i < ncpus; i++) 
+                vector_double_init(sub_p[i], 0);
     
         ///> Initialize partial values of doubles.
         rr = (double *) malloc(ncpus * sizeof(double));
@@ -300,12 +301,12 @@ int main(int argc, char *argv[])
             if (cg_method == CSR_sym || cg_method == CSX_sym)
                 params[i].sub_vectors = sub_p;
         }
-    
+
         ///> Load vector solution with random values and calculate its distance.
         vector_double_init_rand_range(sol, (double) -1000, (double) 1000);
         sol_dis = vector_double_mul(sol, sol);
         sol_dis = sqrt(sol_dis);
-    
+
         ///> Find b vector for the specified solution.
         if (cg_method == CSR_sym || cg_method == CSX_sym)
             FindSymSolution(spm_mt, sol, b, t);
