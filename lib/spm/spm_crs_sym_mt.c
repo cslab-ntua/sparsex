@@ -16,7 +16,7 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
 {
 	unsigned int i;
 	uint32_t ncpus, *cpus;
-	uint64_t cur_row, row_start, elems_limit, elems_total;
+	uint64_t cur_row, elems_limit, elems_total;
 	spm_mt_t *spm_mt;
 	spm_mt_thread_t *spm_thread;
 	SPM_CRS_SYM_MT_TYPE *crs_mt;
@@ -62,7 +62,6 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
 		spm_thread->spm = crs_mt + i;
 		spm_thread->id = i;
 
-		row_start = cur_row;
 		crs_mt[i].row_start = cur_row;
 		elems_total += elems_limit;
 		while (crs->row_ptr[cur_row] + cur_row < elems_total)
