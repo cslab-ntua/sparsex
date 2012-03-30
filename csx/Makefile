@@ -59,7 +59,7 @@ draw.o: draw.cc spm.h draw.h
 draw: draw.cc spm.h draw.h spm.o mmf.o
 	$(LINK) $(CAIROMM_FLAGS) $(CAIROMM_LIBS) $(dynarray_dep) spm.o mmf.o $<  -o $@
 
-csx.o: csx.cc csx.h spm.h delta.h ../lib/spm/numa_util.h ../lib/dynarray/dynarray.h ctl_ll.h
+csx.o: csx.cc csx.h spm.h delta.h $(spm_dir)/numa_util.h $(dynarray_dir)/dynarray.h ctl_ll.h
 	$(CXX_COMPILE) -I$(dynarray_dir) $< -c -o $@
 
 test.o: test.cc drle.h spm.h
@@ -76,11 +76,11 @@ drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 
 elmerif.o: elmerif.cc elmerif.h spmv.h spm.h csr.h
 	$(CXX_COMPILE) -DSPM_CRS_BITS=32 -c $<
-
 jit.o: spm.h csx.h drle.h template_text.h jit_util.h jit_config.h
 compiler.o: jit_util.h
-spmv.o: spm.h mmf.h csx.h drle.h jit.h ctl_ll.h ../lib/spm/mt_lib.h ../lib/spm/spmv_method.h ../lib/spm/spm_crs.h ../lib/spm/spm_mt.h ../lib/prfcnt/timer.h
-spm.o: mmf.h ../lib/dynarray/dynarray.h
+spmv.o: mmf.h csx.h drle.h jit.h ctl_ll.h $(spm_dir)/spm_mt.h $(spm_dir)/mt_lib.h $(spm_dir)/spmv_method.h $(spm_dir)/spm_crs.h $(spm_dir)/spm_mt.h $(prfcnt_dir)/timer.h
+elmerif.o: csr.h spmv.h
+spm.o: mmf.h $(dynarray_dir)/dynarray.h
 drle.o: spm.h
 main.o: spmv.h
 

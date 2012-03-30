@@ -211,7 +211,8 @@ void dynarray_dealloc(struct dynarray *da)
 void *dynarray_alloc_nr(struct dynarray *da, unsigned long nr)
 {
 	void *ret;
-	while (da->next_idx + nr >= da->elems_nr) {
+	while (da->next_idx + nr > da->elems_nr) {
+	    printf("%lu vs %lu\n", da->next_idx, da->elems_nr);
 		dynarray_expand(da);
 	}
 

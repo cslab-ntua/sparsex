@@ -22,7 +22,6 @@
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
 #include "csr.h"
-
 #include "dynarray.h"
 
 namespace csx {
@@ -87,7 +86,67 @@ public:
     {
         return type_;
     }
+    
+    uint64_t GetElemsSize()
+    {
+        return elems_size_;
+    }
+    
+    SpmRowElem *GetElems()
+    {
+        return elems_;
+    }
+    
+    uint64_t *GetRowPtr()
+    {
+        return rowptr_;
+    }
+    
+    uint64_t GetRowStart()
+    {
+        return row_start_;
+    }
+    
+    uint64_t GetMaxRowPtrSize()
+    {
+        return max_rowptr_size_;
+    }
 
+    void SetNrRows(uint64_t nr_rows)
+    {
+        nr_rows_ = nr_rows;
+    }
+
+    void SetNrCols(uint64_t nr_cols)
+    {
+        nr_cols_ = nr_cols;
+    }
+
+    void SetNrNonzeros(uint64_t nr_nzeros)
+    {
+        nr_nzeros_ = nr_nzeros;
+    }
+
+    void SetType(SpmIterOrder type)
+    {
+        type_ = type;
+    }
+    
+    void SetRowStart(uint64_t row_start)
+    {
+        row_start_ = row_start;
+    }
+    
+    void SetRowPtrSize(uint64_t rowptr_size)
+    {
+        rowptr_size_ = rowptr_size;
+    }
+    
+    void SetMaxRowPtrSize(uint64_t max_rowptr_size)
+    {
+        max_rowptr_size_ = max_rowptr_size;
+    }
+    
     SpmRowElem *RowBegin(uint64_t ridx = 0);
     SpmRowElem *RowEnd(uint64_t ridx = 0);
 
@@ -354,6 +413,152 @@ private:
     uint64_t elem_idx_;
 };
 
+
+/**
+ *  Internal representation of a sparse symmetric matrix. This class can also 
+ *  represent a sub-matrix of a larger one.
+ */
+class SPMSym
+{
+private:
+    SPM         *lower_matrix_;   ///> Representation of lower matrix.
+    double      *diagonal_;       ///> Values of diagonal elements.
+    uint64_t    diagonal_size_;   ///> Size of the diagonal.
+    SPM         *m1_;             ///> Matrix that contains the elems of SpmSym
+                                  //   for which column of the element is
+                                  //   smaller than the row start.
+    SPM         *m2_;             ///> Matrix that contains the rest of the
+                                  //   elements.
+    
+public:
+    SPMSym() : lower_matrix_(NULL), diagonal_(NULL), m1_(NULL), m2_(NULL) {
+        lower_matrix_ = new SPM;
+        m1_ = new SPM;
+        m2_ = new SPM;
+    }
+
+    ~SPMSym()
+    {
+        if (lower_matrix_)
+            delete lower_matrix_;
+        
+        if (m1_)
+            delete m1_;
+        
+        if (m2_)
+            delete m2_;
+        
+        if (diagonal_)
+            free(diagonal_);
+    };
+    
+    SPM *GetLowerMatrix()
+    {
+        return lower_matrix_;
+    }
+    
+    SPM *GetFirstMatrix()
+    {
+        return m1_;
+    }
+    
+    SPM *GetSecondMatrix()
+    {
+        return m2_;
+    }
+    
+    double *GetDiagonal()
+    {
+        return diagonal_;
+    }
+    
+    uint64_t GetDiagonalSize()
+    {
+        return diagonal_size_;
+    }
+    
+    void SetDiagonalSize(uint64_t size)
+    {
+        diagonal_size_ = size;
+    }
+    
+    void SetDiagonal(double *diagonal)
+    {
+        diagonal_ = diagonal;
+    }
+    
+    /**
+     *  Loads matrix from a file specifying the number of threads.
+     *
+     *  @param filename name of the file that matrix is kept.
+     *  @param in       buffer from which the matrix is taken.
+     *  @param mmf      handler of MMF class.
+     *  @param nr       number of threads to be used.
+     *  @return         spm class object with the characteristics of the matrix.
+     */
+    static SPMSym *LoadMMF_mt(const char *mmf_file, const long nr);
+    static SPMSym *LoadMMF_mt(std::istream &in, const long nr);
+    static SPMSym *LoadMMF_mt(MMF &mmf, const long nr);
+    
+    void DivideMatrix();
+    void MergeMatrix();
+    
+    class Builder;
+    
+    /**
+     *  Function for filling the matrix using point iterators
+     *
+     *  @param pnts_start   point iterators start.
+     *  @param pnts_end     point iterators end.
+     *  @param first_row    first row of the matrix.
+     *  @param limit        limit for the number of elements.
+     *  @param nr_elems     size for elems allocation.
+     *  @param nr_rows      size for rows allocation.
+     *  @param spm_sym_bld  point to a builder responsible for allocations.
+     *  @return             number of elements allocated.
+     */
+    template <typename IterT>
+    uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
+                      uint64_t first_row, unsigned long limit = 0,
+                      uint64_t nr_elems = 0, uint64_t nr_rows = 0);
+    template <typename IterT>
+    uint64_t SetElems(IterT &pnts_start, const IterT &pnts_end,
+                      uint64_t first_row, unsigned long limit,
+                      uint64_t nr_elems, uint64_t nr_rows,
+                      SPMSym::Builder *spm_sym_bld);
+                      
+    void PrintDiagElems(std::ostream &out = std::cout);
+};
+
+class SPMSym::Builder
+{
+public:
+    /**
+     *  Constructs a Builder object.
+     *
+     *  @param spm_sym  the matrix to be built.
+     *  @param nr_elems an initial guess of the nonzero elements.
+     *  @param nr_rows  an initial guess of the number of rows.
+     */
+    Builder(SPMSym *spm_sym, uint64_t nr_elems = 0, uint64_t nr_rows = 0);
+    virtual ~Builder();
+    
+    SPM::Builder *GetLowerBuilder()
+    {
+        return spm_bld_;
+    }
+    
+    double *AllocDiagElem();
+    uint64_t GetDiagElemsCnt();
+    uint64_t GetElemsCnt();
+    void Finalize();
+    
+private:
+    SPMSym *spm_sym_;
+    SPM::Builder *spm_bld_;
+    dynarray_t *da_dvalues_;
+};
+
 /*
  *  SetElems functions
  */ 
@@ -394,6 +599,53 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
     delete SpmBld;
     return elems_size_;
 }
+
+template<typename IterT>
+uint64_t SPMSym::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
+                          unsigned long limit, uint64_t nr_elems,
+                          uint64_t nrows, SPMSym::Builder *spm_sym_bld)
+{
+    double *value;
+    SpmRowElem *elem;
+    uint64_t row_prev, row, col;
+
+    row_prev = first_row;
+    for (; pi != pnts_end; ++pi) {
+        row = (*pi).y;
+        col = (*pi).x;
+        
+        if (row > col) {
+            if (row != row_prev) {
+                assert(row > row_prev);
+                if (limit && spm_sym_bld->GetElemsCnt() >= limit && 
+                    row_prev == row - 1)
+                    break;
+                spm_sym_bld->GetLowerBuilder()->NewRow(row - row_prev);
+                row_prev = row;
+            }
+            elem = spm_sym_bld->GetLowerBuilder()->AllocElem();
+            MakeRowElem(*pi, elem);
+        } else if (row == col) {
+            value = spm_sym_bld->AllocDiagElem();
+            *value = (*pi).val;
+        }
+    }
+    return lower_matrix_->GetElemsSize() + GetDiagonalSize();
+}
+
+template<typename IterT>
+uint64_t SPMSym::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
+                          unsigned long limit, uint64_t nr_elems,
+                          uint64_t nrows)
+{
+    SPMSym::Builder *spm_sym_bld = new SPMSym::Builder(this, nr_elems, nrows);
+
+    SetElems(pi, pnts_end, first_row, limit, nr_elems, nrows, spm_sym_bld);
+    spm_sym_bld->Finalize();
+    delete spm_sym_bld;
+    return lower_matrix_->GetElemsSize() + GetDiagonalSize();
+}
+
 }   // end of csx namespace
 
 #endif

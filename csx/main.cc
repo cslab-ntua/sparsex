@@ -21,6 +21,7 @@ int main(int argc, char **argv)
 
     // Initialize the CSX JIT execution engine
     CsxExecutionEngine &engine = CsxJitInit();
+    
     for (int i = 1; i < argc; i++) {
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
         spm_mt = GetSpmMt(argv[i], engine);
