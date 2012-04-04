@@ -14,6 +14,7 @@
 #include <ostream>
 #include <inttypes.h>
 #include <map>
+#include <ostream>
 #include <stdint.h>
 #include <boost/function.hpp>
 
@@ -134,7 +135,7 @@ static inline int IsBlockType(SpmIterOrder t)
  *  Holds column and value or values of CSX elements.
  */
 struct RowElem {
-    uint64_t x;     ///< the column index
+    uint64_t x;         ///< the column index
     union {
         double val;     ///< the value of the element
         double *vals;   ///< the value of the elements, if RowElem refers to

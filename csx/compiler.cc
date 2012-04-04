@@ -53,8 +53,13 @@ ClangCompiler::ClangCompiler(const char *prefix)
         invocation_->getHeaderSearchOpts();
     header_search.AddPath(GetClangResourcePath(prefix),
                           frontend::System, false, false, false);
-    header_search.AddPath("/usr/include/x86_64-linux-gnu",
-                          frontend::System, false, false, false);
+    // FIXME: do sth more generic
+    header_search.AddPath("../lib/spm", frontend::Quoted,
+                          true /* user supplied */, false, false);
+    header_search.AddPath("../lib/dynarray", frontend::Angled,
+                          true /* user supplied */, false, false);
+    header_search.AddPath("/usr/include/x86_64-linux-gnu", frontend::System,
+                          false, false, false);
 
     // Setup diagnostic options
     DiagnosticOptions &diag_options = invocation_->getDiagnosticOpts();

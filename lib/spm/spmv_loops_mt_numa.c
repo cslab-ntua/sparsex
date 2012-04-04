@@ -31,11 +31,11 @@ static void *do_spmv_thread_main(void *arg)
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	int i;
+	
 	tsc_t total_tsc, thread_tsc;
 
 	tsc_init(&total_tsc);
 	tsc_init(&thread_tsc);
-
 	tsc_start(&total_tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
@@ -44,6 +44,7 @@ static void *do_spmv_thread_main(void *arg)
 		tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 	}
+
 	tsc_pause(&total_tsc);
 	spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
 	secs = tsc_getsecs(&total_tsc);
@@ -59,6 +60,7 @@ static void *do_spmv_thread(void *arg)
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	int i;
+	
 	tsc_t thread_tsc;
 
 	tsc_init(&thread_tsc);
@@ -69,10 +71,10 @@ static void *do_spmv_thread(void *arg)
                 tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 	}
+
 	spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
 	tsc_shut(&thread_tsc);
-
-	return (void *) 0;
+	return NULL;
 }
 
 float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,

@@ -29,82 +29,76 @@ void getMmfHeader(std::istream &in,
 class MMF
 {
 public:
-	uint64_t nrows, ncols, nnz;
+    uint64_t nrows, ncols, nnz;
 
-	// initialization
-	MMF(std::istream &in);
-
-	// get next element (false if end)
-	bool next(uint64_t &y, uint64_t &x, double &val);
-
-	// CooElem iterator
-	class iterator;
-	iterator begin();
-	iterator end();
+    // initialization
+    MMF(std::istream &in);
+    
+    // get next element (false if end)
+    bool next(uint64_t &y, uint64_t &x, double &val);
+    
+    // CooElem iterator
+    class iterator;
+    iterator begin();
+    iterator end();
 
 private:
-	std::istream &in_;
+    std::istream &in_;
 };
 
-class MMF::iterator :
-        public std::iterator<std::forward_iterator_tag, CooElem>
+class MMF::iterator : public std::iterator<std::forward_iterator_tag, CooElem>
 {
 public:
-	iterator()
+    iterator() {}
+    
+    iterator(MMF *mmf, uint64_t cnt) : mmf_(mmf), cnt_(cnt)
     {
-        assert(false);
+        // this is the initializer
+        if (cnt_ == 0) {
+            this->DoSet();
+        }
     }
 
-	iterator(MMF *mmf, uint64_t cnt)
-        : mmf_(mmf), cnt_(cnt)
-	{
-		// this is the initializer
-		if (cnt_ == 0) {
-			this->DoSet();
-		}
-	}
-
-
-	bool operator==(const iterator &i)
+    bool operator==(const iterator &i)
     {
-		//std::cout << "me: " << mmf_ << " " << cnt_
-		//          << " i: " << i.mmf << " " << i.cnt << "\n";
-		return (mmf_ == i.mmf_) && (cnt_ == i.cnt_);
-	}
+        //std::cout << "me: " << mmf_ << " " << cnt_
+        //          << " i: " << i.mmf << " " << i.cnt << "\n";
+        return (mmf_ == i.mmf_) && (cnt_ == i.cnt_);
+    }
 
-	bool operator!=(const iterator &i)
+    bool operator!=(const iterator &i)
     {
-		return !(*this == i);
-	}
+        return !(*this == i);
+    }
 
-	void operator++()
+    void operator++()
     {
-		++cnt_;
-		this->DoSet();
-	}
+        ++cnt_;
+        this->DoSet();
+    }
 
-	CooElem operator*()
+    CooElem operator*()
     {
-		if (!valid_) {
-			std::cout << "Requesting dereference, but mmf ended\n"
-			          << "cnt: " << cnt_ << std::endl;
-			assert(false);
-		}
-
-		assert(valid_);
-		return elem_;
-	}
+        if (!valid_) {
+            std::cout << "Requesting dereference, but mmf ended\n"
+                      << "cnt: " << cnt_ << std::endl;
+            assert(false);
+        }
+        
+        assert(valid_);
+        return elem_;
+    }
 
 private:
-	void DoSet()
+    void DoSet()
     {
-		valid_ = mmf_->next(elem_.y, elem_.x, elem_.val);
-	}
+        valid_ = mmf_->next(elem_.y, elem_.x, elem_.val);
+    }
 
-	MMF *mmf_;
-	uint64_t cnt_;
-	CooElem elem_;
-	bool valid_;
+    MMF *mmf_;
+    uint64_t cnt_;
+    CooElem elem_;
+    bool valid_;
 };
 
 MMF::iterator MMF::begin()

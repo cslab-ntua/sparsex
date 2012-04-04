@@ -172,9 +172,9 @@ void SPM_CRS_MT_NAME(_destroy)(void *spm)
 
 uint64_t SPM_CRS_MT_NAME(_size)(void *spm)
 {
-	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	spm_mt_t *spm_mt = (spm_mt_t *) spm;
 	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
-	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *) spm_thread->spm;
 	return SPM_CRS_NAME(_size)(crs_mt->crs);
 }
 

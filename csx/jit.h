@@ -72,7 +72,8 @@ CsxExecutionEngine &CsxJitInit(void);
 class CsxJit {
 
 public:
-    CsxJit(CsxManager *csxmg, CsxExecutionEngine *engine, unsigned int tid = 0);
+    CsxJit(CsxManager *csxmg, CsxExecutionEngine *engine, unsigned int tid = 0,
+           bool symmetric = false);
 
     ~CsxJit() {
         delete context_;
@@ -103,6 +104,11 @@ private:
     std::string DoGenLinearCase(SpmIterOrder type, int delta);
     std::string DoGenBlockCase(SpmIterOrder type, int r, int c);
     TemplateText *GetMultTemplate(SpmIterOrder type);
+    
+    std::string DoGenDeltaSymCase(int delta_bits);
+    std::string DoGenLinearSymCase(SpmIterOrder type, int delta);
+    std::string DoGenBlockSymCase(SpmIterOrder type, int r, int c);
+    TemplateText *GetSymMultTemplate(SpmIterOrder type);
 
     CsxManager  *csxmg_;
     Module      *module_;
@@ -111,6 +117,7 @@ private:
     ClangCompiler *compiler_;
     unsigned int thread_id_;
     std::map<SpmIterOrder, TemplateText *> mult_templates_;
+    bool symmetric_;
 };
 
 } // end csx namespace

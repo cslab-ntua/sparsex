@@ -19,13 +19,19 @@
 #include "spmv_method.h"
 #include "spmv_loops.h"
 #include "spmv_loops_mt.h"
+#include "spmv_loops_sym_mt.h"
 #ifdef SPM_NUMA
-#   include "spmv_loops_mt_numa.h"
-#   define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop_numa
-#   define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop_numa
+  #include "spmv_loops_mt_numa.h"
+  #include "spmv_loops_sym_mt_numa.h"
+  #define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop_numa
+  #define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop_numa
+  #define SPMV_DOUBLE_CHECK_SYM_MT_LOOP spmv_double_check_sym_mt_loop_numa
+  #define SPMV_DOUBLE_BENCH_SYM_MT_LOOP spmv_double_bench_sym_mt_loop_numa
 #else
-#   define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop
-#   define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop
+  #define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop
+  #define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop
+  #define SPMV_DOUBLE_CHECK_SYM_MT_LOOP spmv_double_check_sym_mt_loop
+  #define SPMV_DOUBLE_BENCH_SYM_MT_LOOP spmv_double_bench_sym_mt_loop
 #endif
 #include "bcsr/export.h"
 
@@ -52,7 +58,6 @@ static void parse_block_dims(const char *arg, int *r, int *c)
 
 int main(int argc, char **argv)
 {
-
 	progname = argv[0];
 
 	// parse options
@@ -130,7 +135,6 @@ int main(int argc, char **argv)
 	void *m = spmv_meth->mmf_init_fn(mmf_file, &nrows, &ncols, &nnz, init_metadata);
 	int elem_size = spmv_meth->elem_size;
 	assert(elem_size == 8 || elem_size == 4);
-
 	if (opt_check){
 		method_t *meth1;
 		spmv_method_t *spmv_meth1;
@@ -145,17 +149,22 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 
-
-		switch (elem_size + spmv_meth->mt_flag){
+		switch (elem_size + spmv_meth->flag){
 			case 8:
+			case (8+2):
 			spmv_double_check_loop(m1, m, meth1->fn, meth->fn, 1, nrows, ncols, nnz);
 			break;
 
 			case (8+1):
 			SPMV_DOUBLE_CHECK_MT_LOOP(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
+			
+			case (8+3):
+			SPMV_DOUBLE_CHECK_SYM_MT_LOOP(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
+			break;
 
 			case 4:
+			case (4+2):
 			spmv_float_check_loop(m1, m, meth1->fn, meth->fn, 1, nrows, ncols, nnz);
 			break;
 
@@ -163,6 +172,10 @@ int main(int argc, char **argv)
 			spmv_float_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
 			break;
 
+			case (4+3):
+			spmv_float_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols, meth->fn);
+			break;
+			
 			default:
 			fprintf(stderr, "woops!\n");
 			exit(1);
@@ -175,16 +188,22 @@ int main(int argc, char **argv)
 		int count;
 		double t = -666.0;
 		for (count=0; count < outer_loops; count++){
-			switch (elem_size + spmv_meth->mt_flag){
+			switch (elem_size + spmv_meth->flag){
 				case 8:
+				case (8+2):
 				t = spmv_double_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 
 				case (8+1):
 				t = SPMV_DOUBLE_BENCH_MT_LOOP(m, loops_nr, nrows, ncols, meth->fn);
 				break;
+				
+				case (8+3):
+				t = SPMV_DOUBLE_BENCH_SYM_MT_LOOP(m, loops_nr, nrows, ncols, meth->fn);
+				break;
 
-				case 4:
+				case (4):
+				case (4+2):
 				t = spmv_float_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 
@@ -192,12 +211,21 @@ int main(int argc, char **argv)
 				t = spmv_float_bench_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
 				break;
 
+				case (4+3):
+				t = spmv_float_bench_sym_mt_loop(m, loops_nr, nrows, ncols, meth->fn);
+				break;
+				
 				default:
 				fprintf(stderr, "woops!\n");
 				exit(1);
 			}
 			double flops = (double)(loops_nr*nnz*2)/((double)1000*1000*t);
-			printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf b:%dx%d\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops, br, bc);
+			if (spmv_meth->flag != 3)			
+				printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), spmv_meth->size_fn(m), t, flops);
+			else
+				// Switch Reduction Phase
+				printf("m:%s f:%s ms:%lu s:%" PRIu64 " t:%lf r:%lf\n", method, basename(mmf_file), map_size,
+				       spmv_meth->size_fn(m), t, flops);
 		}
 	}
 	spmv_meth->destroy_fn(m);

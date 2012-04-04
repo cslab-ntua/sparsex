@@ -35,9 +35,10 @@ CsxExecutionEngine &csx::CsxJitInit(void)
     return CsxExecutionEngine::CreateEngine();
 }
 
-CsxJit::CsxJit(CsxManager *csxmg, CsxExecutionEngine *engine, unsigned int tid)
-    : csxmg_(csxmg), module_(0), engine_(engine),
-      thread_id_(tid)
+CsxJit::CsxJit(CsxManager *csxmg, CsxExecutionEngine *engine, unsigned int tid,
+               bool symmetric)
+    : csxmg_(csxmg), module_(0), engine_(engine), thread_id_(tid),
+      symmetric_(symmetric)
 {
     context_ = new LLVMContext();
     compiler_ = new ClangCompiler();
@@ -45,7 +46,6 @@ CsxJit::CsxJit(CsxManager *csxmg, CsxExecutionEngine *engine, unsigned int tid)
     compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/spm");
     compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/dynarray");
 };
-
 
 TemplateText *CsxJit::GetMultTemplate(SpmIterOrder type)
 {
@@ -97,6 +97,52 @@ exit:
     return mult_templates_[type];
 }
 
+TemplateText *CsxJit::GetSymMultTemplate(SpmIterOrder type)
+{
+    if (mult_templates_.count(type))
+        goto exit;
+
+    switch (type) {
+    case NONE:
+        mult_templates_[type] =
+            new TemplateText(SourceFromFile(DeltaSymTemplateSource));
+        break;
+    case HORIZONTAL:
+        mult_templates_[type] =
+            new TemplateText(SourceFromFile(HorizSymTemplateSource));
+        break;
+    case VERTICAL:
+        mult_templates_[type] =
+            new TemplateText(SourceFromFile(VertSymTemplateSource));
+        break;
+    case DIAGONAL:
+        mult_templates_[type] =
+            new TemplateText(SourceFromFile(DiagSymTemplateSource));
+        break;
+    case REV_DIAGONAL:
+        mult_templates_[type] =
+            new TemplateText(SourceFromFile(RDiagSymTemplateSource));
+        break;
+    case BLOCK_R1 ... BLOCK_COL_START-1:
+        // Set the same template for all block row patterns
+        for (int t = BLOCK_R1; t < BLOCK_COL_START; ++t)
+            mult_templates_[static_cast<SpmIterOrder>(t)] =
+                new TemplateText(SourceFromFile(BlockRowSymTemplateSource));
+        break;
+    case BLOCK_COL_START ... BLOCK_TYPE_END-1:
+        // Set the same template for all block row patterns
+        for (int t = BLOCK_C1; t < BLOCK_TYPE_END; ++t)
+            mult_templates_[static_cast<SpmIterOrder>(t)] =
+                new TemplateText(SourceFromFile(BlockColSymTemplateSource));
+        break;
+    default:
+        assert(0 && "unknown pattern type");
+    };
+
+exit:
+    return mult_templates_[type];
+}
+
 std::string CsxJit::DoGenDeltaCase(int delta_bits)
 {
     TemplateText *tmpl = GetMultTemplate(NONE);
@@ -127,23 +173,84 @@ std::string CsxJit::DoGenBlockCase(SpmIterOrder type, int r, int c)
     return tmpl->Substitute(subst_map);
 }
 
+std::string CsxJit::DoGenDeltaSymCase(int delta_bits)
+{
+    TemplateText *tmpl = GetSymMultTemplate(NONE);
+    std::map<std::string, std::string> subst_map;
+    subst_map["bits"] = Stringify(delta_bits);
+    int delta_bytes = delta_bits / 8;
+    if (delta_bytes > 1)
+        subst_map["align_ctl"] =
+            "align_ptr(ctl," + Stringify(delta_bytes) + ");";
+
+    return tmpl->Substitute(subst_map);
+}
+
+std::string CsxJit::DoGenLinearSymCase(SpmIterOrder type, int delta)
+{
+    TemplateText *tmpl = GetSymMultTemplate(type);
+    std::map<std::string, std::string> subst_map;
+    subst_map["delta"] = Stringify(delta);
+    return tmpl->Substitute(subst_map);
+}
+
+std::string CsxJit::DoGenBlockSymCase(SpmIterOrder type, int r, int c)
+{
+    TemplateText *tmpl = GetSymMultTemplate(type);
+    std::map<std::string, std::string> subst_map;
+    subst_map["r"] = Stringify(r);
+    subst_map["c"] = Stringify(c);
+    return tmpl->Substitute(subst_map);
+}
+
 void CsxJit::DoNewRowHook(std::map<std::string, std::string> &hooks,
                           std::ostream &log) const
 {
-    if (csxmg_->HasRowJmps()) {
-        hooks["new_row_hook"] =
-            "if (test_bit(&flags, CTL_RJMP_BIT))\n"
-            "\t\t\t\ty_curr += ul_get(&ctl);\n"
-            "\t\t\telse\n"
-            "\t\t\t\ty_curr++;";
+    if (!symmetric_) {
+        if (csxmg_->HasRowJmps()) {
+            hooks["new_row_hook"] =
+                "if (test_bit(&flags, CTL_RJMP_BIT))\n"
+                "\t\t\t\ty_curr += ul_get(&ctl);\n"
+                "\t\t\telse\n"
+                "\t\t\t\ty_curr++;";
+        } else {
+            hooks["new_row_hook"] = "y_curr++;";
+        }
     } else {
-        hooks["new_row_hook"] = "y_curr++;";
-    };
-
-    if (csxmg_->HasFullColumnIndices()) {
-        hooks["next_x"] = "x_curr = x + u32_get(&ctl);";
+        if (csxmg_->HasRowJmps()) {
+            hooks["new_row_hook"] =
+                "if (test_bit(&flags, CTL_RJMP_BIT)) {\n"
+                "\t\t\t\tint jmp = ul_get(&ctl);\n"
+                "\t\t\t\tfor (i = 0; i < jmp; i++) {\n"
+                "\t\t\t\t\ty[y_indx] += x[y_indx] * (*dv);\n"
+                "\t\t\t\t\ty_indx++;\n"
+                "\t\t\t\t\tdv++;\n"
+                "\t\t\t\t}\n"
+                "\t\t\t} else {\n"
+                "\t\t\t\ty[y_indx] += x[y_indx] * (*dv);\n"
+                "\t\t\t\ty_indx++;\n"
+                "\t\t\t\tdv++;\n"
+                "\t\t\t}\n";
+        } else {
+            hooks["new_row_hook"] =
+                "y[y_indx] += x[y_indx] * (*dv);\n"
+                "\t\t\ty_indx++;\n"
+                "\t\t\tdv++;\n";
+        }
+    }
+    
+    if (!symmetric_) {
+        if (csxmg_->HasFullColumnIndices()) {
+            hooks["next_x"] = "x_curr = x + u32_get(&ctl);";
+        } else {
+            hooks["next_x"] = "x_curr += ul_get(&ctl);";
+        }
     } else {
-        hooks["next_x"] = "x_curr += ul_get(&ctl);";
+        if (csxmg_->HasFullColumnIndices()) {
+            hooks["next_x"] = "x_indx = u32_get(&ctl);";
+        } else {
+            hooks["next_x"] = "x_indx += ul_get(&ctl);";
+        }
     }
 }
 
@@ -155,14 +262,14 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
     std::map<long, std::string> func_entries;
 
     uint64_t delta, r, c;
+    
     for (; i_patt != i_patt_end; ++i_patt) {
         std::string patt_code, patt_func_entry;
         long patt_id = i_patt->second.flag;
         SpmIterOrder type =
             static_cast<SpmIterOrder>(i_patt->first / CSX_PID_OFFSET);
         delta = i_patt->first % CSX_PID_OFFSET;
-
-        switch (type) {
+	switch (type) {
         case NONE:
             assert(delta ==  8 ||
                    delta == 16 ||
@@ -171,35 +278,50 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
             log << "type:DELTA size:" << delta << " npatterns:"
                 << i_patt->second.npatterns << " nnz:"
                 << i_patt->second.nr << std::endl;
-            patt_code = DoGenDeltaCase(delta);
+            if (!symmetric_)
+                patt_code = DoGenDeltaCase(delta);
+            else
+                patt_code = DoGenDeltaSymCase(delta);
             patt_func_entry = "delta" + Stringify(delta) + "_case";
             break;
         case HORIZONTAL:
             log << "type:HORIZONTAL delta:" << delta
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
-            patt_code = DoGenLinearCase(type, delta);
+            if (!symmetric_)
+                patt_code = DoGenLinearCase(type, delta);
+            else
+                patt_code = DoGenLinearSymCase(type, delta);
             patt_func_entry = "horiz" + Stringify(delta) + "_case";
             break;
         case VERTICAL:
             log << "type:VERTICAL delta:" << delta
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
-            patt_code = DoGenLinearCase(type, delta);
+            if (!symmetric_)
+                patt_code = DoGenLinearCase(type, delta);
+            else
+                patt_code = DoGenLinearSymCase(type, delta);
             patt_func_entry = "vert" + Stringify(delta) + "_case";
             break;
         case DIAGONAL:
             log << "type:DIAGONAL delta:" << delta
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
-            patt_code = DoGenLinearCase(type, delta);
+            if (!symmetric_)
+                patt_code = DoGenLinearCase(type, delta);
+            else
+                patt_code = DoGenLinearSymCase(type, delta);
             patt_func_entry = "diag" + Stringify(delta) + "_case";
             break;
 	case REV_DIAGONAL:
             log << "type:REV_DIAGONAL delta:" << delta
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
-            patt_code = DoGenLinearCase(type, delta);
+            if (!symmetric_)
+                patt_code = DoGenLinearCase(type, delta);
+            else
+                patt_code = DoGenLinearSymCase(type, delta);
             patt_func_entry = "rdiag" + Stringify(delta) + "_case";
             break;
         case BLOCK_R1 ... BLOCK_COL_START - 1:
@@ -209,7 +331,10 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
                 << " dim:" << r << "x" << c
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
-            patt_code = DoGenBlockCase(type, r, c);
+            if (!symmetric_)
+                patt_code = DoGenBlockCase(type, r, c);
+            else
+                patt_code = DoGenBlockSymCase(type, r, c);
             patt_func_entry = "block_row_" + Stringify(r) + "x" +
                 Stringify(c) + "_case";
             break;
@@ -220,7 +345,10 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
                 << " dim:" << r << "x" << c
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
-            patt_code = DoGenBlockCase(type, r, c);
+            if (!symmetric_)
+                patt_code = DoGenBlockCase(type, r, c);
+            else
+                patt_code = DoGenBlockSymCase(type, r, c);
             patt_func_entry = "block_col_" + Stringify(r) + "x" +
                 Stringify(c) + "_case";
             break;
@@ -240,44 +368,76 @@ void CsxJit::DoSpmvFnHook(std::map<std::string, std::string> &hooks,
 
     if (func_entries.size() == 1) {
         // Don't switch, just call the pattern-specific mult. routine
-        hooks["body_hook"] =
-            "\t\t\tyr += " + Stringify(i_fentry->second) +
-            "(&ctl, size, &v, &x_curr, &y_curr);";
+        if (!symmetric_) {
+            hooks["body_hook"] =
+                "yr += "+ Stringify(i_fentry->second) +
+                "(&ctl, size, &v, &x_curr, &y_curr);";
+        } else {
+            hooks["body_hook"] =
+                "yr += " + Stringify(i_fentry->second) +
+                "(&ctl, size, &v, x, y, cur, &x_indx, &y_indx);";
+        }
     } else {
         hooks["body_hook"] = "switch (patt_id) {\n";
         for (; i_fentry != fentries_end; ++i_fentry) {
-            hooks["body_hook"] +=
-                "\t\tcase " + Stringify(i_fentry->first) + ":\n"
-                "\t\t\tyr += " + Stringify(i_fentry->second) +
-                "(&ctl, size, &v, &x_curr, &y_curr);\n"
-                "\t\t\tbreak;\n";
+            if (!symmetric_) {    
+                hooks["body_hook"] +=
+                    Tabify(2) + "case " + Stringify(i_fentry->first) + ":\n" +
+                    Tabify(3) + "yr += " + Stringify(i_fentry->second) +
+                    "(&ctl, size, &v, &x_curr, &y_curr);\n" +
+                    Tabify(3) + "break;\n";
+            } else {
+                hooks["body_hook"] +=
+                    Tabify(2) + "case " + Stringify(i_fentry->first) + ":\n" +
+                    Tabify(3) + "yr += " + Stringify(i_fentry->second) +
+                    "(&ctl, size, &v, x, y, cur, &x_indx, &y_indx);\n" +
+                    Tabify(3) + "break;\n";
+            }
         }
-    
+        
         // Add default statement
-        hooks["body_hook"] += "\t\tdefault:\n"
-            "\t\t\tfprintf(stderr, \"[BUG] unknown pattern\\n\");\n"
-            "\t\t\texit(1);\n"
-            "\t\t};";
+        hooks["body_hook"] +=
+            Tabify(2) + "default:\n" +
+            Tabify(3) + "fprintf(stderr, \"[BUG] unknown pattern\\n\");\n" +
+            Tabify(3) + "exit(1);\n" +
+            Tabify(2) + "};";
     }
 }
 
 void CsxJit::GenCode(std::ostream &log)
 {
-    // Load the template source
-    TemplateText source_tmpl(SourceFromFile(CsxTemplateSource));
-
-    // Fill in the hooks
     std::map<std::string, std::string> hooks;
-    DoNewRowHook(hooks, log);
-    DoSpmvFnHook(hooks, log);
+    
+    // compiler_->SetDebugMode(true);
+    if (!symmetric_) {
+        // Load the template source
+        TemplateText source_tmpl(SourceFromFile(CsxTemplateSource));
+        
+        DoNewRowHook(hooks, log);
+        DoSpmvFnHook(hooks, log);
 
-    // Substitute and compile into an LLVM module
-    compiler_->SetLogStream(&log);
-    //compiler_->SetDebugMode(true);
-    module_ = DoCompile(source_tmpl.Substitute(hooks));
-    if (!module_) {
-        log << "compilation failed for thread " << thread_id_ << "\n";
-        exit(1);
+        // Substitute and compile into an LLVM module
+        compiler_->SetLogStream(&log);
+        //compiler_->SetDebugMode(true);
+        module_ = DoCompile(source_tmpl.Substitute(hooks));
+        if (!module_) {
+            log << "compilation failed for thread " << thread_id_ << "\n";
+            exit(1);
+        }
+    } else {
+        // Load the template source
+        TemplateText source_tmpl(SourceFromFile(CsxSymTemplateSource));    
+        DoNewRowHook(hooks, log);
+        DoSpmvFnHook(hooks, log);
+
+        // Substitute and compile into an LLVM module
+        compiler_->SetLogStream(&log);
+        //compiler_->SetDebugMode(true);
+        module_ = DoCompile(source_tmpl.Substitute(hooks));
+        if (!module_) {
+            log << "compilation failed for thread " << thread_id_ << "\n";
+            exit(1);
+        }
     }
 }
 
@@ -314,8 +474,13 @@ void CsxJit::DoOptimizeModule()
 
 void *CsxJit::GetSpmvFn() const
 {
+    Function *llvm_fn;
+    
     engine_->AddModule(module_);
-    Function *llvm_fn = module_->getFunction("spm_csx32_double_multiply");
+    if (!symmetric_)
+         llvm_fn = module_->getFunction("spm_csx32_double_multiply");
+    else
+         llvm_fn = module_->getFunction("spm_csx32_double_sym_multiply");
     assert(llvm_fn);
     return engine_->GetPointerToFunction(llvm_fn);
 }
