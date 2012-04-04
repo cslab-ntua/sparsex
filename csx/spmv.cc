@@ -424,7 +424,7 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
         data[i].deltas = deltas;
         data[i].buffer.str("");
         // use less aggressive compression to gain in computation
-        data[i].csxmg->SetFullColumnIndices(true);
+        data[i].csxmg->SetFullColumnIndices(false);
     }
     
     // Start parallel preprocessing

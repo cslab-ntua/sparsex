@@ -16,13 +16,14 @@ dynarray_dep = $(dynarray_dir)/dynarray.o
 # This is ugly and non-portable
 # (we need a script to return CPU MhZs)
 MHZ_SH      = $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
+CPU_TYPE	= $(shell $(prfcnt_dir)/scripts/cpu_info.sh)
 CC          = gcc
 LD          = ld
 CFLAGS      = -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC
 MAKE_LDFLAGS = 
 
 # Always add the following flags
-MAKE_CPPFLAGS = -DCPU_MHZ_SH=\"$(MHZ_SH)\"
+MAKE_CPPFLAGS = -DCPU_MHZ_SH=\"$(MHZ_SH)\" -DCPU_$(CPU_TYPE)
 MAKE_CPPFLAGS += -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_FORMAT_MACROS
 MAKE_CPPFLAGS += -I$(dynarray_dir) -I$(prfcnt_dir)
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
