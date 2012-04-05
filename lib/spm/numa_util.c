@@ -120,7 +120,7 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
 	 */
 	fix_interleaving(nr_parts, parts, nodes);
 
-        void *curr_part = ret;
+    void *curr_part = ret;
 	for (i = 0; i < nr_parts; i++) {
 		// Bind part to the proper node.
 		numa_bitmask_setbit(nodemask, nodes[i]);

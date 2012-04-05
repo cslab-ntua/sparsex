@@ -65,6 +65,18 @@ public:
         SetCodeGenOptions();
     }
 
+    void AddHeaderSearchPath(const char *path)
+    {
+        HeaderSearchOptions &header_search =
+            invocation_->getHeaderSearchOpts();
+
+        // Add path both as a quoted and angled include
+        header_search.AddPath(path, frontend::Quoted,
+                              true /* user supplied */, false, false);
+        header_search.AddPath(path, frontend::Angled,
+                              true /* user supplied */, false, false);
+    }
+
 private:
     // Set up the code generation options depending on debug mode
     void SetCodeGenOptions();

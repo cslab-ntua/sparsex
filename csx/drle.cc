@@ -106,6 +106,7 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
     AddIgnore(BLOCK_TYPE_START);
     AddIgnore(BLOCK_COL_START);
     AddIgnore(BLOCK_TYPE_END);
+    
     if (!onedim_blocks_) {
         AddIgnore(BLOCK_ROW_TYPE_NAME(1));
         AddIgnore(BLOCK_COL_TYPE_NAME(1));
@@ -139,7 +140,7 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
         selected_splits_ = 0;
     }
     
-    for (int i = 0; i < TIMER_END; i++)
+    for (int i = 0; i < PRE_TIMER_END; i++)
         timer_init(&timers_[i]);
 }
     
@@ -154,8 +155,8 @@ DeltaRLE::Stats DRLE_Manager::GenerateStats(SPM *spm, uint64_t rs, uint64_t re)
     DeltaRLE::Stats stats;
 
     for (uint64_t i = rs; i < re; ++i) {
-        for (const SpmRowElem *elem = spm->RowBegin(i); elem != spm->RowEnd(i);
-             ++elem) {
+        for (const SpmRowElem *elem = spm->RowBegin(i);
+             elem != spm->RowEnd(i); ++elem) {
             if (elem->pattern == NULL) {
                 xs.push_back(elem->x);
                 continue;
@@ -166,7 +167,6 @@ DeltaRLE::Stats DRLE_Manager::GenerateStats(SPM *spm, uint64_t rs, uint64_t re)
 
         UpdateStats(spm, xs, stats);
     }
-
     return stats;
 }
 
@@ -228,7 +228,7 @@ void DRLE_Manager::GenAllStats()
         for (iter = sp->begin(); iter != sp->end(); ) {
             tmp = iter++;
             double p = (double) tmp->second.nnz / (double) spm_->nr_nzeros_;
-            if (block_align == 1 && tmp->first < min_limit_)
+            if (block_align == 1 && (unsigned int) tmp->first < min_limit_)
                 // the dimension of one-dimensional blocks must exceed
                 // min_limit_
                 sp->erase(tmp);
@@ -354,9 +354,9 @@ void DRLE_Manager::Encode(SpmIterOrder type)
         EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
         if (nr_size > 0) {
-            timer_start(&timers_[TIMER_ALLOC]);
+            timer_start(&timers_[PRE_TIMER_ALLOC]);
             elems = SpmBld->AllocElems(nr_size);
-            timer_pause(&timers_[TIMER_ALLOC]);
+            timer_pause(&timers_[PRE_TIMER_ALLOC]);
             for (uint64_t i = 0; i < nr_size; ++i)
                 MakeRowElem(new_row[i], elems + i);
         }
@@ -367,7 +367,7 @@ void DRLE_Manager::Encode(SpmIterOrder type)
 
     SpmBld->Finalize();
     delete SpmBld;
-
+    
     // Transform matrix to the original iteration order
     spm_->Transform(oldtype);
     AddIgnore(type);
@@ -414,28 +414,28 @@ void DRLE_Manager::Decode(SpmIterOrder type)
 void DRLE_Manager::EncodeAll(std::ostream &os)
 {
     SpmIterOrder type = NONE;
-    StatsMap::iterator iter;
+    StatsMap::iterator iter; 
     SpmIterOrder enc_seq[22];
     int counter = 0;
     //double t;
     
-    timer_start(&timers_[TIMER_TOTAL]);
+    timer_start(&timers_[PRE_TIMER_TOTAL]);
     for (;;) {
-        timer_start(&timers_[TIMER_STATS]);
+        timer_start(&timers_[PRE_TIMER_STATS]);
         GenAllStats();
-        timer_pause(&timers_[TIMER_STATS]);
+        timer_pause(&timers_[PRE_TIMER_STATS]);
         OutStats(os);
         type = ChooseType();
         if (type == NONE)
             break;
-        timer_start(&timers_[TIMER_ENCODE]);
+        timer_start(&timers_[PRE_TIMER_ENCODE]);
         os << "Encode to " << SpmTypesNames[type] << "\n";
         Encode(type);
         enc_seq[counter++] = type;
-        timer_pause(&timers_[TIMER_ENCODE]);
+        timer_pause(&timers_[PRE_TIMER_ENCODE]);
     }
     
-    timer_pause(&timers_[TIMER_TOTAL]);
+    timer_pause(&timers_[PRE_TIMER_TOTAL]);
     
     os << "Encoding sequence: ";
     if (counter == 0)
@@ -449,7 +449,7 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
     os << std::endl;
     
     /*
-    for (int i = 0; i < TIMER_END; i++) {
+    for (int i = 0; i < PRE_TIMER_END; i++) {
         t = timer_secs(&timers_[i]);
         os << timers_desc_[i] << t << std::endl;
     }
@@ -574,28 +574,47 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
     col = 0;
     elem.pattern = NULL;
     FOREACH (RLE<uint64_t> rle, rles) {
-        if (deltas_set->find(rle.val) != deltas_set->end()) {
-            while (rle.freq >= min_limit_) {
-                uint64_t freq;
-                SpmRowElem *last_elem;
+        long rle_freq, rle_start;
+        rle_freq = rle.freq;
+        if (rle_freq != 1 && deltas_set->find(rle.val) != deltas_set->end()) {
 
-                freq = std::min(max_limit_, rle.freq);
-                col += rle.val;
-                elem.x = col;
+            col += rle.val;
+            if (col != rle.val) {
+                // include the previous element, too
+                rle_start = col - rle.val;
+                rle_freq = rle.freq + 1;
+                encoded.pop_back();
+                --vi;
+            } else {
+                // we are the first unit in the row
+                rle_start = col;
+                rle_freq = rle.freq;
+            }
+            
+            int nr_parts = 0;
+            while (rle_freq >= min_limit_) {
+                SpmRowElem *last_elem;
+                long curr_freq = std::min(max_limit_, rle_freq);
+                
+                elem.x = rle_start;
                 encoded.push_back(elem);
                 last_elem = &encoded.back();
-                last_elem->pattern = new DeltaRLE(freq, rle.val,
+                last_elem->pattern = new DeltaRLE(curr_freq, rle.val,
                                                   spm_->type_);
-                last_elem->vals = new double[freq];
-                std::copy(vi, vi + freq, last_elem->vals);
-                vi += freq;
-                col += rle.val * (freq - 1);
-                rle.freq -= freq;
+                last_elem->vals = new double[curr_freq];
+                std::copy(vi, vi + curr_freq, last_elem->vals);
+                vi += curr_freq;
+                rle_start += rle.val * curr_freq;
+                rle_freq -= curr_freq;
+                ++nr_parts;
             }
+
+            // leave col at the last element of the pattern
+            col = rle_start - rle.val;
         }
 
         // add individual elements
-        for (int i = 0; i < rle.freq; ++i) {
+        for (int i = 0; i < rle_freq; ++i) {
             col += rle.val;
             elem.x = col;
             elem.val = *vi++;
@@ -603,7 +622,7 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
         }
     }
 
-    assert(vi == vs.end() && "out of bounds");
+    assert(vi == vs.end() && "not all elements processed or out of bounds");
     xs.clear();
     vs.clear();
 }
@@ -1086,12 +1105,16 @@ void DRLE_Manager::UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
         return;
 
     rles = RLEncode(DeltaEncode(xs));
+    uint64_t col = 0;
     FOREACH(RLE<uint64_t> &rle, rles) {
-        if (rle.freq >= min_limit_) {
-            stats[rle.val].nnz += rle.freq;
-            stats[rle.val].npatterns += rle.freq / max_limit_ +
-                                        (rle.freq % max_limit_ != 0);
+        int real_limit = (col) ? min_limit_ - 1 : min_limit_;
+        if (rle.freq > 1 && rle.freq >= real_limit) {
+            uint64_t real_nnz = (col) ? rle.freq + 1 : rle.freq;
+            stats[rle.val].nnz += real_nnz;
+            stats[rle.val].npatterns += (real_nnz) / max_limit_ +
+                                        (real_nnz % max_limit_ != 0);
         }
+        col += rle.val;
     }
     xs.clear();
 }

@@ -148,7 +148,7 @@ float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 
 	/*
 	 * spawn two kind of threads:
-	 *	- 1	 : do_spmv_thread_main_swap: computes, does SWAP(Y,X) and zeroes Y
+	 *	- 1	 : do_spmv_thread_main_swap: computes and does SWAP(Y,X)
 	 *	- N-1: do_spmv_thread: just computes
 	 */
 	pthread_create(tids, NULL, do_spmv_thread_main_swap, spm_mt->spm_threads);

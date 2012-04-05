@@ -58,6 +58,8 @@ ClangCompiler::ClangCompiler(const char *prefix)
                           true /* user supplied */, false, false);
     header_search.AddPath("../lib/dynarray", frontend::Angled,
                           true /* user supplied */, false, false);
+    header_search.AddPath("/usr/include/x86_64-linux-gnu", frontend::System,
+                          false, false, false);
 
     // Setup diagnostic options
     DiagnosticOptions &diag_options = invocation_->getDiagnosticOpts();

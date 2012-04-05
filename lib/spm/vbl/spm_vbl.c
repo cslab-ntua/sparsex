@@ -106,7 +106,7 @@ SPM_VBL_TYPE *SPM_VBL_NAME(_init_crs)(SPM_CRS_TYPE *crs)
         /* That's a new row, start a new block. */
         col_curr = crs->col_ind[crs->row_ptr[i]];
         vbl->bcol_ind[vbl->nblocks] = col_curr;
-        vbl->bsize[vbl->nblocks]   = 1;
+        vbl->bsize[vbl->nblocks] = 1;
 
         for (j = crs->row_ptr[i], col_prev = crs->col_ind[j];
              j < crs->row_ptr[i+1]; j++) {
@@ -139,6 +139,7 @@ SPM_VBL_TYPE *SPM_VBL_NAME(_init_crs)(SPM_CRS_TYPE *crs)
 
         /* Line finished, increment block counter */
         vbl->nblocks++;
+        assert(vbl->nblocks <= crs->nz);
     }
 
     /* Truncate the extra space for the bcol_ind and bsize array. */

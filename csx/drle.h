@@ -19,19 +19,20 @@
 #include <limits>
 #include <cassert>
 #include <cstdlib>
+#include <iostream>
 
 extern "C" {
 #include "timer.h"
 }
 
 namespace csx {
-    
+
 enum {
-    TIMER_TOTAL = 0,
-    TIMER_STATS,
-    TIMER_ENCODE,
-    TIMER_ALLOC,
-    TIMER_END
+    PRE_TIMER_TOTAL = 0,
+    PRE_TIMER_STATS,
+    PRE_TIMER_ENCODE,
+    PRE_TIMER_ALLOC,
+    PRE_TIMER_END
 };
 
 const char *timers_desc_[] =
@@ -381,12 +382,13 @@ private:
     double sampling_portion_;
     uint64_t samples_max_;
     static const uint64_t max_sampling_tries_ = 3;
+    bool symmetric_;
     bool split_blocks_;
     bool onedim_blocks_;
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;
-    xtimer_t timers_[TIMER_END];
+    xtimer_t timers_[PRE_TIMER_END];
 };
 
 /**

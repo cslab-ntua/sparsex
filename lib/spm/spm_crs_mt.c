@@ -8,6 +8,7 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+#include <assert.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <pthread.h>
@@ -20,6 +21,66 @@
 #include "spm_crs.h"
 #include "spm_crs_mt.h"
 #include "spmv_method.h"
+
+spm_mt_t *SPM_CRS_MT_NAME(_get_spm)(SPM_CRS_IDX_TYPE *rowptr,
+                                    SPM_CRS_IDX_TYPE *colind,
+                                    ELEM_TYPE *values,
+                                    SPM_CRS_IDX_TYPE nr_rows,
+                                    unsigned int nr_threads,
+                                    unsigned int *cpus)
+{
+    SPM_CRS_MT_TYPE *csr_mts = malloc(nr_threads*sizeof(*csr_mts));
+    SPM_CRS_TYPE *csr = malloc(sizeof(*csr));
+    csr->row_ptr = rowptr;
+    csr->col_ind = colind;
+    csr->values = values;
+    csr->nz = rowptr[nr_rows] - 1;
+    csr->nrows = csr->ncols = nr_rows;
+
+    spm_mt_t *ret = malloc(sizeof(*ret));
+    ret->nr_threads = nr_threads;
+    ret->spm_threads = malloc(nr_threads*sizeof(*ret->spm_threads));
+
+    // Compute the matrix splits
+    size_t nnz_per_split = csr->nz / nr_threads;
+    size_t curr_nnz = 0;
+    size_t row_start = 0;
+    size_t split_cnt = 0;
+    int i;
+    for (i = 0; i < nr_rows; ++i) {
+        curr_nnz += rowptr[i+1] - rowptr[i];
+        if (curr_nnz >= nnz_per_split) {
+            csr_mts[split_cnt].crs = csr;
+            csr_mts[split_cnt].row_start = row_start;
+            csr_mts[split_cnt].row_end = i+1;
+            ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
+            ret->spm_threads[split_cnt].spmv_fn =
+                SPM_CRS_MT_NAME(_multiply_base_one);
+            ret->spm_threads[split_cnt].cpu = cpus[split_cnt];
+            ret->spm_threads[split_cnt].row_start = row_start;
+            ret->spm_threads[split_cnt].nr_rows = i + 1 - row_start;
+            row_start = i + 1;
+            curr_nnz = 0;
+            ++split_cnt;
+        }
+    }
+
+    // fill the last split
+    if (curr_nnz < nnz_per_split && split_cnt < nr_threads) {
+        csr_mts[split_cnt].crs = csr;
+        csr_mts[split_cnt].row_start = row_start;
+        csr_mts[split_cnt].row_end = i;
+        ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
+        ret->spm_threads[split_cnt].spmv_fn =
+            SPM_CRS_MT_NAME(_multiply_base_one);
+        ret->spm_threads[split_cnt].cpu = cpus[split_cnt];
+        ret->spm_threads[split_cnt].row_start = row_start;
+        ret->spm_threads[split_cnt].nr_rows = i - row_start;
+    }
+
+    return ret;
+}
+
 
 void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
                                  uint64_t *rows_nr, uint64_t *cols_nr,
@@ -111,9 +172,9 @@ void SPM_CRS_MT_NAME(_destroy)(void *spm)
 
 uint64_t SPM_CRS_MT_NAME(_size)(void *spm)
 {
-	spm_mt_t *spm_mt = (spm_mt_t *)spm;
+	spm_mt_t *spm_mt = (spm_mt_t *) spm;
 	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
-	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm_thread->spm;
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *) spm_thread->spm;
 	return SPM_CRS_NAME(_size)(crs_mt->crs);
 }
 
@@ -138,6 +199,32 @@ void SPM_CRS_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		y[i] = yr;
 	}
 }
+
+/*
+ *  Multiplication for one-based indexing of rows and column indices
+ */
+void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *y = out->elements;
+	ELEM_TYPE *values = crs_mt->crs->values;
+	SPM_CRS_IDX_TYPE *row_ptr = crs_mt->crs->row_ptr;
+	SPM_CRS_IDX_TYPE *col_ind = crs_mt->crs->col_ind;
+	const unsigned long row_start = crs_mt->row_start;
+	const unsigned long row_end = crs_mt->row_end;
+	register ELEM_TYPE yr;
+
+	unsigned long i,j;
+	for (i=row_start; i<row_end; i++){
+		yr = (ELEM_TYPE)0;
+		for (j=row_ptr[i]-1; j<row_ptr[i+1]-1; j++) {
+			yr += (values[j] * x[col_ind[j]-1]);
+		}
+		y[i] = yr;
+	}
+}
+
 XSPMV_MT_METH_INIT(
  SPM_CRS_MT_NAME(_multiply),
  SPM_CRS_MT_NAME(_init_mmf),

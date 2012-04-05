@@ -54,7 +54,6 @@ void getMmfHeader(std::istream &in, uint64_t &nrows, uint64_t &ncols,
 
 MMF::MMF(std::istream &in) : in_(in)
 {
-
     getMmfHeader(in_, this->nrows, this->ncols, this->nnz);
 }
 

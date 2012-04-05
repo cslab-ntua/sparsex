@@ -15,12 +15,6 @@
 #include <assert.h>
 
 #include "macros.h"
-
-#ifndef SPM_CRS_BITS
-#define SPM_CRS_BITS 64
-#endif
-
-#include "macros.h"
 #include "vector.h"
 #include "spm_crs.h"
 #include "mmf.h"

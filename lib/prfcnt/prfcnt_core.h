@@ -401,7 +401,7 @@ static prfcnt_event_t __evnts[] = {
  */
 static const int __evnts_selected[] = {
 	EVENT_UNHLT_CORE_CYCLES,
-	EVENT_UOPS_RETIRED,
+/* 	EVENT_UOPS_RETIRED, */
 /* 	EVENT_L1D_REPL, */
 /* 	EVENT_L1D_ALL_REF, */
 /* 	EVENT_L1I_READS, */
@@ -410,7 +410,7 @@ static const int __evnts_selected[] = {
 /* 	EVENT_L2_RQSTS, */
 /* 	EVENT_LLC_REFERENCE, */
 /* 	EVENT_LLC_MISSES, */
-/* 	EVENT_BUS_TRANS_ANY, */
+	EVENT_BUS_TRANS_MEM,
 /* 	EVENT_SIMD_UOPS_EXEC, */
 /* 	EVENT_BR_RETIRED, */
 /* 	EVENT_MISPRED_BR_RETIRED, */
