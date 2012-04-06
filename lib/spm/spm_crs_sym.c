@@ -15,9 +15,8 @@
 #endif
 
 void *SPM_CRS_SYM_NAME(_init_mmf)(char *mmf_file,
-                                  uint64_t *nrows,
-                                  uint64_t *ncols,
-                                  uint64_t *nnz)
+                                  uint64_t *nrows, uint64_t *ncols,
+                                  uint64_t *nnz, void *metadata)
 {
     SPM_CRS_SYM_TYPE *crs;
     

@@ -4,7 +4,7 @@
 scripts      = $(shell pwd)/../../scripts
 
 CC      = gcc
-CFLAGS  = -Wall -Winline -O2
+CFLAGS  = -Wall -O2
 # run scripts to get information
 ifneq ($(MAKECMDGOALS), clean)
 	CPU ?= $(shell $(scripts)/cpu_info.sh)

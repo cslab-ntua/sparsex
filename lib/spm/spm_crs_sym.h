@@ -36,7 +36,7 @@ typedef struct { \
 void *\
 CRS_SYM_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
                                            uint64_t *nrows, uint64_t *ncols, \
-                                           uint64_t *nnz); \
+                                           uint64_t *nnz, void *metadata); \
 void CRS_SYM_NAME(val_type, ci_bits, _destroy)(void *crs); \
 uint64_t CRS_SYM_NAME(val_type, ci_bits, _size)(void *spm); \
 spmv_  ## val_type ## _fn_t CRS_SYM_NAME(val_type, ci_bits, _multiply);

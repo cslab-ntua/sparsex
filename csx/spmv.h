@@ -121,9 +121,7 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name);
  *  @param spm_mt  the sparse matrix in CSX format.
  */
 uint64_t CsxSize(void *spm_mt);
-static unsigned long CsxSize(spm_mt_t *spm_mt);
 uint64_t CsxSymSize(void *spm_mt);
-static unsigned long CsxSymSize(spm_mt_t *spm_mt);
 
 #endif // SPMV_H__
 

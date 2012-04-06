@@ -36,7 +36,7 @@ void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_init_mmf( \
     char *mmf_file, \
     uint64_t *nrows, uint64_t *ncols, \
-    uint64_t *nnz); \
+    uint64_t *nnz, void *metadata);   \
 \
 void \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_make_map(void *spm); \
@@ -67,7 +67,8 @@ void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_init_mmf( \
     char *mmf_file, \
     uint64_t *nrows, uint64_t *ncols, \
-    uint64_t *nnz); \
+    uint64_t *nnz,                    \
+    void *metadata);                  \
 \
 void \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_make_map(void *spm); \

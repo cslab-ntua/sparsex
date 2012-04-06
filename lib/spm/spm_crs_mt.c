@@ -130,9 +130,9 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file,
 		spm_thread->cpu = cpus[i];
 		spm_thread->spm = crs_mt + i;
 
-		unsigned long elems, rows;
+		unsigned long elems;
 		crs_mt[i].row_start = cur_row;
-		for (elems=0,rows=0; ; ){
+		for (elems=0; ; ){
 			elems += crs->row_ptr[cur_row+1] - crs->row_ptr[cur_row];
 			cur_row++;
 			//printf("i:%d nr_cpus:%d cur_row:%lu rows_nr:%lu elems:%lu elems_limit:%lu\n", i, nr_cpus, cur_row, *rows_nr, elems, elems_limit);

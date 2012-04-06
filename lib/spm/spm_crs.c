@@ -21,7 +21,8 @@
 #include "spmv_method.h"
 
 void *SPM_CRS_NAME(_init_mmf)(char *mmf_file,
-                              uint64_t *nrows, uint64_t *ncols, uint64_t *nnz, void *metadata)
+                              uint64_t *nrows, uint64_t *ncols,
+                              uint64_t *nnz, void *metadata)
 {
 
 	SPM_CRS_TYPE *crs;

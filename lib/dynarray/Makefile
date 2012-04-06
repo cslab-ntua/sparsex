@@ -6,7 +6,7 @@ common_dir = ../
 
 ## Configuration
 CC          ?= gcc
-CFLAGS      ?= -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC
+CFLAGS      ?= -g -Wall -O3 -Wdisabled-optimization -fPIC
 override CPPFLAGS += -I$(common_dir)
 COMPILE      = $(CC) $(CPPFLAGS) $(CFLAGS)
 

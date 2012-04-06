@@ -133,12 +133,12 @@ int main(int argc, char *argv[])
 #ifndef SPM_NUMA
             spm_mt = (spm_mt_t *)
                 spm_crs32_double_sym_mt_init_mmf(mmf_file, &nrows, &ncols,
-                                                 &nnz);
+                                                 &nnz, NULL);
 	    meth = method_get((char *) "spm_crs32_double_sym_mt_multiply");
 #else
             spm_mt = (spm_mt_t *)
                 spm_crs32_double_sym_mt_numa_init_mmf(mmf_file, &nrows, &ncols,
-                                                      &nnz);
+                                                      &nnz, NULL);
 	    meth = method_get((char *) "spm_crs32_double_sym_mt_numa_multiply");
 #endif
             for (i = 0; i < spm_mt->nr_threads; i++)
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
         p = vector_double_create(n);
         t = vector_double_create(n);
 
-        if (cg_method == CSR_sym || cg_method == CSX_sym) {
+        if (cg_method == SSS_SPMV || cg_method == CSX_SYM_SPMV) {
             sub_p = (vector_double_t **)
                         malloc(ncpus * sizeof(vector_double_t *));
             sub_p[0] = t;

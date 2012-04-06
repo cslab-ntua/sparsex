@@ -12,7 +12,7 @@
 
 void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
                                      uint64_t *nrows, uint64_t *ncols,
-                                     uint64_t *nnz)
+                                     uint64_t *nnz, void *metadata)
 {
 	unsigned int i;
 	uint32_t ncpus, *cpus;
@@ -22,8 +22,9 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file,
 	SPM_CRS_SYM_MT_TYPE *crs_mt;
 	SPM_CRS_SYM_TYPE *crs;
 
-	crs = (SPM_CRS_SYM_TYPE *) SPM_CRS_SYM_NAME(_init_mmf)(mmf_file, nrows,
-	                                                       ncols, nnz);
+	crs = (SPM_CRS_SYM_TYPE *) SPM_CRS_SYM_NAME(_init_mmf)(mmf_file,
+                                                           nrows, ncols,
+                                                           nnz, metadata);
 	mt_get_options(&ncpus, &cpus);
 	printf("MT_CONF: ");
 	printf("%u", cpus[0]);
@@ -344,11 +345,13 @@ XSPMV_SYM_MT_METH_INIT(
 #include <numa.h>
 #include "numa_util.h"
 
-void *SPM_CRS_SYM_MT_NAME(_numa_init_mmf)(char *mmf_file, uint64_t *nrows,
-                                          uint64_t *ncols, uint64_t *nnz)
+void *SPM_CRS_SYM_MT_NAME(_numa_init_mmf)(char *mmf_file,
+                                          uint64_t *nrows, uint64_t *ncols,
+                                          uint64_t *nnz, void *metadata)
 {
-	spm_mt_t *spm_mt = SPM_CRS_SYM_MT_NAME(_init_mmf)(mmf_file, nrows,
-	                                                  ncols, nnz);
+	spm_mt_t *spm_mt = SPM_CRS_SYM_MT_NAME(_init_mmf)(mmf_file,
+                                                      nrows, ncols,
+                                                      nnz, metadata);
 	int nr_threads = spm_mt->nr_threads;
 	size_t *values_parts = malloc(nr_threads * sizeof(*values_parts));
 	size_t *rowptr_parts = malloc(nr_threads * sizeof(*rowptr_parts));
