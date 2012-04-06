@@ -1,0 +1,10 @@
+1. [DONE] Merge elmer with master
+2. Fix Clang include path issues
+3. Update help texts, etc.
+4. Checking and refactoring of new parts (CG, symmetrics)
+5. Fix bug with the demopatt.mtx.sorted matrix
+6. Final testing before release
+7. [DONE] Fix GCC 4.6 warnings
+8. Convert environment variables to cmd options
+9. Automate the setting of the full-col-index option
+10. Conditional compilation of the prfcnt library.
