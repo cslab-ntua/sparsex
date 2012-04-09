@@ -21,7 +21,6 @@
 #include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
 
-
 using namespace llvm;
 
 namespace csx {

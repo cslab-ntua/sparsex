@@ -83,12 +83,11 @@ static void *do_spmv_thread_main_swap(void *arg)
 #endif
 
 	SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn;
-	int id;
 	tsc_t tsc;
 
 	spm_mt_thread = arg;
 	spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
-	id = spm_mt_thread->id;
+	// int id = spm_mt_thread->id;
 
 #ifdef SPMV_PRFCNT
 	prfcnt = (prfcnt_t *) spm_mt_thread->data;
