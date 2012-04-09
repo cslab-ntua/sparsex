@@ -10,3 +10,6 @@ if [ -f $f ]; then
 	echo "($(cat $f)/(1000*1000))" | bc -l
 	exit 0
 fi
+
+# failed ...
+exit 1

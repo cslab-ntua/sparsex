@@ -2,6 +2,7 @@ SHELL = /bin/bash
 SUBDIRS = bcsr vbl
 
 .PHONY: all clean $(SUBDIRS)
+.NOTPARALLEL: $(SUBDIRS)
 
 all: $(SUBDIRS) libspmv.o spmv
 clean: $(SUBDIRS)
@@ -9,14 +10,14 @@ clean: $(SUBDIRS)
 ## Configuration
 dynarray_dir = ../dynarray
 prfcnt_dir   = ../prfcnt
-script_dir   = ../../scripts
+script_dir   = $(shell pwd)/../../scripts
 
 dynarray_dep = $(dynarray_dir)/dynarray.o
 
 # This is ugly and non-portable
 # (we need a script to return CPU MhZs)
-MHZ_SH      = $(shell pwd)/$(prfcnt_dir)/scripts/cpu_mhz.sh
-CPU_TYPE	= $(shell $(prfcnt_dir)/scripts/cpu_info.sh)
+MHZ_SH      = $(script_dir)/cpu_mhz.sh
+CPU_TYPE    = $(shell $(script_dir)/cpu_info.sh)
 CC          = gcc
 LD          = ld
 CFLAGS      = -g -Wall -Winline -O3 -Wdisabled-optimization -fPIC

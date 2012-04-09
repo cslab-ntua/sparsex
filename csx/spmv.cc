@@ -718,7 +718,10 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
         data[i].symmetric = symmetric;
         data[i].deltas = deltas;
         data[i].buffer.str("");
-        data[i].csxmg->SetFullColumnIndices(false);
+#ifdef SPM_NUMA
+        // Enable the full-column-index optimization for NUMA architectures
+        data[i].csxmg->SetFullColumnIndices(true);
+#endif
     }
     
     // Start parallel preprocessing
