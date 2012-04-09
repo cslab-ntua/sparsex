@@ -2,6 +2,7 @@ SHELL = /bin/bash
 SUBDIRS = bcsr vbl
 
 .PHONY: all clean $(SUBDIRS)
+.NOTPARALLEL: $(SUBDIRS)
 
 all: $(SUBDIRS) libspmv.o spmv
 clean: $(SUBDIRS)
