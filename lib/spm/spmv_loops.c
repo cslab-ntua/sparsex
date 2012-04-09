@@ -3,7 +3,6 @@
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
- * Copyright (C) 2010,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -20,13 +19,10 @@
 #include "prfcnt.h"
 #endif
 
-//#define SPMV_PRFCNT
-
 float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
-                             unsigned long loops,
-			     unsigned long rows_nr, unsigned long cols_nr)
+                              unsigned long loops, unsigned long rows_nr,
+                              unsigned long cols_nr)
 {
-
 	VECTOR_TYPE *x,*y;
 	unsigned long i;
 	tsc_t tsc;
@@ -44,9 +40,8 @@ float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
 	prfcnt_t prfcnt;
 	prfcnt_init(&prfcnt, cpu,PRFCNT_FL_T0|PRFCNT_FL_T1);
 	#endif
-	for (i=0; i<loops; i++){
-		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
-		VECTOR_NAME(_init)(y, (ELEM_TYPE)0);
+	for (i = 0; i < loops; i++)  {
+		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
 		#ifdef SPMV_PRFCNT
 		prfcnt_start(&prfcnt);
 		#endif
@@ -57,11 +52,9 @@ float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
 		prfcnt_pause(&prfcnt);
 		#endif
 	}
+
 	tsc_shut(&tsc);
 	const float secs = tsc_getsecs(&tsc);
-	//const float mf = (((float)(nz_nr*2*loops))/secs)/(1000*1000);
-	//const float mb = (((float)(nz_nr*2+rows_nr*2+cols_nr)*8*LOOPS)/secs)/(1024.0*1024.0);
-	//printf("%s %f %f\n", prefix, mf, secs);
 	#ifdef SPMV_PRFCNT
 	prfcnt_report(&prfcnt);
 	prfcnt_shut(&prfcnt);
@@ -73,11 +66,10 @@ float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
 	return secs;
 }
 
-void SPMV_NAME(_check_loop) (void *m1, void *m2,
-                             SPMV_NAME(_fn_t) *fn1, SPMV_NAME(_fn_t) *fn2,
-                             unsigned long loops,
+void SPMV_NAME(_check_loop) (void *m1, void *m2, SPMV_NAME(_fn_t) *fn1,
+                             SPMV_NAME(_fn_t) *fn2, unsigned long loops,
                              unsigned long rows_nr, unsigned long cols_nr,
-			     unsigned long nz_nr)
+                             unsigned long nz_nr)
 {
 	unsigned long i;
 	VECTOR_TYPE *x,*y1,*y2;
@@ -86,20 +78,14 @@ void SPMV_NAME(_check_loop) (void *m1, void *m2,
 	y1 = VECTOR_NAME(_create)(rows_nr);
 	y2 = VECTOR_NAME(_create)(rows_nr);
 
-	for (i=0; i<loops ;  i++){
-		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
-		//vector_init(x, (ELEM_TYPE)3);
-		//printf("y1=%p y2=%p\n", y1->elements, y2->elements);
-		// We need to zero the vectors, for spmv versions that use
-		// vertical or diagonal patterns
-		VECTOR_NAME(_init)(y1, (ELEM_TYPE)0);
-		VECTOR_NAME(_init)(y2, (ELEM_TYPE)0);
+	for (i = 0; i < loops;  i++){
+		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
+		VECTOR_NAME(_init)(y1, (ELEM_TYPE) 23);
+		VECTOR_NAME(_init)(y2, (ELEM_TYPE) 0);
 		fn1(m1, x, y1);
 		fn2(m2, x, y2);
-		if ( VECTOR_NAME(_compare)(y1, y2) < 0){
+		if (VECTOR_NAME(_compare)(y1, y2) < 0)
 			exit(1);
-		}
-		//vector_print(x);
 	}
 
 	VECTOR_NAME(_destroy)(x);

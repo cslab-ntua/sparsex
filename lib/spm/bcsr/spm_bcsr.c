@@ -38,7 +38,6 @@ static void _fill_bcsr(SPM_BCSR_TYPE *mat, const SPM_CRS_TYPE *matin,
 void *SPM_BCSR_NAME(_init_mmf)(char *mmf_file,
                                uint64_t *nrows, uint64_t *ncols, uint64_t *nnz, void *metadata)
 {
-
     assert(metadata);
     SPM_CRS_TYPE *crs = SPM_CRS_NAME(_init_mmf)(mmf_file, nrows, ncols, nnz, NULL);
     bcsr_metadata_t *meta = (bcsr_metadata_t *) metadata;

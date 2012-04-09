@@ -1,8 +1,9 @@
 /*
- * spmv_loops_mt_numa.c -- NUMA-aware SpMV implementation for symmetric matrices
+ * spmv_loops_mt_numa.c -- NUMA-aware SpMV implementation for symmetric
+ *                         matrices.
  *
- * Copyright (C) 2010-2011, Computing Systems Laboratory (CSLab), NTUA
- * Copyright (C) 2011,      Theodoros Gkountouvas
+ * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -35,24 +36,23 @@ static void *do_spmv_thread(void *arg)
 	
 	int id = spm_mt_thread->id;
 
-	// Switch Reduction Phase
+	// Switch Reduction Phase.
 	int i/*, j, start, end*/;
 	/*
 	start = (id * n) / ncpus;
 	end = ((id + 1) * n) / ncpus;
 	*/
 	for (i = 0; i < nloops; i++) { 
-		// Switch Reduction Phase
+		// Switch Reduction Phase.
 		/*
 		if (id != 0)
 			VECTOR_NAME(_init)(temp[id], 0);
 		*/
 		VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
 		pthread_barrier_wait(&barrier);
-		spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y,
-		               temp[id]);
+		spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y, temp[id]);
 		pthread_barrier_wait(&barrier);
-		// Switch Reduction Phase
+		// Switch Reduction Phase.
 		/*
 		for (j = 1; j < ncpus; j++)
 			VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
@@ -83,12 +83,12 @@ static void *do_spmv_thread_main(void *arg)
 	end = n / ncpus;
 	*/
 	for (i = 0; i < nloops; i++) {
-		// Switch Reduction Phase
+		// Switch Reduction Phase.
 		VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
 		pthread_barrier_wait(&barrier);
 		spmv_mt_sym_fn(spm_mt_thread->spm, spm_mt_thread->data, y, y);
 		pthread_barrier_wait(&barrier);
-		// Switch Reduction Phase
+		// Switch Reduction Phase.
 		/*
 		for (j = 0; j < ncpus; j++)
 		 	VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
@@ -120,13 +120,13 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	n = nrows;
 	
 	err = pthread_barrier_init(&barrier, NULL, ncpus);
-	if (err){
+	if (err) {
 		perror("pthread_barrier_init");
 		exit(1);
 	}
 
 	tids = (pthread_t *) malloc(ncpus * sizeof(pthread_t));
-	if (!tids){
+	if (!tids) {
 		perror("malloc");
 		exit(1);
 	}
@@ -140,9 +140,8 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 
 	int nr_nodes = numa_max_node() + 1;
 	VECTOR_TYPE **xs = malloc(sizeof(*xs)*nr_nodes);
-	for (i = 0; i < nr_nodes; i++) {
+	for (i = 0; i < nr_nodes; i++)
 		xs[i] = NULL;
-	}
 
 	VECTOR_TYPE *x_proto = xs[0];
 	for (i = 0; i < ncpus; i++) {
@@ -151,18 +150,16 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 		if (!xs[node]) {
 			xs[node] = VECTOR_NAME(_create_onnode)(n, node);
 			if (!x_proto) {
-				VECTOR_NAME(_init_rand_range)(xs[node],
-				                              (ELEM_TYPE) -1000,
+				VECTOR_NAME(_init_rand_range)(xs[node], (ELEM_TYPE) -1000,
 				                              (ELEM_TYPE) 1000);
 				x_proto = xs[node];
 			} else {
-				/* copy the elements from the prototype */
 				memcpy(xs[node]->elements, x_proto->elements,
-				       n * sizeof(ELEM_TYPE));
+				       n*sizeof(ELEM_TYPE));
 			}
 		}
 
-		parts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
+		parts[i] = spm->nr_rows*sizeof(ELEM_TYPE);
 		nodes[i] = spm->node;
 		spm->data = xs[spm->node];
 		if (fn)
@@ -173,19 +170,18 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 
 	for (i = 0; i < nr_nodes; i++)
 		if (xs[i])
-			if (check_region(xs[i]->elements,
-			                 n * sizeof(ELEM_TYPE), i))
+			if (check_region(xs[i]->elements, n*sizeof(ELEM_TYPE), i))
 				alloc_err = 1;
 	print_alloc_status("input vector", alloc_err);
 
-	/* Allocate an interleaved y */
+	// Allocate an interleaved y.
 	y = VECTOR_NAME(_create_interleaved)(n, parts, ncpus, nodes);
 	VECTOR_NAME(_init)(y, 0);
 	
 	alloc_err = check_interleaved(y->elements, parts, ncpus, nodes);
 	print_alloc_status("output vector", alloc_err);
 
-	/* Allocate temporary buffers */
+	// Allocate temporary buffers.
 	temp = malloc(ncpus * sizeof(*temp));
 	temp[0] = y;
 	for (i = 1; i < ncpus; i++) {
@@ -203,39 +199,34 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	for (i = 1; i < ncpus; i++) {
 		int tnode = spm_mt->spm_threads[i].node;
 		
-		alloc_err += check_region(temp[i]->elements,
-		                         n * sizeof(ELEM_TYPE), tnode);
+		alloc_err += check_region(temp[i]->elements, n*sizeof(ELEM_TYPE),
+		                          tnode);
 	}
 	print_alloc_status("temporary buffers", alloc_err);
     
+	pthread_create(tids, NULL, do_spmv_thread_main, spm_mt->spm_threads);
 	for (i = 1; i < ncpus; i++)
-		pthread_create(tids + i, NULL, do_spmv_thread,
-		               spm_mt->spm_threads + i);
+		pthread_create(tids + i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
 
-	do_spmv_thread_main(spm_mt->spm_threads);
-
-	for (i = 1; i < ncpus; i++){
+	for (i = 0; i < ncpus; i++)
 		pthread_join(tids[i], NULL);
-	}
 
-	/* Destroy vectors */
-	for (i = 0; i < nr_nodes; i++) {
+	// Destroy vectors.
+	for (i = 0; i < nr_nodes; i++)
 		if (xs[i])
 			VECTOR_NAME(_destroy)(xs[i]);
-	}
-	free(xs);
 
 	VECTOR_NAME(_destroy)(y);
-
-	for (i = 1; i < ncpus; i++) {
+	for (i = 1; i < ncpus; i++)
 		VECTOR_NAME(_destroy)(temp[i]);
-	}
+
+	free(xs);
 	free(temp);
-	
 	free(parts);
 	free(nodes);
 	free(tids);
 	pthread_barrier_destroy(&barrier);
+	
 	return secs;
 }
 
@@ -276,9 +267,8 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 
 	int nr_nodes = numa_max_node() + 1;
 	VECTOR_TYPE **xs = malloc(sizeof(*xs)*nr_nodes);
-	for (i = 0; i < nr_nodes; i++) {
+	for (i = 0; i < nr_nodes; i++)
 		xs[i] = NULL;
-	}
 
 	VECTOR_TYPE *x_proto = NULL;
 	for (i = 0; i < ncpus; i++) {
@@ -287,14 +277,12 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 		if (!xs[node]) {
 			xs[node] = VECTOR_NAME(_create_onnode)(n, node);
 			if (!x_proto) {
-				VECTOR_NAME(_init_rand_range)(xs[node],
-				                              (ELEM_TYPE) -1000,
+				VECTOR_NAME(_init_rand_range)(xs[node],(ELEM_TYPE) -1000,
 				                              (ELEM_TYPE) 1000);
 				x_proto = xs[node];
 			} else {
-				/* copy the elements from the prototype */
 				memcpy(xs[node]->elements, x_proto->elements,
-				       n * sizeof(ELEM_TYPE));
+				       n*sizeof(ELEM_TYPE));
 			}
 		}
 
@@ -305,13 +293,11 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 			spm->spmv_fn = mt_fn;
 	}
 	
-	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(n, parts, ncpus, nodes);
 	y2 = VECTOR_NAME(_create)(n);
 	VECTOR_NAME(_init)(y, 0);
 	VECTOR_NAME(_init)(y2, 0);
 
-	/* Allocate temporary buffers */
 	temp = malloc(ncpus * sizeof(*temp));
 	temp[0] = y;
 	for (i = 1; i < ncpus; i++) {
@@ -333,27 +319,24 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 		pthread_barrier_wait(&barrier);
 		pthread_barrier_wait(&barrier);
 		pthread_barrier_wait(&barrier);
-		/* use the prototype of x */
-		fn(spm_serial, x_proto, y2);
-		if (VECTOR_NAME(_compare)(y2, y) < 0) {
+		fn(spm_serial, x_proto, y2);	
+		if (VECTOR_NAME(_compare)(y2, y) < 0)
 			exit(1);
-		}
 	}
 
-	/* Destroy vectors */
-	for (i = 0; i < nr_nodes; i++) {
+	for (i = 0; i < ncpus; i++)
+		pthread_join(tids[i], NULL);
+
+	for (i = 0; i < nr_nodes; i++)
 		if (xs[i])
 			VECTOR_NAME(_destroy)(xs[i]);
-	}
-	free(xs);
 
 	VECTOR_NAME(_destroy)(y);
-
-    for (i = 1; i < ncpus; i++) {
+	for (i = 1; i < ncpus; i++)
 		VECTOR_NAME(_destroy)(temp[i]);
-	}
+
+	free(xs);
 	free(temp);
-	
 	free(parts);
 	free(nodes);
 	free(tids);

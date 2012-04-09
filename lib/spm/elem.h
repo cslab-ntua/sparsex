@@ -17,7 +17,7 @@ enum {
 
 static inline int elem_size(unsigned type)
 {
-	switch (type){
+	switch (type) {
 		case ELEM_FLOAT:
 		return sizeof(float);
 
@@ -30,11 +30,10 @@ static inline int elem_size(unsigned type)
 	}
 }
 
-static inline void elem_set(void *dst, unsigned long dst_idx,
-                            void *src, unsigned long src_idx, 
-			    unsigned type)
+static inline void elem_set(void *dst, unsigned long dst_idx, void *src,
+                            unsigned long src_idx, unsigned type)
 {
-	switch (type){
+	switch (type) {
 		case ELEM_FLOAT:
 		{
 			float *_src = (float *)src;
@@ -59,7 +58,7 @@ static inline void elem_set(void *dst, unsigned long dst_idx,
 static inline void elem_set_from_double(void *dst, unsigned long dst_idx,
                                         double val, unsigned type)
 {
-	switch (type){
+	switch (type) {
 		case ELEM_FLOAT:
 		{
 			float *_dst = (float *)dst;
@@ -79,4 +78,4 @@ static inline void elem_set_from_double(void *dst, unsigned long dst_idx,
 	}
 }
 
-#endif
+#endif /* __ELEM_H__ */

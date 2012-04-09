@@ -67,7 +67,7 @@ libspmv_deps = vector.o method.o mt_lib.o mmf.o  \
 libspmv.o: $(libspmv_deps) $(deps) $(SUBDIRS)
 	$(LD) -i --allow-multiple-definition $(libspmv_deps) $(deps) -o libspmv.o
 
-vector.o: vector.c vector.h
+vector.o: vector.c vector.h map.h
 	for t in double float; do                                 \
            $(COMPILE) -DELEM_TYPE=$$t  -c $< -o vector_$${t}.o;   \
         done

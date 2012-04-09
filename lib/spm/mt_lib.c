@@ -25,7 +25,7 @@ void setaffinity_oncpu(unsigned int cpu)
     CPU_SET(cpu, &cpu_mask);
 
     err = sched_setaffinity(0, sizeof(cpu_set_t), &cpu_mask);
-    if ( err) {
+    if (err) {
         perror("sched_setaffinity");
         exit(1);
     }
@@ -37,7 +37,7 @@ static long parse_int(char *s)
     char *endptr;
 
     ret = strtol(s, &endptr, 10);
-    if ( *endptr != '\0' ) {
+    if (*endptr != '\0') {
         printf("parse error: '%s' is not a number\n", s);
         exit(1);
     }
@@ -50,11 +50,11 @@ void mt_get_options(unsigned int *nr_cpus, unsigned int **cpus)
     char *s,*e,*token;
 
     e = getenv(MT_CONF);
-    if ( !e ){
-        printf("%s empty: setting default mt options: 0\n", MT_CONF);
+    if (!e) {
+        // printf("%s empty: setting default mt options: 0\n", MT_CONF);
         *nr_cpus = 1;
         *cpus = malloc(sizeof(unsigned int)*(*nr_cpus));
-        if (!*cpus){
+        if (!*cpus) {
             fprintf(stderr, "mt_get_options: malloc failed\n");
             exit(1);
         }
@@ -62,27 +62,26 @@ void mt_get_options(unsigned int *nr_cpus, unsigned int **cpus)
         return;
     }
     s = malloc(strlen(e)+1);
-    if ( !s ){
+    if (!s) {
         fprintf(stderr, "mt_get_options: malloc failed\n");
         exit(1);
     }
     memcpy(s, e, strlen(e)+1);
     *nr_cpus = 1;
-    for ( i=0 ; i < strlen(s); i++){
-        if ( s[i] == ','){
+    for (i = 0; i < strlen(s); i++)
+        if (s[i] == ',')
             *nr_cpus = *nr_cpus+1;
-        }
-    }
+
     i = 0;
     *cpus = malloc(sizeof(unsigned int)*(*nr_cpus));
-    if ( !(*cpus) ){
+    if (!(*cpus)) {
         fprintf(stderr, "mt_get_options: malloc failed\n");
         exit(1);
     }
     token = strtok(s, ",");
     do {
         (*cpus)[i++] = (unsigned int)parse_int(token);
-    } while ( (token = strtok(NULL, ",")) );
+    } while ((token = strtok(NULL, ",")));
     free(s);
     return;
 }

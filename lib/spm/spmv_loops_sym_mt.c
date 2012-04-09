@@ -1,8 +1,8 @@
 /*
  * spmv_loops_sym_mt.c
  *
- * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
- * Copyright (C) 2011,      Theodoros Gkountouvas
+ * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -24,7 +24,7 @@ static void *do_spmv_thread(void *arg)
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
 	SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
 	int id = spm_mt_thread->id;
-	// Switch Reduction Phase
+	// Switch Reduction Phase.
 	int i/*, j, start, end*/;
 
 	setaffinity_oncpu(spm_mt_thread->cpu);
@@ -34,14 +34,14 @@ static void *do_spmv_thread(void *arg)
 	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
 	prfcnt_start(prfcnt);
 #endif
-	// Switch Reduction Phase
+	// Switch Reduction Phase.
 	/*
 	start = (id * n) / ncpus;
 	end = ((id + 1) * n) / ncpus;
 	*/
 
 	for (i = 0; i < nloops; i++) {
-		// Switch Reduction Phase
+		// Switch Reduction Phase.
 		/*
 		if (id != 0)
 			VECTOR_NAME(_init)(temp[id], 0);
@@ -50,7 +50,7 @@ static void *do_spmv_thread(void *arg)
 		pthread_barrier_wait(&barrier);
 		spmv_mt_sym_fn(spm_mt_thread->spm, x, y, temp[id]);
 		pthread_barrier_wait(&barrier);
-		// Switch Reduction Phase
+		// Switch Reduction Phase.
 		/*
 		for (j = 1; j < ncpus; j++)
 			VECTOR_NAME(_add_part)(y, temp[j], y, start, end);
@@ -66,12 +66,12 @@ static void *do_spmv_thread(void *arg)
 	return NULL;
 }
 
-#define SWAP(x,y)		\
-	do {			\
+#define SWAP(x,y) \
+	do { \
 		typeof(x) _tmp;	\
-		_tmp = x;	\
-		x = y;		\
-		y = _tmp;	\
+		_tmp = x; \
+		x = y; \
+		y = _tmp; \
 	} while (0)
 
 static void *do_spmv_thread_main_swap(void *arg)
@@ -83,21 +83,21 @@ static void *do_spmv_thread_main_swap(void *arg)
 #endif
 
 	SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn;
-	int id;
+	// int id;
 	tsc_t tsc;
 
 	spm_mt_thread = arg;
 	spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
-	id = spm_mt_thread->id;
+	// id = spm_mt_thread->id;
 
 #ifdef SPMV_PRFCNT
 	prfcnt = (prfcnt_t *) spm_mt_thread->data;
 #endif
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
-	VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
+	VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
 
-	// assert that this is a rectangular matrix, and swap is OK
+	// Assert that the matrix is square and swap is OK.
 	assert(x->size == y->size);
 	tsc_init(&tsc);
 	tsc_start(&tsc);
@@ -106,7 +106,7 @@ static void *do_spmv_thread_main_swap(void *arg)
 	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
 	prfcnt_start(prfcnt);
 #endif
-	// Switch Reduction Phase
+	// Switch Reduction Phase.
 	int i/*, j, start, end*/;
 	/*
 	start = (id * n) / ncpus;
@@ -139,20 +139,11 @@ static void *do_spmv_thread_main_swap(void *arg)
 	return NULL;
 }
 
-static void init_barrier(unsigned count)
-{
-	int err = pthread_barrier_init(&barrier, NULL, count);
-	if (err) {
-		perror("pthread_barrier_init");
-		exit(1);
-	}
-}
-
 float SPMV_NAME(_bench_sym_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
                                     unsigned long nrows, unsigned long ncols,
                                     SPMV_NAME(_fn_t) *fn)
 {
-	int i;
+	int i, err;
 	pthread_t *tids;
 
 	secs = 0.0;
@@ -163,14 +154,24 @@ float SPMV_NAME(_bench_sym_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 	x = VECTOR_NAME(_create)(n);
 	y = VECTOR_NAME(_create)(n);
 	temp = (VECTOR_TYPE **) malloc(ncpus * sizeof(VECTOR_TYPE *));
+	if (!temp) {
+		perror("malloc");
+		exit(1);
+	}
+
 	temp[0] = y;
 	for (i = 1; i < ncpus; i++)
 		temp[i] = VECTOR_NAME(_create)(n);
 
-	init_barrier(ncpus);
+	err = pthread_barrier_init(&barrier, NULL, ncpus);
+	if (err) {
+		perror("pthread_barrier_init");
+		exit(1);
+	}
+
 	tids = (pthread_t *) malloc(ncpus * sizeof(pthread_t));
 	if (!tids) {
-		fprintf(stderr, "malloc failed\n");
+		perror("malloc");
 		exit(1);
 	}
 
@@ -181,7 +182,7 @@ float SPMV_NAME(_bench_sym_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 #ifdef SPMV_PRFCNT
 		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
 		if (!spm_mt->spm_threads[i].data) {
-			fprintf(stderr, "malloc failed\n");
+			perror("malloc");
 			exit(1);
 		}
 #endif
@@ -198,7 +199,7 @@ float SPMV_NAME(_bench_sym_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 		pthread_join(tids[i], NULL);
 
 #ifdef SPMV_PRFCNT
-	/* Report performance counters for every thread */
+	// Report performance counters for every thread.
 	for (i = 0; i < ncpus; i++) {
 		spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
 		prfcnt_t *prfcnt = (prfcnt_t *) spmv_thread.data;
@@ -215,6 +216,7 @@ float SPMV_NAME(_bench_sym_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 	for (i = 1; i < ncpus; i++)
 		VECTOR_NAME(_destroy)(temp[i]);
 	free(temp);
+	pthread_barrier_destroy(&barrier);
 	free(tids);
 
 	return secs;
@@ -225,7 +227,7 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
                                     unsigned long nrows, unsigned long ncols,
                                     SPMV_NAME(_fn_t) *mt_fn)
 {
-	int i;
+	int i, err;
 	pthread_t *tids;
 	VECTOR_TYPE *y2;
 
@@ -237,13 +239,24 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
 	y = VECTOR_NAME(_create)(n);
 	y2 = VECTOR_NAME(_create)(n);
 	temp = (VECTOR_TYPE **) malloc(ncpus * sizeof(VECTOR_TYPE *));
+	if (!temp) {
+		perror("malloc");
+		exit(1);
+	}
+
 	for (i = 1; i < ncpus; i++)
 		temp[i] = VECTOR_NAME(_create)(n);
 	temp[0] = y;
-	init_barrier(ncpus + 1);
+	
+	err = pthread_barrier_init(&barrier, NULL, ncpus+1);
+	if (err) {
+		perror("pthread_barrier_init");
+		exit(1);
+	}
+
 	tids = (pthread_t *) malloc(ncpus * sizeof(pthread_t));
 	if (!tids) {
-		fprintf(stderr, "malloc failed");
+		perror("malloc");
 		exit(1);
 	}
 
@@ -254,7 +267,7 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
 #ifdef SPMV_PRFCNT
 		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
 		if (!spm_mt->spm_threads[i].data) {
-			fprintf(stderr, "malloc failed");
+			perror("malloc");
 			exit(1);
 		}
 #endif
@@ -264,8 +277,7 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
 	}
 
 	for (i = 0; i < nloops; i++) {
-		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000,
-		            (ELEM_TYPE) 1000);
+		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
 		VECTOR_NAME(_init)(y, (ELEM_TYPE) 21);
 		VECTOR_NAME(_init)(y2, (ELEM_TYPE) 22);
 		pthread_barrier_wait(&barrier);
@@ -276,14 +288,8 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
 			exit(1);
 	}
 
-	for (i = 0; i < spm_mt->nr_threads; i++)
+	for (i = 0; i < ncpus; i++)
 		pthread_join(tids[i], NULL);
-
-	VECTOR_NAME(_destroy)(x);
-	VECTOR_NAME(_destroy)(y);
-	VECTOR_NAME(_destroy)(y2);
-	for (i = 1; i < ncpus; i++)
-		VECTOR_NAME(_destroy)(temp[i]);
 
 #ifdef SPMV_PRFCNT
 	for (i = 0; i < spm_mt->nr_threads; i++) {
@@ -294,7 +300,13 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
 	}
 #endif
 
+	VECTOR_NAME(_destroy)(x);
+	VECTOR_NAME(_destroy)(y);
+	VECTOR_NAME(_destroy)(y2);
+	for (i = 1; i < ncpus; i++)
+		VECTOR_NAME(_destroy)(temp[i]);
+
+	free(temp);
+	pthread_barrier_destroy(&barrier);
 	free(tids);
 }
-
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

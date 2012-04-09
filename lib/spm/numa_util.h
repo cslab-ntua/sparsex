@@ -1,8 +1,9 @@
 /*
  * numa_util.h -- NUMA utilitiy functions
  *
- * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA
- * Copyright (C) 2011, Vasileios Karakasis
+ * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2011-2012, Vasileios Karakasis
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.

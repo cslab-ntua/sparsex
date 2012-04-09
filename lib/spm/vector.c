@@ -1,9 +1,10 @@
 /*
  * vector.c
  *
- * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2007-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
- * Copyright (C) 2011,      Vasileios Karakasis
+ * Copyright (C) 2011-2012, Vasileios Karakasis
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -42,7 +43,7 @@ VECTOR_TYPE *VECTOR_NAME(_create_from_buff)(ELEM_TYPE *buff, unsigned long size)
 {
 	VECTOR_TYPE *v = malloc(sizeof(VECTOR_TYPE));
 	if (!v) {
-		fprintf(stderr, "malloc failed\n");
+		perror("malloc");
 		exit(1);
 	}
 
@@ -56,16 +57,16 @@ VECTOR_TYPE *VECTOR_NAME(_create_from_buff)(ELEM_TYPE *buff, unsigned long size)
 VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 {
 	VECTOR_TYPE *v = malloc(sizeof(VECTOR_TYPE));
-	if ( !v ) {
-		fprintf(stderr, "malloc failed\n");
+	if (!v) {
+		perror("malloc");
 		exit(1);
 	}
 
 	v->size = size;
 	v->alloc_type = ALLOC_STD;
 	v->elements = malloc(sizeof(ELEM_TYPE)*(size + 12));
-	if ( !v->elements ){
-		fprintf(stderr, "malloc failed\n");
+	if (!v->elements) {
+		perror("malloc");
 		exit(1);
 	}
 
@@ -83,19 +84,15 @@ VECTOR_TYPE *VECTOR_NAME(_create_onnode)(unsigned long size, int node)
 	return v;
 }
 
-VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size,
-                                              size_t *parts,
-                                              int nr_parts,
-                                              const int *nodes) {
-
+VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size, size_t *parts,
+                                              int nr_parts, const int *nodes)
+{
 	VECTOR_TYPE *v = alloc_onnode(sizeof(VECTOR_TYPE), nodes[0]);
 
 	v->size = size;
 	v->alloc_type = ALLOC_MMAP;
-	v->elements = (ELEM_TYPE *) alloc_interleaved(size * 
-	                                              sizeof(*v->elements),
+	v->elements = (ELEM_TYPE *) alloc_interleaved(size*sizeof(*v->elements),
 	                                              parts, nr_parts, nodes);
-
 	return v;
 }
 
@@ -152,7 +149,7 @@ void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 	ELEM_TYPE val;
 
 	for (i=0; i<v->size; i++) {
-		val = ((ELEM_TYPE)(rand()+i)/((ELEM_TYPE)RAND_MAX+1));
+		val = ((ELEM_TYPE) (rand()+i) / ((ELEM_TYPE) RAND_MAX+1));
 		v->elements[i] = min + val*(max-min);
 	}
 }
@@ -206,7 +203,6 @@ void VECTOR_NAME(_add_from_map)(VECTOR_TYPE *v1, VECTOR_TYPE **v2,
 
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)
 {
-	// if (fabs((double) (a - b)) > 1.e-7) {
 	if (fabs((double) (a-b) / (double) a)  > 1.e-7)
 		return 1;
 	return 0;
@@ -216,15 +212,16 @@ int VECTOR_NAME(_compare)(VECTOR_TYPE *v1, VECTOR_TYPE *v2)
 {
 	unsigned long i;
 	
-	if ( v1->size != v2->size ){
-		fprintf(stderr, "v1->size=%lu v2->size=%lu differ\n", v1->size, v2->size);
+	if (v1->size != v2->size) {
+		fprintf(stderr, "v1->size=%lu v2->size=%lu differ\n", v1->size,
+		        v2->size);
 		return -2;
 	}
 	
-	for (i=0; i<v1->size; i++){
-		if ( elems_neq(v1->elements[i], v2->elements[i])){
-			fprintf(stderr, "element %ld differs: %10.20lf != %10.20lf\n",
-			        i, (double)v1->elements[i], (double)v2->elements[i]);
+	for (i=0; i<v1->size; i++) {
+		if (elems_neq(v1->elements[i], v2->elements[i])) {
+			fprintf(stderr, "element %ld differs: %10.20lf != %10.20lf\n", i,
+			        (double) v1->elements[i], (double) v2->elements[i]);
 			return -1;
 		}
 	}
@@ -241,5 +238,3 @@ void VECTOR_NAME(_print)(VECTOR_TYPE *v)
         printf("%lf ", (double) v->elements[i]);
     printf("]\n");
 }
-
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

@@ -1,19 +1,20 @@
 /*
  * spmv_loops_sym_mt.h -- Multithreaded spmv loops for symmetric matrices.
  *
- * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
- * Copyright (C) 2011,      Theodoros Gkountouvas
+ * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
  
-#ifndef SPMV_LOOPS_SYM_MT_
-#define SPMV_LOOPS_SYM_MT_
+#ifndef __SPMV_LOOPS_SYM_MT_H__
+#define __SPMV_LOOPS_SYM_MT_H__
 
 #include <stdlib.h>
 #include <pthread.h>
 
+#include "map.h"
 #include "vector.h"
 #include "mt_lib.h"
 #include "spm_mt.h"
@@ -56,6 +57,4 @@ void spmv_float_check_sym_mt_loop_serial(void *spm, spm_mt_t *spm_mt,
                                          unsigned long ncols,
                                          spmv_float_fn_t *mt_fn);
                                          		     
-#endif
-
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
+#endif /* __SPMV_LOOPS_SYM_MT_H__ */

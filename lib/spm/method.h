@@ -24,7 +24,8 @@ method_t *method_get(char *name);
 method_t *method_create(char *name, void *fn, void *data);
 void method_add(method_t *method);
 void method_print(char *start, char *sep_start, char *sep_end, char *end);
-void method_fprint(FILE *stream, char *start, char *sep_start, char *sep_end, char *end);
+void method_fprint(FILE *stream, char *start, char *sep_start, char *sep_end,
+                   char *end);
 
 #define METHOD_INIT(func, data) \
 void __attribute__((constructor)) func ## _init (void) \

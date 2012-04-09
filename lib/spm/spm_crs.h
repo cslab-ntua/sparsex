@@ -17,7 +17,8 @@
 #define SPM_CRS_BITS 64
 #endif
 
-#define CRS_NAME(val_type, ci_bits, name) spm_crs ## ci_bits ## _ ## val_type ## name
+#define CRS_NAME(val_type, ci_bits, name) \
+            spm_crs ## ci_bits ## _ ## val_type ## name
 #define CRS_TYPE(val_type, ci_bits) CRS_NAME(val_type, ci_bits, _t)
 
 #define SPM_CRS_DECLARE(val_type, ci_bits) \
@@ -27,12 +28,15 @@ typedef struct { \
 	uint64_t            nz, nrows, ncols; \
 } CRS_TYPE(val_type, ci_bits); \
 \
-void *\
-CRS_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file,                  \
-                                       uint64_t *rows_nr, uint64_t *cols_nr, \
-                                       uint64_t *nz_nr, void *metadata); \
+void *CRS_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
+                                             uint64_t *rows_nr, \
+                                             uint64_t *cols_nr, \
+                                             uint64_t *nz_nr, void *metadata); \
+\
 void CRS_NAME(val_type, ci_bits, _destroy)(void *crs); \
+\
 uint64_t CRS_NAME(val_type, ci_bits, _size)(void *spm); \
+\
 spmv_  ## val_type ## _fn_t CRS_NAME(val_type, ci_bits, _multiply);
 
 SPM_CRS_DECLARE(double, 32)
