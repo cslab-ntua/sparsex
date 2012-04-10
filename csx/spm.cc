@@ -1,33 +1,15 @@
 /*
  * spm.cc --  Internal representation of sparse matrices (implementation)
  *
- * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2011,      Theodoros Gkountouvas
+ * Copyright (C) 2009-2012, Vasileios Karakasis
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 #include "spm.h"
-#include "mmf.h"
-
-#include <vector>
-#include <iterator>
-#include <algorithm>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <cstdio>
-#include <cstdlib>
-#include <cassert>
-
-#include <boost/function.hpp>
-#include <boost/foreach.hpp>
-#include <boost/lambda/bind.hpp>
-#include <boost/lambda/lambda.hpp>
-
-#include "dynarray.h"
 
 #define FOREACH BOOST_FOREACH
 

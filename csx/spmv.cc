@@ -1,10 +1,10 @@
 /*
  * spmv.cc -- Front-end utilities for invoking CSX.
  *
- * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2010-2011, Theodoros Gkountouvas
+ * Copyright (C) 2009-2012, Vasileios Karakasis
+ * Copyright (C) 2010-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.

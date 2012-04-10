@@ -2,10 +2,10 @@
  *
  * csx.h -- The CSX Manager interface
  *
- * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2011,      Vasileios Karakasis
- * Copyright (C) 2011,      Theodoros Gkountouvas
+ * Copyright (C) 2011-2012, Vasileios Karakasis
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -61,13 +61,13 @@ public:
                 flag(flag_), npatterns(npatterns_), nr(nr_) {}
         PatInfo(): flag(0), npatterns(0), nr(0) {}
 
-        uint8_t flag;       ///< A unique CSX ID assigned to this pattern.
-        uint64_t npatterns; ///< Number of patterns of this kind.
-        uint64_t nr;        ///< Number of non-zero elements of this pattern.
+        uint8_t flag;       // A unique CSX ID assigned to this pattern.
+        uint64_t npatterns; // Number of patterns of this kind.
+        uint64_t nr;        // Number of non-zero elements of this pattern.
     };
 
     typedef std::map<long,PatInfo> PatMap;
-    PatMap patterns;    ///< Patterns found in matrix.
+    PatMap patterns;        // Patterns found in matrix.
 
     CsxManager(SPM *spm)
         : spm_(spm),
@@ -98,10 +98,19 @@ public:
 
     /**
      *  Transform the matrix owned by this manager into CSX form.
-     *
-     *  @return a handle to the newly created CSX matrix.
+     *  
+     *  @param symmetric determines if the matrix is symmetric (only the lower
+     *                   triangle half must be encoded) or not.
+     *  @return          a handle to the newly created CSX matrix or to CSX-Sym
+     *                   lower triangle half part of the matrix.
      */
     csx_double_t *MakeCsx(bool symmetric);
+    
+    /**
+     *  Transform the matrix owned by this manager into CSX form.
+     *
+     *  @return a handle to the newly created CSX-Sym matrix.
+     */
     csx_double_sym_t *MakeCsxSym();
 
     /**
@@ -155,29 +164,29 @@ private:
      *  pattern.
      *
      *  @param elem elements of current pattern.
-     *  @param jmp  ????????????
+     *  @param jmp  """bkk"""
      */
     void AddPattern(const SpmRowElem &elem, uint64_t jmp);
 
     /**
-     *  ???????????????????
+     *  @param xs  elements found before pattern.
+     *  @param jmp """bkk"""
      */
     uint64_t PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem);
 
     SPM *spm_;
     SPMSym *spm_sym_;
-    uint8_t flag_avail_;    ///< Current available flags for pattern id mapping.
-    bool row_jmps_;         ///< Whether or not row jumps included.
-    bool full_column_indices_;  ///< use full 32-bit indices instead of
-                                /// deltas
-
+    uint8_t flag_avail_;     // Current available flags for pattern id mapping.
+    bool row_jmps_;          // Whether or not row jumps included.
+    bool full_column_indices_;  // use full 32-bit indices instead of deltas.
+                                
     double *values_;
     uint64_t values_idx_;
 
     dynarray_t *ctl_da_;
     uint64_t last_col_;
-    bool new_row_;          ///< Marker of new_row.
-    uint64_t empty_rows_;   ///< Number of empty rows since last non-empty row.
+    bool new_row_;          // Marker of new_row.
+    uint64_t empty_rows_;   // Number of empty rows since last non-empty row.
 };
 }   // end of csx namespace
 

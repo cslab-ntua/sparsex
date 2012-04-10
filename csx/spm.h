@@ -2,10 +2,10 @@
  *
  * spm.h --  Internal representation of sparse matrices.
  *
- * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2009-2011, Vasileios Karakasis
- * Copyright (C) 2011,      Theodoros Gkountouvas
+ * Copyright (C) 2009-2012, Vasileios Karakasis
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -13,14 +13,22 @@
 #ifndef CSX_SPM_H__
 #define CSX_SPM_H__
 
-#include "spm_bits.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cassert>
 #include <vector>
 #include <iterator>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lambda/bind.hpp>
+#include <boost/lambda/lambda.hpp>
+
+#include "spm_bits.h"
+#include "mmf.h"
 #include "csr.h"
 #include "dynarray.h"
 
@@ -42,11 +50,11 @@ private:
     uint64_t elems_size_;
     uint64_t *rowptr_;
     uint64_t rowptr_size_;
-    uint64_t row_start_;    ///< Row of the original matrix, where this
-                            ///  sub-matrix starts.
+    uint64_t row_start_;    /* Row of the original matrix, where this
+                               sub-matrix starts. */
     bool elems_mapped_;
     
-    ///< Maximum possible rowptr_size after transformations.
+    // Maximum possible rowptr_size after transformations.
     uint64_t max_rowptr_size_;
 
     // These are mainly SPM construction classes, so make them friends
@@ -197,6 +205,20 @@ public:
     static SPM *LoadMMF_mt(const char *mmf_file, const long nr);
     static SPM *LoadMMF_mt(std::istream &in, const long nr);
     static SPM *LoadMMF_mt(MMF &mmf, const long nr);
+    
+    /**
+     *  Loads matrix from CSR format.
+     *
+     *  @param rowptr     array "rowptr" of CSR format.
+     *  @param colind     array "colind" of CSR format.
+     *  @param values     array "values" of CSR format.
+     *  @param nr_rows    number of rows.
+     *  @param nr_cols    number of columns.
+     *  @param zero_based """bkk"""
+     *  @param nr         number of threads to be used.
+     *  @return           spm class object with the characteristics of the 
+     *                    matrix.
+     */
     template<typename IndexType, typename ValueType>
     static SPM *LoadCSR_mt(IndexType *rowptr, IndexType *colind,
                            ValueType *values, IndexType nr_rows,
@@ -204,7 +226,6 @@ public:
     {
         CSR<IndexType, ValueType> csr(rowptr, colind, values, nr_rows,
                                       nr_cols, zero_based);
-        // std::cout << csr << std::endl;
         return DoLoadMatrix<CSR<IndexType, ValueType> >(csr, nr);
     };
 
@@ -292,6 +313,9 @@ public:
      */
     void PutWindow(const SPM *window);
 
+/**
+ *  """bkk"""
+ */
 private:
     template<typename MatrixType>
     static SPM *DoLoadMatrix(MatrixType &mat, long nr)
@@ -421,14 +445,14 @@ private:
 class SPMSym
 {
 private:
-    SPM         *lower_matrix_;   ///> Representation of lower matrix.
-    double      *diagonal_;       ///> Values of diagonal elements.
-    uint64_t    diagonal_size_;   ///> Size of the diagonal.
-    SPM         *m1_;             ///> Matrix that contains the elems of SpmSym
-                                  //   for which column of the element is
-                                  //   smaller than the row start.
-    SPM         *m2_;             ///> Matrix that contains the rest of the
-                                  //   elements.
+    SPM         *lower_matrix_;   // Representation of lower matrix.
+    double      *diagonal_;       // Values of diagonal elements.
+    uint64_t    diagonal_size_;   // Size of the diagonal.
+    SPM         *m1_;             /* Matrix that contains the elems of SpmSym
+                                     for which column of the element is smaller
+                                     than the row start. */
+    SPM         *m2_;             /* Matrix that contains the rest of the
+                                     elements. */
     
 public:
     SPMSym() : lower_matrix_(NULL), diagonal_(NULL), m1_(NULL), m2_(NULL)
@@ -495,13 +519,21 @@ public:
      *  @param in       buffer from which the matrix is taken.
      *  @param mmf      handler of MMF class.
      *  @param nr       number of threads to be used.
-     *  @return         spm class object with the characteristics of the matrix.
+     *  @return         spmsym class object with the characteristics of the 
+     *                  matrix.
      */
     static SPMSym *LoadMMF_mt(const char *mmf_file, const long nr);
     static SPMSym *LoadMMF_mt(std::istream &in, const long nr);
     static SPMSym *LoadMMF_mt(MMF &mmf, const long nr);
     
+    /**
+     *  Divide the matrix (m) to two submatrices (m1 and m2).
+     */
     void DivideMatrix();
+
+    /**
+     *  Merge the two submatrices (m1 and m2) into one matrix (m).
+     */
     void MergeMatrix();
     
     class Builder;
