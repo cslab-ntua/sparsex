@@ -195,7 +195,9 @@ void DRLE_Manager::GenAllStats()
                 
                 // std::cout << "wstart: " << window_start << std::endl;
                 // std::cout << "wsize (rows): " << window_size << std::endl;
-                // std::cout << "wsize (nnz): " << sort_splits_nzeros_[selected_splits_[i]] << std::endl;
+                // std::cout << "wsize (nnz): " << 
+                //               sort_splits_nzeros_[selected_splits_[i]] <<
+                //               std::endl;
                 // Check for empty windows, since nonzeros might be captured
                 // from previous patterns.
                 if  (!window->nr_nzeros_)
@@ -922,10 +924,7 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
     uint64_t max_block_dim;
     DeltaRLE::Stats::iterator tmp;
     DeltaRLE::Stats::reverse_iterator iter, rtmp;
-/*
-    for (rtmp = sp->rbegin(); rtmp != sp->rend(); ++rtmp)
-        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl;
-*/
+
     max_block_dim = max_limit_ / block_align;
     temp[max_block_dim].nnz = 0;
     temp[max_block_dim].npatterns = 0;
@@ -967,10 +966,7 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
             temp[iter->first].npatterns += iter->second.npatterns;
         }
     }
-/*  
-    for (rtmp = temp.rbegin(); rtmp != temp.rend(); ++rtmp)
-        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl;
-*/
+
     uint64_t div_factor, mod_factor;
     
     rtmp = sp->rbegin();
@@ -983,13 +979,17 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
                
                 tmp = temp2.find(iter->first);
                 if (tmp == temp2.end()) {
-                    temp2[iter->first].npatterns = div_factor * rtmp->second.npatterns;
+                    temp2[iter->first].npatterns =
+                        div_factor * rtmp->second.npatterns;
                     temp2[iter->first].nnz =
-                        div_factor * (rtmp->second.nnz / rtmp->first) * iter->first;
+                        div_factor * (rtmp->second.nnz / rtmp->first) *
+                        iter->first;
                 } else {   
-                    tmp->second.npatterns += div_factor * rtmp->second.npatterns;
+                    tmp->second.npatterns +=
+                        div_factor * rtmp->second.npatterns;
                     tmp->second.nnz +=
-                        div_factor * (rtmp->second.nnz / rtmp->first) * iter->first;
+                        div_factor * (rtmp->second.nnz / rtmp->first) *
+                        iter->first;
                 }
 
                 if (mod_factor >= 2) {
@@ -1009,10 +1009,6 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
     }
     sp->clear();
     *sp = temp2;
-/*
-    for (rtmp = sp->rbegin(); rtmp != sp->rend(); ++rtmp)
-        std::cout << rtmp->first << ": (" << rtmp->second.npatterns << "," << rtmp->second.nnz << ")" << std::endl; 
-*/
 }
 
 void DRLE_Manager::HandleStats(DeltaRLE::Stats *sp, uint64_t size,
@@ -1210,9 +1206,7 @@ void DRLE_Manager::SelectSplits()
     for (size_t i = 0; i < nr_samples; ++i) {
         selected_splits_[i] = (i+1)*skip;
     }
-
-//     std::vector<uint64_t>::iterator lastwin = sort_splits_.end() - 1;
-//     std::cout << "Last window: " << *lastwin << std::endl;
+    
     return;
 }
 

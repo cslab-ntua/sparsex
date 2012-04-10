@@ -291,7 +291,7 @@ private:
      *  Update stats taking into account the split block function.
      *
      *  @param stats       stats of the matrix.
-     *  @param size        number of non-zero elementw of initial matrix.
+     *  @param size        number of non-zero elements of initial matrix.
      *  @param block_align block's main dimension.
      */
     void HandleStats(DeltaRLE::Stats *stats, uint64_t size,

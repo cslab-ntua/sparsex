@@ -331,7 +331,8 @@ static Instruction *get_hook(Module *M, const char *name, Function *Parent)
 }
 
 // core function for replacing a hook with thow basic-blocks
-static BasicBlock *__llvm_hook_newbb(Module *M, Instruction *Hook, BasicBlock **BBnext)
+static BasicBlock *__llvm_hook_newbb(Module *M, Instruction *Hook,
+                                     BasicBlock **BBnext)
 {
     BasicBlock *BB = Hook->getParent();
     BasicBlock::iterator BI(Hook);

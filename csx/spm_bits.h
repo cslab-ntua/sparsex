@@ -473,3 +473,5 @@ std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
 }   // namespace csx
 
 #endif  // SPM_BITS_H__
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

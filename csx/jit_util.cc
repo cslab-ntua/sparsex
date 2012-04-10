@@ -57,3 +57,5 @@ const char *UniqueFilename(std::string &tmpl)
     tmpl.assign(local_tmpl);
     return tmpl.c_str();
 }
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

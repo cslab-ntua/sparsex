@@ -67,9 +67,8 @@ ExecutionEngine *mkJIT(Module *M);
 //    have finished
 BasicBlock *llvm_hook_newbb(Module *M, const char *name, BasicBlock **BBnext);
 // same as before, but hook should be insinde Parent
-BasicBlock *llvm_hook_newbb(Module *M, const char *name, Function *Parent, BasicBlock **BBnext);
-
-
+BasicBlock *llvm_hook_newbb(Module *M, const char *name, Function *Parent,
+                            BasicBlock **BBnext);
 
 /**
  * Annotations:
@@ -100,7 +99,6 @@ public:
     // dump annotations to std::cout
     void dump();
 };
-
 
 #endif /* LLVM_JIT_HELP_H__ */
 

@@ -500,14 +500,4 @@ void CsxExecutionEngine::AddModule(Module *mod)
     }
 }
 
-#if 0
-int main(int argc, char **argv)
-{
-    CsxManager csxmg(NULL);
-    CsxJit jit(&csxmg);
-    jit.GenCode(std::cout);
-    return 0;
-}
-#endif
-
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

@@ -60,3 +60,5 @@ std::string Tabify(int num)
     return ss.str();
 }
 #endif  // JIT_UTIL_H__
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

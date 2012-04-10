@@ -1006,16 +1006,6 @@ void SPMSym::DivideMatrix()
     
     delete spmbld1;
     delete spmbld2;
-    
-    /*
-    std::cout << "New Thread" << std::endl;
-    std::cout << "First" << std::endl;
-    m1_->PrintRows(std::cout);
-    m1_->PrintElems(std::cout);
-    std::cout << "Second" << std::endl;
-    m2_->PrintRows(std::cout);
-    m2_->PrintElems(std::cout);
-    */
 }
 
 void SPMSym::MergeMatrix()
@@ -1118,9 +1108,7 @@ uint64_t SPMSym::Builder::GetElemsCnt()
 
 void SPMSym::Builder::Finalize()
 {
-
     spm_bld_->Finalize();
-    //assert(GetDiagElemsCnt() == spm_sym_->GetLowerMatrix()->GetNrRows());
     spm_sym_->SetDiagonalSize(GetDiagElemsCnt());
     spm_sym_->SetDiagonal((double *) dynarray_destroy(da_dvalues_));
     da_dvalues_ = NULL;
@@ -1195,8 +1183,8 @@ void TestRDiagTransform(uint64_t y, uint64_t x)
     TestTransform(y, x, xform_fn, rxform_fn);
 }
 
-
 #if 0
+
 int main(int argc, char **argv)
 {
 	PrintRDiagTransform(5, 5, std::cout);
@@ -1210,8 +1198,6 @@ int main(int argc, char **argv)
 	TestRDiagTransform(10,5);
 	TestRDiagTransform(5,10);
 }
-
-
 
 void printXforms()
 {
@@ -1248,9 +1234,7 @@ void TestXforms()
 	TestRDiagTransform(5, 10);
 	TestRDiagTransform(10, 5);
 }
-#endif
 
-#if 0
 void test_drle()
 {
 	std::vector<int> v_in, delta;
@@ -1277,9 +1261,7 @@ void test_drle()
 	}
 	std::cout << std::endl;
 }
-#endif
 
-#if 0
 int main(int argc, char **argv)
 {
 	SPM obj;

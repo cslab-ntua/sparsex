@@ -21,7 +21,7 @@ typedef void llvm_jit_hook_t(void);
 #define ALIGN(buf,a) (void *) (((unsigned long) (buf) + (a-1)) & ~(a-1))
 void align_ptr(uint8_t **ctl, int align)
 {
-	*ctl = ALIGN(*ctl, align);
+    *ctl = ALIGN(*ctl, align);
 }
 
 
@@ -37,17 +37,17 @@ asm("llvm.var.annotation");
 
 void inline fail()
 {
-	assert(0);
+    assert(0);
 }
 
 void print_yx(uint64_t y, uint64_t x)
 {
-	printf("%" PRIu64 " %" PRIu64 "\n", y+1, x+1);
+    printf("%" PRIu64 " %" PRIu64 "\n", y+1, x+1);
 }
 
 void print_yxv(uint64_t y, uint64_t x, double v)
 {
-	printf("%" PRIu64 " %" PRIu64 " %le\n", y+1, x+1, v);
+    printf("%" PRIu64 " %" PRIu64 " %le\n", y+1, x+1, v);
 }
 
 #define ELEM_TYPE double
@@ -147,7 +147,7 @@ void csx_sym_spmv_template(void *spm, vector_double_t *in, vector_double_t *out,
     llvm_annotate(&cur, "spmv::cur");
     
     for (i = csx->row_start; i < csx->row_start + csx->nrows; i++)
-	    y[i] = 0;
+        y[i] = 0;
     
     do {
         flags = *ctl++;
@@ -172,3 +172,5 @@ void csx_sym_spmv_template(void *spm, vector_double_t *in, vector_double_t *out,
         y_indx++;
     }
 }
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

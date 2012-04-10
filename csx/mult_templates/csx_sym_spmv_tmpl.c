@@ -1,8 +1,8 @@
 /*
- * csx_spmv_tmpl.c -- The CSX-sym multiplication template
+ * csx_spmv_tmpl.c -- The CSX-Sym multiplication template
  *
- * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2011, Theodoros Gkountouvas
+ * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.

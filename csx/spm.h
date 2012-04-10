@@ -431,7 +431,8 @@ private:
                                   //   elements.
     
 public:
-    SPMSym() : lower_matrix_(NULL), diagonal_(NULL), m1_(NULL), m2_(NULL) {
+    SPMSym() : lower_matrix_(NULL), diagonal_(NULL), m1_(NULL), m2_(NULL)
+    {
         lower_matrix_ = new SPM;
         m1_ = new SPM;
         m2_ = new SPM;

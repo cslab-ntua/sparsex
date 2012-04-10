@@ -42,20 +42,20 @@ extern "C" {
 #include "spm_crs.h"
 #include "spm_mt.h"
 #ifdef SPM_NUMA
-#   include "spmv_loops_mt_numa.h"
-#   include "spmv_loops_sym_mt_numa.h"
-#   define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
-#   define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
-#   define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop_numa
-#   define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop_numa
+    #include "spmv_loops_mt_numa.h"
+    #include "spmv_loops_sym_mt_numa.h"
+    #define SPMV_CHECK_FN spmv_double_check_mt_loop_numa
+    #define SPMV_BENCH_FN spmv_double_bench_mt_loop_numa
+    #define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop_numa
+    #define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop_numa
 #else
-#   include "spmv_loops_mt.h"
-#   include "spmv_loops_sym_mt.h"
-#   define SPMV_CHECK_FN spmv_double_check_mt_loop
-#   define SPMV_BENCH_FN spmv_double_bench_mt_loop
-#   define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop
-#   define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop
-#endif
+    #include "spmv_loops_mt.h"
+    #include "spmv_loops_sym_mt.h"
+    #define SPMV_CHECK_FN spmv_double_check_mt_loop
+    #define SPMV_BENCH_FN spmv_double_bench_mt_loop
+    #define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop
+    #define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop
+#endif // SPM_NUMA
 #include "timer.h"
 #include "ctl_ll.h"
 #include <libgen.h>
@@ -87,18 +87,44 @@ typedef struct thread_info {
 /**
  *  Parallel Preprocessing.
  *
- *  @param info parameters of matrix needed by each thread.
+ *  @param thread_info parameters of matrix needed by each thread.
  */
 void *PreprocessThread(void *thread_info);
 
 /**
  *  Routine responsible for making a map for the symmetric representation of
  *  sparse matrices.
+ *  
+ *  @param spm_mt  parameters of the multithreaded execution.
+ *  @param spm_sym the multithreaded CSX-Sym matrix.
  */
 void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym);
+
+/**
+ *  Find the size of the map including the values accessed by it.
+ *
+ *  @param spm_mt  the complete multithreaded CSX-Sym matrix.
+ *  @return        the size of the map.
+ */
 uint64_t MapSize(void *spm);
+
+/**
+ *  Routine responsible for retrieving the CSX or CSX-Sym sparse matrix format
+ *  according to the command line parameters.
+ *  
+ *  @param mmf_fname name of the sparse matrix file.
+ *  @param engine    """bkk"""
+ *  @param spms      an initial sparse matrix format if it exists.
+ *  @return          the (multithreaded) CSX or CSX-Sym sparse matrix.
+ */
 spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine,
                    SPM *spms = NULL);
+                   
+/**
+ *  Deallocation of CSX or CSX-Sym sparse matrix.
+ *  
+ *  @param spm_mt the (multithreaded) CSX or CSX-Sym sparse matrix.
+ */
 void PutSpmMt(spm_mt_t *spm_mt);
 
 /**
@@ -121,6 +147,12 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name);
  *  @param spm_mt  the sparse matrix in CSX format.
  */
 uint64_t CsxSize(void *spm_mt);
+
+/**
+ *  Compute the size (in bytes) of the compressed matrix in CSX-Sym form.
+ *
+ *  @param spm_mt  the sparse matrix in CSX-Sym format.
+ */
 uint64_t CsxSymSize(void *spm_mt);
 
 #endif // SPMV_H__

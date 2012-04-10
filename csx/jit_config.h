@@ -112,3 +112,5 @@ const std::string BlockRowSymTemplateSource = BLOCK_ROW_SYM_TEMPLATE;
 const std::string BlockColSymTemplateSource = BLOCK_COL_SYM_TEMPLATE;
 
 #endif // JIT_CONFIG_H__
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

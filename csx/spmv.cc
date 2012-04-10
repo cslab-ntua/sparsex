@@ -324,8 +324,6 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
         while (temp_count < limit)
             temp_count += count[end++];
         total_count -= temp_count;
-        /*std::cout << "Thread " << i << std::endl;
-        std::cout << start << " -> " << end << std::endl;*/
         map->length = temp_count;
 #ifdef SPM_NUMA
         map->cpus = (unsigned int *) 
@@ -370,7 +368,8 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
 #else
     map = (map_t *) xmalloc(sizeof(map_t));
     map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
-    map->elems_pos = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
+    map->elems_pos = (unsigned int *)
+                         xmalloc(temp_count * sizeof(unsigned int));
 #endif
 
     map->length = temp_count;
@@ -446,19 +445,21 @@ void *PreprocessThread(void *thread_info)
 {
     thread_info_t *data = (thread_info_t *) thread_info;
     
-    // set cpu affinity
+    // Set CPU affinity.
     setaffinity_oncpu(data->cpu);
+    
+    // If symmetric option not set ...
     if (!data->symmetric) {
         DRLE_Manager *DrleMg;
         data->buffer << "==> Thread: #" << data->thread_no << std::endl;
 
-        // Initialize the DRLE manager
+        // Initialize the DRLE manager.
         DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
                                   DRLE_Manager::SPLIT_BY_NNZ,
                                   data->sampling_portion, data->samples_max,
                                   data->split_blocks, false);
                                   
-        // Adjust the ignore settings properly
+        // Adjust the ignore settings properly.
         DrleMg->IgnoreAll();
         for (int i = 0; data->xform_buf[i] != -1; ++i)
             DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
@@ -495,39 +496,24 @@ void *PreprocessThread(void *thread_info)
                         "FAILED (see above for more info)" : "DONE")
                      << std::endl;
 #endif
- 
-	delete DrleMg;
-    } else {
+        delete DrleMg;
+    } else {  // If symmetric option is set split the sub-matrix into two.
         DRLE_Manager *DrleMg1;
         DRLE_Manager *DrleMg2;
 
         data->buffer << "==> Thread: #" << data->thread_no << std::endl;
         
         data->spm_sym->DivideMatrix();
-        /*
-        if (data->thread_no == 0) {
-            std::cout << "Rows: " << data->spm_sym->GetFirstMatrix()->GetNrRows() << std::endl;
-            std::cout << "Cols: " << data->spm_sym->GetFirstMatrix()->GetNrCols() << std::endl;
-            std::cout << "Nnz: " << data->spm_sym->GetFirstMatrix()->GetNrNonzeros() << std::endl;
-            std::cout << "Elems: " << data->spm_sym->GetFirstMatrix()->GetElemsSize() << std::endl;
-            data->spm_sym->GetFirstMatrix()->PrintRows();
-            data->spm_sym->GetFirstMatrix()->PrintElems();
-            std::cout << "Rows: " << data->spm_sym->GetSecondMatrix()->GetNrRows() << std::endl;
-            std::cout << "Cols: " << data->spm_sym->GetSecondMatrix()->GetNrCols() << std::endl;
-            std::cout << "Nnz: " << data->spm_sym->GetSecondMatrix()->GetNrNonzeros() << std::endl;
-            std::cout << "Elems: " << data->spm_sym->GetSecondMatrix()->GetElemsSize() << std::endl;
-            data->spm_sym->GetSecondMatrix()->PrintRows();
-            data->spm_sym->GetSecondMatrix()->PrintElems();
-        }
-        */
         
         // Initialize the DRLE manager
         DrleMg1 = new DRLE_Manager(data->spm_sym->GetFirstMatrix(), 4, 255-1, 
-                                   0.05, data->wsize, DRLE_Manager::SPLIT_BY_NNZ,
+                                   0.05, data->wsize,
+                                   DRLE_Manager::SPLIT_BY_NNZ,
                                    data->sampling_portion, data->samples_max,
                                    false);
         DrleMg2 = new DRLE_Manager(data->spm_sym->GetSecondMatrix(), 4, 255-1, 
-                                   0.05, data->wsize, DRLE_Manager::SPLIT_BY_NNZ,
+                                   0.05, data->wsize,
+                                   DRLE_Manager::SPLIT_BY_NNZ,
                                    data->sampling_portion, data->samples_max,
                                    false);
                         
@@ -535,8 +521,10 @@ void *PreprocessThread(void *thread_info)
         DrleMg1->IgnoreAll();
         DrleMg2->IgnoreAll();
         for (int i = 0; data->xform_buf[i] != -1; ++i) {
-            DrleMg1->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
-            DrleMg2->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
+            DrleMg1->
+                RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
+            DrleMg2->
+                RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
         }
         
         // If the user supplies the deltas choices, encode the matrix with the
@@ -550,33 +538,8 @@ void *PreprocessThread(void *thread_info)
             DrleMg1->EncodeAll(data->buffer);
             DrleMg2->EncodeAll(data->buffer);
         }
-        
-        /*
-        if (data->thread_no == 0) {
-            std::cout << "Rows: " << data->spm_sym->GetFirstMatrix()->GetNrRows() << std::endl;
-            std::cout << "Cols: " << data->spm_sym->GetFirstMatrix()->GetNrCols() << std::endl;
-            std::cout << "Nnz: " << data->spm_sym->GetFirstMatrix()->GetNrNonzeros() << std::endl;
-            std::cout << "Elems: " << data->spm_sym->GetFirstMatrix()->GetElemsSize() << std::endl;
-            data->spm_sym->GetFirstMatrix()->PrintRows();
-            //data->spm_sym->GetFirstMatrix()->PrintElems();
-            std::cout << "Rows: " << data->spm_sym->GetSecondMatrix()->GetNrRows() << std::endl;
-            std::cout << "Cols: " << data->spm_sym->GetSecondMatrix()->GetNrCols() << std::endl;
-            std::cout << "Nnz: " << data->spm_sym->GetSecondMatrix()->GetNrNonzeros() << std::endl;
-            std::cout << "Elems: " << data->spm_sym->GetSecondMatrix()->GetElemsSize() << std::endl;
-            data->spm_sym->GetSecondMatrix()->PrintRows();
-            //data->spm_sym->GetSecondMatrix()->PrintElems();
-        }
-        */
         data->spm_sym->MergeMatrix();
-        
-        /*
-        std::cout << "Rows: " << data->spm_sym->GetLowerMatrix()->GetNrRows() << std::endl;
-        std::cout << "Cols: " << data->spm_sym->GetLowerMatrix()->GetNrCols() << std::endl;
-        std::cout << "Nnz: " << data->spm_sym->GetLowerMatrix()->GetNrNonzeros() << std::endl;
-        std::cout << "Elems: " << data->spm_sym->GetLowerMatrix()->GetElemsSize() << std::endl;
-        data->spm_sym->GetLowerMatrix()->PrintRows();
-        //data->spm_sym->GetLowerMatrix()->PrintElems();
-        */
+
         csx_double_sym_t *csx = data->csxmg->MakeCsxSym();
         data->spm_encoded->spm = csx;
         data->spm_encoded->row_start = csx->lower_matrix->row_start;
@@ -734,42 +697,6 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
     for (unsigned int i = 1; i < nr_threads; ++i)
         pthread_join(threads[i-1], NULL);
 
-    /*
-    for (unsigned int i = 0; i < nr_threads; ++i) {
-        if (!symmetric) {
-            csx_double_t *csx = (csx_double_t *) data[i].spm_encoded->spm;
-            
-            std::cout << "Rows: " << csx->nrows << std::endl;
-            std::cout << "Cols: " << csx->ncols << std::endl;
-            std::cout << "Non-Zero Elements: " << csx->nnz << std::endl;
-            std::cout << "Row Start: " << csx->row_start << std::endl;
-            std::cout << "Ctl Size: " << csx->ctl_size << std::endl;
-            for (uint64_t i = 0; i < csx->ctl_size; i++)
-                std::cout << (uint32_t) csx->ctl[i] << std::endl;
-            
-        } else {
-            csx_double_sym_t *csx_sym = (csx_double_sym_t *) data[i].spm_encoded->spm;
-            csx_double_t *csx = csx_sym->lower_matrix;
-            
-            std::cout << "Rows: " << csx->nrows << std::endl;
-            std::cout << "Cols: " << csx->ncols << std::endl;
-            std::cout << "Non-Zero Elements: " << csx->nnz << std::endl;
-            std::cout << "Row Start: " << csx->row_start << std::endl;
-            std::cout << "Ctl Size: " << csx->ctl_size << std::endl;
-            std::cout << "Ctl: " << std::endl;
-            for (uint64_t i = 0; i < csx->ctl_size; i++)
-                std::cout << (uint32_t) csx->ctl[i] << std::endl;
-            std::cout << "Values: " << std::endl;
-            for (uint64_t i = 0; i < csx->nnz; i++)
-                std::cout << csx->values[i] << std::endl;
-            std::cout << "Diagonal Values: " << std::endl;
-            for (uint64_t i = 0; i < csx->nrows; i++)
-                std::cout << csx_sym->dvalues[i] << std::endl;
-            
-        }
-    }
-    */
-        
     // CSX JIT compilation
     CsxJit **Jits = new CsxJit*[nr_threads];
     for (unsigned int i = 0; i < nr_threads; ++i) {
@@ -827,12 +754,6 @@ uint64_t CsxSize(void *spm_mt)
 {
     return (uint64_t) CsxSize((spm_mt_t *) spm_mt);
 }
-
-/**
- *  Compute the size (in bytes) of the compressed matrix in CSX form.
- *
- *  @parame spm_mt  the sparse matrix in CSX format.
- */
 
 static unsigned long CsxSize(spm_mt_t *spm_mt)
 {
@@ -898,3 +819,5 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
         }        
     }
 }
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

@@ -18,3 +18,5 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
                    void *values, void *x, void *y, void *reinit);
 
 #endif  /* ELMERIF_H__ */
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
