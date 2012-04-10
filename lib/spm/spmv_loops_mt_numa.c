@@ -172,11 +172,11 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 
 	VECTOR_NAME(_destroy)(y);
 
+	pthread_barrier_destroy(&barrier);
 	free(parts);
 	free(nodes);
 	free(tids);
 	free(xs);
-	pthread_barrier_destroy(&barrier);
 
 	return secs;
 }

@@ -1,5 +1,5 @@
 /*
- * vector.h
+ * vector.h -- Vector interface.
  *
  * Copyright (C) 2007-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis

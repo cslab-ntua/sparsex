@@ -45,7 +45,7 @@ static void *do_spmv_thread(void *arg)
 		/*
 		if (id != 0)
 			VECTOR_NAME(_init)(temp[id], 0);
-        	*/
+			*/
 		VECTOR_NAME(_init_from_map)(temp, 0, spm_mt_thread->map);
 		pthread_barrier_wait(&barrier);
 		spmv_mt_sym_fn(spm_mt_thread->spm, x, y, temp[id]);
@@ -58,7 +58,7 @@ static void *do_spmv_thread(void *arg)
 		VECTOR_NAME(_add_from_map)(y, temp, y, spm_mt_thread->map);
 		pthread_barrier_wait(&barrier);
 	}
-    
+
 #ifdef SPMV_PRFCNT
 	prfcnt_pause(prfcnt);
 #endif
@@ -101,7 +101,7 @@ static void *do_spmv_thread_main_swap(void *arg)
 	assert(x->size == y->size);
 	tsc_init(&tsc);
 	tsc_start(&tsc);
-    
+
 #ifdef SPMV_PRFCNT
 	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
 	prfcnt_start(prfcnt);
@@ -263,7 +263,7 @@ void SPMV_NAME(_check_sym_mt_loop) (void *spm, spm_mt_t *spm_mt,
 	for (i = 0; i < ncpus; i++) {
 		if (mt_fn != NULL)
 			spm_mt->spm_threads[i].spmv_fn = mt_fn;
-            
+
 #ifdef SPMV_PRFCNT
 		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
 		if (!spm_mt->spm_threads[i].data) {

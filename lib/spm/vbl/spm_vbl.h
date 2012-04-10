@@ -13,7 +13,8 @@
 #include <inttypes.h>
 #include "spmv_method.h"
 
-#define VBL_NAME(val_type, ci_bits, name) spm_vbl ## ci_bits ## _ ## val_type ## name
+#define VBL_NAME(val_type, ci_bits, name)       \
+    spm_vbl ## ci_bits ## _ ## val_type ## name
 #define VBL_TYPE(val_type, ci_bits) VBL_NAME(val_type, ci_bits, _t)
 
 #define SPM_VBL_DECLARE(val_type, ci_bits) \
@@ -28,7 +29,7 @@
 void *\
 VBL_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
                                        uint64_t *rows_nr, uint64_t *cols_nr, \
-                                       uint64_t *nz_nr, void *metadata);               \
+                                       uint64_t *nz_nr, void *metadata);\
 void VBL_NAME(val_type, ci_bits, _destroy)(void *crs); \
 uint64_t VBL_NAME(val_type, ci_bits, _size)(void *spm); \
 spmv_  ## val_type ## _fn_t VBL_NAME(val_type, ci_bits, _multiply);

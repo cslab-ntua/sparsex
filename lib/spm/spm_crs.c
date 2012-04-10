@@ -1,5 +1,5 @@
 /*
- * spm_crs.c
+ * spm_crs.c -- CSR implementation
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -122,9 +122,9 @@ void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 }
 
 XSPMV_METH_INIT(
- SPM_CRS_NAME(_multiply),
- SPM_CRS_NAME(_init_mmf),
- SPM_CRS_NAME(_size),
- SPM_CRS_NAME(_destroy),
- sizeof(ELEM_TYPE)
+	SPM_CRS_NAME(_multiply),
+	SPM_CRS_NAME(_init_mmf),
+	SPM_CRS_NAME(_size),
+	SPM_CRS_NAME(_destroy),
+	sizeof(ELEM_TYPE)
 )

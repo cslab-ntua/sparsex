@@ -1,5 +1,5 @@
 /*
- * mmf.c
+ * mmf.c -- Read MMF files.
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -22,7 +22,7 @@ FILE *mmf_init(char *mmf_file, uint64_t *rows, uint64_t *cols, uint64_t *nz)
 	FILE *f;
 
 	if (!(f = fopen(mmf_file, "r"))) {
-		perror("fopen");
+		perror("mmf_init: fopen");
 		exit(1);
 	}
 
@@ -30,12 +30,12 @@ FILE *mmf_init(char *mmf_file, uint64_t *rows, uint64_t *cols, uint64_t *nz)
 		if (input[0] == '#')
 			continue;
 
-		ret = sscanf(input, "%" PRIu64 " %" PRIu64 " %" PRIu64, rows,
-		             cols, nz);
+		ret = sscanf(input, "%" PRIu64 " %" PRIu64 " %" PRIu64, rows, cols, nz);
 		if (ret != 3) {
-			fprintf(stderr, "mmf header error: sscanf\n");
+			fprintf(stderr, "mmf header error: sscanf");
 			exit(1);
 		}
+
 		break;
 	}
 
@@ -49,13 +49,13 @@ int mmf_get_next(FILE *mmf, uint64_t *row, uint64_t *col, double *val)
 	if (!fgets(input, 4096, mmf))
 		return 0;
 
-	if (sscanf(input, "%"PRIu64" %"PRIu64" %lf",  row, col, val) != 3) {
+	if (sscanf(input,  "%"PRIu64" %"PRIu64" %lf",  row, col, val) != 3) {
 		fprintf(stderr, "mmf file error: sscanf failed\n");
 		fprintf(stderr, "**input:\n%s\n**\n", input);
 		exit(1);
 	}
-	(*row)--; (*col)--;
 
+	(*row)--; (*col)--;
 	return 1;
 }
 
@@ -73,12 +73,12 @@ int mmf_get_next_vstr(FILE *mmf, uint64_t *row, uint64_t *col, char **val)
 		fprintf(stderr, "**input: %s**\n", input);
 		exit(1);
 	}
+
 	(*row)--; (*col)--;
 
 	int len = strlen(val_buf);
 	val_buf[len] = '\n';
 	val_buf[len+1] = '\0';
 	*val = val_buf;
-
 	return 1;
 }

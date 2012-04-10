@@ -9,7 +9,7 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
- 
+
 #ifndef __SPM_MT_H__
 #define __SPM_MT_H__
 

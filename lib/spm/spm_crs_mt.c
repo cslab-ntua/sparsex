@@ -210,7 +210,7 @@ void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in,
 
 	for (i = row_start; i < row_end; i++) {
 		yr = (ELEM_TYPE) 0;
-		for (j = row_ptr[i] - 1; j < row_ptr[i+1] - 1; j++)
+		for (j = row_ptr[i]-1; j < row_ptr[i+1]-1; j++)
 			yr += (values[j] * x[col_ind[j]-1]);
 
 		y[i] = yr;
@@ -218,11 +218,11 @@ void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in,
 }
 
 XSPMV_MT_METH_INIT(
- SPM_CRS_MT_NAME(_multiply),
- SPM_CRS_MT_NAME(_init_mmf),
- SPM_CRS_MT_NAME(_size),
- SPM_CRS_MT_NAME(_destroy),
- sizeof(ELEM_TYPE)
+	SPM_CRS_MT_NAME(_multiply),
+	SPM_CRS_MT_NAME(_init_mmf),
+	SPM_CRS_MT_NAME(_size),
+	SPM_CRS_MT_NAME(_destroy),
+	sizeof(ELEM_TYPE)
 )
 
 #ifdef SPM_NUMA
@@ -263,7 +263,7 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file, uint64_t *rows_nr,
 		spm_thread->row_start = row_start;
 		spm_thread->nr_rows = row_end - row_start;
 	}
-	rowptr_parts[nr_threads-1] += sizeof(*crs->row_ptr); 
+	rowptr_parts[nr_threads-1] += sizeof(*crs->row_ptr);
 
 	// Sanity check.
 	assert(crs);
@@ -346,11 +346,11 @@ void SPM_CRS_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in,
 }
 
 XSPMV_MT_METH_INIT(
- SPM_CRS_MT_NAME(_numa_multiply),
- SPM_CRS_MT_NAME(_numa_init_mmf),
- SPM_CRS_MT_NAME(_numa_size),
- SPM_CRS_MT_NAME(_numa_destroy),
- sizeof(ELEM_TYPE)
+	SPM_CRS_MT_NAME(_numa_multiply),
+	SPM_CRS_MT_NAME(_numa_init_mmf),
+	SPM_CRS_MT_NAME(_numa_size),
+	SPM_CRS_MT_NAME(_numa_destroy),
+	sizeof(ELEM_TYPE)
 )
 
 #endif /* SPM_NUMA */

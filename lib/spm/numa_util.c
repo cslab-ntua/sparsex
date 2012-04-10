@@ -1,5 +1,5 @@
 /*
- * numa_util.c -- NUMA utilitiy functions
+ * numa_util.c -- NUMA utilitiy functions.
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011-2012, Vasileios Karakasis
@@ -39,7 +39,7 @@ static void fix_interleaving(size_t nr_parts, size_t *parts, const int *nodes)
 			parts[curr_part] -= rem;
 
 			// Calculate page partitions to nodes.
-			for (i = 1; curr_part + i < nr_parts &&
+			for (i = 1; curr_part + i < nr_parts && 
 			     curr_page_size + parts[curr_part+i] < pagesize; i++) {
 				page_to_nodes[nodes[curr_part+i]] += parts[curr_part+i];
 				curr_page_size += parts[curr_part+i];
@@ -87,7 +87,7 @@ static void fix_interleaving(size_t nr_parts, size_t *parts, const int *nodes)
  *  @param nodes the physical memory nodes to bind each partition. The
  *               size of the array must equal nr_parts.
  *  @return On success a pointer to the newly allocated area is
- *          returned, otherwise NULL is returned. 
+ *          returned, otherwise NULL is returned.
  */
 void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
                         const int *nodes)

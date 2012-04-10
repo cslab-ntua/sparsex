@@ -89,7 +89,7 @@ void SPM_VBL_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 
 SPM_VBL_TYPE *SPM_VBL_NAME(_init_crs)(SPM_CRS_TYPE *crs)
 {
-	SPM_VBL_TYPE *vbl; 
+	SPM_VBL_TYPE *vbl;
 
 	vbl = malloc(sizeof(*vbl));
 	if (!vbl) {
@@ -164,9 +164,9 @@ SPM_VBL_TYPE *SPM_VBL_NAME(_init_crs)(SPM_CRS_TYPE *crs)
 }
 
 XSPMV_METH_INIT(
- SPM_VBL_NAME(_multiply),
- SPM_VBL_NAME(_init_mmf),
- SPM_VBL_NAME(_size),
- SPM_VBL_NAME(_destroy),
- sizeof(ELEM_TYPE)
+	SPM_VBL_NAME(_multiply),
+	SPM_VBL_NAME(_init_mmf),
+	SPM_VBL_NAME(_size),
+	SPM_VBL_NAME(_destroy),
+	sizeof(ELEM_TYPE)
 )

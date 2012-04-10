@@ -25,10 +25,6 @@ static void *do_matvec_thread(void *arg)
 
 	setaffinity_oncpu(spm_mt_thread->cpu);
 	pthread_barrier_wait(&barrier);
-#ifndef _CSR_
-	VECTOR_NAME(_init_part)(spm_mt_thread->y, spm_mt_thread->row_start,
-	                        spm_mt_thread->nr_rows, (ELEM_TYPE) 0);
-#endif
 	spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->x, spm_mt_thread->y);
 	pthread_barrier_wait(&barrier);
 
@@ -47,7 +43,7 @@ void SPMV_NAME(_matvec_mt)(spm_mt_t *spm_mt, VECTOR_TYPE *x, VECTOR_TYPE *y)
 
 	tids = malloc(sizeof(*tids)*spm_mt->nr_threads);
 	if (!tids) {
-		perror("malloc failed");
+		perror("malloc");
 		exit(1);
 	}
 

@@ -1,6 +1,5 @@
 /*
- * spm_crs_sym_mt.h -- Interface of expansion of CSR for symmetric sparse
- *                     matrices.
+ * spm_crs_sym_mt.h -- SSS format for symmetric sparse matrices.
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011-2012, Theodoros Gkountouvas

@@ -21,10 +21,10 @@
 #include "vector.h"
 
 enum {
-    ALLOC_STD = 1,
-    ALLOC_NUMA,
-    ALLOC_MMAP,
-    ALLOC_OTHER,
+	ALLOC_STD = 1,
+	ALLOC_NUMA,
+	ALLOC_MMAP,
+	ALLOC_OTHER,
 };
 
 /*
@@ -50,7 +50,6 @@ VECTOR_TYPE *VECTOR_NAME(_create_from_buff)(ELEM_TYPE *buff, unsigned long size)
 	v->size = size;
 	v->alloc_type = ALLOC_OTHER;
 	v->elements = buff;
-
 	return v;
 }
 
@@ -76,11 +75,10 @@ VECTOR_TYPE *VECTOR_NAME(_create)(unsigned long size)
 VECTOR_TYPE *VECTOR_NAME(_create_onnode)(unsigned long size, int node)
 {
 	VECTOR_TYPE *v = alloc_onnode(sizeof(VECTOR_TYPE), node);
-	
+
 	v->size = size;
 	v->alloc_type = ALLOC_MMAP;
 	v->elements = alloc_onnode(sizeof(ELEM_TYPE)*size, node);
-
 	return v;
 }
 
@@ -120,7 +118,7 @@ void VECTOR_NAME(_init)(VECTOR_TYPE *v, ELEM_TYPE val)
 {
 	unsigned long i;
 
-	for (i=0 ; i<v->size; i++)
+	for (i = 0 ; i < v->size; i++)
 		v->elements[i] = val;
 }
 
@@ -148,8 +146,8 @@ void VECTOR_NAME(_init_rand_range)(VECTOR_TYPE *v, ELEM_TYPE max, ELEM_TYPE min)
 	unsigned long i;
 	ELEM_TYPE val;
 
-	for (i=0; i<v->size; i++) {
-		val = ((ELEM_TYPE) (rand()+i) / ((ELEM_TYPE) RAND_MAX+1));
+	for (i = 0; i < v->size; i++) {
+		val = ((ELEM_TYPE) (rand()+i) / ((ELEM_TYPE) RAND_MAX + 1));
 		v->elements[i] = min + val*(max-min);
 	}
 }
@@ -203,7 +201,7 @@ void VECTOR_NAME(_add_from_map)(VECTOR_TYPE *v1, VECTOR_TYPE **v2,
 
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)
 {
-	if (fabs((double) (a-b) / (double) a)  > 1.e-7)
+	if (fabs((double) (a - b) / (double) a)  > 1.e-7)
 		return 1;
 	return 0;
 }
@@ -231,10 +229,10 @@ int VECTOR_NAME(_compare)(VECTOR_TYPE *v1, VECTOR_TYPE *v2)
 
 void VECTOR_NAME(_print)(VECTOR_TYPE *v)
 {
-    unsigned long i;
+	unsigned long i;
 
-    printf("[ ");
-    for (i = 0; i < v->size; i++)
-        printf("%lf ", (double) v->elements[i]);
-    printf("]\n");
+	printf("[ ");
+	for (i = 0; i < v->size; i++)
+		printf("%lf ", (double) v->elements[i]);
+	printf("]\n");
 }

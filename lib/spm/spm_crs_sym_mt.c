@@ -1,6 +1,5 @@
 /*
- * spm_crs_sym.c -- Implementation of expansion of CSR for symmetric sparse 
- *                  matrices.
+ * spm_crs_sym.c -- SSS format for symmetric sparse matrices.
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
@@ -49,7 +48,7 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file, uint64_t *nrows,
 	}
 
 	crs_mt = (SPM_CRS_SYM_MT_TYPE *)
-	             malloc(ncpus * sizeof(SPM_CRS_SYM_MT_TYPE));
+	              malloc(ncpus * sizeof(SPM_CRS_SYM_MT_TYPE));
 	if (!crs_mt ) {
 		perror("malloc");
 		exit(1);
@@ -59,7 +58,6 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file, uint64_t *nrows,
 	elems_total = 0;
 	for (i = 0; i < ncpus; i++) {
 		elems_limit = (crs->nnz + crs->n - elems_total) / (ncpus - i);
-
 		spm_thread = spm_mt->spm_threads + i;
 		spm_thread->cpu = cpus[i];
 		spm_thread->spm = crs_mt + i;
@@ -78,7 +76,7 @@ void *SPM_CRS_SYM_MT_NAME(_init_mmf)(char *mmf_file, uint64_t *nrows,
 
 	// Create map.
 	SPM_CRS_SYM_MT_NAME(_make_map)(spm_mt);
-	map_size = SPM_CRS_SYM_MT_NAME(_map_size)(spm_mt);    
+	map_size = SPM_CRS_SYM_MT_NAME(_map_size)(spm_mt);
 
 	assert(cur_row == crs->n);
 	assert(elems_total == crs->nnz + crs->n);
@@ -146,8 +144,7 @@ void SPM_CRS_SYM_MT_NAME(_make_map)(void *spm) {
 		end = crs_mt->row_end;
 
 		for (j = start; j < end; j++) {
-			for (k = row_ptr[j];
-			     col_ind[k] < start && k < row_ptr[j+1]; k++) {
+			for (k = row_ptr[j]; col_ind[k] < start && k < row_ptr[j+1]; k++) {
 				if (initial_map[i][col_ind[k]] == 0) {
 					initial_map[i][col_ind[k]] = 1;
 					count[col_ind[k]]++;
@@ -196,6 +193,7 @@ void SPM_CRS_SYM_MT_NAME(_make_map)(void *spm) {
 			perror("malloc");
 			exit(1);
 		}
+
 		limit = (total_count) / (ncpus - i);
 		temp_count = 0;
 		while (temp_count < limit) {
@@ -222,7 +220,6 @@ void SPM_CRS_SYM_MT_NAME(_make_map)(void *spm) {
 		}
 
 		spm_thread->map = final_map;
-
 		start = end;
 		total_count -= temp_count;
 	}
@@ -270,8 +267,7 @@ void SPM_CRS_SYM_MT_NAME(_make_map)(void *spm) {
 
 		printf("Thread %d\n", i);
 		for (j = 0; j < final_map->length; j++)
-			printf("(%u, %u)\n", final_map->cpus[j],
-			         final_map->elems_pos[j]);
+			printf("(%u, %u)\n", final_map->cpus[j], final_map->elems_pos[j]);
 	}
 	*/
 
@@ -310,7 +306,6 @@ uint64_t SPM_CRS_SYM_MT_NAME(_size)(void *spm)
 	spm_mt_t *spm_mt = (spm_mt_t *) spm;
 	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
 	SPM_CRS_SYM_MT_TYPE *crs_mt = (SPM_CRS_SYM_MT_TYPE *) spm_thread->spm;
-
 	return SPM_CRS_SYM_NAME(_size)(crs_mt->crs);
 }
 
@@ -320,7 +315,6 @@ uint64_t SPM_CRS_SYM_MT_NAME(_map_size)(void *spm)
 	spm_mt_t *spm_mt = (spm_mt_t *) spm;
 	spm_mt_thread_t *spm_thread;
 	uint64_t size = 0;
-
 	for (i = 0; i < spm_mt->nr_threads; i++) {
 		spm_thread = spm_mt->spm_threads + i;
 		size += spm_thread->map->length*sizeof(uint32_t)
@@ -365,6 +359,7 @@ void SPM_CRS_SYM_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in,
 			yr += values[j] * x[col_ind[j]];
 			t[col_ind[j]] += values[j] * x[i];
 		}
+
 		for ( ; j < row_ptr[i+1]; j++) {
 			yr += values[j] * x[col_ind[j]];
 			y[col_ind[j]] += values[j] * x[i];
@@ -422,6 +417,7 @@ void *SPM_CRS_SYM_MT_NAME(_numa_init_mmf)(char *mmf_file, uint64_t *nrows,
 		spm_thread->row_start = row_start;
 		spm_thread->nr_rows = row_end - row_start;
 	}
+
 	rowptr_parts[nr_threads-1] += sizeof(*crs->row_ptr);
 
 	// Sanity check.
@@ -463,7 +459,6 @@ void *SPM_CRS_SYM_MT_NAME(_numa_init_mmf)(char *mmf_file, uint64_t *nrows,
 
 	// Check the memory allocation for numa aware SSS.
 	int alloc_err;
-
 	alloc_err = check_interleaved((void *) crs->row_ptr, rowptr_parts,
 	                              nr_threads, nodes);
 	print_alloc_status("rowptr field", alloc_err);
@@ -542,10 +537,11 @@ void SPM_CRS_SYM_MT_NAME(_numa_make_map)(void * spm)
 		map = spm_mt_thread->map;
 		length = map->length;
 
-		alloc_err += check_region(map->cpus, length*sizeof(unsigned int),node);
-		alloc_err += check_region(map->elems_pos,
-		                          length*sizeof(unsigned int),node);
+		alloc_err += check_region(map->cpus, length*sizeof(unsigned int), node);
+		alloc_err += check_region(map->elems_pos, length*sizeof(unsigned int),
+		                          node);
 	}
+
 	print_alloc_status("map", alloc_err);
 }
 

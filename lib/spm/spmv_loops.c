@@ -16,7 +16,7 @@
 
 #include "tsc.h"
 #ifdef SPMV_PRFCNT
-#include "prfcnt.h"
+#   include "prfcnt.h"
 #endif
 
 float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
@@ -31,38 +31,38 @@ float SPMV_NAME(_bench_loop) (SPMV_NAME(_fn_t) *fn, void *matrix,
 	y = VECTOR_NAME(_create)(rows_nr);
 
 	tsc_init(&tsc);
-	#ifdef SPMV_PRFCNT
-	int cpu=0;
+#ifdef SPMV_PRFCNT
+	int cpu = 0;
 	cpu_set_t cpu_set;
 	CPU_ZERO(&cpu_set);
 	CPU_SET(cpu,&cpu_set);
 	sched_setaffinity(getpid(), sizeof(cpu_set_t), &cpu_set);
 	prfcnt_t prfcnt;
 	prfcnt_init(&prfcnt, cpu,PRFCNT_FL_T0|PRFCNT_FL_T1);
-	#endif
-	for (i = 0; i < loops; i++)  {
+#endif
+	for (i = 0; i < loops; i++) {
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
-		#ifdef SPMV_PRFCNT
+		VECTOR_NAME(_init)(y, (ELEM_TYPE) 0);
+#ifdef SPMV_PRFCNT
 		prfcnt_start(&prfcnt);
-		#endif
+#endif
 		tsc_start(&tsc);
 		fn(matrix, x, y);
 		tsc_pause(&tsc);
-		#ifdef SPMV_PRFCNT
+#ifdef SPMV_PRFCNT
 		prfcnt_pause(&prfcnt);
-		#endif
+#endif
 	}
 
 	tsc_shut(&tsc);
 	const float secs = tsc_getsecs(&tsc);
-	#ifdef SPMV_PRFCNT
+#ifdef SPMV_PRFCNT
 	prfcnt_report(&prfcnt);
 	prfcnt_shut(&prfcnt);
-	#endif
+#endif
 
 	VECTOR_NAME(_destroy)(x);
 	VECTOR_NAME(_destroy)(y);
-
 	return secs;
 }
 

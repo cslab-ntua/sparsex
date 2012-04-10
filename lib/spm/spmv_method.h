@@ -1,5 +1,5 @@
 /*
- * spmv_method.h
+ * spmv_method.h -- Matrix method interface.
  *
  * Copyright (C) 2007-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -42,7 +42,7 @@ typedef struct {
 } spmv_method_t;
 
 #define __SPMV_METH_INIT(_mmf_init, _size, _destroy, _elem_size, _mt, _sym) \
-{                                      \
+{                                  \
 	.mmf_init_fn  = _mmf_init,     \
 	.size_fn      = _size,         \
 	.destroy_fn   = _destroy,      \
@@ -61,7 +61,7 @@ typedef struct {
 	METHOD_INIT(fn, &_spmv_meth_ ## fn)
 
 #define XSPMV_METH_INIT(fn, mmf_init, size, destroy, elem_size) \
-	SPMV_METH_INIT(fn, mmf_init, size, destroy, elem_size)
+    SPMV_METH_INIT(fn, mmf_init, size, destroy, elem_size)
 
 #define SPMV_MT_METH_INIT(fn, _mmf_init, _size, _destroy, _elem_size) \
 	static spmv_method_t _spmv_mt_meth_ ## fn = \
@@ -69,7 +69,7 @@ typedef struct {
 	METHOD_INIT(fn, &_spmv_mt_meth_ ## fn)
 
 #define XSPMV_MT_METH_INIT(fn, mmf_init, size, destroy, elem_size) \
-	SPMV_MT_METH_INIT(fn, mmf_init, size, destroy, elem_size)
+    SPMV_MT_METH_INIT(fn, mmf_init, size, destroy, elem_size)
 
 #define SPMV_SYM_METH_INIT(fn, _mmf_init, _size, _destroy, _elem_size) \
 	static spmv_method_t _spmv_meth_ ## fn = \
@@ -77,7 +77,7 @@ typedef struct {
 	METHOD_INIT(fn, &_spmv_meth_ ## fn)
 
 #define XSPMV_SYM_METH_INIT(fn, mmf_init, size, destroy, elem_size) \
-	SPMV_SYM_METH_INIT(fn, mmf_init, size, destroy, elem_size)
+    SPMV_SYM_METH_INIT(fn, mmf_init, size, destroy, elem_size)
 
 #define SPMV_SYM_MT_METH_INIT(fn, _mmf_init, _size, _destroy, _elem_size) \
 	static spmv_method_t _spmv_mt_meth_ ## fn = \
@@ -85,6 +85,6 @@ typedef struct {
 	METHOD_INIT(fn, &_spmv_mt_meth_ ## fn)
 
 #define XSPMV_SYM_MT_METH_INIT(fn, mmf_init, size, destroy, elem_size) \
-	SPMV_SYM_MT_METH_INIT(fn, mmf_init, size, destroy, elem_size)
+    SPMV_SYM_MT_METH_INIT(fn, mmf_init, size, destroy, elem_size)
 
 #endif

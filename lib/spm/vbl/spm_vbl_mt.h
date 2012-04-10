@@ -20,10 +20,11 @@
 struct spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt { \
 	spm_vbl ## __idx_bits ## _ ## __elem_type ## _t    *vbl; \
 	uint64_t row_start, row_end; \
-    uint64_t bstart; \
-    uint64_t bend;   \
+	uint64_t bstart; \
+	uint64_t bend;	 \
 }; \
-typedef struct spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt ## _t; \
+typedef struct spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt \
+spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt ## _t;         \
 \
 void * \
 spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt_init_mmf( \
@@ -33,7 +34,8 @@ spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt_init_mmf( \
 \
 /* XXX: Destroy */ \
 \
-spmv_ ## __elem_type ## _fn_t spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt_multiply;
+spmv_ ## __elem_type ## _fn_t                               \
+spm_vbl ## __idx_bits ## _ ## __elem_type ## _mt_multiply;
 
 SPM_VBL_MT_DECLARE(32, double)
 SPM_VBL_MT_DECLARE(64, double)

@@ -1,5 +1,5 @@
 /*
- * method.c
+ * method.c -- Matrix methods interface.
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -19,8 +19,8 @@ method_t *method_get(char *name)
 {
 	method_t *m;
 
-	for (m = methods ; m ; m = m->next)
-		if ( strcmp(m->name, name) == 0 )
+	for (m = methods; m; m = m->next)
+		if (strcmp(m->name, name) == 0)
 			break;
 
 	return m;
@@ -42,7 +42,6 @@ method_t *method_create(char *name, void *fn, void *data)
 	ret->data = data;
 	ret->name = ((void *)ret + sizeof(*ret));
 	strcpy(ret->name, name);
-
 	return ret;
 }
 
@@ -56,6 +55,7 @@ void method_add(method_t *method)
 	}
 
 	method_t *m;
+	
 	for (m = methods; m->next; m = m->next);
 
 	m->next = method;

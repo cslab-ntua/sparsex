@@ -1,5 +1,5 @@
 /*
- * spm_crs_mt.h -- multithreaded CRS
+ * spm_crs_mt.h -- Multithreaded CSR
  *
  * Copyright (C) 2007-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -16,7 +16,6 @@
 #include "spm_crs.h"
 #include "spm_mt.h"
 #include "spmv_method.h"
-   
 #define SPM_CRS_MT_DECLARE(__idx_bits, __elem_type) \
 struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt { \
 	spm_crs ## __idx_bits ## _ ## __elem_type ## _t *crs; \
