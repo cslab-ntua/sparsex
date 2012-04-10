@@ -31,7 +31,6 @@ static void *do_spmv_thread_main(void *arg)
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	int i;
-	
 	tsc_t total_tsc, thread_tsc;
 
 	tsc_init(&total_tsc);
@@ -60,15 +59,14 @@ static void *do_spmv_thread(void *arg)
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
 	int i;
-	
 	tsc_t thread_tsc;
 
 	tsc_init(&thread_tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
-                tsc_start(&thread_tsc);
+		        tsc_start(&thread_tsc);
 		spmv_mt_fn(spm_mt_thread->spm, spm_mt_thread->data, y);
-                tsc_pause(&thread_tsc);
+		        tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 	}
 
@@ -156,7 +154,7 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 
 	for (i = 1; i < spm_mt->nr_threads; i++)
 		pthread_create(tids + i, NULL, do_spmv_thread,
-                       spm_mt->spm_threads + i);
+		               spm_mt->spm_threads + i);
 
 	do_spmv_thread_main(spm_mt->spm_threads);
 
@@ -172,11 +170,11 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt,
 
 	VECTOR_NAME(_destroy)(y);
 
+	pthread_barrier_destroy(&barrier);
 	free(parts);
 	free(nodes);
 	free(tids);
 	free(xs);
-	pthread_barrier_destroy(&barrier);
 	return secs;
 }
 
@@ -282,3 +280,5 @@ void SPMV_NAME(_check_mt_loop_numa)(void *spm_serial,
 	free(nodes);
 	free(tids);
 }
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

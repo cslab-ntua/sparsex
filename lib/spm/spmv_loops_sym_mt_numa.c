@@ -30,9 +30,9 @@ static void *do_spmv_thread(void *arg)
 {
 	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
 	SPMV_NAME(_sym_fn_t) *spmv_mt_sym_fn = spm_mt_thread->spmv_fn;
-	
+
 	setaffinity_oncpu(spm_mt_thread->cpu);
-	
+
 	int id = spm_mt_thread->id;
 
 	// Switch Reduction Phase
@@ -41,7 +41,7 @@ static void *do_spmv_thread(void *arg)
 	start = (id * n) / ncpus;
 	end = ((id + 1) * n) / ncpus;
 	*/
-	for (i = 0; i < nloops; i++) { 
+	for (i = 0; i < nloops; i++) {
 		// Switch Reduction Phase
 		/*
 		if (id != 0)
@@ -113,12 +113,12 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	pthread_t *tids;
 
 	setaffinity_oncpu(spm_mt->spm_threads[0].cpu);
-	
+
 	nloops = loops;
 	ncpus = spm_mt->nr_threads;
 	assert(nrows == ncols);
 	n = nrows;
-	
+
 	err = pthread_barrier_init(&barrier, NULL, ncpus);
 	if (err){
 		perror("pthread_barrier_init");
@@ -168,7 +168,7 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 		if (fn)
 			spm->spmv_fn = fn;
 	}
-	
+
 	int alloc_err = 0;
 
 	for (i = 0; i < nr_nodes; i++)
@@ -181,7 +181,7 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(n, parts, ncpus, nodes);
 	VECTOR_NAME(_init)(y, 0);
-	
+
 	alloc_err = check_interleaved(y->elements, parts, ncpus, nodes);
 	print_alloc_status("output vector", alloc_err);
 
@@ -192,22 +192,20 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 		int tnode = spm_mt->spm_threads[i].node;
 		temp[i] = VECTOR_NAME(_create_onnode)(n, tnode);
 	}
-	
+
 	for (i = 1; i < ncpus; i++) {
-	    int j;
-	    for (j = 1; j < n; j++)
-	        temp[i]->elements[j] = 0;
+		int j;
+		for (j = 1; j < n; j++)
+			temp[i]->elements[j] = 0;
 	}
-	
+
 	alloc_err = 0;
 	for (i = 1; i < ncpus; i++) {
 		int tnode = spm_mt->spm_threads[i].node;
-		
 		alloc_err += check_region(temp[i]->elements,
 		                         n * sizeof(ELEM_TYPE), tnode);
 	}
 	print_alloc_status("temporary buffers", alloc_err);
-    
 	for (i = 1; i < ncpus; i++)
 		pthread_create(tids + i, NULL, do_spmv_thread,
 		               spm_mt->spm_threads + i);
@@ -231,7 +229,6 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 		VECTOR_NAME(_destroy)(temp[i]);
 	}
 	free(temp);
-	
 	free(parts);
 	free(nodes);
 	free(tids);
@@ -254,7 +251,6 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 	ncpus = spm_mt->nr_threads;
 	assert(nrows == ncols);
 	n = nrows;
-	
 	err = pthread_barrier_init(&barrier, NULL, ncpus + 1);
 	if (err){
 		perror("pthread_barrier_init");
@@ -304,7 +300,7 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 		if (mt_fn)
 			spm->spmv_fn = mt_fn;
 	}
-	
+
 	/* Allocate an interleaved y */
 	y = VECTOR_NAME(_create_interleaved)(n, parts, ncpus, nodes);
 	y2 = VECTOR_NAME(_create)(n);
@@ -316,16 +312,15 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 	temp[0] = y;
 	for (i = 1; i < ncpus; i++) {
 		int node = spm_mt->spm_threads[i].node;
-		
-	    temp[i] = VECTOR_NAME(_create_onnode)(n, node);
+		temp[i] = VECTOR_NAME(_create_onnode)(n, node);
 	}
-	
+
 	for (i = 1; i < ncpus; i++) {
-	    int j;
-	    for (j = 1; j < n; j++)
-	        temp[i]->elements[j] = 0;
+		int j;
+		for (j = 1; j < n; j++)
+			temp[i]->elements[j] = 0;
 	}
-	
+
 	for (i = 0; i < ncpus; i++)
 		pthread_create(tids + i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
 
@@ -349,13 +344,14 @@ void SPMV_NAME(_check_sym_mt_loop_numa)(void *spm_serial, spm_mt_t *spm_mt,
 
 	VECTOR_NAME(_destroy)(y);
 
-    for (i = 1; i < ncpus; i++) {
+	for (i = 1; i < ncpus; i++) {
 		VECTOR_NAME(_destroy)(temp[i]);
 	}
 	free(temp);
-	
 	free(parts);
 	free(nodes);
 	free(tids);
 	pthread_barrier_destroy(&barrier);
 }
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

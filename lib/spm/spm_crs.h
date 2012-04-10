@@ -17,7 +17,8 @@
 #define SPM_CRS_BITS 64
 #endif
 
-#define CRS_NAME(val_type, ci_bits, name) spm_crs ## ci_bits ## _ ## val_type ## name
+#define CRS_NAME(val_type, ci_bits, name)       \
+    spm_crs ## ci_bits ## _ ## val_type ## name
 #define CRS_TYPE(val_type, ci_bits) CRS_NAME(val_type, ci_bits, _t)
 
 #define SPM_CRS_DECLARE(val_type, ci_bits) \

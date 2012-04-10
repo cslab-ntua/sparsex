@@ -1,8 +1,8 @@
 /*
- * spm_crs_sym_mt.h -- Interface of expansion of CSR for symmetric sparse matrices.
+ * spm_crs_sym_mt.h -- CSR for symmetric matrices.
  *
- * Copyright (C) 2011,      Computing Systems Laboratory (CSLab), NTUA
- * Copyright (C) 2011,      Theodoros Gkountouvas
+ * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2011, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -26,17 +26,18 @@ uint64_t map_size;
 
 #define SPM_CRS_SYM_MT_DECLARE(__idx_bits, __elem_type) \
 struct spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt { \
-    spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_t *crs; \
-    uint64_t row_start, row_end; \
-    uint64_t nnz; \
+	spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_t *crs; \
+	uint64_t row_start, row_end; \
+	uint64_t nnz; \
 }; \
-typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_t; \
+typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ##     \
+_sym_mt spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_t; \
 \
 void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_init_mmf( \
-    char *mmf_file, \
-    uint64_t *nrows, uint64_t *ncols, \
-    uint64_t *nnz, void *metadata);   \
+	char *mmf_file, \
+	uint64_t *nrows, uint64_t *ncols, \
+	uint64_t *nnz, void *metadata); \
 \
 void \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_make_map(void *spm); \
@@ -47,7 +48,8 @@ spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_size(void *spm); \
 uint64_t \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_map_size(void *spm); \
 \
-spmv_ ## __elem_type ## _sym_fn_t spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_multiply;
+spmv_ ## __elem_type ## _sym_fn_t spm_crs ## __idx_bits ## _ ## \
+__elem_type ## _sym_mt_multiply;
 
 SPM_CRS_SYM_MT_DECLARE(32, double)
 SPM_CRS_SYM_MT_DECLARE(64, double)
@@ -57,11 +59,12 @@ SPM_CRS_SYM_MT_DECLARE(64, float)
 #ifdef SPM_NUMA
 #define SPM_CRS_SYM_MT_NUMA_DECLARE(__idx_bits, __elem_type) \
 struct spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa { \
-    spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_t *crs; \
-    uint64_t row_start, row_end; \
-    uint64_t nnz; \
+	spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_t *crs; \
+	uint64_t row_start, row_end; \
+	uint64_t nnz; \
 }; \
-typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_t; \
+typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ##             \
+_sym_mt_numa spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_t; \
 \
 void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_init_mmf( \
@@ -79,7 +82,8 @@ spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_size(void *spm); \
 uint64_t \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_map_size(void *spm); \
 \
-spmv_ ## __elem_type ## _sym_fn_t spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_multiply;
+spmv_ ## __elem_type ## _sym_fn_t spm_crs ## __idx_bits ## _ ## \
+__elem_type ## _sym_mt_numa_multiply;
 
 SPM_CRS_SYM_MT_NUMA_DECLARE(32, double)
 SPM_CRS_SYM_MT_NUMA_DECLARE(64, double)
@@ -88,9 +92,11 @@ SPM_CRS_SYM_MT_NUMA_DECLARE(64, float)
 
 #endif
 
-#define SPM_CRS_SYM_MT_NAME(name) CON6(spm_crs, SPM_CRS_BITS, _, ELEM_TYPE, _sym_mt, name)
+#define SPM_CRS_SYM_MT_NAME(name) CON6(spm_crs, SPM_CRS_BITS,   \
+                                       _, ELEM_TYPE, _sym_mt, name)
 #define SPM_CRS_SYM_MT_TYPE SPM_CRS_SYM_MT_NAME(_t)
-#define SPM_CRS_SYM_MT_MAP_NAME(name) CON5(map, SPM_CRS_BITS, _, ELEM_TYPE, name)
+#define SPM_CRS_SYM_MT_MAP_NAME(name) CON5(map, SPM_CRS_BITS,   \
+                                           _, ELEM_TYPE, name)
 #define SPM_CRS_SYM_MT_MAP_TYPE SPM_CRS_SYM_MT_MAP_NAME(_t)
 
 #endif

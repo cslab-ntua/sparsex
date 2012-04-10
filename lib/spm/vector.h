@@ -1,5 +1,5 @@
 /*
- * vector.h
+ * vector.h -- Vector interface.
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -20,9 +20,9 @@
 #endif
 
 struct map {
-    unsigned int length;
-    unsigned int *cpus;
-    unsigned int *elems_pos;
+	unsigned int length;
+	unsigned int *cpus;
+	unsigned int *elems_pos;
 };
 typedef struct map map_t;
 
@@ -37,17 +37,25 @@ typedef struct { \
 } _VTYPE(vtype); \
 \
 _VTYPE(vtype) *_VNAME(vtype,create)(unsigned long size); \
-_VTYPE(vtype) *_VNAME(vtype,create_from_buff)(ELEM_TYPE *buff, unsigned long size); \
+_VTYPE(vtype) *_VNAME(vtype,create_from_buff)(ELEM_TYPE *buff,          \
+                                              unsigned long size);      \
 _VTYPE(vtype) *_VNAME(vtype,create_onnode)(unsigned long size, int node); \
-_VTYPE(vtype) *_VNAME(vtype,create_interleaved)(unsigned long size, size_t *parts, int nr_parts, const int *nodes); \
+_VTYPE(vtype) *_VNAME(vtype,create_interleaved)(unsigned long size,     \
+                                                size_t *parts, int nr_parts, \
+                                                const int *nodes);      \
 void _VNAME(vtype,destroy)(_VTYPE(vtype) *v); \
 void _VNAME(vtype,init)(_VTYPE(vtype) *v, vtype val); \
-void _VNAME(vtype,init_part)(_VTYPE(vtype) *v, vtype val, unsigned long start, unsigned long end); \
+void _VNAME(vtype,init_part)(_VTYPE(vtype) *v, vtype val, unsigned long start, \
+                             unsigned long end);                        \
 void _VNAME(vtype,init_rand_range)(_VTYPE(vtype) *v, vtype max, vtype min); \
 void _VNAME(vtype,init_from_map)(_VTYPE(vtype) **v, vtype val, map_t *map); \
-void _VNAME(vtype,add)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, _VTYPE(vtype) *v3); \
-void _VNAME(vtype,add_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, _VTYPE(vtype) *v3, unsigned long start, unsigned long end); \
-void _VNAME(vtype,add_from_map)(_VTYPE(vtype) *v1, _VTYPE(vtype) **v2, _VTYPE(vtype) *v3, map_t *map); \
+void _VNAME(vtype,add)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2,            \
+                       _VTYPE(vtype) *v3);                              \
+void _VNAME(vtype,add_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2,       \
+                            _VTYPE(vtype) *v3, unsigned long start,     \
+                            unsigned long end);                         \
+void _VNAME(vtype,add_from_map)(_VTYPE(vtype) *v1, _VTYPE(vtype) **v2,  \
+                                _VTYPE(vtype) *v3, map_t *map);         \
 int _VNAME(vtype,compare)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2); \
 void _VNAME(vtype,print)(_VTYPE(vtype) *v);
 

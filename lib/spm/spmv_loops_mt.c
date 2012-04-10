@@ -140,7 +140,7 @@ float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 #ifdef SPMV_PRFCNT
 		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
 		if (!spm_mt->spm_threads[i].data) {
-		        fprintf(stderr, "malloc failed\n");
+			fprintf(stderr, "malloc failed\n");
 			exit(1);
 		}
 #endif
@@ -148,7 +148,7 @@ float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 
 	/*
 	 * spawn two kind of threads:
-	 *	- 1	 : do_spmv_thread_main_swap: computes and does SWAP(Y,X)
+	 *	- 1  : do_spmv_thread_main_swap: computes and does SWAP(Y,X)
 	 *	- N-1: do_spmv_thread: just computes
 	 */
 	pthread_create(tids, NULL, do_spmv_thread_main_swap, spm_mt->spm_threads);
@@ -174,7 +174,6 @@ float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,
 	VECTOR_NAME(_destroy)(x);
 	VECTOR_NAME(_destroy)(y);
 	free(tids);
-
 	return secs;
 }
 
@@ -268,7 +267,7 @@ void SPMV_NAME(_check_mt_loop_serial)(void *spm, spm_mt_t *spm_mt,
 	}
 
 	for (i = 0; i < loops; i++) {
-		//unsigned long	 k;
+		//unsigned long k;
 		//for (k=0; k < cols_nr; k++)
 		//	x->elements[k] = (ELEM_TYPE)(k+666.0);
 		VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE)-1000, (ELEM_TYPE)1000);
@@ -293,3 +292,4 @@ void SPMV_NAME(_check_mt_loop_serial)(void *spm, spm_mt_t *spm_mt,
 	VECTOR_NAME(_destroy)(y2);
 }
 
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

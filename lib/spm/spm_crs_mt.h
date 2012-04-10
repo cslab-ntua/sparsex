@@ -1,5 +1,5 @@
 /*
- * spm_crs_mt.h -- multithreaded CRS
+ * spm_crs_mt.h -- Multithreaded CSR
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -15,13 +15,13 @@
 #include "spm_crs.h"
 #include "spm_mt.h"
 #include "spmv_method.h"
-   
 #define SPM_CRS_MT_DECLARE(__idx_bits, __elem_type) \
 struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt { \
 	spm_crs ## __idx_bits ## _ ## __elem_type ## _t    *crs; \
 	uint64_t row_start, row_end; \
 }; \
-typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt spm_crs ## __idx_bits ## _ ## __elem_type ## _mt ## _t; \
+typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _mt ## _t;         \
 \
 void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_init_mmf( \
@@ -34,7 +34,8 @@ spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_size(void *spm); \
 \
 /* XXX: Destroy */ \
 \
-spmv_ ## __elem_type ## _fn_t spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_multiply;
+spmv_ ## __elem_type ## _fn_t                               \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_multiply;
 
 SPM_CRS_MT_DECLARE(32, double)
 SPM_CRS_MT_DECLARE(64, double)
@@ -47,7 +48,8 @@ struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa { \
 	spm_crs ## __idx_bits ## _ ## __elem_type ## _t    *crs; \
 	uint64_t row_start, row_end; \
 }; \
-typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa ## _t; \
+typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa    \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa ## _t;            \
 \
 void * \
 spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_init_mmf( \
@@ -60,7 +62,8 @@ spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_size(void *spm); \
 \
 /* XXX: Destroy */ \
 \
-spmv_ ## __elem_type ## _fn_t spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_multiply;
+spmv_ ## __elem_type ## _fn_t                                   \
+spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_multiply;
 
 SPM_CRS_MT_NUMA_DECLARE(32, double)
 SPM_CRS_MT_NUMA_DECLARE(64, double)

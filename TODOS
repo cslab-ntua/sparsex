@@ -10,3 +10,4 @@
 10. [DISCARDED] Conditional compilation of the prfcnt library.
 11. [DONE] Use other, more generic CPU detectors. Don't rely on non-standard modules.
 12. [DONE] Fix multithreaded compilation.
+13. Correct tabification in C files.

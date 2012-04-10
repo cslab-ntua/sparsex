@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
- * Copyright (C)      2011, Vasileios Karakasis
+ * Copyright (C)	  2011, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -29,56 +29,56 @@ spm_mt_t *SPM_CRS_MT_NAME(_get_spm)(SPM_CRS_IDX_TYPE *rowptr,
                                     unsigned int nr_threads,
                                     unsigned int *cpus)
 {
-    SPM_CRS_MT_TYPE *csr_mts = malloc(nr_threads*sizeof(*csr_mts));
-    SPM_CRS_TYPE *csr = malloc(sizeof(*csr));
-    csr->row_ptr = rowptr;
-    csr->col_ind = colind;
-    csr->values = values;
-    csr->nz = rowptr[nr_rows] - 1;
-    csr->nrows = csr->ncols = nr_rows;
+	SPM_CRS_MT_TYPE *csr_mts = malloc(nr_threads*sizeof(*csr_mts));
+	SPM_CRS_TYPE *csr = malloc(sizeof(*csr));
+	csr->row_ptr = rowptr;
+	csr->col_ind = colind;
+	csr->values = values;
+	csr->nz = rowptr[nr_rows] - 1;
+	csr->nrows = csr->ncols = nr_rows;
 
-    spm_mt_t *ret = malloc(sizeof(*ret));
-    ret->nr_threads = nr_threads;
-    ret->spm_threads = malloc(nr_threads*sizeof(*ret->spm_threads));
+	spm_mt_t *ret = malloc(sizeof(*ret));
+	ret->nr_threads = nr_threads;
+	ret->spm_threads = malloc(nr_threads*sizeof(*ret->spm_threads));
 
-    // Compute the matrix splits
-    size_t nnz_per_split = csr->nz / nr_threads;
-    size_t curr_nnz = 0;
-    size_t row_start = 0;
-    size_t split_cnt = 0;
-    int i;
-    for (i = 0; i < nr_rows; ++i) {
-        curr_nnz += rowptr[i+1] - rowptr[i];
-        if (curr_nnz >= nnz_per_split) {
-            csr_mts[split_cnt].crs = csr;
-            csr_mts[split_cnt].row_start = row_start;
-            csr_mts[split_cnt].row_end = i+1;
-            ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
-            ret->spm_threads[split_cnt].spmv_fn =
-                SPM_CRS_MT_NAME(_multiply_base_one);
-            ret->spm_threads[split_cnt].cpu = cpus[split_cnt];
-            ret->spm_threads[split_cnt].row_start = row_start;
-            ret->spm_threads[split_cnt].nr_rows = i + 1 - row_start;
-            row_start = i + 1;
-            curr_nnz = 0;
-            ++split_cnt;
-        }
-    }
+	// Compute the matrix splits
+	size_t nnz_per_split = csr->nz / nr_threads;
+	size_t curr_nnz = 0;
+	size_t row_start = 0;
+	size_t split_cnt = 0;
+	int i;
+	for (i = 0; i < nr_rows; ++i) {
+		curr_nnz += rowptr[i+1] - rowptr[i];
+		if (curr_nnz >= nnz_per_split) {
+			csr_mts[split_cnt].crs = csr;
+			csr_mts[split_cnt].row_start = row_start;
+			csr_mts[split_cnt].row_end = i+1;
+			ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
+			ret->spm_threads[split_cnt].spmv_fn =
+			    SPM_CRS_MT_NAME(_multiply_base_one);
+			ret->spm_threads[split_cnt].cpu = cpus[split_cnt];
+			ret->spm_threads[split_cnt].row_start = row_start;
+			ret->spm_threads[split_cnt].nr_rows = i + 1 - row_start;
+			row_start = i + 1;
+			curr_nnz = 0;
+			++split_cnt;
+		}
+	}
 
-    // fill the last split
-    if (curr_nnz < nnz_per_split && split_cnt < nr_threads) {
-        csr_mts[split_cnt].crs = csr;
-        csr_mts[split_cnt].row_start = row_start;
-        csr_mts[split_cnt].row_end = i;
-        ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
-        ret->spm_threads[split_cnt].spmv_fn =
-            SPM_CRS_MT_NAME(_multiply_base_one);
-        ret->spm_threads[split_cnt].cpu = cpus[split_cnt];
-        ret->spm_threads[split_cnt].row_start = row_start;
-        ret->spm_threads[split_cnt].nr_rows = i - row_start;
-    }
+	// fill the last split
+	if (curr_nnz < nnz_per_split && split_cnt < nr_threads) {
+		csr_mts[split_cnt].crs = csr;
+		csr_mts[split_cnt].row_start = row_start;
+		csr_mts[split_cnt].row_end = i;
+		ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
+		ret->spm_threads[split_cnt].spmv_fn =
+		    SPM_CRS_MT_NAME(_multiply_base_one);
+		ret->spm_threads[split_cnt].cpu = cpus[split_cnt];
+		ret->spm_threads[split_cnt].row_start = row_start;
+		ret->spm_threads[split_cnt].nr_rows = i - row_start;
+	}
 
-    return ret;
+	return ret;
 }
 
 
@@ -201,9 +201,10 @@ void SPM_CRS_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 }
 
 /*
- *  Multiplication for one-based indexing of rows and column indices
+ *	Multiplication for one-based indexing of rows and column indices
  */
-void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in,
+                                         VECTOR_TYPE *out)
 {
 	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm;
 	ELEM_TYPE *x = in->elements;
@@ -216,9 +217,9 @@ void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE
 	register ELEM_TYPE yr;
 
 	unsigned long i,j;
-	for (i=row_start; i<row_end; i++){
-		yr = (ELEM_TYPE)0;
-		for (j=row_ptr[i]-1; j<row_ptr[i+1]-1; j++) {
+	for (i = row_start; i < row_end; i++) {
+		yr = (ELEM_TYPE) 0;
+		for (j = row_ptr[i]-1; j < row_ptr[i+1]-1; j++) {
 			yr += (values[j] * x[col_ind[j]-1]);
 		}
 		y[i] = yr;
@@ -226,11 +227,11 @@ void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE
 }
 
 XSPMV_MT_METH_INIT(
- SPM_CRS_MT_NAME(_multiply),
- SPM_CRS_MT_NAME(_init_mmf),
- SPM_CRS_MT_NAME(_size),
- SPM_CRS_MT_NAME(_destroy),
- sizeof(ELEM_TYPE)
+	SPM_CRS_MT_NAME(_multiply),
+	SPM_CRS_MT_NAME(_init_mmf),
+	SPM_CRS_MT_NAME(_size),
+	SPM_CRS_MT_NAME(_destroy),
+	sizeof(ELEM_TYPE)
 )
 
 #ifdef SPM_NUMA
@@ -271,17 +272,19 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file,
 		spm_thread->row_start = row_start;
 		spm_thread->nr_rows = row_end - row_start;
 	}
-	rowptr_parts[nr_threads-1] += sizeof(*crs->row_ptr); 
+	rowptr_parts[nr_threads-1] += sizeof(*crs->row_ptr);
 
 	// sanity check (+ get rid of compiler warning about uninit. variable)
 	assert(crs);
 
-	SPM_CRS_IDX_TYPE *new_rowptr = alloc_interleaved((crs->nrows+1)*sizeof(*crs->row_ptr),
-	                                                 rowptr_parts, nr_threads,
-	                                                 nodes);
-	SPM_CRS_IDX_TYPE *new_colind = alloc_interleaved(crs->nz*sizeof(*crs->col_ind),
-	                                                 colind_parts, nr_threads,
-	                                                 nodes);
+	SPM_CRS_IDX_TYPE *new_rowptr =
+	    alloc_interleaved((crs->nrows+1)*sizeof(*crs->row_ptr),
+													 rowptr_parts, nr_threads,
+													 nodes);
+	SPM_CRS_IDX_TYPE *new_colind =
+	    alloc_interleaved(crs->nz*sizeof(*crs->col_ind),
+	                      colind_parts, nr_threads,
+													 nodes);
 	ELEM_TYPE *new_values = alloc_interleaved(crs->nz*sizeof(*crs->values),
 	                                          values_parts, nr_threads,
 	                                          nodes);
@@ -338,17 +341,18 @@ uint64_t SPM_CRS_MT_NAME(_numa_size)(void *spm)
 	return SPM_CRS_MT_NAME(_size)(spm);
 }
 
-void SPM_CRS_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_CRS_MT_NAME(_numa_multiply)(void *spm, VECTOR_TYPE *in,
+                                     VECTOR_TYPE *out)
 {
 	SPM_CRS_MT_NAME(_multiply)(spm, in, out);
 }
 
 XSPMV_MT_METH_INIT(
- SPM_CRS_MT_NAME(_numa_multiply),
- SPM_CRS_MT_NAME(_numa_init_mmf),
- SPM_CRS_MT_NAME(_numa_size),
- SPM_CRS_MT_NAME(_numa_destroy),
- sizeof(ELEM_TYPE)
+	SPM_CRS_MT_NAME(_numa_multiply),
+	SPM_CRS_MT_NAME(_numa_init_mmf),
+	SPM_CRS_MT_NAME(_numa_size),
+	SPM_CRS_MT_NAME(_numa_destroy),
+	sizeof(ELEM_TYPE)
 )
 
 #endif /* SPM_NUMA */

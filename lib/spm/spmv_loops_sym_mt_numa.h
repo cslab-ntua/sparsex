@@ -28,4 +28,4 @@ void spmv_double_check_sym_mt_loop_numa(void *spm,
                                         unsigned long ncols,
                                         SPMV_NAME(_fn_t) *mt_fn);
 
-#endif  /* SPMV_LOOPS_MT_NUMA_H__ */
+#endif /* SPMV_LOOPS_MT_NUMA_H__ */

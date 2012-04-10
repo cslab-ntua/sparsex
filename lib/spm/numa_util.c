@@ -1,5 +1,5 @@
 /*
- * numa_util.c -- NUMA utilitiy functions
+ * numa_util.c -- NUMA utilitiy functions.
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011, Vasileios Karakasis
@@ -31,46 +31,42 @@ static void fix_interleaving(size_t nr_parts, size_t *parts, const int *nodes)
 
 		// If a page is divided to more than one cpu ...
 		if (rem != 0) {
-                        // Initialize parameters.
-                        for (i = 0; i < nr_nodes; i++)
-                                page_to_nodes[i] = 0;
-                        page_to_nodes[nodes[curr_part]] = rem;
-                        curr_page_size = rem;
-                        parts[curr_part] -= rem;
+			// Initialize parameters.
+			for (i = 0; i < nr_nodes; i++)
+				page_to_nodes[i] = 0;
+			page_to_nodes[nodes[curr_part]] = rem;
+			curr_page_size = rem;
+			parts[curr_part] -= rem;
 
-                        // Calculate page partitions to nodes.
+			// Calculate page partitions to nodes.
 			for (i = 1; curr_part + i < nr_parts &&
-			     curr_page_size + parts[curr_part+i] < pagesize;
+			         curr_page_size + parts[curr_part+i] < pagesize;
 			     i++) {
-				page_to_nodes[nodes[curr_part+i]] +=
-				    parts[curr_part+i];
-                                curr_page_size += parts[curr_part+i];
-                                parts[curr_part+i] = 0;
-                        }
-                        if (curr_part + i < nr_parts) {
-                                page_to_nodes[nodes[curr_part+i]] +=
-				    pagesize - curr_page_size;
-                                parts[curr_part+i] -=
-				    pagesize - curr_page_size;
-                                curr_page_size = pagesize;
-                        }
+				page_to_nodes[nodes[curr_part+i]] += parts[curr_part+i];
+				curr_page_size += parts[curr_part+i];
+				parts[curr_part+i] = 0;
+			}
+			if (curr_part + i < nr_parts) {
+				page_to_nodes[nodes[curr_part+i]] += pagesize - curr_page_size;
+				parts[curr_part+i] -= pagesize - curr_page_size;
+				curr_page_size = pagesize;
+			}
 
-                        // Assign current page to the proper node.
-                        max_page_size = page_to_nodes[0];
-                        chosen_node = 0;
-                        for (i = 1; i < nr_nodes; i++) {
-                                if (max_page_size < page_to_nodes[i]) {
-                                        max_page_size = page_to_nodes[i];
-                                        chosen_node = i;
-                                }
-                        }
+			// Assign current page to the proper node.
+			max_page_size = page_to_nodes[0];
+			chosen_node = 0;
+			for (i = 1; i < nr_nodes; i++) {
+				if (max_page_size < page_to_nodes[i]) {
+					max_page_size = page_to_nodes[i];
+					chosen_node = i;
+				}
+			}
 
-                        // Assign current page to the proper CPU.
+			// Assign current page to the proper CPU.
 			for (i = 0; nodes[curr_part+i] != chosen_node; i++);
-                        parts[curr_part+i] += curr_page_size;
+			parts[curr_part+i] += curr_page_size;
 		}
 	}
-	
 }
 
 #define ALIGN_ADDR(addr, bound) (void *)((unsigned long) addr & ~(bound-1))
@@ -91,7 +87,7 @@ static void fix_interleaving(size_t nr_parts, size_t *parts, const int *nodes)
  *  @param nodes the physical memory nodes to bind each partition. The
  *               size of the array must equal nr_parts.
  *  @return On success a pointer to the newly allocated area is
- *          returned, otherwise NULL is returned. 
+ *          returned, otherwise NULL is returned.
  */
 void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
                         const int *nodes)
@@ -120,18 +116,18 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
 	 */
 	fix_interleaving(nr_parts, parts, nodes);
 
-    void *curr_part = ret;
+	void *curr_part = ret;
 	for (i = 0; i < nr_parts; i++) {
 		// Bind part to the proper node.
 		numa_bitmask_setbit(nodemask, nodes[i]);
 		if (parts[i] != 0 &&
-		    mbind(curr_part, parts[i], MPOL_BIND, nodemask->maskp,
-		          nodemask->size, 0) < 0) {
+			mbind(curr_part, parts[i], MPOL_BIND, nodemask->maskp,
+			      nodemask->size, 0) < 0) {
 			perror("mbind");
 			exit(1);
 		}
 		curr_part += parts[i];
-		
+
 		/* Clear the mask for the next round */
 		numa_bitmask_clearbit(nodemask, nodes[i]);
 	}
@@ -142,7 +138,7 @@ exit:
 
 void *alloc_onnode(size_t size, int node)
 {
-    return alloc_interleaved(size, &size, 1, &node);
+	return alloc_interleaved(size, &size, 1, &node);
 }
 
 void free_interleaved(void *addr, size_t length)

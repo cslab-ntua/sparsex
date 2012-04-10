@@ -27,7 +27,7 @@ extern "C" {
  *  @nodes memory nodes to bind each partition
  *
  *  @return pointer to the newly allocated area. Free with free_interleaved().
- */ 
+ */
 void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
                         const int *nodes);
 void *alloc_onnode(size_t size, int node);

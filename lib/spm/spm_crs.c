@@ -1,5 +1,5 @@
 /*
- * spm_crs.c
+ * spm_crs.c -- CSR implementation
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -8,9 +8,6 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 #include <stdlib.h>
-//#if defined(__i386__) || defined(__x86_64__)
-//#include <emmintrin.h>
-//#endif
 #include <inttypes.h>
 #include <assert.h>
 
@@ -97,7 +94,8 @@ void SPM_CRS_NAME(_destroy)(void *spm)
 uint64_t SPM_CRS_NAME(_size)(void *spm)
 {
 	SPM_CRS_TYPE *crs = (SPM_CRS_TYPE *)spm;
-	uint64_t ret = crs->nz*(sizeof(ELEM_TYPE) + sizeof(UINT_TYPE(SPM_CRS_BITS)));
+	uint64_t ret =
+	    crs->nz*(sizeof(ELEM_TYPE) + sizeof(UINT_TYPE(SPM_CRS_BITS)));
 	ret += (crs->nrows + 1)*sizeof(UINT_TYPE(SPM_CRS_BITS));
 	return ret;
 }
@@ -123,20 +121,20 @@ void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		}
 		y[i] = yr;
 		//printf("++y[%lu] = %lf\n", i, yr);
-		#if 0
+#if 0
 		__asm__ __volatile__ (
 			" movntq %[val], (%[mem]) \n\t"
 			:
 			: [val] "x" (yr), [mem] "r" (y+i)
 		);
-		#endif
+#endif
 	}
 }
 
 XSPMV_METH_INIT(
- SPM_CRS_NAME(_multiply),
- SPM_CRS_NAME(_init_mmf),
- SPM_CRS_NAME(_size),
- SPM_CRS_NAME(_destroy),
- sizeof(ELEM_TYPE)
+	SPM_CRS_NAME(_multiply),
+	SPM_CRS_NAME(_init_mmf),
+	SPM_CRS_NAME(_size),
+	SPM_CRS_NAME(_destroy),
+	sizeof(ELEM_TYPE)
 )

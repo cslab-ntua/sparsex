@@ -55,7 +55,6 @@ void spmv_float_check_sym_mt_loop_serial(void *spm, spm_mt_t *spm_mt,
                                          unsigned long nrows,
                                          unsigned long ncols,
                                          spmv_float_fn_t *mt_fn);
-                                         		     
 #endif
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
