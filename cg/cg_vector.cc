@@ -1,8 +1,8 @@
 /*
- * cg_vector.cc -- Implementation of Expansion of Vector Operations for CG.
+ * cg_vector.cc -- Expansion of Vector Operations for CG.
  *
- * Copyright (C) 2011,      Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2011,      Theodoros Gkountouvas
+ * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
