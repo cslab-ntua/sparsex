@@ -10,8 +10,8 @@
 
 #include "mult/multiply.h"
 
-void SPM_BCSR_NAME(_multiply_generic) (void *spm, VECTOR_TYPE *in,
-                                       VECTOR_TYPE *out)
+void SPM_BCSR_NAME(_multiply_generic)(void *spm, VECTOR_TYPE *in,
+                                      VECTOR_TYPE *out)
 {
 	SPM_BCSR_TYPE *mat = (SPM_BCSR_TYPE *) spm;
 	ELEM_TYPE *y = out->elements;
@@ -28,7 +28,7 @@ void SPM_BCSR_NAME(_multiply_generic) (void *spm, VECTOR_TYPE *in,
 	register ELEM_TYPE yr;
 	for (i = r_start, _i = r_start / r; i < r_end; i += r, _i++) {
 		for (j = brow_ptr[_i], _j = j / (r*c); j < brow_ptr[_i+1];
-			 j += r*c, _j++) {
+		     j += r*c, _j++) {
 			SPM_CRS_IDX_TYPE x_start = bcol_ind[_j];
 			for (k = 0; k < r; k++) {
 				yr = 0;
@@ -42,8 +42,8 @@ void SPM_BCSR_NAME(_multiply_generic) (void *spm, VECTOR_TYPE *in,
 	return;
 }
 
-void SPM_BCSR_MT_NAME(_multiply_generic) (void *spm, VECTOR_TYPE *in,
-                                          VECTOR_TYPE *out)
+void SPM_BCSR_MT_NAME(_multiply_generic)(void *spm, VECTOR_TYPE *in,
+                                         VECTOR_TYPE *out)
 {
 	SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *) spm;
 	ELEM_TYPE *y = out->elements;
@@ -60,7 +60,7 @@ void SPM_BCSR_MT_NAME(_multiply_generic) (void *spm, VECTOR_TYPE *in,
 	register ELEM_TYPE yr;
 	for (i = r_start, _i = r_start / r; i < r_end; i += r, _i++) {
 		for (j = brow_ptr[_i], _j = j / (r*c); j < brow_ptr[_i+1];
-			 j += r*c, _j++) {
+		     j += r*c, _j++) {
 			SPM_CRS_IDX_TYPE x_start = bcol_ind[_j];
 			for (k = 0; k < r; k++) {
 				yr = 0;

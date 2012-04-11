@@ -10,7 +10,7 @@
 
 #include "mult/multiply.h"
 
-void SPM_BCSR_NAME(_multiply_${r}x${c}) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_BCSR_NAME(_multiply_${r}x${c})(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	SPM_BCSR_TYPE *mat = (SPM_BCSR_TYPE *) spm;
 	ELEM_TYPE *y = out->elements;
@@ -36,7 +36,7 @@ ${y_assign_hook}
 	return;
 }
 
-void SPM_BCSR_MT_NAME(_multiply_${r}x${c}) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_BCSR_MT_NAME(_multiply_${r}x${c})(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *) spm;
 	ELEM_TYPE *y = out->elements;

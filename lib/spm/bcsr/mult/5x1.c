@@ -10,78 +10,78 @@
 
 #include "mult/multiply.h"
 
-void SPM_BCSR_NAME(_multiply_5x1) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_BCSR_NAME(_multiply_5x1)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
-    SPM_BCSR_TYPE *mat = (SPM_BCSR_TYPE *) spm;
-    ELEM_TYPE *y = out->elements;
-    ELEM_TYPE *x = in->elements;
-    ELEM_TYPE *bvalues = mat->bvalues;
-    SPM_CRS_IDX_TYPE *brow_ptr = mat->brow_ptr;
-    SPM_CRS_IDX_TYPE *bcol_ind = mat->bcol_ind;
-    const SPM_CRS_IDX_TYPE r_start = 0;
-    const SPM_CRS_IDX_TYPE r_end = mat->nrows;
+	SPM_BCSR_TYPE *mat = (SPM_BCSR_TYPE *) spm;
+	ELEM_TYPE *y = out->elements;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *bvalues = mat->bvalues;
+	SPM_CRS_IDX_TYPE *brow_ptr = mat->brow_ptr;
+	SPM_CRS_IDX_TYPE *bcol_ind = mat->bcol_ind;
+	const SPM_CRS_IDX_TYPE r_start = 0;
+	const SPM_CRS_IDX_TYPE r_end = mat->nrows;
 
-    SPM_CRS_IDX_TYPE i, i_, j, j_;
-    for (i = r_start, i_ = r_start / 5; i < r_end; i += 5, i_++) {
-        register ELEM_TYPE yr0 = 0;
-        register ELEM_TYPE yr1 = 0;
-        register ELEM_TYPE yr2 = 0;
-        register ELEM_TYPE yr3 = 0;
-        register ELEM_TYPE yr4 = 0;
-        for (j = brow_ptr[i_], j_ = j / (5*1);
-             j < brow_ptr[i_+1]; j += 5*1, j_++) {
-            SPM_CRS_IDX_TYPE x_start = bcol_ind[j_];
-            yr0 += bvalues[j]*x[x_start];
-            yr1 += bvalues[j+1]*x[x_start];
-            yr2 += bvalues[j+2]*x[x_start];
-            yr3 += bvalues[j+3]*x[x_start];
-            yr4 += bvalues[j+4]*x[x_start];
-        }
+	SPM_CRS_IDX_TYPE i, i_, j, j_;
+	for (i = r_start, i_ = r_start / 5; i < r_end; i += 5, i_++) {
+		register ELEM_TYPE yr0 = 0;
+		register ELEM_TYPE yr1 = 0;
+		register ELEM_TYPE yr2 = 0;
+		register ELEM_TYPE yr3 = 0;
+		register ELEM_TYPE yr4 = 0;
+		for (j = brow_ptr[i_], j_ = j / (5*1);
+		     j < brow_ptr[i_+1]; j += 5*1, j_++) {
+			SPM_CRS_IDX_TYPE x_start = bcol_ind[j_];
+			yr0 += bvalues[j]*x[x_start];
+			yr1 += bvalues[j+1]*x[x_start];
+			yr2 += bvalues[j+2]*x[x_start];
+			yr3 += bvalues[j+3]*x[x_start];
+			yr4 += bvalues[j+4]*x[x_start];
+		}
 
-        y[i] = yr0;
-        y[i+1] = yr1;
-        y[i+2] = yr2;
-        y[i+3] = yr3;
-        y[i+4] = yr4;
-    }
+		y[i] = yr0;
+		y[i+1] = yr1;
+		y[i+2] = yr2;
+		y[i+3] = yr3;
+		y[i+4] = yr4;
+	}
 
-    return;
+	return;
 }
 
-void SPM_BCSR_MT_NAME(_multiply_5x1) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_BCSR_MT_NAME(_multiply_5x1)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
-    SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *) spm;
-    ELEM_TYPE *y = out->elements;
-    ELEM_TYPE *x = in->elements;
-    ELEM_TYPE *bvalues = bcsr_mt->bcsr->bvalues;
-    SPM_CRS_IDX_TYPE *brow_ptr = bcsr_mt->bcsr->brow_ptr;
-    SPM_CRS_IDX_TYPE *bcol_ind = bcsr_mt->bcsr->bcol_ind;
-    const SPM_CRS_IDX_TYPE r_start = bcsr_mt->row_start;
-    const SPM_CRS_IDX_TYPE r_end = bcsr_mt->row_end;
+	SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *) spm;
+	ELEM_TYPE *y = out->elements;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *bvalues = bcsr_mt->bcsr->bvalues;
+	SPM_CRS_IDX_TYPE *brow_ptr = bcsr_mt->bcsr->brow_ptr;
+	SPM_CRS_IDX_TYPE *bcol_ind = bcsr_mt->bcsr->bcol_ind;
+	const SPM_CRS_IDX_TYPE r_start = bcsr_mt->row_start;
+	const SPM_CRS_IDX_TYPE r_end = bcsr_mt->row_end;
 
-    SPM_CRS_IDX_TYPE i, i_, j, j_;
-    for (i = r_start, i_ = r_start / 5; i < r_end; i += 5, i_++) {
-        register ELEM_TYPE yr0 = 0;
-        register ELEM_TYPE yr1 = 0;
-        register ELEM_TYPE yr2 = 0;
-        register ELEM_TYPE yr3 = 0;
-        register ELEM_TYPE yr4 = 0;
-        for (j = brow_ptr[i_], j_ = j / (5*1);
-             j < brow_ptr[i_+1]; j += 5*1, j_++) {
-            SPM_CRS_IDX_TYPE x_start = bcol_ind[j_];
-            yr0 += bvalues[j]*x[x_start];
-            yr1 += bvalues[j+1]*x[x_start];
-            yr2 += bvalues[j+2]*x[x_start];
-            yr3 += bvalues[j+3]*x[x_start];
-            yr4 += bvalues[j+4]*x[x_start];
-        }
+	SPM_CRS_IDX_TYPE i, i_, j, j_;
+	for (i = r_start, i_ = r_start / 5; i < r_end; i += 5, i_++) {
+		register ELEM_TYPE yr0 = 0;
+		register ELEM_TYPE yr1 = 0;
+		register ELEM_TYPE yr2 = 0;
+		register ELEM_TYPE yr3 = 0;
+		register ELEM_TYPE yr4 = 0;
+		for (j = brow_ptr[i_], j_ = j / (5*1);
+		     j < brow_ptr[i_+1]; j += 5*1, j_++) {
+			SPM_CRS_IDX_TYPE x_start = bcol_ind[j_];
+			yr0 += bvalues[j]*x[x_start];
+			yr1 += bvalues[j+1]*x[x_start];
+			yr2 += bvalues[j+2]*x[x_start];
+			yr3 += bvalues[j+3]*x[x_start];
+			yr4 += bvalues[j+4]*x[x_start];
+		}
 
-        y[i] = yr0;
-        y[i+1] = yr1;
-        y[i+2] = yr2;
-        y[i+3] = yr3;
-        y[i+4] = yr4;
-    }
+		y[i] = yr0;
+		y[i+1] = yr1;
+		y[i+2] = yr2;
+		y[i+3] = yr3;
+		y[i+4] = yr4;
+	}
 
-    return;
+	return;
 }
