@@ -10,7 +10,7 @@
 
 #include "mult/multiply.h"
 
-void SPM_BCSR_NAME(_multiply_8x1) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_BCSR_NAME(_multiply_8x1)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	SPM_BCSR_TYPE *mat = (SPM_BCSR_TYPE *) spm;
 	ELEM_TYPE *y = out->elements;
@@ -32,7 +32,7 @@ void SPM_BCSR_NAME(_multiply_8x1) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		register ELEM_TYPE yr6 = 0;
 		register ELEM_TYPE yr7 = 0;
 		for (j = brow_ptr[i_], j_ = j / (8*1);
-			 j < brow_ptr[i_+1]; j += 8*1, j_++) {
+		     j < brow_ptr[i_+1]; j += 8*1, j_++) {
 			SPM_CRS_IDX_TYPE x_start = bcol_ind[j_];
 			yr0 += bvalues[j]*x[x_start];
 			yr1 += bvalues[j+1]*x[x_start];
@@ -57,7 +57,7 @@ void SPM_BCSR_NAME(_multiply_8x1) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	return;
 }
 
-void SPM_BCSR_MT_NAME(_multiply_8x1) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+void SPM_BCSR_MT_NAME(_multiply_8x1)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 {
 	SPM_BCSR_MT_TYPE *bcsr_mt = (SPM_BCSR_MT_TYPE *) spm;
 	ELEM_TYPE *y = out->elements;
@@ -79,7 +79,7 @@ void SPM_BCSR_MT_NAME(_multiply_8x1) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *o
 		register ELEM_TYPE yr6 = 0;
 		register ELEM_TYPE yr7 = 0;
 		for (j = brow_ptr[i_], j_ = j / (8*1);
-			 j < brow_ptr[i_+1]; j += 8*1, j_++) {
+		     j < brow_ptr[i_+1]; j += 8*1, j_++) {
 			SPM_CRS_IDX_TYPE x_start = bcol_ind[j_];
 			yr0 += bvalues[j]*x[x_start];
 			yr1 += bvalues[j+1]*x[x_start];
