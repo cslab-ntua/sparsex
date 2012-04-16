@@ -223,7 +223,6 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
 void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 {
     std::vector<uint64_t> xs;
-    uint64_t jmp;
 
     last_col_ = 1;
     for (const SpmRowElem *spm_elem = rbegin; spm_elem < rend; spm_elem++) {
@@ -232,9 +231,9 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
-            jmp = PreparePat(xs, *spm_elem);
+            PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
-            AddPattern(*spm_elem, jmp);
+            AddPattern(*spm_elem);
             for (long i=0; i < spm_elem->pattern->GetSize(); i++)
                 values_[values_idx_++] = spm_elem->vals[i];
 
@@ -263,7 +262,6 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 void CsxManager::DoSymRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 {
     std::vector<uint64_t> xs;
-    uint64_t jmp;
     const SpmRowElem *spm_elem = rbegin;
 
     last_col_ = 1;
@@ -274,9 +272,9 @@ void CsxManager::DoSymRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
-            jmp = PreparePat(xs, *spm_elem);
+            PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
-            AddPattern(*spm_elem, jmp);
+            AddPattern(*spm_elem);
             for (long i=0; i < spm_elem->pattern->GetSize(); i++)
                 values_[values_idx_++] = spm_elem->vals[i];
 
@@ -301,9 +299,9 @@ void CsxManager::DoSymRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
-            jmp = PreparePat(xs, *spm_elem);
+            PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
-            AddPattern(*spm_elem, jmp);
+            AddPattern(*spm_elem);
             for (long i=0; i < spm_elem->pattern->GetSize(); i++)
                 values_[values_idx_++] = spm_elem->vals[i];
 
@@ -359,7 +357,7 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     max = 0;
     if (xs_size > 1) {
         vi = xs.begin();
-        std::advance(vi, 1);                        // Advance over jmp.
+        std::advance(vi, 1);
         max = *(std::max_element(vi, xs.end()));
     }
     delta_size =  getDeltaSize(max);
@@ -377,7 +375,7 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     // Variables ctls_size, ctl_flags are not valid after this call.
     UpdateNewRow(ctl_flags);
 
-    // Add jmp and deltas.
+    // Add the column index
     if (full_column_indices_)
         da_put_u32(ctl_da_, x_start-1);
     else
@@ -407,17 +405,13 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     return;
 }
 
-void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
+void CsxManager::AddPattern(const SpmRowElem &elem)
 {
     uint8_t *ctl_flags, *ctl_size;
     long pat_size, pat_id;
-    uint64_t ujmp;
+    uint64_t ucol;
 
     pat_size = elem.pattern->GetSize();
-    if (debug)
-        std::cerr << "AddPattern jmp: " << jmp << " pat_size: " << pat_size
-                  << "\n";
-
     pat_id = elem.pattern->GetPatternId();
     ctl_flags = (uint8_t *) dynarray_alloc_nr(ctl_da_, 2);
     *ctl_flags = GetFlag(pat_id, pat_size);
@@ -427,17 +421,17 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
     UpdateNewRow(ctl_flags);
 
     if (full_column_indices_)
-        ujmp = jmp ? jmp : elem.x;
+        ucol = elem.x;
     else
-        ujmp = jmp ? jmp : elem.x - last_col_;
+        ucol = elem.x - last_col_;
         
     if (debug)
-        std::cerr << "AddPattern ujmp " << ujmp << "\n";
+        std::cerr << "AddPattern ujmp " << ucol << "\n";
 
     if (full_column_indices_)
-        da_put_u32(ctl_da_, ujmp-1);
+        da_put_u32(ctl_da_, ucol-1);
     else
-        da_put_ul(ctl_da_, ujmp);
+        da_put_ul(ctl_da_, ucol);
 
     last_col_ = elem.pattern->ColIncreaseJmp(spm_->type_, elem.x);
     if (debug)
@@ -445,36 +439,10 @@ void CsxManager::AddPattern(const SpmRowElem &elem, uint64_t jmp)
 }
 
 // return ujmp
-uint64_t CsxManager::PreparePat(std::vector<uint64_t> &xs,
-                                const SpmRowElem &elem)
+void CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem)
 {
     if (xs.size() != 0)
         AddXs(xs);
-
-    return 0;
-
-    /*uint64_t lastx;
-    if (xs.size() == 0)
-        return 0;
-
-    if (elem.pattern->type != spm_->type){
-        AddXs(xs);
-        return 0;
-    }
-    lastx = xs.back();
-    // normaly we wouldn't need to check for this, since
-    // it is assured by the parsing. Nevertheless, the
-    // previous element can ``disappear'' if it is included
-    // in another type of pattern.
-    // Todo: maybe it's cleaner to fix the parsing
-    if (elem.pattern->GetNextCol(lastx) != elem.x){
-        AddXs(xs);
-        return 0;
-    }
-    //xs.pop_back();
-    if (xs.size() > 0)
-        AddXs(xs);
-    return lastx - last_col_;*/
 }
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
