@@ -32,6 +32,9 @@
 void DestroyCsx(csx_double_t *csx)
 {
 #ifdef SPM_NUMA
+    free_interleaved(csx->ctl, csx->ctl_size*sizeof(*csx->ctl));
+    free_interleaved(csx->values, csx->nnz*sizeof(*csx->values));
+    free_interleaved(csx, sizeof(*csx));
 #else
     free(csx->ctl);
     free(csx->values);
@@ -41,10 +44,14 @@ void DestroyCsx(csx_double_t *csx)
 
 void DestroyCsxSym(csx_double_sym_t *csx_sym)
 {
+    uint64_t diag_size = csx_sym->lower_matrix->nrows;
     DestroyCsx(csx_sym->lower_matrix);
 #ifdef SPM_NUMA
+    numa_free(csx_sym->dvalues, diag_size*sizeof(*csx_sym->dvalues));
+    numa_free(csx_sym, sizeof(*csx_sym));
 #else
     free(csx_sym->dvalues);
+    free(csx_sym);
 #endif
 }
 
