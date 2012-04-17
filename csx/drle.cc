@@ -584,11 +584,10 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
 
             col += rle.val;
             if (col != rle.val) {
-                SpmRowElem *temp_elem = &encoded.back();
-                
+                SpmRowElem *last_elem = &encoded.back();
                 rle_start = col;
                 rle_freq = rle.freq;
-                if (temp_elem->pattern == NULL) {
+                if (last_elem->pattern == NULL) {
                     // include the previous element, too
                     rle_start -= rle.val;
                     rle_freq++;
@@ -1110,13 +1109,18 @@ void DRLE_Manager::UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
 
     rles = RLEncode(DeltaEncode(xs));
     uint64_t col = 0;
+    bool last_rle_patt = false; // turn on for encoded units
     FOREACH(RLE<uint64_t> &rle, rles) {
-        int real_limit = (col) ? min_limit_ - 1 : min_limit_;
+        int real_limit = (col && !last_rle_patt) ? min_limit_ - 1 : min_limit_;
         if (rle.freq > 1 && rle.freq >= real_limit) {
-            uint64_t real_nnz = (col) ? rle.freq + 1 : rle.freq;
+            uint64_t real_nnz = (col && !last_rle_patt) ?
+                rle.freq + 1 : rle.freq;
             stats[rle.val].nnz += real_nnz;
             stats[rle.val].npatterns += (real_nnz) / max_limit_ +
                                         (real_nnz % max_limit_ != 0);
+            last_rle_patt = true;
+        } else {
+            last_rle_patt = false;
         }
         col += rle.val;
     }
@@ -1127,7 +1131,7 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
                                     DeltaRLE::Stats &stats,
                                     uint64_t block_align)
 {
-    std::vector< RLE<uint64_t> > rles;
+    std::vector<RLE<uint64_t> > rles;
 
     assert(block_align && "not a block type");
     if (xs.size() == 0)

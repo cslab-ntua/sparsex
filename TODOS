@@ -12,3 +12,4 @@
 12. [DONE] Fix multithreaded compilation.
 13. Modify lib/spm/spmv.c to work in case of spm_crs32_double_mt_multiply in NUMA machines.
 14. [DONE] Correct tabification in C files.
+15. Deallocation of CSX matrix (DestroyCsx()) in NUMA architectures.
