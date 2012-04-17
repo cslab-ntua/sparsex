@@ -10,6 +10,6 @@
 10. [DISCARDED] Conditional compilation of the prfcnt library.
 11. [DONE] Use other, more generic CPU detectors. Don't rely on non-standard modules.
 12. [DONE] Fix multithreaded compilation.
-13. Modify lib/spm/spmv.c to work in case of spm_crs32_double_mt_multiply in NUMA machines.
+13. [DONE] Modify lib/spm/spmv.c to work in case of spm_crs32_double_mt_multiply in NUMA machines.
 14. [DONE] Correct tabification in C files.
 15. [DONE] Deallocation of CSX matrix (DestroyCsx()) in NUMA architectures.

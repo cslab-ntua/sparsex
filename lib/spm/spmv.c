@@ -25,15 +25,6 @@
 #ifdef SPM_NUMA
 #	include "spmv_loops_mt_numa.h"
 #	include "spmv_loops_sym_mt_numa.h"
-#	define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop_numa
-#	define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop_numa
-#	define SPMV_DOUBLE_CHECK_SYM_MT_LOOP spmv_double_check_sym_mt_loop_numa
-#	define SPMV_DOUBLE_BENCH_SYM_MT_LOOP spmv_double_bench_sym_mt_loop_numa
-#else
-#	define SPMV_DOUBLE_CHECK_MT_LOOP spmv_double_check_mt_loop
-#	define SPMV_DOUBLE_BENCH_MT_LOOP spmv_double_bench_mt_loop
-#	define SPMV_DOUBLE_CHECK_SYM_MT_LOOP spmv_double_check_sym_mt_loop
-#	define SPMV_DOUBLE_BENCH_SYM_MT_LOOP spmv_double_bench_sym_mt_loop
 #endif
 #include "bcsr/export.h"
 
@@ -57,6 +48,15 @@ static void parse_block_dims(const char *arg, int *r, int *c)
 	*r = atoi(r_str);
 	*c = atoi(c_str);
 	free(dims);
+}
+
+int is_numa(char *method)
+{
+	char *numa_string = method + strlen(method) - strlen("numa_multiply");
+
+	if (strcmp(numa_string, "numa_multiply") == 0)
+		return 1;
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -115,6 +115,7 @@ int main(int argc, char **argv)
 
 	char *mmf_file = argv[1];
 	char *method = (remargs > 1) ? argv[2] : "spm_crs32_double_multiply";
+	int numa = is_numa(method);
 	method_t *meth = method_get(method);
 	if (!meth) {
 		fprintf(stderr, "No such method: %s\n", method);
@@ -161,12 +162,20 @@ int main(int argc, char **argv)
 			                       nnz);
 			break;
 		case (8+1):
-			SPMV_DOUBLE_CHECK_MT_LOOP(m1, m, meth1->fn, 1, nrows, ncols,
-			                          meth->fn);
+			if (numa)
+				spmv_double_check_mt_loop_numa(m1, m, meth1->fn, 1, nrows,
+				                               ncols, meth->fn);
+			else
+				spmv_double_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols,
+                                          meth->fn);
 			break;
 		case (8+3):
-			SPMV_DOUBLE_CHECK_SYM_MT_LOOP(m1, m, meth1->fn, 1, nrows, ncols,
-			                              meth->fn);
+			if (numa)
+				spmv_double_check_sym_mt_loop_numa(m1, m, meth1->fn, 1, nrows,
+				                                   ncols, meth->fn);
+			else
+				spmv_double_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows,
+				                              ncols, meth->fn);
 			break;
 		case 4:
 		case (4+2):
@@ -195,18 +204,26 @@ int main(int argc, char **argv)
 		double t = -666.0;
 
 		for (count = 0; count < outer_loops; count++) {
-			switch (elem_size + spmv_meth->flag){
+			switch (elem_size + spmv_meth->flag) {
 			case 8:
 			case (8+2):
 				t = spmv_double_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 			case (8+1):
-				t = SPMV_DOUBLE_BENCH_MT_LOOP(m, loops_nr, nrows, ncols,
-				                              meth->fn);
+				if (numa)
+					t = spmv_double_bench_mt_loop_numa(m, loops_nr, nrows, 
+					                                   ncols, meth->fn);
+				else
+					t = spmv_double_bench_mt_loop(m, loops_nr, nrows, ncols,
+					                              meth->fn);
 				break;
 			case (8+3):
-				t = SPMV_DOUBLE_BENCH_SYM_MT_LOOP(m, loops_nr, nrows, ncols,
-				                                  meth->fn);
+				if (numa)
+					t = spmv_double_bench_sym_mt_loop_numa(m, loops_nr, nrows,
+					                                       ncols, meth->fn);
+				else
+					t = spmv_double_bench_sym_mt_loop(m, loops_nr, nrows, ncols,
+					                                  meth->fn);
 				break;
 			case (4):
 			case (4+2):
