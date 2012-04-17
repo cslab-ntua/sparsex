@@ -170,15 +170,13 @@ private:
      *  pattern.
      *
      *  @param elem elements of current pattern.
-     *  @param jmp  """bkk"""
      */
-    void AddPattern(const SpmRowElem &elem, uint64_t jmp);
+    void AddPattern(const SpmRowElem &elem);
 
     /**
      *  @param xs  elements found before pattern.
-     *  @param jmp """bkk"""
      */
-    uint64_t PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem);
+    void PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem);
 
     SPM *spm_;
     SPMSym *spm_sym_;
