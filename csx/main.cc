@@ -12,19 +12,42 @@
 
 int main(int argc, char **argv)
 {   
+    char c;
+    bool split_blocks = false;
+    bool symmetric = false;
     spm_mt_t *spm_mt;
-    
-    if (argc < 2){
-        std::cerr << "Usage: " << argv[0] << " <mmf_file> ... \n";
-        exit(1);
-    }
 
     // Initialize the CSX JIT execution engine
     CsxExecutionEngine &engine = CsxJitInit();
     
-    for (int i = 1; i < argc; i++) {
+    while ((c = getopt(argc, argv, "bs")) != -1) {
+        switch (c) {
+        case 'b':
+            split_blocks = true;
+            break;
+
+        case 's':
+            symmetric = true;
+            break;
+
+        default:
+            std::cerr << "Usage: " << argv[0] <<
+                         " [-c] [-b] <mmf_file_1> ... \n";
+            exit(1);
+        }
+    }
+    
+    int remargc = argc - optind; // remaining arguments
+    
+    if (remargc < 1) {
+        std::cerr << "Usage: " << argv[0] << " [-c] [-b] <mmf_file_1> ... \n";
+        exit(1);
+    }
+    argv = &argv[optind];
+    
+    for (int i = 0; i < remargc; i++) {    
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        spm_mt = GetSpmMt(argv[i], engine);
+        spm_mt = GetSpmMt(argv[i], engine, split_blocks, symmetric);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);

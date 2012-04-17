@@ -21,12 +21,11 @@ using namespace std;
 
 ///> Type of method used in CG.
 typedef enum {
-   CSR_SPMV = 0,
-   SSS_SPMV,
-   CSX_SPMV,
-   CSX_SYM_SPMV
+    CSR_SPMV = 0,
+    SSS_SPMV,
+    CSX_SPMV,
+    CSX_SYM_SPMV
 } cg_method_t;
-
 
 int main(int argc, char *argv[])
 {
@@ -40,7 +39,7 @@ int main(int argc, char *argv[])
     vector_double_t **sub_p = NULL;
     double rd, sol_dis;
     double  *rr, *tp, *rr_new, *ai, *bi;
-    
+
     pthread_t *tids;
     pthread_barrier_t barrier;
     method_t *meth;
@@ -50,17 +49,17 @@ int main(int argc, char *argv[])
     double cg_time;
     double spmv_time = 0;
     double red_time = 0;
-    
+
     // Function variables.   
     void *(*CgSideThread)(void *);
     void (*CgMainThread)(cg_params *, double *, double *, double *);
     uint64_t (*SpMSize)(void *);
-    
+
     // Default options.
     unsigned long nLoops = 1;
     unsigned long nloops = 512;
     cg_method_t cg_method = CSR_SPMV;
-    
+
     csx::CsxExecutionEngine &engine = csx::CsxJitInit();
 
     ///> Parse Options.
@@ -84,35 +83,35 @@ int main(int argc, char *argv[])
         case 'L':
             nLoops = atol(optarg);
             break;
-	default:
-	    fprintf(stderr, "Usage: cg [-x -s -l <number of inside loops> "
-	                    "-L <number of outside loops>] mmf_file\n");
-	    exit(1);
-	}
+        default:
+            fprintf(stderr, "Usage: cg [-x -s -l <number of inside loops> "
+                            "-L <number of outside loops>] mmf_file\n");
+            exit(1);
+        }
     }
-    
+
     ///> Take input file from which matrix will be loaded.
     if (argc != optind+1)
         exit(1);
-        
+
     mmf_file = argv[optind];
-    
+
     ///> Load matrix in appropriate format.
     switch(cg_method) {
     case(CSR_SPMV):
 #ifndef SPM_NUMA
         spm_mt = (spm_mt_t *) spm_crs32_double_mt_init_mmf(mmf_file, &nrows,
                                                            &ncols, &nnz, NULL);
-	meth = method_get((char *) "spm_crs32_double_mt_multiply");
+        meth = method_get((char *) "spm_crs32_double_mt_multiply");
 #else
         spm_mt = (spm_mt_t *) spm_crs32_double_mt_numa_init_mmf(mmf_file,
                                                                 &nrows, &ncols,
                                                                 &nnz, NULL);
-	meth = method_get((char *) "spm_crs32_double_mt_numa_multiply");
+        meth = method_get((char *) "spm_crs32_double_mt_numa_multiply");
 #endif
         for (i = 0; i < spm_mt->nr_threads; i++)
             spm_mt->spm_threads[i].spmv_fn = meth->fn;
-        
+
         assert(nrows == ncols && "Matrix is not square");
         n = nrows;
         CgSideThread = NormalCgSideThread;
@@ -124,16 +123,16 @@ int main(int argc, char *argv[])
         spm_mt = (spm_mt_t *) spm_crs32_double_sym_mt_init_mmf(mmf_file, &nrows,
                                                                &ncols, &nnz,
                                                                NULL);
-	meth = method_get((char *) "spm_crs32_double_sym_mt_multiply");
+        meth = method_get((char *) "spm_crs32_double_sym_mt_multiply");
 #else
         spm_mt = (spm_mt_t *)
                      spm_crs32_double_sym_mt_numa_init_mmf(mmf_file, &nrows,
                                                            &ncols, &nnz, NULL);
-	meth = method_get((char *) "spm_crs32_double_sym_mt_numa_multiply");
+        meth = method_get((char *) "spm_crs32_double_sym_mt_numa_multiply");
 #endif
         for (i = 0; i < spm_mt->nr_threads; i++)
             spm_mt->spm_threads[i].spmv_fn = meth->fn;
-        
+
         assert(nrows == ncols && "Matrix is not square");
         n = nrows;
         CgSideThread = SymCgSideThread;
@@ -142,11 +141,7 @@ int main(int argc, char *argv[])
         break;
         
     case(CSX_SPMV):
-        symmetric = getenv("SYMMETRIC");
-        assert(symmetric == NULL && 
-               "environment variable SYMMETRIC must not be set");
-               
-        spm_mt = GetSpmMt(mmf_file, engine);
+        spm_mt = GetSpmMt(mmf_file, engine, true, false);
         csx = (csx_double_t *) spm_mt->spm_threads[0].spm;
         ncols = csx->ncols;
         nrows = 0;
@@ -156,7 +151,7 @@ int main(int argc, char *argv[])
             nrows += csx->nrows;
             nnz += csx->nnz;
         }
-        
+
         assert(nrows == ncols && "Matrix is not square");
         n = nrows;
         CgSideThread = NormalCgSideThread;
@@ -164,14 +159,11 @@ int main(int argc, char *argv[])
         SpMSize = CsxSize;
         break;
     case(CSX_SYM_SPMV):
-        symmetric = getenv("SYMMETRIC");
-        assert(symmetric != NULL && 
-               "environment variable SYMMETRIC must be set");
-        spm_mt = GetSpmMt(mmf_file, engine);
+        spm_mt = GetSpmMt(mmf_file, engine, true, true);
         csx_sym = (csx_double_sym_t *) spm_mt->spm_threads[0].spm;
         csx = (csx_double_t *) csx_sym->lower_matrix;
         ncols = csx->ncols;
-	nrows = 0;
+        nrows = 0;
         nnz = 0;
         for (i = 0; i < spm_mt->nr_threads; i++) {
             csx_sym = (csx_double_sym_t *) spm_mt->spm_threads[i].spm;
@@ -179,7 +171,7 @@ int main(int argc, char *argv[])
             nrows += csx->nrows;
             nnz += csx->nnz;
         }
-        
+
         assert(nrows == ncols && "Matrix is not square");
         n = nrows;
         CgSideThread = SymCgSideThread;
@@ -190,7 +182,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Wrong method choosed\n");
         exit(1);
     }
-    
+
     ncpus = spm_mt->nr_threads;
 
 #ifdef SPM_NUMA
@@ -199,21 +191,22 @@ int main(int argc, char *argv[])
     int *nodes = (int *) malloc(ncpus * sizeof(*nodes));
     
     for (i = 0; i < ncpus; i++) {
-	spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
-	
-	parts[i] = ((i + 1) * n / ncpus - i * n / ncpus) * sizeof(double);
-	matrix_parts[i] = spm_thread->nr_rows * sizeof(double);
-	nodes[i] = numa_node_of_cpu(spm_thread->cpu);
+        spm_mt_thread_t *spm_thread = spm_mt->spm_threads + i;
+        parts[i] = ((i + 1) * n / ncpus - i * n / ncpus) * sizeof(double);
+        matrix_parts[i] = spm_thread->nr_rows * sizeof(double);
+        nodes[i] = numa_node_of_cpu(spm_thread->cpu);
     }
 #endif
 
     ///> Init pthreads.
     tids = (pthread_t *) malloc((ncpus - 1) * sizeof(pthread_t));
     if (!tids) {
-	fprintf(stderr, "Malloc of pthreads failed\n");
-	exit(1);
+        fprintf(stderr, "Malloc of pthreads failed\n");
+        exit(1);
     }
-    if (pthread_barrier_init(&barrier, NULL, ncpus)) {
+
+    int err = pthread_barrier_init(&barrier, NULL, ncpus);
+    if (err) {
         fprintf(stderr, "Pthread barrier init failed");
         exit(1);
     }
@@ -240,10 +233,10 @@ int main(int argc, char *argv[])
         r = vector_double_create_interleaved(n, parts, ncpus, nodes);
         p = vector_double_create_interleaved(n, parts, ncpus, nodes);
         t = vector_double_create_interleaved(n, matrix_parts, ncpus, nodes);
-        
+
         if (cg_method == SSS_SPMV || cg_method == CSX_SYM_SPMV) {
             sub_p = (vector_double_t **) 
-                       malloc(ncpus * sizeof(vector_double_t *));
+                        malloc(ncpus * sizeof(vector_double_t *));
             sub_p[0] = t;
             for (i = 1; i < ncpus; i++)
                 sub_p[i] = vector_double_create_onnode(n, nodes[i]);
@@ -252,7 +245,7 @@ int main(int argc, char *argv[])
         if (cg_method == SSS_SPMV || cg_method == CSX_SYM_SPMV)
             for (i = 1; i < ncpus; i++) 
                 vector_double_init(sub_p[i], 0);
-    
+
         ///> Initialize partial values of doubles.
         rr = (double *) malloc(ncpus * sizeof(double));
         tp = (double *) malloc(ncpus * sizeof(double));
@@ -262,7 +255,7 @@ int main(int argc, char *argv[])
 
         ///> Assign the appropriate parameters to each thread.
         cg_params *params = (cg_params *) malloc(ncpus * sizeof(cg_params));
-                            
+
         for (i = 0; i < ncpus; i++) {
             params[i].nloops = nloops;
             params[i].ncpus = ncpus;
@@ -302,32 +295,36 @@ int main(int argc, char *argv[])
 
         ///> Initiate side threads.
         for (i = 1; i < ncpus; i++)
-	    pthread_create(&tids[i-1], NULL, CgSideThread, (void *) &params[i]);
+            pthread_create(&tids[i-1], NULL, CgSideThread, (void *) &params[i]);
 
         ///> Execute main thread.
         CgMainThread(params, &cg_time, &spmv_time, &red_time);
 
+        ///> Wait for the other threads to finish.
+        for (i = 1; i < ncpus; i++)
+            pthread_join(tids[i-1], NULL);
+
 #ifdef SPM_NUMA	
         int alloc_err;
 
-	alloc_err = check_interleaved(x->elements, parts, ncpus, nodes);
-	print_alloc_status("x", alloc_err);
+        alloc_err = check_interleaved(x->elements, parts, ncpus, nodes);
+        print_alloc_status("x", alloc_err);
 
-	alloc_err = check_interleaved(r->elements, parts, ncpus, nodes);
-	print_alloc_status("r", alloc_err);
+        alloc_err = check_interleaved(r->elements, parts, ncpus, nodes);
+        print_alloc_status("r", alloc_err);
 
-	alloc_err = check_interleaved(p->elements, parts, ncpus, nodes);
-	print_alloc_status("p", alloc_err);
+        alloc_err = check_interleaved(p->elements, parts, ncpus, nodes);
+        print_alloc_status("p", alloc_err);
 
-	alloc_err = check_interleaved(t->elements, matrix_parts, ncpus, nodes);
-	print_alloc_status("t", alloc_err);
-	
-	if (cg_method == SSS_SPMV || cg_method == CSX_SYM_SPMV) {
-	    alloc_err = 0;
-	    for (i = 1; i < ncpus; i++)
-	        alloc_err += check_region(sub_p[i]->elements,
-		                          n * sizeof(double), nodes[i]);
-	    print_alloc_status("temporary buffers", alloc_err);
+        alloc_err = check_interleaved(t->elements, matrix_parts, ncpus, nodes);
+        print_alloc_status("t", alloc_err);
+
+        if (cg_method == SSS_SPMV || cg_method == CSX_SYM_SPMV) {
+            alloc_err = 0;
+            for (i = 1; i < ncpus; i++)
+                alloc_err += check_region(sub_p[i]->elements, n*sizeof(double),
+                                          nodes[i]);
+            print_alloc_status("temporary buffers", alloc_err);
         }
 #endif
 
@@ -336,11 +333,11 @@ int main(int argc, char *argv[])
         rd = vector_double_mul(t, t);
         rd = sqrt(rd);
         rd /= sol_dis;
-    
+
         ///> Print Results.
         printf("m:%s l:%lu rd:%lf st:%lf rt:%lf ct:%lf\n", basename(mmf_file), 
                nloops, rd, spmv_time, red_time, cg_time);
-    
+
         ///> Release vectors.
         vector_double_destroy(x);
         vector_double_destroy(sol);
@@ -363,16 +360,14 @@ int main(int argc, char *argv[])
         free(ai);
         free(bi);
         free(params);
-    
     }
-    
+
     ///> Free pthreads.
     free(tids);
-    
+
     ///> Release matrix.
-    free(spm_mt->spm_threads);
-    free(spm_mt);
-    
+    PutSpmMt(spm_mt);
+
     return 0;
 }
 

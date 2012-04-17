@@ -419,7 +419,6 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
     StatsMap::iterator iter; 
     SpmIterOrder enc_seq[22];
     int counter = 0;
-    //double t;
     
     timer_start(&timers_[PRE_TIMER_TOTAL]);
     for (;;) {
@@ -431,26 +430,29 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
         if (type == NONE)
             break;
         timer_start(&timers_[PRE_TIMER_ENCODE]);
-        os << "Encode to " << SpmTypesNames[type] << "\n";
+        os << "Encode to " << SpmTypesNames[type] << std::endl;
+        
         Encode(type);
+
         enc_seq[counter++] = type;
         timer_pause(&timers_[PRE_TIMER_ENCODE]);
     }
-    
+
     timer_pause(&timers_[PRE_TIMER_TOTAL]);
-    
+
     os << "Encoding sequence: ";
     if (counter == 0)
         os << "NONE";
     else
         os << SpmTypesNames[enc_seq[0]];
-        
+
     for (int i = 1; i < counter; i++)
         os << ", " << SpmTypesNames[enc_seq[i]];
-    
     os << std::endl;
     
     /*
+    double t;
+
     for (int i = 0; i < PRE_TIMER_END; i++) {
         t = timer_secs(&timers_[i]);
         os << timers_desc_[i] << t << std::endl;
@@ -582,11 +584,17 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
 
             col += rle.val;
             if (col != rle.val) {
-                // include the previous element, too
-                rle_start = col - rle.val;
-                rle_freq = rle.freq + 1;
-                encoded.pop_back();
-                --vi;
+                SpmRowElem *temp_elem = &encoded.back();
+                
+                rle_start = col;
+                rle_freq = rle.freq;
+                if (temp_elem->pattern == NULL) {
+                    // include the previous element, too
+                    rle_start -= rle.val;
+                    rle_freq++;
+                    encoded.pop_back();
+                    --vi;
+                }
             } else {
                 // we are the first unit in the row
                 rle_start = col;

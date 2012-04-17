@@ -219,32 +219,6 @@ static double GetOptionPortion()
     return sampling_portion;
 }
 
-static bool GetOptionSplitBlocks()
-{
-    const char *split_blocks_str = getenv("SPLIT_BLOCKS");
-    bool split_blocks;
-
-    if (!split_blocks_str)
-        split_blocks = false;
-    else
-        split_blocks = true;
-
-    return split_blocks;
-}
-
-bool GetOptionSymmetric()
-{
-    const char *symmetric_str = getenv("SYMMETRIC");
-    bool symmetric;
-
-    if (!symmetric_str)
-        symmetric = false;
-    else
-        symmetric = true;
-
-    return symmetric;
-}
-
 void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
 {
     spm_mt_thread *spm_thread;
@@ -579,7 +553,8 @@ void *PreprocessThread(void *thread_info)
     return 0;
 }
 
-spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
+spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine,
+                   bool split_blocks, bool symmetric, SPM *spms)
 {
     unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
@@ -616,12 +591,6 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
     // Get SAMPLING_PORTION
     double sampling_portion = GetOptionPortion();
 
-    // Get SPLIT_BLOCKS
-    bool split_blocks = GetOptionSplitBlocks();
-    
-    // Get SYMMETRIC
-    bool symmetric = GetOptionSymmetric();
-
     // Set affinity for the serial part of the preproprecessing.
     setaffinity_oncpu(threads_cpus[0]);
 
@@ -657,11 +626,11 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
     timer_start(&timer);
 
     // Initalize and setup threads
-    threads = (pthread_t *) xmalloc((nr_threads - 1) * sizeof(pthread_t));
+    threads = (pthread_t *) xmalloc(nr_threads * sizeof(pthread_t));
 
     data = new thread_info_t[nr_threads];
     for (unsigned int i = 0; i < nr_threads; i++) {
-        if (!symmetric) { 
+        if (!symmetric) {
             data[i].spm = spms + i;
             data[i].spm_sym = NULL;
             data[i].csxmg = new CsxManager(data[i].spm);
@@ -688,14 +657,12 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
     }
     
     // Start parallel preprocessing
-    for (unsigned int i = 1; i < nr_threads; i++)
-        pthread_create(&threads[i-1], NULL, PreprocessThread,
+    for (unsigned int i = 0; i < nr_threads; i++)
+        pthread_create(&threads[i], NULL, PreprocessThread,
                        (void *) &data[i]);
-    
-    PreprocessThread((void *) &data[0]);
 
-    for (unsigned int i = 1; i < nr_threads; ++i)
-        pthread_join(threads[i-1], NULL);
+    for (unsigned int i = 0; i < nr_threads; ++i)
+        pthread_join(threads[i], NULL);
 
     // CSX JIT compilation
     CsxJit **Jits = new CsxJit*[nr_threads];
@@ -705,9 +672,8 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
         std::cout << data[i].buffer.str();
     }
 
-    for (unsigned int i = 0; i < nr_threads; i++) {
+    for (unsigned int i = 0; i < nr_threads; i++)
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->GetSpmvFn();
-    }
     
     // Cleanup.
     free(threads);
@@ -728,6 +694,20 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine, SPM *spms)
 
 void PutSpmMt(spm_mt_t *spm_mt)
 {
+    if (!spm_mt->symmetric) {
+        for (unsigned i = 0; i < spm_mt->nr_threads; i++) {
+            csx_double_t *csx = (csx_double_t *) spm_mt->spm_threads[i].spm;
+            
+            DestroyCsx(csx);
+        }
+    } else {
+        for (unsigned i = 0; i < spm_mt->nr_threads; i++) {
+            csx_double_sym_t *csx_sym =
+                (csx_double_sym_t *) spm_mt->spm_threads[i].spm;
+            
+            DestroyCsxSym(csx_sym);
+        }
+    }
     free(spm_mt->spm_threads);
     free(spm_mt);
 }

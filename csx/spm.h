@@ -410,7 +410,7 @@ public:
      */
     virtual void Finalize();
 
-private:
+public:
     SPM *spm_;
     dynarray_t *da_elems_;
     dynarray_t *da_rowptr_;

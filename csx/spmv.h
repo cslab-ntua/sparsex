@@ -112,13 +112,15 @@ uint64_t MapSize(void *spm);
  *  Routine responsible for retrieving the CSX or CSX-Sym sparse matrix format
  *  according to the command line parameters.
  *  
- *  @param mmf_fname name of the sparse matrix file.
- *  @param engine    """bkk"""
- *  @param spms      an initial sparse matrix format if it exists.
- *  @return          the (multithreaded) CSX or CSX-Sym sparse matrix.
+ *  @param mmf_fname    name of the sparse matrix file.
+ *  @param engine       """bkk"""
+ *  @param split_blocks whether or not split-blocks update is on/off.
+ *  @param symmetric    true if CSX-Sym format is used, false otherwise. 
+ *  @param spms         an initial sparse matrix format if it exists.
+ *  @return             the (multithreaded) CSX or CSX-Sym sparse matrix.
  */
 spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine,
-                   SPM *spms = NULL);
+                   bool split_blocks, bool symmetric, SPM *spms = NULL);
                    
 /**
  *  Deallocation of CSX or CSX-Sym sparse matrix.

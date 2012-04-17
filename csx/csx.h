@@ -35,6 +35,12 @@ typedef struct {
     double *dvalues;
 } csx_double_sym_t;
 
+///> Deletes all the fields of CSX format.
+void DestroyCsx(csx_double_t *csx);
+    
+///> Deletes all the fields of CSX-Sym format.
+void DestroyCsxSym(csx_double_sym_t *csx_sym);
+
 #include "dynarray.h"
 
 #define PID_DELTA_BASE 0

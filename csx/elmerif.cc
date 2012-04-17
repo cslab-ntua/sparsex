@@ -156,7 +156,7 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
 
         timer_start(&timers[TIMER_CONSTRUCT_CSX]);
         CsxExecutionEngine &engine = CsxJitInit();
-        spm_mt = GetSpmMt(NULL, engine, spms);
+        spm_mt = GetSpmMt(NULL, engine, true, false, spms);
         timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
         delete[] spms;
 #endif        

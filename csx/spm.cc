@@ -1071,10 +1071,9 @@ SPMSym::Builder::~Builder()
 
 double *SPMSym::Builder::AllocDiagElem()
 {
-    assert(dynarray_size(da_dvalues_) < 
-           spm_sym_->GetLowerMatrix()->GetNrRows() &&
-           "out of bounds");
-           
+    // assert(dynarray_size(da_dvalues_) <
+    //       spm_sym_->GetLowerMatrix()->GetNrRows() && "out of bounds");
+
     return (double *) dynarray_alloc(da_dvalues_);
 }
 

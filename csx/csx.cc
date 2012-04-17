@@ -29,6 +29,25 @@
 #   define DYNARRAY_CREATE  dynarray_create
 #endif
 
+void DestroyCsx(csx_double_t *csx)
+{
+#ifdef SPM_NUMA
+#else
+    free(csx->ctl);
+    free(csx->values);
+    free(csx);
+#endif
+}
+
+void DestroyCsxSym(csx_double_sym_t *csx_sym)
+{
+    DestroyCsx(csx_sym->lower_matrix);
+#ifdef SPM_NUMA
+#else
+    free(csx_sym->dvalues);
+#endif
+}
+
 using namespace csx;
 
 static bool debug = false;
@@ -151,9 +170,9 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
     csx->row_start = spm_->row_start_;
     values_idx_ = 0;
     new_row_ = false;		        // Do not mark first row.
-    
+
     if (!symmetric) {
-        for (uint64_t i = 0; i < spm_->GetNrRows(); i++){
+        for (uint64_t i = 0; i < spm_->GetNrRows(); i++) {
             const SpmRowElem *rbegin, *rend;
     
             rbegin = spm_->RowBegin(i);
@@ -165,11 +184,10 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
                 if (debug)
                     std::cerr << "MakeCsx(): row is empty" << std::endl;
     
-                if (new_row_ == false){
+                if (new_row_ == false)
                     new_row_ = true;	// In case the first row is empty.
-                } else {
+                else
                     empty_rows_++;
-                }
     
                 continue;
             }
@@ -178,7 +196,7 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
             new_row_ = true;
         }
     } else {
-        for (uint64_t i = 0; i < spm_->GetNrRows(); i++){
+        for (uint64_t i = 0; i < spm_->GetNrRows(); i++) {
             const SpmRowElem *rbegin, *rend;
     
             rbegin = spm_->RowBegin(i);
@@ -190,11 +208,10 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
                 if (debug)
                     std::cerr << "MakeCsx(): row is empty" << std::endl;
     
-                if (new_row_ == false){
+                if (new_row_ == false)
                     new_row_ = true;	// In case the first row is empty.
-                } else {
+                else
                     empty_rows_++;
-                }
     
                 continue;
             }
@@ -203,7 +220,7 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
             new_row_ = true;
         }
     }
-    
+
     csx->ctl_size = dynarray_size(ctl_da_);
     csx->ctl = (uint8_t *) dynarray_destroy(ctl_da_);
     ctl_da_ = NULL;
@@ -235,7 +252,7 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
             jmp = PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
             AddPattern(*spm_elem, jmp);
-            for (long i=0; i < spm_elem->pattern->GetSize(); i++)
+            for (long i = 0; i < spm_elem->pattern->GetSize(); i++)
                 values_[values_idx_++] = spm_elem->vals[i];
 
             continue;

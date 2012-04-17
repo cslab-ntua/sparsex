@@ -1,6 +1,6 @@
 static inline double delta${bits}_case(uint8_t **ctl, uint8_t size,
                                        double **values, double *x, double *y,
-                                       double *cur, int64_t *x_indx,
+                                       double *cur, uint64_t *x_indx,
                                        uint64_t *y_indx)
 {
 	register double yr = 0;
