@@ -17,12 +17,11 @@
 
 extern "C" {
 #include "mt_lib.h"
+#include "vector.h"
 #include "spm_crs_mt.h"
 #include "spm_crs_sym_mt.h"
 #include "timer.h"
 }
-
-#include "cg_vector.h"
 
 ///> Timers for CG breakdown to three different parts.
 xtimer_t cg_timer;

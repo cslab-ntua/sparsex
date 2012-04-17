@@ -50,6 +50,22 @@ void _VNAME(vtype,add_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
                             unsigned long end); \
 void _VNAME(vtype,add_from_map)(_VTYPE(vtype) *v1, _VTYPE(vtype) **v2, \
                                 _VTYPE(vtype) *v3, map_t *map); \
+void _VNAME(vtype,sub)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
+                       _VTYPE(vtype) *v3); \
+void _VNAME(vtype,sub_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
+                            _VTYPE(vtype) *v3, unsigned long start, \
+                            unsigned long end); \
+ELEM_TYPE _VNAME(vtype,mul)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2); \
+ELEM_TYPE _VNAME(vtype,mul_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
+                                 unsigned long start, unsigned long end); \
+void _VNAME(vtype,mul_scale)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
+                             double num); \
+void _VNAME(vtype,scale_add)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
+                             _VTYPE(vtype) *v3, double num); \
+void _VNAME(vtype,scale_add_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
+                                  _VTYPE(vtype) *v3, double num, \
+                                  unsigned long start, unsigned long end); \
+void _VNAME(vtype,copy)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2); \
 int _VNAME(vtype,compare)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2); \
 void _VNAME(vtype,print)(_VTYPE(vtype) *v);
 

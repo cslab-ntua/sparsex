@@ -19,11 +19,23 @@ float spmv_double_bench_sym_mt_loop_numa(spm_mt_t *spm_mt, unsigned long loops,
                                          unsigned long cols_nr,
                                          SPMV_NAME(_fn_t) *fn);
 
+float spmv_float_bench_sym_mt_loop_numa(spm_mt_t *spm_mt, unsigned long loops,
+                                        unsigned long rows_nr,
+                                        unsigned long cols_nr,
+                                        SPMV_NAME(_fn_t) *fn);
+
 void spmv_double_check_sym_mt_loop_numa(void *spm, spm_mt_t *spm_mt,
                                         SPMV_NAME(_fn_t) *fn,
                                         unsigned long loops,
                                         unsigned long nrows,
                                         unsigned long ncols,
                                         SPMV_NAME(_fn_t) *mt_fn);
+
+void spmv_float_check_sym_mt_loop_numa(void *spm, spm_mt_t *spm_mt,
+                                       SPMV_NAME(_fn_t) *fn,
+                                       unsigned long loops,
+                                       unsigned long nrows,
+                                       unsigned long ncols,
+                                       SPMV_NAME(_fn_t) *mt_fn);
 
 #endif /* __SPMV_LOOPS_SYM_MT_NUMA_H__ */

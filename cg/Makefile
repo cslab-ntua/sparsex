@@ -44,13 +44,10 @@ endif
 CXX_COMPILE = $(CXX) $(CPPFLAGS) $(CXXFLAGS)
 LINK        = $(LD) $(CPPFLAGS) $(LDFLAGS)
 	 
-cg_vector.o: cg_vector.cc cg_vector.h $(spm_dir)/vector.h
-	$(CXX_COMPILE) $< -c -o $@
-
-cg.o: cg.cc cg.h cg_vector.h
+cg.o: cg.cc cg.h $(spm_dir)/vector.h
 	$(CXX_COMPILE) $< -c -o $@
     
-cg: main.cc cg.o cg_vector.o $(OBJS)
+cg: main.cc cg.o $(OBJS)
 	$(LINK) $(LIBS) $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
     
 clean:

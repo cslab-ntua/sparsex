@@ -324,7 +324,7 @@ int main(int argc, char *argv[])
             for (i = 1; i < ncpus; i++)
                 alloc_err += check_region(sub_p[i]->elements, n*sizeof(double),
                                           nodes[i]);
-            print_alloc_status("temporary buffers", alloc_err);
+            print_alloc_status("local buffers", alloc_err);
         }
 #endif
 
@@ -339,19 +339,17 @@ int main(int argc, char *argv[])
                nloops, rd, spmv_time, red_time, cg_time);
 
         ///> Release vectors.
-        vector_double_destroy(x);
-        vector_double_destroy(sol);
         vector_double_destroy(b);
+        vector_double_destroy(sol);
+        vector_double_destroy(x);
         vector_double_destroy(r);
         vector_double_destroy(p);
         vector_double_destroy(t);
-        /*
-        if (cg_method == CSR_sym || cg_method == CSX_sym) {
+        if (cg_method == SSS_SPMV || cg_method == CSX_SYM_SPMV) {
             for (i = 1; i < ncpus; i++)
                 vector_double_destroy(sub_p[i]);
             free(sub_p);
         }
-        */
         
         ///> Free parameters.
         free(rr);
@@ -366,7 +364,29 @@ int main(int argc, char *argv[])
     free(tids);
 
     ///> Release matrix.
-    PutSpmMt(spm_mt);
+    switch(cg_method) {
+    case(CSR_SPMV):
+#ifdef SPM_NUMA
+        spm_crs32_double_mt_numa_destroy(spm_mt);
+#else
+        spm_crs32_double_mt_destroy(spm_mt);
+#endif
+        break;
+    case(SSS_SPMV):
+#ifdef SPM_NUMA
+        spm_crs32_double_sym_mt_numa_destroy(spm_mt);
+#else
+       spm_crs32_double_sym_mt_destroy(spm_mt);
+#endif
+        break;
+    case(CSX_SPMV):
+    case(CSX_SYM_SPMV):
+        PutSpmMt(spm_mt);
+        break;
+    default:
+        fprintf(stderr, "Wrong method\n");
+        exit(1);
+    }
 
     return 0;
 }

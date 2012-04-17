@@ -199,6 +199,103 @@ void VECTOR_NAME(_add_from_map)(VECTOR_TYPE *v1, VECTOR_TYPE **v2,
 		    v1->elements[pos[i]] + v2[cpus[i]]->elements[pos[i]];
 }
 
+void VECTOR_NAME(_sub)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3)
+{
+	unsigned long i;
+
+	assert(v1->size == v2->size && v1->size == v3->size && 
+	       "vectors for sub have different size");
+
+	for (i = 0; i < v1->size; i++)
+		v3->elements[i] = v1->elements[i] - v2->elements[i];
+}
+
+void VECTOR_NAME(_sub_part)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, VECTOR_TYPE *v3,
+                            unsigned long start, unsigned long end)
+{
+	unsigned long i;
+
+	assert(v1->size == v2->size && v1->size == v3->size &&
+	       "vectors for sub have different size");
+
+	for (i = start; i < end; i++)
+		v3->elements[i] = v1->elements[i] - v2->elements[i];
+}
+
+ELEM_TYPE VECTOR_NAME(_mul)(VECTOR_TYPE *v1, VECTOR_TYPE *v2)
+{
+	unsigned long i;
+	ELEM_TYPE ret;
+
+	assert(v1->size == v2->size &&  "vectors for mul have different size");
+
+    ret = 0;
+    for (i = 0; i < v1->size; i++)
+        ret += v1->elements[i] * v2->elements[i];
+
+	return ret;
+}
+
+ELEM_TYPE VECTOR_NAME(_mul_part)(VECTOR_TYPE *v1, VECTOR_TYPE *v2,
+                                 unsigned long start, unsigned long end)
+{
+	unsigned long i;
+	ELEM_TYPE ret;
+
+	assert(v1->size == v2->size &&  "vectors for mul have different size");
+
+	ret = 0;
+	for (i = start; i < end; i++)
+		ret += v1->elements[i] * v2->elements[i];
+
+	return ret;
+}
+
+void VECTOR_NAME(_scale)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, double num)
+{
+	unsigned long i;
+
+	assert(v1->size == v2->size &&  "vectors for scale have different size");
+
+	for (i = 0; i < v1->size; i++)
+		v2->elements[i] = num * v1->elements[i];
+}
+
+void VECTOR_NAME(_scale_add)(VECTOR_TYPE *v1, VECTOR_TYPE *v2,
+                             VECTOR_TYPE *v3, double num)
+{
+	unsigned long i;
+
+	assert(v1->size == v2->size && v1->size == v3->size &&
+	       "vectors for scale add have different size");
+
+	for (i = 0; i < v1->size; i++)
+		v3->elements[i] = v1->elements[i] + num * v2->elements[i];
+}
+
+void VECTOR_NAME(_scale_add_part)(VECTOR_TYPE *v1, VECTOR_TYPE *v2,
+                                  VECTOR_TYPE *v3, double num,
+                                  unsigned long start, unsigned long end)
+{
+	unsigned long i;
+
+	assert(v1->size == v2->size && v1->size == v3->size &&
+	       "vectors for scale add have different size");
+
+	for (i = start; i < end; i++)
+		v3->elements[i] = v1->elements[i] + num * v2->elements[i];
+}
+
+void VECTOR_NAME(_copy)(VECTOR_TYPE *v1, VECTOR_TYPE *v2)
+{
+    unsigned long i;
+
+    assert(v1->size == v2->size && "vectors for copy have different size");
+
+    for (i = 0; i < v1->size; i++)
+        v2->elements[i] = v1->elements[i];
+}
+
 static inline int elems_neq(ELEM_TYPE a, ELEM_TYPE b)
 {
 	if (fabs((double) (a - b) / (double) a)  > 1.e-7)

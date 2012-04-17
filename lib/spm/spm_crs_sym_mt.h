@@ -39,6 +39,8 @@ void *spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_init_mmf( \
 \
 void spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_make_map(void *spm); \
 \
+void spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_destroy(void *spm); \
+\
 uint64_t spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_size(void *spm); \
 \
 uint64_t spm_crs ## __idx_bits ## _ ## __elem_type ## \
@@ -65,6 +67,9 @@ typedef struct spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa \
 void * spm_crs ## __idx_bits ## _ ## __elem_type ## _sym_mt_numa_init_mmf( \
     char *mmf_file, uint64_t *nrows, uint64_t *ncols, uint64_t *nnz, \
     void *metadata); \
+\
+void spm_crs ## __idx_bits ## _ ## __elem_type ## \
+         _sym_mt_numa_destroy(void *spm); \
 \
 void spm_crs ## __idx_bits ## _ ## __elem_type ## \
          _sym_mt_numa_make_map(void *spm); \

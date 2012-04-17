@@ -181,7 +181,7 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	alloc_err = check_interleaved(y->elements, parts, ncpus, nodes);
 	print_alloc_status("output vector", alloc_err);
 
-	// Allocate temporary buffers.
+	// Allocate local buffers.
 	temp = malloc(ncpus * sizeof(*temp));
 	temp[0] = y;
 	for (i = 1; i < ncpus; i++) {
@@ -202,7 +202,7 @@ float SPMV_NAME(_bench_sym_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 		alloc_err += check_region(temp[i]->elements, n*sizeof(ELEM_TYPE),
 		                          tnode);
 	}
-	print_alloc_status("temporary buffers", alloc_err);
+	print_alloc_status("local buffers", alloc_err);
     
 	pthread_create(tids, NULL, do_spmv_thread_main, spm_mt->spm_threads);
 	for (i = 1; i < ncpus; i++)
