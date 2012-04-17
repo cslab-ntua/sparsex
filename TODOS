@@ -5,7 +5,7 @@
  5. [DONE] Fix bug with the demopatt.mtx.sorted matrix.
  6. Final testing before release.
  7. [DONE] Fix GCC 4.6 warnings.
- 8. Convert environment variables to cmd options.
+ 8. [DONE] Convert environment variables to cmd options.
  9. [DONE] Automate the setting of the full-col-index option.
 10. [DISCARDED] Conditional compilation of the prfcnt library.
 11. [DONE] Use other, more generic CPU detectors. Don't rely on non-standard modules.
