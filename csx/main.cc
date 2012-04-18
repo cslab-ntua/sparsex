@@ -10,6 +10,21 @@
 
 #include "spmv.h"
 
+static const char *program_name;
+
+void PrintUsage(std::ostream &os)
+{
+    os << "Usage: " << program_name
+       << " [-s] [-b] <mmf_file> ...\n";
+}
+
+void PrintHelp(std::ostream &os)
+{
+    os << "-s    Use CSX for symmetric matrices.\n"
+       << "-b    Disable the split-blocks optimization.\n"
+       << "-h    Print this help message and exit.\n";
+}
+
 int main(int argc, char **argv)
 {   
     char c;
@@ -17,34 +32,33 @@ int main(int argc, char **argv)
     bool symmetric = false;
     spm_mt_t *spm_mt;
 
-    // Initialize the CSX JIT execution engine
-    CsxExecutionEngine &engine = CsxJitInit();
-    
-    while ((c = getopt(argc, argv, "bs")) != -1) {
+    program_name = argv[0];
+    while ((c = getopt(argc, argv, "bsh")) != -1) {
         switch (c) {
         case 'b':
             split_blocks = true;
             break;
-
         case 's':
             symmetric = true;
             break;
-
+        case 'h':
+            PrintHelp(std::cerr);
+            exit(0);
         default:
-            std::cerr << "Usage: " << argv[0] <<
-                         " [-c] [-b] <mmf_file_1> ... \n";
+            PrintUsage(std::cerr);
             exit(1);
         }
     }
     
     int remargc = argc - optind; // remaining arguments
-    
     if (remargc < 1) {
-        std::cerr << "Usage: " << argv[0] << " [-c] [-b] <mmf_file_1> ... \n";
+        PrintUsage(std::cerr);
         exit(1);
     }
     argv = &argv[optind];
     
+    // Initialize the CSX JIT execution engine
+    CsxExecutionEngine &engine = CsxJitInit();
     for (int i = 0; i < remargc; i++) {    
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
         spm_mt = GetSpmMt(argv[i], engine, split_blocks, symmetric);
