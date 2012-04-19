@@ -438,10 +438,11 @@ void *PreprocessThread(void *thread_info)
         for (int i = 0; data->xform_buf[i] != -1; ++i)
             DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
 
-        // If the user supplies the deltas choices, encode the matrix with the
-        // order given in XFORM_CONF, otherwise find statistical data for the 
-        // types in XFORM_CONF, choose the best choise, encode it and proceed 
-        // likewise until there is no satisfying encoding.
+        // If the user supplies the deltas choices, encode the matrix
+        // with the order given in XFORM_CONF, otherwise find
+        // statistical data for the types in XFORM_CONF, choose the
+        // best choise, encode it and proceed likewise until there is
+        // no satisfying encoding.
         if (data->deltas)
             DrleMg->EncodeSerial(data->xform_buf, data->deltas);
         else

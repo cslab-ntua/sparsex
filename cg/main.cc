@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 
     // Load matrix in appropriate format.
     switch(cg_method) {
-    case(CSR_SPMV):
+    case CSR_SPMV:
 #ifndef SPM_NUMA
         spm_mt = (spm_mt_t *) spm_crs32_double_mt_init_mmf(mmf_file, &nrows,
                                                            &ncols, &nnz, NULL);
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
         CgMainThread = NormalCgMainThread;
         SpMSize = spm_crs32_double_mt_size;
         break;
-    case(SSS_SPMV):
+    case SSS_SPMV:
 #ifndef SPM_NUMA
         spm_mt = (spm_mt_t *) spm_crs32_double_sym_mt_init_mmf(mmf_file, &nrows,
                                                                &ncols, &nnz,
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
         SpMSize = spm_crs32_double_sym_mt_size;
         break;
         
-    case(CSX_SPMV):
+    case CSX_SPMV:
         spm_mt = GetSpmMt(mmf_file, engine, true, false);
         csx = (csx_double_t *) spm_mt->spm_threads[0].spm;
         ncols = csx->ncols;
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
         CgMainThread = NormalCgMainThread;
         SpMSize = CsxSize;
         break;
-    case(CSX_SYM_SPMV):
+    case CSX_SYM_SPMV:
         spm_mt = GetSpmMt(mmf_file, engine, true, true);
         csx_sym = (csx_double_sym_t *) spm_mt->spm_threads[0].spm;
         csx = (csx_double_t *) csx_sym->lower_matrix;
