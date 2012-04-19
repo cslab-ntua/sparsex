@@ -19,7 +19,7 @@
 
 using namespace std;
 
-///> Type of method used in CG.
+// Type of method used in CG.
 typedef enum {
     CSR_SPMV = 0,
     SSS_SPMV,
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 
     csx::CsxExecutionEngine &engine = csx::CsxJitInit();
 
-    ///> Parse Options.
+    // Parse Options.
     while ((j = getopt(argc, argv, "xsl:L:")) != -1) {
         switch (j) {
         case 'x':
@@ -90,13 +90,13 @@ int main(int argc, char *argv[])
         }
     }
 
-    ///> Take input file from which matrix will be loaded.
+    // Take input file from which matrix will be loaded.
     if (argc != optind+1)
         exit(1);
 
     mmf_file = argv[optind];
 
-    ///> Load matrix in appropriate format.
+    // Load matrix in appropriate format.
     switch(cg_method) {
     case(CSR_SPMV):
 #ifndef SPM_NUMA
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    ///> Init pthreads.
+    // Init pthreads.
     tids = (pthread_t *) malloc((ncpus - 1) * sizeof(pthread_t));
     if (!tids) {
         fprintf(stderr, "Malloc of pthreads failed\n");
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
     }
 
     for (unsigned int loops=0; loops < nLoops; loops++) {  
-        ///> Create vectors with the appropriate size.
+        // Create vectors with the appropriate size.
         sol = vector_double_create(n);
         b = vector_double_create(n);
 #ifndef SPM_NUMA
@@ -246,14 +246,14 @@ int main(int argc, char *argv[])
             for (i = 1; i < ncpus; i++) 
                 vector_double_init(sub_p[i], 0);
 
-        ///> Initialize partial values of doubles.
+        // Initialize partial values of doubles.
         rr = (double *) malloc(ncpus * sizeof(double));
         tp = (double *) malloc(ncpus * sizeof(double));
         rr_new = (double *) malloc(ncpus * sizeof(double));
         ai = (double *) malloc(sizeof(double));
         bi = (double *) malloc(sizeof(double));
 
-        ///> Assign the appropriate parameters to each thread.
+        // Assign the appropriate parameters to each thread.
         cg_params *params = (cg_params *) malloc(ncpus * sizeof(cg_params));
 
         for (i = 0; i < ncpus; i++) {
@@ -276,31 +276,31 @@ int main(int argc, char *argv[])
                 params[i].sub_vectors = sub_p;
         }
 
-        ///> Load vector solution with random values and calculate its distance.
+        // Load vector solution with random values and calculate its distance.
         vector_double_init_rand_range(sol, (double) -1000, (double) 1000);
         sol_dis = vector_double_mul(sol, sol);
         sol_dis = sqrt(sol_dis);
 
-        ///> Find b vector for the specified solution.
+        // Find b vector for the specified solution.
         if (cg_method == SSS_SPMV || cg_method == CSX_SYM_SPMV)
             FindSymSolution(spm_mt, sol, b, t);
         else
             FindSolution(spm_mt, sol, b, t);
     
-        ///> Initialize CG method.
+        // Initialize CG method.
         if (cg_method == SSS_SPMV || cg_method == CSX_SYM_SPMV)
             InitializeSymCg(spm_mt, x, r, p, b, t);
         else
             InitializeCg(spm_mt, x, r, p, b, t);
 
-        ///> Initiate side threads.
+        // Initiate side threads.
         for (i = 1; i < ncpus; i++)
             pthread_create(&tids[i-1], NULL, CgSideThread, (void *) &params[i]);
 
-        ///> Execute main thread.
+        // Execute main thread.
         CgMainThread(params, &cg_time, &spmv_time, &red_time);
 
-        ///> Wait for the other threads to finish.
+        // Wait for the other threads to finish.
         for (i = 1; i < ncpus; i++)
             pthread_join(tids[i-1], NULL);
 
@@ -328,17 +328,17 @@ int main(int argc, char *argv[])
         }
 #endif
 
-        ///> Find relative distance.
+        // Find relative distance.
         vector_double_sub(sol, x, t);
         rd = vector_double_mul(t, t);
         rd = sqrt(rd);
         rd /= sol_dis;
 
-        ///> Print Results.
+        // Print Results.
         printf("m:%s l:%lu rd:%lf st:%lf rt:%lf ct:%lf\n", basename(mmf_file), 
                nloops, rd, spmv_time, red_time, cg_time);
 
-        ///> Release vectors.
+        // Release vectors.
         vector_double_destroy(b);
         vector_double_destroy(sol);
         vector_double_destroy(x);
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
             free(sub_p);
         }
         
-        ///> Free parameters.
+        // Free parameters.
         free(rr);
         free(tp);
         free(rr_new);
@@ -360,10 +360,13 @@ int main(int argc, char *argv[])
         free(params);
     }
 
-    ///> Free pthreads.
+    // Free pthreads.
     free(tids);
+    
+    // Destroy barrier.
+    pthread_barrier_destroy(&barrier);
 
-    ///> Release matrix.
+    // Release matrix.
     switch(cg_method) {
     case(CSR_SPMV):
 #ifdef SPM_NUMA
