@@ -28,7 +28,7 @@ void PrintHelp(std::ostream &os)
 int main(int argc, char **argv)
 {   
     char c;
-    bool split_blocks = false;
+    bool split_blocks = true;
     bool symmetric = false;
     spm_mt_t *spm_mt;
 
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     while ((c = getopt(argc, argv, "bsh")) != -1) {
         switch (c) {
         case 'b':
-            split_blocks = true;
+            split_blocks = false;
             break;
         case 's':
             symmetric = true;

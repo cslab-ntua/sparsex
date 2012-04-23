@@ -115,7 +115,11 @@ int main(int argc, char **argv)
 
 	char *mmf_file = argv[1];
 	char *method = (remargs > 1) ? argv[2] : "spm_crs32_double_multiply";
+
+#ifdef SPM_NUMA
 	int numa = is_numa(method);
+#endif
+
 	method_t *meth = method_get(method);
 	if (!meth) {
 		fprintf(stderr, "No such method: %s\n", method);
@@ -162,20 +166,30 @@ int main(int argc, char **argv)
 			                       nnz);
 			break;
 		case (8+1):
+#ifdef SPM_NUMA
 			if (numa)
 				spmv_double_check_mt_loop_numa(m1, m, meth1->fn, 1, nrows,
 				                               ncols, meth->fn);
 			else
 				spmv_double_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols,
                                           meth->fn);
+#else
+			spmv_double_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols,
+			                          meth->fn);
+#endif
 			break;
 		case (8+3):
+#ifdef SPM_NUMA
 			if (numa)
 				spmv_double_check_sym_mt_loop_numa(m1, m, meth1->fn, 1, nrows,
 				                                   ncols, meth->fn);
 			else
 				spmv_double_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows,
 				                              ncols, meth->fn);
+#else
+			spmv_double_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols,
+			                              meth->fn);
+#endif
 			break;
 		case 4:
 		case (4+2):
@@ -183,20 +197,30 @@ int main(int argc, char **argv)
 			                      nnz);
 			break;
 		case (4+1):
+#ifdef SPM_NUMA
 			if (numa)
 				spmv_float_check_mt_loop_numa(m1, m, meth1->fn, 1, nrows,
 				                              ncols, meth->fn);
 			else
 				spmv_float_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols,
 				                         meth->fn);
+#else
+			spmv_float_check_mt_loop(m1, m, meth1->fn, 1, nrows, ncols,
+			                         meth->fn);
+#endif
 			break;
 		case (4+3):
+#ifdef SPM_NUMA
 			if (numa)
 				spmv_float_check_sym_mt_loop_numa(m1, m, meth1->fn, 1, nrows,
 				                                  ncols, meth->fn);
 			else
 				spmv_float_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols,
 				                             meth->fn);
+#else
+			spmv_float_check_sym_mt_loop(m1, m, meth1->fn, 1, nrows, ncols,
+			                             meth->fn);
+#endif
 			break;
 		default:
 			fprintf(stderr, "woops!\n");
@@ -218,40 +242,60 @@ int main(int argc, char **argv)
 				t = spmv_double_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 			case (8+1):
+#ifdef SPM_NUMA
 				if (numa)
 					t = spmv_double_bench_mt_loop_numa(m, loops_nr, nrows, 
 					                                   ncols, meth->fn);
 				else
 					t = spmv_double_bench_mt_loop(m, loops_nr, nrows, ncols,
 					                              meth->fn);
+#else
+				t = spmv_double_bench_mt_loop(m, loops_nr, nrows, ncols,
+				                              meth->fn);
+#endif
 				break;
 			case (8+3):
+#ifdef SPM_NUMA
 				if (numa)
 					t = spmv_double_bench_sym_mt_loop_numa(m, loops_nr, nrows,
 					                                       ncols, meth->fn);
 				else
 					t = spmv_double_bench_sym_mt_loop(m, loops_nr, nrows, ncols,
 					                                  meth->fn);
+#else
+				t = spmv_double_bench_sym_mt_loop(m, loops_nr, nrows, ncols,
+				                                  meth->fn);
+#endif
 				break;
 			case (4):
 			case (4+2):
 				t = spmv_float_bench_loop(meth->fn, m, loops_nr, nrows, ncols);
 				break;
 			case (4+1):
+#ifdef SPM_NUMA
 				if (numa)
 					t = spmv_float_bench_mt_loop_numa(m, loops_nr, nrows,
 					                                  ncols, meth->fn);
 				else
 					t = spmv_float_bench_mt_loop(m, loops_nr, nrows, ncols,
 					                             meth->fn);
+#else
+				t = spmv_float_bench_mt_loop(m, loops_nr, nrows, ncols,
+				                             meth->fn);
+#endif
 				break;
 			case (4+3):
+#ifdef SPM_NUMA
 				if (numa)
 					t = spmv_float_bench_sym_mt_loop_numa(m, loops_nr, nrows,
 					                                      ncols, meth->fn);
 				else
 					t = spmv_float_bench_sym_mt_loop(m, loops_nr, nrows, ncols,
 					                                 meth->fn);
+#else
+				t = spmv_float_bench_sym_mt_loop(m, loops_nr, nrows, ncols,
+				                                 meth->fn);
+#endif
 				break;
 			default:
 				fprintf(stderr, "woops!\n");

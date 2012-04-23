@@ -44,8 +44,10 @@ void DestroyCsx(csx_double_t *csx)
 
 void DestroyCsxSym(csx_double_sym_t *csx_sym)
 {
+#ifdef SPM_NUMA
     uint64_t diag_size = csx_sym->lower_matrix->nrows;
-    DestroyCsx(csx_sym->lower_matrix);
+#endif    
+        DestroyCsx(csx_sym->lower_matrix);
 #ifdef SPM_NUMA
     numa_free(csx_sym->dvalues, diag_size*sizeof(*csx_sym->dvalues));
     numa_free(csx_sym, sizeof(*csx_sym));
