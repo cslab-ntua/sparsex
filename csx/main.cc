@@ -15,14 +15,10 @@ static const char *program_name;
 void PrintUsage(std::ostream &os)
 {
     os << "Usage: " << program_name
-       << " [-s] [-b] <mmf_file> ...\n";
-}
-
-void PrintHelp(std::ostream &os)
-{
-    os << "-s    Use CSX for symmetric matrices.\n"
-       << "-b    Disable the split-blocks optimization.\n"
-       << "-h    Print this help message and exit.\n";
+       << " [-s] [-b] <mmf_file> ...\n"
+       << "\t-s    Use CSX for symmetric matrices.\n"
+       << "\t-b    Disable the split-blocks optimization.\n"
+       << "\t-h    Print this help message and exit.\n";
 }
 
 int main(int argc, char **argv)
@@ -42,7 +38,7 @@ int main(int argc, char **argv)
             symmetric = true;
             break;
         case 'h':
-            PrintHelp(std::cerr);
+            PrintUsage(std::cerr);
             exit(0);
         default:
             PrintUsage(std::cerr);
