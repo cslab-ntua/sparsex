@@ -335,21 +335,22 @@ m:csx f:demopatt.mtx.sorted s:327 pt:0.063501 t:0.000086 r:113.363468
 6. Running CG
 =============
 
-After you have successfully compiled CG, the final executable, named `cg', will
-be placed inside the `cg' directory. The cg executable may be invoked as
-follows:
+After you have successfully compiled CG, the final executable, named
+`cg', will be placed inside the `cg' directory. The cg executable may
+be invoked as follows:
 
 [ENV=<value>] ... ./cg [-s | -x | -l <n> | -L <n>] <matrix_file>
 
-The execution of CG is controlled by a set of environment variables and command
-line parameters and takes as input a file describing the sparse matrix. The
-solution vector of equation Ax = b (s) is randomized with double precision
-elements from -1000 to 1000, the vector b is calculated from the multiplication
-b = As and the estimated solution vector (x) is initialized with elements equal
-to 0.01. The result shows the square distance between the estimated vector (x)
-and the real solution vector values (s), the time breakdown into spmv
-multiplication phase, spmv reduction time and rest vector operations, and the
-total cg time.
+The execution of CG is controlled by a set of environment variables
+and command line parameters and takes as input a file describing the
+sparse matrix. The solution vector of equation Ax = b (s) is
+randomized with double precision elements from -1000 to 1000, the
+vector b is calculated from the multiplication b = As and the
+estimated solution vector (x) is initialized with elements equal to
+0.01. The result shows the square distance between the estimated
+vector (x) and the real solution vector values (s), the time breakdown
+into spmv multiplication phase, spmv reduction time and rest vector
+operations, and the total cg time.
 
 6.1 Input matrix format
 -----------------------
@@ -364,19 +365,21 @@ See 5.2.
 6.3 Other options controlling execution
 ---------------------------------------
 
-You can specify the four following options when running CG:
+You can control the execution of the CG method with the following four
+command line options:
 
--x      Activate the CSX format. By default (if the options is not set) CSR
-        would be used.
+-x      Activate the CSX format. By default (if the options is not
+        set), CSR will be used.
 
--s      Replace with the respective symmetric formats. Instead of CSR, SSS would
-        be deployed and instead of CSX, CSX-Sym would be used.
+-s      Replace with the respective symmetric formats. Instead of CSR,
+        SSS will be deployed and instead of CSX, CSX-Sym would be
+        used.
 
--l <n>  Clarify the number of iterations for CG. If the option is not set CG
-        would terminate after 1024 iterations.
+-l <n>  Specify the maximum number of iterations of the CG method
+        (default is 1024).
 
--L <n>  Clarify the number of times to run the specified benchmark. If the
-        option is not set the benchmark would run only once.
+-L <n>  Specify how many times to run the specified benchmark (default
+        is once).
 
 6.4 Output
 ----------

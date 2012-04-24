@@ -1,4 +1,4 @@
-Copyright (C) 2010, Computing Systems Laboratory (CSLab), NTUA.
+Copyright (C) 2010-2012, Computing Systems Laboratory (CSLab), NTUA.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
