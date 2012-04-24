@@ -562,8 +562,10 @@ void SPM_CRS_SYM_MT_NAME(_numa_destroy)(void *spm)
 	for (i = 0; i < spm_mt->nr_threads; i++) {
 		map_t *map = spm_thread[i].map;
 
-		free_interleaved(map->cpus, map->length*sizeof(unsigned int));
-		free_interleaved(map->elems_pos, map->length*sizeof(unsigned int));
+		if (map->length > 0) {
+			free_interleaved(map->cpus, map->length*sizeof(unsigned int));
+			free_interleaved(map->elems_pos, map->length*sizeof(unsigned int));
+		}
 		free_interleaved(map, sizeof(map_t));
 	}
 

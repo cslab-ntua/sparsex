@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
     // Default options.
     unsigned long nLoops = 1;
-    unsigned long nloops = 512;
+    unsigned long nloops = 1024;
     cg_method_t cg_method = CSR_SPMV;
 
     csx::CsxExecutionEngine &engine = csx::CsxJitInit();
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 
     int err = pthread_barrier_init(&barrier, NULL, ncpus);
     if (err) {
-        fprintf(stderr, "Pthread barrier init failed");
+        fprintf(stderr, "Pthread barrier init failed\n");
         exit(1);
     }
 

@@ -335,6 +335,78 @@ m:csx f:demopatt.mtx.sorted s:327 pt:0.063501 t:0.000086 r:113.363468
 6. Running CG
 =============
 
+After you have successfully compiled CG, the final executable, named `cg', will
+be placed inside the `cg' directory. The cg executable may be invoked as
+follows:
+
+[ENV=<value>] ... ./cg [-s | -x | -l <n> | -L <n>] <matrix_file>
+
+The execution of CG is controlled by a set of environment variables and command
+line parameters and takes as input a file describing the sparse matrix. The
+solution vector of equation Ax = b (s) is randomized with double precision
+elements from -1000 to 1000, the vector b is calculated from the multiplication
+b = As and the estimated solution vector (x) is initialized with elements equal
+to 0.01. The result shows the square distance between the estimated vector (x)
+and the real solution vector values (s), the time breakdown into spmv
+multiplication phase, spmv reduction time and rest vector operations, and the
+total cg time.
+
+6.1 Input matrix format
+-----------------------
+
+See 5.1. 
+
+6.2 Environment
+---------------
+
+See 5.2.
+
+6.3 Other options controlling execution
+---------------------------------------
+
+You can specify the four following options when running CG:
+
+-x      Activate the CSX format. By default (if the options is not set) CSR
+        would be used.
+
+-s      Replace with the respective symmetric formats. Instead of CSR, SSS would
+        be deployed and instead of CSX, CSX-Sym would be used.
+
+-l <n>  Clarify the number of iterations for CG. If the option is not set CG
+        would terminate after 1024 iterations.
+
+-L <n>  Clarify the number of times to run the specified benchmark. If the
+        option is not set the benchmark would run only once.
+
+6.4 Output
+----------
+
+The typical output of running CG is the following (lines starting with `#' are
+not part of the output, but serve as explanatory comments):
+
+##
+## The CPU configuration.
+##
+MT_CONF: 0,1,2,3
+##
+## The specified format output (if CSX or CSX-Sym is activated the details about
+## stats, encoding etc. is shown.
+##
+...
+##
+## Performance info
+##
+## m:<matrix> : the matrix file (basename)
+## l:<loops> : number of iterations of CG
+## rd:<distance> : square distance from actual solution
+## st:<time> : SpMxV multiplication operations time
+## rt:<time> : SpMxV reduction operations time
+## ct:<time> : CG total time
+##
+## * the rest vector operations time of CG can be found by subtracting 'st' and
+##   'rt' from 'ct' time.
+##
+m:26.nd12k.mtx.sorted l:1024 rd:0.004506 st:10.816884 rt:0.145372 ct:11.367220
 
 7. Licence
 ==========
