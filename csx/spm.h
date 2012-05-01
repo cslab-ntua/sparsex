@@ -53,7 +53,8 @@ private:
     uint64_t row_start_;    /* Row of the original matrix, where this
                                sub-matrix starts. */
     bool elems_mapped_;
-    
+    bool is_window_;
+
     // Maximum possible rowptr_size after transformations.
     uint64_t max_rowptr_size_;
 
@@ -64,7 +65,8 @@ private:
     friend class DRLE_Manager;
 
 public:
-    SPM() : type_(NONE), elems_(NULL), rowptr_(NULL), elems_mapped_(false) {}
+    SPM() : type_(NONE), elems_(NULL), rowptr_(NULL), elems_mapped_(false),
+            is_window_(false) {}
 
     ~SPM()
     {

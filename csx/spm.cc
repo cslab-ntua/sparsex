@@ -469,11 +469,39 @@ static inline bool elem_cmp_less(const SpmCooElem &e0, const SpmCooElem &e1)
     return (ret < 0);
 }
 
+static inline bool is_row_block(SpmIterOrder t)
+{
+    if (t > BLOCK_TYPE_START && t < BLOCK_COL_START)
+        return true;
+    return false;
+}
+
+static inline bool is_col_block(SpmIterOrder t)
+{
+    if (t > BLOCK_COL_START && t < BLOCK_TYPE_END)
+        return true;
+    return false;
+}
+
+static inline int gcd(int i, int j)
+{
+    if (j == 0)
+        return i;
+    return gcd(j, i%j);
+}
+
+static inline int lcm(int i, int j) {
+    if (i >= j)
+        return i * j / gcd(i,j);
+    else
+        return i * j / gcd(j,i);
+}
+
 void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 {
     PntIter p0, pe, p;
     std::vector<SpmCooElem> elems;
-    std::vector<SpmCooElem>::iterator e0, ee;
+    std::vector<SpmCooElem>::iterator e0, ee, es;
     boost::function<void (CooElem &p)> xform_fn;
 
     if (type_ == t)
@@ -481,18 +509,60 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 
     xform_fn = GetTransformFn(type_, t);
     elems.reserve(elems_size_);
-    p0 = PointsBegin(rs);
-    pe = PointsEnd(re);
-    for(p = p0; p != pe; ++p) {
-        SpmCooElem p_new = SpmCooElem(*p);
-        xform_fn(p_new);
-        elems.push_back(p_new);
-    }
+    if (((type_ == HORIZONTAL || is_row_block(type_)) &&
+         (t == HORIZONTAL || is_row_block(t))) ||
+        ((type_ == VERTICAL || is_col_block(type_)) &&
+         (t == VERTICAL || is_col_block(t)))) {
+        int old_block_align, new_block_align, k;
 
-    e0 = elems.begin();
-    ee = elems.end();
-    sort(e0, ee, elem_cmp_less);
-    SetElems(e0, ee, rs + 1, 0, elems_size_, max_rowptr_size_);
+        if (type_ == HORIZONTAL || type_ == VERTICAL)
+            old_block_align = 1;
+        else
+            old_block_align = IsBlockType(type_);
+
+        if (t == HORIZONTAL || t == VERTICAL)
+            new_block_align = 1;
+        else
+            new_block_align = IsBlockType(t);
+
+        k = lcm(old_block_align, new_block_align);
+        k /= old_block_align;
+        re = GetNrRows();
+        
+        p0 = PointsBegin(rs);
+        pe = PointsEnd(re);
+        for (p = p0; p != pe; ++p) {
+            SpmCooElem p_new = SpmCooElem(*p);
+            xform_fn(p_new);
+            elems.push_back(p_new);
+        }
+        
+        e0 = elems.begin();
+        ee = e0;
+        for (uint64_t i = k; i < re; i += k) {
+            es = ee;
+            ee += rowptr_[i] - rowptr_[i-k];
+            sort(es, ee, elem_cmp_less);
+        }
+        es = ee;
+        ee = elems.end();
+        sort(es, ee, elem_cmp_less);
+            
+        SetElems(e0, ee, rs + 1, 0, elems_size_, max_rowptr_size_);
+    } else {
+        p0 = PointsBegin(rs);
+        pe = PointsEnd(re);
+        for (p = p0; p != pe; ++p) {
+            SpmCooElem p_new = SpmCooElem(*p);
+            xform_fn(p_new);
+            elems.push_back(p_new);
+        }
+
+        e0 = elems.begin();
+        ee = elems.end();
+        sort(e0, ee, elem_cmp_less);
+        SetElems(e0, ee, rs + 1, 0, elems_size_, max_rowptr_size_);
+    }
     elems.clear();
     type_ = t;
 }
@@ -667,7 +737,7 @@ SPM *SPM::GetWindow(uint64_t rs, uint64_t length)
     uint64_t es = rowptr_[rs];
     uint64_t ee = rowptr_[rs+length];
 
-    ret->rowptr_ = new uint64_t[length+1];
+    ret->rowptr_ = (uint64_t *) malloc((length+1) * sizeof(uint64_t));
     ret->rowptr_size_ = length + 1;
     for (uint64_t i = 0; i < ret->rowptr_size_; i++)
         ret->rowptr_[i] = rowptr_[rs+i] - es;
@@ -680,6 +750,7 @@ SPM *SPM::GetWindow(uint64_t rs, uint64_t length)
     ret->row_start_ = row_start_ + rs;
     ret->type_ = type_;
     ret->elems_mapped_ = true;
+    ret->is_window_ = true;
     ret->max_rowptr_size_ = ret->nr_rows_ + ret->nr_cols_ + 1;
     assert(ret->rowptr_[ret->rowptr_size_-1] == ret->elems_size_);
     return ret;

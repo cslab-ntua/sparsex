@@ -3,7 +3,7 @@
  3. Update help texts, etc.
  4. [DONE] Checking and refactoring of new parts (CG, symmetrics).
  5. [DONE] Fix bug with the demopatt.mtx.sorted matrix.
- 6. Final testing before release.
+ 6. [DONE] Final testing before release.
  7. [DONE] Fix GCC 4.6 warnings.
  8. [DONE] Convert environment variables to cmd options.
  9. [DONE] Automate the setting of the full-col-index option.
