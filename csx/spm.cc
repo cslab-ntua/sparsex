@@ -286,7 +286,6 @@ SPM *SPM::LoadMMF_mt(MMF &mmf, const long nr)
         spm->row_start_ = row_start;
         row_start += spm->nr_rows_;
         spm->type_ = HORIZONTAL;
-        spm->max_rowptr_size_ = spm->nr_rows_ + spm->nr_cols_ + 1;
         cnt += spm->nr_nzeros_;
     }
 
@@ -490,11 +489,28 @@ static inline int gcd(int i, int j)
     return gcd(j, i%j);
 }
 
-static inline int lcm(int i, int j) {
+static inline int lcm(int i, int j)
+{
     if (i >= j)
         return i * j / gcd(i,j);
     else
         return i * j / gcd(j,i);
+}
+
+uint64_t SPM::FindNewRowptrSize(SpmIterOrder t)
+{
+    if (t == HORIZONTAL)
+        return nr_rows_ + 1;
+    else if (t == VERTICAL)
+        return nr_cols_ + 1;
+    else if (t == DIAGONAL || REV_DIAGONAL)
+        return nr_rows_ + nr_cols_ + 1;
+    else if (is_row_block(t))
+        return nr_rows_ / IsBlockType(t) + 2;
+    else if (is_col_block(t))
+        return nr_cols_ / IsBlockType(t) + 2;
+    else
+        return 0;
 }
 
 void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
@@ -547,8 +563,6 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
         es = ee;
         ee = elems.end();
         sort(es, ee, elem_cmp_less);
-            
-        SetElems(e0, ee, rs + 1, 0, elems_size_, max_rowptr_size_);
     } else {
         p0 = PointsBegin(rs);
         pe = PointsEnd(re);
@@ -557,12 +571,12 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
             xform_fn(p_new);
             elems.push_back(p_new);
         }
-
         e0 = elems.begin();
         ee = elems.end();
         sort(e0, ee, elem_cmp_less);
-        SetElems(e0, ee, rs + 1, 0, elems_size_, max_rowptr_size_);
     }
+
+    SetElems(e0, ee, rs + 1, 0, elems_size_, FindNewRowptrSize(t));
     elems.clear();
     type_ = t;
 }
@@ -750,8 +764,6 @@ SPM *SPM::GetWindow(uint64_t rs, uint64_t length)
     ret->row_start_ = row_start_ + rs;
     ret->type_ = type_;
     ret->elems_mapped_ = true;
-    ret->is_window_ = true;
-    ret->max_rowptr_size_ = ret->nr_rows_ + ret->nr_cols_ + 1;
     assert(ret->rowptr_[ret->rowptr_size_-1] == ret->elems_size_);
     return ret;
 }
@@ -1022,13 +1034,11 @@ void SPMSym::DivideMatrix()
     m1_->SetRowStart(row_start);
     m1_->SetNrCols(nr_cols);
     m1_->SetNrNonzeros(0);
-    m1_->SetMaxRowPtrSize(nr_rows + nr_cols + 1);
     
     m2_->SetType(HORIZONTAL);
     m2_->SetRowStart(row_start);
     m2_->SetNrCols(nr_cols);
     m2_->SetNrNonzeros(0);
-    m2_->SetMaxRowPtrSize(nr_rows + nr_cols + 1);
     
     for (unsigned long i = 0; i < nr_rows; i++) {
         for (unsigned long j = rowptr[i]; j < rowptr[i+1]; j++) {
@@ -1085,7 +1095,6 @@ void SPMSym::MergeMatrix()
     temp->SetRowStart(row_start);
     temp->SetNrCols(nr_cols);
     temp->SetNrNonzeros(matrix->GetNrNonzeros());
-    temp->SetMaxRowPtrSize(matrix->GetMaxRowPtrSize());
     
     for (unsigned long i = 0; i < nr_rows; i++) {
         if (m1_->GetNrRows() > i) {

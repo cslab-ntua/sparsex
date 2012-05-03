@@ -140,7 +140,7 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
     }
     
     for (int i = 0; i < PRE_TIMER_END; i++)
-        timer_init(&timers_[i]);
+        timer_init(&pre_timers_[i]);
 }
     
 DeltaRLE::Stats DRLE_Manager::GenerateStats(uint64_t rs, uint64_t re)
@@ -185,23 +185,17 @@ void DRLE_Manager::GenAllStats()
             uint64_t window_size =
                          sort_splits_[selected_splits_[i]+1] - window_start;
             SPM *window = spm_->GetWindow(window_start, window_size);
-            // std::cout << "wstart: " << window_start << std::endl;
-            // std::cout << "wsize (rows): " << window_size << std::endl;
-            // std::cout << "wsize (nnz): " << 
-            //              sort_splits_nzeros_[selected_splits_[i]] <<
-            //              std::endl;
-            // Check for empty windows, since nonzeros might be captured
-            // from previous patterns.
+
             if (window->nr_nzeros_ != 0) {
                 samples_nnz += sort_splits_nzeros_[selected_splits_[i]];
-            
+
                 for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
                     if (xforms_ignore_[t])
                         continue;
 
                     SpmIterOrder type = SpmTypes[t];
                     DeltaRLE::Stats w_stats;
-                    
+
                     window->Transform(type);
                     w_stats = GenerateStats(window, 0, window->GetNrRows());
                     UpdateStats(type, w_stats);
@@ -243,7 +237,7 @@ void DRLE_Manager::GenAllStats()
 
             SpmIterOrder type = SpmTypes[t];
             uint64_t block_align = IsBlockType(type);
-            
+
             spm_->Transform(type);
             stats_[type] = GenerateStats(0, spm_->GetNrRows());
             sp = &stats_[type];
@@ -369,18 +363,18 @@ void DRLE_Manager::Encode(SpmIterOrder type)
     if (type == NONE && ((type = ChooseType()) == NONE))
         return;
 
-    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->max_rowptr_size_);
-
     // Transform matrix to the desired iteration order
     spm_->Transform(type);
+    
+    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->rowptr_size_);
 
     for (uint64_t i = 0; i < spm_->GetNrRows(); ++i) {
         EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
         if (nr_size > 0) {
-            timer_start(&timers_[PRE_TIMER_ALLOC]);
+            timer_start(&pre_timers_[PRE_TIMER_ALLOC]);
             elems = SpmBld->AllocElems(nr_size);
-            timer_pause(&timers_[PRE_TIMER_ALLOC]);
+            timer_pause(&pre_timers_[PRE_TIMER_ALLOC]);
             for (uint64_t i = 0; i < nr_size; ++i)
                 MakeRowElem(new_row[i], elems + i);
         }
@@ -408,7 +402,7 @@ void DRLE_Manager::Decode(SpmIterOrder type)
     spm_->Transform(type);
 
     // Do the decoding
-    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->max_rowptr_size_);
+    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->rowptr_size_);
     for (uint64_t i = 0; i < spm_->GetNrRows(); ++i) {
         DecodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
@@ -424,8 +418,6 @@ void DRLE_Manager::Decode(SpmIterOrder type)
 
     SpmBld->Finalize();
     delete SpmBld;
-
-    // Transform matrix to the original iteration order
     RemoveIgnore(type);
 }
 
@@ -436,26 +428,26 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
     SpmIterOrder enc_seq[22];
     int counter = 0;
     
-    timer_start(&timers_[PRE_TIMER_TOTAL]);
+    timer_start(&pre_timers_[PRE_TIMER_TOTAL]);
     for (;;) {
-        timer_start(&timers_[PRE_TIMER_STATS]);
+        timer_start(&pre_timers_[PRE_TIMER_STATS]);
         GenAllStats();
-        timer_pause(&timers_[PRE_TIMER_STATS]);
+        timer_pause(&pre_timers_[PRE_TIMER_STATS]);
         OutStats(os);
         type = ChooseType();
         if (type == NONE)
             break;
-        timer_start(&timers_[PRE_TIMER_ENCODE]);
+        timer_start(&pre_timers_[PRE_TIMER_ENCODE]);
         os << "Encode to " << SpmTypesNames[type] << std::endl;
         
         Encode(type);
 
         enc_seq[counter++] = type;
-        timer_pause(&timers_[PRE_TIMER_ENCODE]);
+        timer_pause(&pre_timers_[PRE_TIMER_ENCODE]);
     }
-    
+
     spm_->Transform(HORIZONTAL);
-    timer_pause(&timers_[PRE_TIMER_TOTAL]);
+    timer_pause(&pre_timers_[PRE_TIMER_TOTAL]);
 
     os << "Encoding sequence: ";
     if (counter == 0)
@@ -467,12 +459,14 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
         os << ", " << SpmTypesNames[enc_seq[i]];
     os << std::endl;
 
+    /*
     double t;
 
     for (int i = 0; i < PRE_TIMER_END; i++) {
-        t = timer_secs(&timers_[i]);
-        os << timers_desc_[i] << t << std::endl;
+        t = timer_secs(&pre_timers_[i]);
+        os << pre_timers_desc_[i] << t << std::endl;
     }
+    */
 }
 
 void DRLE_Manager::MakeEncodeTree()
