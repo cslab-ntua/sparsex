@@ -130,7 +130,7 @@ void *NormalCgSideThread(void *arg)
         *rr_new = vector_double_mul_part(r, r, start, end);
         pthread_barrier_wait(barrier);
         pthread_barrier_wait(barrier);
-	vector_double_scale_add_part(r, p, p, *bi, start, end);
+        vector_double_scale_add_part(r, p, p, *bi, start, end);
         pthread_barrier_wait(barrier);
     }
     

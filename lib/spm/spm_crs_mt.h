@@ -60,6 +60,8 @@ void spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_destroy(void *spm); \
 \
 spmv_ ## __elem_type ## _fn_t \
     spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_multiply;
+// void
+// spm_crs ## __idx_bits ## _ ## __elem_type ## _mt_numa_make_col_map(void *spm);
 
 SPM_CRS_MT_NUMA_DECLARE(32, double)
 SPM_CRS_MT_NUMA_DECLARE(64, double)
