@@ -525,6 +525,15 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
 
     xform_fn = GetTransformFn(type_, t);
     elems.reserve(elems_size_);
+    
+    p0 = PointsBegin(rs);
+    pe = PointsEnd(re);
+    for (p = p0; p != pe; ++p) {
+        SpmCooElem p_new = SpmCooElem(*p);
+        xform_fn(p_new);
+        elems.push_back(p_new);
+    }
+    
     if (((type_ == HORIZONTAL || is_row_block(type_)) &&
          (t == HORIZONTAL || is_row_block(t))) ||
         ((type_ == VERTICAL || is_col_block(type_)) &&
@@ -545,14 +554,6 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
         k /= old_block_align;
         re = GetNrRows();
         
-        p0 = PointsBegin(rs);
-        pe = PointsEnd(re);
-        for (p = p0; p != pe; ++p) {
-            SpmCooElem p_new = SpmCooElem(*p);
-            xform_fn(p_new);
-            elems.push_back(p_new);
-        }
-        
         e0 = elems.begin();
         ee = e0;
         for (uint64_t i = k; i < re; i += k) {
@@ -564,13 +565,6 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
         ee = elems.end();
         sort(es, ee, elem_cmp_less);
     } else {
-        p0 = PointsBegin(rs);
-        pe = PointsEnd(re);
-        for (p = p0; p != pe; ++p) {
-            SpmCooElem p_new = SpmCooElem(*p);
-            xform_fn(p_new);
-            elems.push_back(p_new);
-        }
         e0 = elems.begin();
         ee = elems.end();
         sort(e0, ee, elem_cmp_less);
