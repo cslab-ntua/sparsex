@@ -415,6 +415,7 @@ void CsxJit::GenCode(std::ostream &log)
         
         DoNewRowHook(hooks, log);
         DoSpmvFnHook(hooks, log);
+        hooks["header_prefix"] = CSX_PREFIX;
 
         // Substitute and compile into an LLVM module
         compiler_->SetLogStream(&log);

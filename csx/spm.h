@@ -330,9 +330,10 @@ private:
         for (long i = 0; i < nr; ++i) {
             spm = ret + i;
             limit = (mat.GetNrNonzeros() - cnt) / (nr - i);
-            spm->nr_nzeros_ = spm->SetElems(iter, iter_end, row_start + 1,
+            spm->nr_nzeros_ = spm->SetElems(iter, iter_end,
+                                            row_start + !mat.IsZeroBased(),
                                             limit,
-                                            limit + mat.GetNrRows() + 1,
+                                            limit + mat.GetNrRows() + !mat.IsZeroBased(),
                                             mat.GetNrRows() + 1);
             spm->nr_rows_ = spm->rowptr_size_ - 1;
             spm->nr_cols_ = mat.GetNrCols();

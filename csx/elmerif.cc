@@ -22,6 +22,13 @@ extern "C" {
 #include "timer.h"
 }
 
+//
+// Assume zero-indexing by default
+// 
+#ifndef CSX_IDX_OFFSET
+#   define CSX_IDX_OFFSET 0
+#endif
+
 enum {
     TIMER_CONSTRUCT_INTERN = 0,
     TIMER_CONSTRUCT_CSX,
@@ -71,8 +78,9 @@ static void matvec_csr(const elmer_index_t *rowptr,
     elmer_index_t i, j;
     for (i = 0; i < nr_rows; ++i) {
         register elmer_value_t yi_ = 0;
-        for (j = rowptr[i] - 1; j < rowptr[i+1] - 1; ++j) {
-            yi_ += values[j]*x[colind[j] - 1];
+        for (j = rowptr[i] - CSX_IDX_OFFSET;
+             j < rowptr[i+1] - CSX_IDX_OFFSET; ++j) {
+            yi_ += values[j]*x[colind[j] - CSX_IDX_OFFSET];
         }
 
         y[i] = yi_;
@@ -95,13 +103,61 @@ static bool equal(elmer_value_t *v1, elmer_value_t *v2,
 
 #endif
 
-void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
-                   void *values, void *u, void *v, void *reinit)
+void *csx_mattune(elmer_index_t *rowptr,
+                  elmer_index_t *colind,
+                  elmer_value_t *values,
+                  elmer_index_t nr_rows,
+                  elmer_index_t nr_cols)
 {
     unsigned int nr_threads;
     unsigned int *cpus __attribute__ ((unused));
     csx::SPM *spms;
     spm_mt_t *spm_mt;
+    uint64_t nr_nzeros = rowptr[nr_rows] - CSX_IDX_OFFSET;
+    uint64_t ws = (nr_rows + nr_nzeros)*sizeof(elmer_index_t) +
+        nr_nzeros*sizeof(elmer_value_t);
+    std::cout << "Rows: " << nr_rows << " "
+              << "Cols: " << nr_cols << " "
+              << "Non-zeros: " << nr_nzeros << " "
+              << "Working set size (MB): " << ((double) ws) / (1024*1024)
+              << std::endl;
+    mt_get_options(&nr_threads, &cpus);
+#ifdef _CSR_
+    spm_mt = spm_crs32_double_mt_get_spm((uint32_t *) rowptr,
+                                         (uint32_t *) colind,
+                                         values, nr_rows, nr_threads, cpus);
+#else
+    timer_start(&timers[TIMER_CONSTRUCT_INTERN]);
+    spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
+        (rowptr, colind, values, nr_rows, nr_cols, !CSX_IDX_OFFSET, nr_threads);
+    timer_pause(&timers[TIMER_CONSTRUCT_INTERN]);
+
+    timer_start(&timers[TIMER_CONSTRUCT_CSX]);
+    CsxExecutionEngine &engine = CsxJitInit();
+    spm_mt = GetSpmMt(NULL, engine, true, false, spms);
+    timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
+    delete[] spms;
+#endif        
+    return spm_mt;
+}
+
+void csx_matvec(void *spm, elmer_value_t *x, elmer_index_t nr_x,
+                elmer_value_t *y, elmer_index_t nr_y)
+{
+    spm_mt_t *spm_mt = (spm_mt_t *) spm;
+    // FIXME: Although Elmer uses doubles by default, this is not portable
+    vector_double_t *vec_x = vector_double_create_from_buff(x, nr_x);
+    vector_double_t *vec_y = vector_double_create_from_buff(y, nr_y);
+
+    ++nr_calls;
+    timer_start(&timers[TIMER_SPMV]);
+    spmv_double_matvec_mt(spm_mt, vec_x, vec_y);
+    timer_pause(&timers[TIMER_SPMV]);
+}
+
+void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
+                   void *values, void *u, void *v, void *reinit)
+{
     elmer_index_t n_ = *((elmer_index_t *) n);
     elmer_index_t *rowptr_ = (elmer_index_t *) rowptr;
     elmer_index_t *colind_ = (elmer_index_t *) colind;
@@ -110,7 +166,6 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
     elmer_value_t *x_ = (elmer_value_t *) u;
     elmer_value_t *y_ = (elmer_value_t *) v;
 
-    ++nr_calls;
     timer_start(&timers[TIMER_TOTAL]);
 #ifdef _DEBUG_
     if (!y_copy)
@@ -136,41 +191,10 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
 #endif
 
     if (!*tuned || reinit_) {
-        uint64_t nr_nzeros = rowptr_[n_] - 1;
-        uint64_t ws = (n_ + nr_nzeros)*sizeof(elmer_index_t) +
-            nr_nzeros*sizeof(elmer_value_t);
-        std::cout << "Rows: " << n_ << " "
-                  << "Non-zeros: " << nr_nzeros << " "
-                  << "Working set size (MB): " << ((double) ws) / (1024*1024)
-                  << std::endl;
-        mt_get_options(&nr_threads, &cpus);
-#ifdef _CSR_
-        spm_mt = spm_crs32_double_mt_get_spm((uint32_t *) rowptr_,
-                                             (uint32_t *) colind_,
-                                             values_, n_, nr_threads, cpus);
-#else
-        timer_start(&timers[TIMER_CONSTRUCT_INTERN]);
-        spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
-            (rowptr_, colind_, values_, n_, n_, false, nr_threads);
-        timer_pause(&timers[TIMER_CONSTRUCT_INTERN]);
-
-        timer_start(&timers[TIMER_CONSTRUCT_CSX]);
-        CsxExecutionEngine &engine = CsxJitInit();
-        spm_mt = GetSpmMt(NULL, engine, true, false, spms);
-        timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
-        delete[] spms;
-#endif        
-        *tuned = spm_mt;
-    } else {
-        spm_mt = (spm_mt_t *) *tuned;
+        *tuned = csx_mattune(rowptr_, colind_, values_, n_, n_);
     }
-     
-    // FIXME: Although Elmer uses doubles by default, this is not portable
-    vector_double_t *vec_x = vector_double_create_from_buff(x_, n_);
-    vector_double_t *vec_y = vector_double_create_from_buff(y_, n_);
-    timer_start(&timers[TIMER_SPMV]);
-    spmv_double_matvec_mt(spm_mt, vec_x, vec_y);
-    timer_pause(&timers[TIMER_SPMV]);
+
+    csx_matvec(*tuned, x_, n_, y_, n_);
 
 #ifdef _DEBUG_
     std::cout << "Checking result... ";
@@ -181,5 +205,7 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
 #endif
     timer_pause(&timers[TIMER_TOTAL]);
 }
+
+
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

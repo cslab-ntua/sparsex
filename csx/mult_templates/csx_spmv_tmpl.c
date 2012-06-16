@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2011-2012, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -12,11 +13,11 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#include "ctl_ll.h"
+#include  "${header_prefix}/csx/ctl_ll.h"
 
 #define ELEM_TYPE double
-#include "vector.h"
-#include "csx.h"
+#include "${header_prefix}/lib/spm/vector.h"
+#include "${header_prefix}/csx/csx.h"
 
 #define CSX_SPMV_FN_MAX CTL_PATTERNS_MAX
 
