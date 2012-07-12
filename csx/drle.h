@@ -42,7 +42,7 @@ const char *pre_timers_desc_[] =
     "Encode Time: ",
     "Alloc Time: "
 };
-    
+
 /**
  *  Delta Run-Length Encoding Manager.
  *

@@ -333,24 +333,20 @@ uint64_t DRLE_Manager::GetTypeScore(SpmIterOrder type)
 {
     DeltaRLE::Stats *sp;
     DeltaRLE::Stats::iterator iter;
-    uint64_t ret;
-
-    ret = 0;
-    if (stats_.find(type) == stats_.end())
-        return ret;
-        
-    sp = &stats_[type];
-
     uint64_t nr_nzeros_encoded = 0;
     uint64_t nr_patterns = 0;
+
+    if (stats_.find(type) == stats_.end())
+        return 0;
+
+    sp = &stats_[type];
 
     for (iter = sp->begin(); iter != sp->end(); ++iter) {
         nr_nzeros_encoded += iter->second.nnz;
         nr_patterns += iter->second.npatterns;
     }
 
-    ret = nr_nzeros_encoded - nr_patterns;
-    return ret;
+    return nr_nzeros_encoded - nr_patterns;
 }
 
 void DRLE_Manager::Encode(SpmIterOrder type)
@@ -545,6 +541,7 @@ void DRLE_Manager::EncodeSerial(int *xform_buf, int **deltas)
         Encode(t);
         AddIgnore(t);
     }
+    spm_->Transform(HORIZONTAL);
 }
 
 void DRLE_Manager::OutputSortSplits(std::ostream& out)
@@ -940,7 +937,7 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
     uint64_t max_block_dim;
     DeltaRLE::Stats::iterator tmp;
     DeltaRLE::Stats::reverse_iterator iter, rtmp;
-
+    
     max_block_dim = max_limit_ / block_align;
     temp[max_block_dim].nnz = 0;
     temp[max_block_dim].npatterns = 0;
