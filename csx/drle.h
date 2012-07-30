@@ -35,14 +35,14 @@ enum {
     PRE_TIMER_END
 };
 
-const char *timers_desc_[] =
+const char *pre_timers_desc_[] =
 {
     "Total Time: ",
     "Stats Time: ",
     "Encode Time: ",
     "Alloc Time: "
 };
-    
+
 /**
  *  Delta Run-Length Encoding Manager.
  *
@@ -391,7 +391,7 @@ private:
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;
-    xtimer_t timers_[PRE_TIMER_END];
+    xtimer_t pre_timers_[PRE_TIMER_END];
 };
 
 /**

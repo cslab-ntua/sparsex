@@ -485,6 +485,8 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file, uint64_t *rows_nr,
 	                              nr_threads, nodes);
 	print_alloc_status("CSR values", alloc_err);
 
+	// SPM_CRS_MT_NAME(_numa_make_col_map)(spm_mt);
+
 	// Free the auxiliaries.
 	free(rowptr_parts);
 	free(colind_parts);
@@ -493,6 +495,31 @@ void *SPM_CRS_MT_NAME(_numa_init_mmf)(char *mmf_file, uint64_t *rows_nr,
 
 	return spm_mt;
 }
+
+/* void SPM_CRS_MT_NAME(_numa_make_col_map)(void *spm)
+{
+	int i;
+	uint64_t j, r, c;
+	spm_mt_t *spm_mt = (spm_mt_t *) spm;
+	spm_mt_thread_t *spm_thread = spm_mt->spm_threads;
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *) spm_thread->spm;
+	SPM_CRS_TYPE *crs = crs_mt->crs;
+	uint64_t *map;
+
+	for (i = 0; i < spm_mt->nr_threads; i++) {
+		map = (uint64_t *) malloc(crs->ncols*sizeof(uint64_t));
+		for (c = 0; c < crs->ncols; c++)
+			map[c] = 0;
+
+		for (r = crs_mt[i].row_start; r < crs_mt[i].row_end; r++) {
+			for (j = crs->row_ptr[r]; j < crs->row_ptr[r+1]; j++) {
+				c = crs->col_ind[j];
+				map[c]++;
+			}
+		}
+		spm_thread[i].col_map = map;
+	}
+}*/
 
 void SPM_CRS_MT_NAME(_numa_destroy)(void *spm)
 {

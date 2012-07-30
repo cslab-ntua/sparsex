@@ -115,11 +115,6 @@ public:
     {
         return row_start_;
     }
-    
-    uint64_t GetMaxRowPtrSize()
-    {
-        return max_rowptr_size_;
-    }
 
     void SetNrRows(uint64_t nr_rows)
     {
@@ -150,12 +145,7 @@ public:
     {
         rowptr_size_ = rowptr_size;
     }
-    
-    void SetMaxRowPtrSize(uint64_t max_rowptr_size)
-    {
-        max_rowptr_size_ = max_rowptr_size;
-    }
-    
+
     SpmRowElem *RowBegin(uint64_t ridx = 0);
     SpmRowElem *RowEnd(uint64_t ridx = 0);
 
@@ -242,6 +232,8 @@ public:
 
     PntIter PointsBegin(uint64_t ridx = 0);
     PntIter PointsEnd(uint64_t ridx = 0);
+
+    uint64_t FindNewRowptrSize(SpmIterOrder t);
 
     /**
      *  Transforms matrix to specific type.
@@ -341,7 +333,6 @@ private:
             spm->row_start_ = row_start;
             row_start += spm->nr_rows_;
             spm->type_ = HORIZONTAL;
-            spm->max_rowptr_size_ = spm->nr_rows_ + spm->nr_cols_ + 1;
             cnt += spm->nr_nzeros_;
         }
 

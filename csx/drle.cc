@@ -163,9 +163,8 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
         }
 #endif
 
-        if (samples_max_ > sort_splits_.size()) {
+        if (samples_max_ > sort_splits_.size())
             samples_max_ = sort_splits_.size();
-        }
 
         SelectSplits();
     } else {
@@ -173,7 +172,7 @@ DRLE_Manager::DRLE_Manager(SPM *spm, long min_limit, long max_limit,
     }
     
     for (int i = 0; i < PRE_TIMER_END; i++)
-        timer_init(&timers_[i]);
+        timer_init(&pre_timers_[i]);
 }
     
 DeltaRLE::Stats DRLE_Manager::GenerateStats(uint64_t rs, uint64_t re)
@@ -254,76 +253,94 @@ void DRLE_Manager::GenAllStats()
     stats_.clear();
     deltas_to_encode_.clear();
 
+    if (sort_windows_ && spm_->GetNrRows() > samples_max_) {
+        uint64_t samples_nnz = 0;
+
+        spm_->Transform(HORIZONTAL);
+        for (size_t i = 0; i < samples_max_; ++i) {
+            uint64_t window_start = sort_splits_[selected_splits_[i]];
+            uint64_t window_size =
+                         sort_splits_[selected_splits_[i]+1] - window_start;
+            SPM *window = spm_->GetWindow(window_start, window_size);
+
+            if (window->nr_nzeros_ != 0) {
+                samples_nnz += sort_splits_nzeros_[selected_splits_[i]];
+
+                for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
+                    if (xforms_ignore_[t])
+                        continue;
+
+                    SpmIterOrder type = SpmTypes[t];
+                    DeltaRLE::Stats w_stats;
+
+                    window->Transform(type);
+                    w_stats = GenerateStats(window, 0, window->GetNrRows());
+                    UpdateStats(type, w_stats);
+                }
+            }
+            window->Transform(HORIZONTAL);
+            spm_->PutWindow(window);
+            delete window;
+        }
+        for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
+            if (xforms_ignore_[t])
+                continue;
+
+            SpmIterOrder type = SpmTypes[t];
+            uint64_t block_align = IsBlockType(type);
+
+            CorrectStats(type, spm_->nr_nzeros_ / (double) samples_nnz);
+            sp = &stats_[type];
+            if (block_align && split_blocks_)
+                CorrectBlockStats(sp, block_align);
+
+            for (iter = sp->begin(); iter != sp->end(); ) {
+                tmp = iter++;
+                double p = (double) tmp->second.nnz / (double) spm_->nr_nzeros_;
+                if (block_align == 1 && (unsigned int) tmp->first < min_limit_)
+                    // The dimension of one-dimensional blocks must exceed
+                    // min_limit_.
+                    sp->erase(tmp);
+                else if (p < min_perc_ || tmp->first >= CSX_PID_OFFSET)
+                    sp->erase(tmp);
+                else
+                    deltas_to_encode_[type].insert(tmp->first);
+            }
+        }
+    } else {
     // first generate stats for the delta type
 #ifdef SPM_HEUR_NEW
-    GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), stats_[NONE]);
+        GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), stats_[NONE]);
 #endif
-    for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
-        if (xforms_ignore_[t])
-            continue;
+        for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
+            if (xforms_ignore_[t])
+                continue;
 
-        SpmIterOrder type = SpmTypes[t];
+            SpmIterOrder type = SpmTypes[t];
+            uint64_t block_align = IsBlockType(type);
 
-        // std::cout << "Checking for " << SpmTypesNames[t] << std::endl;
-        if (sort_windows_ && spm_->GetNrRows() > samples_max_) {
-            uint64_t samples_nnz = 0;
-            for (size_t i = 0; i < samples_max_; ++i) {
-                DeltaRLE::Stats w_stats;
-                uint64_t window_start = sort_splits_[selected_splits_[i]];
-                uint64_t window_size =
-                    sort_splits_[selected_splits_[i]+1] - window_start;
-                SPM *window = spm_->GetWindow(window_start, window_size);
-                
-                // std::cout << "wstart: " << window_start << std::endl;
-                // std::cout << "wsize (rows): " << window_size << std::endl;
-                // std::cout << "wsize (nnz): " << 
-                //               sort_splits_nzeros_[selected_splits_[i]] <<
-                //               std::endl;
-                // Check for empty windows, since nonzeros might be captured
-                // from previous patterns.
-                if  (!window->nr_nzeros_)
-                    goto exit_loop;
-                    
-                samples_nnz += sort_splits_nzeros_[selected_splits_[i]];
-                window->Transform(type);
-                w_stats = GenerateStats(window, 0, window->GetNrRows());
-                UpdateStats(type, w_stats);
-                window->Transform(HORIZONTAL);
-                spm_->PutWindow(window);
-            exit_loop:
-                delete window;
-            }
-            
-            CorrectStats(type, spm_->nr_nzeros_ / (double) samples_nnz);
-        } else {
             spm_->Transform(type);
             stats_[type] = GenerateStats(0, spm_->GetNrRows());
-            spm_->Transform(HORIZONTAL);
-        }
+            sp = &stats_[type];
+            if (block_align && split_blocks_)
+                CorrectBlockStats(sp, block_align);
 
-        sp = &stats_[type];
-
-        uint64_t block_align = IsBlockType(type);
-        
-        if (block_align && split_blocks_)
-            CorrectBlockStats(sp, block_align);
-        
-        for (iter = sp->begin(); iter != sp->end(); ) {
-            tmp = iter++;
-            double p = (double) tmp->second.nnz / (double) spm_->nr_nzeros_;
-            if (block_align == 1 && (unsigned int) tmp->first < min_limit_)
-                // the dimension of one-dimensional blocks must exceed
-                // min_limit_
-                sp->erase(tmp);
-            else if (p < min_perc_ || tmp->first >= CSX_PID_OFFSET)
-                sp->erase(tmp);
-            else
-                deltas_to_encode_[type].insert(tmp->first);
-        }
-
+            for (iter = sp->begin(); iter != sp->end(); ) {
+                tmp = iter++;
+                double p = (double) tmp->second.nnz / (double) spm_->nr_nzeros_;
+                if (block_align == 1 && (unsigned int) tmp->first < min_limit_)
+                    // The dimension of one-dimensional blocks must exceed
+                    // min_limit_.
+                    sp->erase(tmp);
+                else if (p < min_perc_ || tmp->first >= CSX_PID_OFFSET)
+                    sp->erase(tmp);
+                else
+                    deltas_to_encode_[type].insert(tmp->first);
+            }
 #ifdef SPM_HEUR_NEW
-        GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), *sp);
+            GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), *sp);
 #endif
+        }
     }
 }
 
@@ -401,15 +418,13 @@ long DRLE_Manager::GetTypeScore(SpmIterOrder type)
     DeltaRLE::Stats::iterator iter;
     long ret;
 
-    ret = 0;
     if (stats_.find(type) == stats_.end())
-        return ret;
-        
-    sp = &stats_[type];
+        return 0;
 
     long nr_nzeros_encoded = 0;
     long nr_patterns = 0;
     long nr_deltas = spm_->nr_deltas_;
+    sp = &stats_[type];
 
     for (iter = sp->begin(); iter != sp->end(); ++iter) {
         if (iter->first == 0 && type != NONE) {
@@ -444,7 +459,6 @@ long DRLE_Manager::GetTypeScore(SpmIterOrder type)
 void DRLE_Manager::Encode(SpmIterOrder type)
 {
     SPM::Builder *SpmBld;
-    SpmIterOrder oldtype;
     std::vector<SpmRowElem> new_row;
     uint64_t nr_size;
     SpmRowElem *elems;
@@ -452,19 +466,18 @@ void DRLE_Manager::Encode(SpmIterOrder type)
     if (type == NONE && ((type = ChooseType()) == NONE))
         return;
 
-    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->max_rowptr_size_);
-
     // Transform matrix to the desired iteration order
-    oldtype = spm_->type_;
     spm_->Transform(type);
+    
+    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->rowptr_size_);
 
     for (uint64_t i = 0; i < spm_->GetNrRows(); ++i) {
         EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
         if (nr_size > 0) {
-            timer_start(&timers_[PRE_TIMER_ALLOC]);
+            timer_start(&pre_timers_[PRE_TIMER_ALLOC]);
             elems = SpmBld->AllocElems(nr_size);
-            timer_pause(&timers_[PRE_TIMER_ALLOC]);
+            timer_pause(&pre_timers_[PRE_TIMER_ALLOC]);
             for (uint64_t i = 0; i < nr_size; ++i)
                 MakeRowElem(new_row[i], elems + i);
         }
@@ -475,16 +488,12 @@ void DRLE_Manager::Encode(SpmIterOrder type)
 
     SpmBld->Finalize();
     delete SpmBld;
-    
-    // Transform matrix to the original iteration order
-    spm_->Transform(oldtype);
     AddIgnore(type);
 }
 
 void DRLE_Manager::Decode(SpmIterOrder type)
 {
     SPM::Builder *SpmBld;
-    SpmIterOrder oldtype;
     std::vector<SpmRowElem> new_row;
     uint64_t nr_size;
     SpmRowElem *elems;
@@ -493,11 +502,10 @@ void DRLE_Manager::Decode(SpmIterOrder type)
         return;
 
     // Transform matrix to the desired iteration order
-    oldtype = spm_->type_;
     spm_->Transform(type);
 
     // Do the decoding
-    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->max_rowptr_size_);
+    SpmBld = new SPM::Builder(spm_, spm_->elems_size_, spm_->rowptr_size_);
     for (uint64_t i = 0; i < spm_->GetNrRows(); ++i) {
         DecodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
@@ -513,9 +521,6 @@ void DRLE_Manager::Decode(SpmIterOrder type)
 
     SpmBld->Finalize();
     delete SpmBld;
-
-    // Transform matrix to the original iteration order
-    spm_->Transform(oldtype);
     RemoveIgnore(type);
 }
 
@@ -526,16 +531,16 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
     SpmIterOrder enc_seq[22];
     int counter = 0;
     
-    timer_start(&timers_[PRE_TIMER_TOTAL]);
+    timer_start(&pre_timers_[PRE_TIMER_TOTAL]);
     for (;;) {
-        timer_start(&timers_[PRE_TIMER_STATS]);
+        timer_start(&pre_timers_[PRE_TIMER_STATS]);
         GenAllStats();
-        timer_pause(&timers_[PRE_TIMER_STATS]);
+        timer_pause(&pre_timers_[PRE_TIMER_STATS]);
         OutStats(os);
         type = ChooseType();
         if (type == NONE)
             break;
-        timer_start(&timers_[PRE_TIMER_ENCODE]);
+        timer_start(&pre_timers_[PRE_TIMER_ENCODE]);
         os << "Encode to " << SpmTypesNames[type] << std::endl;
         
         Encode(type);
@@ -544,10 +549,11 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
         spm_->nr_deltas_ += stats_[type][0].npatterns;
 
         enc_seq[counter++] = type;
-        timer_pause(&timers_[PRE_TIMER_ENCODE]);
+        timer_pause(&pre_timers_[PRE_TIMER_ENCODE]);
     }
 
-    timer_pause(&timers_[PRE_TIMER_TOTAL]);
+    spm_->Transform(HORIZONTAL);
+    timer_pause(&pre_timers_[PRE_TIMER_TOTAL]);
 
     os << "Encoding sequence: ";
     if (counter == 0)
@@ -558,13 +564,13 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
     for (int i = 1; i < counter; i++)
         os << ", " << SpmTypesNames[enc_seq[i]];
     os << std::endl;
-    
+
     /*
     double t;
 
     for (int i = 0; i < PRE_TIMER_END; i++) {
-        t = timer_secs(&timers_[i]);
-        os << timers_desc_[i] << t << std::endl;
+        t = timer_secs(&pre_timers_[i]);
+        os << pre_timers_desc_[i] << t << std::endl;
     }
     */
 }
@@ -645,6 +651,7 @@ void DRLE_Manager::EncodeSerial(int *xform_buf, int **deltas)
         Encode(t);
         AddIgnore(t);
     }
+    spm_->Transform(HORIZONTAL);
 }
 
 void DRLE_Manager::OutputSortSplits(std::ostream& out)
@@ -1042,7 +1049,7 @@ void DRLE_Manager::CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
     uint64_t max_block_dim;
     DeltaRLE::Stats::iterator tmp;
     DeltaRLE::Stats::reverse_iterator iter, rtmp;
-
+    
     max_block_dim = max_limit_ / block_align;
     temp[max_block_dim].nnz = 0;
     temp[max_block_dim].npatterns = 0;

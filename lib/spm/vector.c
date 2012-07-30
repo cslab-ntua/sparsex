@@ -94,7 +94,6 @@ VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size, size_t *parts,
 	return v;
 }
 
-
 void VECTOR_NAME(_destroy)(VECTOR_TYPE *v)
 {
 	if (v->alloc_type == ALLOC_STD) {

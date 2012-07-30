@@ -25,7 +25,7 @@ struct spm_mt_thread {
 	int node;
 	uint64_t row_start;
 	uint64_t nr_rows;
-	void *data;
+	// uint64_t *col_map;
 	map_t *map;
 	VECTOR_TYPE *x, *y;
 	uint64_t size_assigned;

@@ -379,7 +379,7 @@ int main(int argc, char *argv[])
 #ifdef SPM_NUMA
         spm_crs32_double_sym_mt_numa_destroy(spm_mt);
 #else
-       spm_crs32_double_sym_mt_destroy(spm_mt);
+        spm_crs32_double_sym_mt_destroy(spm_mt);
 #endif
         break;
     case(CSX_SPMV):
