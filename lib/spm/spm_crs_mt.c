@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <string.h>
 #include <assert.h>
 
 #include "macros.h"
@@ -21,6 +22,27 @@
 #include "spm_crs.h"
 #include "spm_crs_mt.h"
 #include "spmv_method.h"
+
+// Set to true when in special benchmark context. It is used to implement
+// the noxmiss benchmark (sequential access pattern in the x vector)
+static int SpmBenchContext = 0;
+
+static double arith_intensity(size_t nr_rows, size_t nr_nzeros)
+{
+    size_t elem_size = sizeof(ELEM_TYPE);
+    size_t idx_size = sizeof(SPM_CRS_IDX_TYPE);
+    return (2.*nr_nzeros) /
+        (nr_nzeros*(elem_size + idx_size) + nr_rows*(idx_size + 2.*elem_size));
+}
+
+void *SPM_CRS_MT_NAME(_init_mmf_noxmiss)(char *mmf_file, uint64_t *rows_nr,
+                                         uint64_t *cols_nr, uint64_t *nz_nr,
+                                         void *metadata)
+{
+    SpmBenchContext = 1;
+    return SPM_CRS_MT_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr,
+                                      metadata);
+}
 
 spm_mt_t *SPM_CRS_MT_NAME(_get_spm)(SPM_CRS_IDX_TYPE *rowptr,
                                     SPM_CRS_IDX_TYPE *colind,
@@ -55,7 +77,7 @@ spm_mt_t *SPM_CRS_MT_NAME(_get_spm)(SPM_CRS_IDX_TYPE *rowptr,
 			csr_mts[split_cnt].row_end = i + 1;
 			ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
 			ret->spm_threads[split_cnt].spmv_fn =
-			    SPM_CRS_MT_NAME(_multiply_base_one);
+			    SPM_CRS_MT_NAME(_multiply);
 			ret->spm_threads[split_cnt].cpu = cpus[split_cnt];
 			ret->spm_threads[split_cnt].row_start = row_start;
 			ret->spm_threads[split_cnt].nr_rows = i + 1 - row_start;
@@ -72,7 +94,7 @@ spm_mt_t *SPM_CRS_MT_NAME(_get_spm)(SPM_CRS_IDX_TYPE *rowptr,
 		csr_mts[split_cnt].row_end = i;
 		ret->spm_threads[split_cnt].spm = &csr_mts[split_cnt];
 		ret->spm_threads[split_cnt].spmv_fn =
-		    SPM_CRS_MT_NAME(_multiply_base_one);
+		    SPM_CRS_MT_NAME(_multiply);
 		ret->spm_threads[split_cnt].cpu = cpus[split_cnt];
 		ret->spm_threads[split_cnt].row_start = row_start;
 		ret->spm_threads[split_cnt].nr_rows = i - row_start;
@@ -103,8 +125,22 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file, uint64_t *rows_nr,
 		printf(",%d", cpus[i]);
 	printf("\n");
 
-	SPM_CRS_TYPE *crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr,
-	                                            nz_nr, metadata);
+	SPM_CRS_TYPE *crs;
+	if (SpmBenchContext)
+		crs = SPM_CRS_NAME(_init_mmf_noxmiss)(mmf_file, rows_nr, cols_nr,
+		                                      nz_nr, metadata);
+	else
+		crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr,
+		                              nz_nr, metadata);
+
+#if SPM_INTENSITY_MAP
+	const char *map_file = "mat_intensity.out";
+	FILE *fmap = fopen(map_file, "w");
+	if (!fmap) {
+		perror("WARNING: fopen() failed");
+		fprintf(stderr, "File: %s\n", map_file);
+	}
+#endif
 
 	spm_mt = malloc(sizeof(spm_mt_t));
 	if (!spm_mt) {
@@ -125,17 +161,32 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file, uint64_t *rows_nr,
 		exit(1);
 	}
 
+	double total_intensity = arith_intensity(crs->nrows, crs->nz);
+	printf("Matrix flop:byte ratio: %.4f\n", total_intensity);
 	for (i = 0, cur_row = 0; i < nr_cpus; i++) {
+		double local_intensity __attribute__((unused)) = 0.0;
 		elems_limit = (*nz_nr - elems_total) / (nr_cpus - i);
 		spm_thread = spm_mt->spm_threads+ i;
 		spm_thread->cpu = cpus[i];
 		spm_thread->spm = crs_mt + i;
 
 		unsigned long elems = 0;
+		size_t sample_elems __attribute__ ((unused)) = 0;
 		crs_mt[i].row_start = cur_row;
 		while (1) {
 			elems += crs->row_ptr[cur_row+1] - crs->row_ptr[cur_row];
+#ifdef SPM_INTENSITY_MAP
+			sample_elems += crs->row_ptr[cur_row+1] - crs->row_ptr[cur_row];
+			if (cur_row && cur_row % 1000 == 0) {
+				local_intensity = arith_intensity(1000, sample_elems);
+				if (fmap)
+					fprintf(fmap, "%zd %lf\n", cur_row, local_intensity);
+				sample_elems = 0;
+			}
+
+#endif
 			cur_row++;
+//			  if (cur_row % row_limit == 0 || cur_row == *rows_nr)
 			if (elems >= elems_limit)
 				break;
 		}
@@ -143,7 +194,17 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file, uint64_t *rows_nr,
 		elems_total += elems;
 		crs_mt[i].row_end = cur_row;
 		crs_mt[i].crs = crs;
+		int nr_rows_part = crs_mt[i].row_end - crs_mt[i].row_start;
+		int nr_nzeros_part = elems;
+		printf("Partition info (id, nr_rows, nr_nzeros, flop:byte): (%d,%d,%d,%.4f)\n",
+		       i, nr_rows_part, nr_nzeros_part,
+		       arith_intensity(nr_rows_part, nr_nzeros_part));
 	}
+
+#ifdef SPM_INTENSITY_MAP
+    if (fmap)
+        fclose(fmap);
+#endif
 
 	free(cpus);
 	return spm_mt;
@@ -192,6 +253,121 @@ void SPM_CRS_MT_NAME(_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 	}
 }
 
+#ifdef SPM_BENCH
+/*
+ *  Benchmark routines
+ *
+ *  All benchmarks assume the special noxmiss initialization of the matrix.
+ *  See `SpmBenchContext' in `spm_crs.c' file.
+ */
+void SPM_CRS_MT_NAME(_noxmiss_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CRS_MT_NAME(_multiply)(spm, in, out);
+}
+
+void SPM_CRS_MT_NAME(_nocolind_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *y = out->elements;
+	ELEM_TYPE *values = crs_mt->crs->values;
+	SPM_CRS_IDX_TYPE *row_ptr = crs_mt->crs->row_ptr;
+	const unsigned long row_start = crs_mt->row_start;
+	const unsigned long row_end = crs_mt->row_end;
+	register ELEM_TYPE yr;
+	unsigned long i,j, k;
+
+	for (i = row_start; i < row_end; i++) {
+		yr = (ELEM_TYPE) 0;
+		for (j = row_ptr[i], k = 0; j < row_ptr[i+1]; j++, k++)
+			yr += (values[j] * x[k]);
+
+		y[i] = yr;
+	}
+}
+
+void SPM_CRS_MT_NAME(_norowptr_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *y = out->elements;
+	ELEM_TYPE *values = crs_mt->crs->values;
+	SPM_CRS_IDX_TYPE *col_ind = crs_mt->crs->col_ind;
+	const unsigned long row_start = crs_mt->row_start;
+	const unsigned long row_end = crs_mt->row_end;
+	register ELEM_TYPE yr;
+	unsigned long i,j;
+
+	size_t nnz = crs_mt->crs->nz;
+	size_t nrows = crs_mt->crs->nrows;
+	size_t row_size = nnz / nrows + (nnz % nrows != 0);
+	for (i = row_start; i < row_end; i++) {
+		size_t rs = i*row_size;
+		yr = (ELEM_TYPE) 0;
+		for (j = 0; j < row_size; j++)
+			yr += (values[rs+j] * x[col_ind[rs+j]]);
+
+		y[i] = yr;
+	}
+}
+
+void SPM_CRS_MT_NAME(_norowptr_nocolind_multiply)(void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
+{
+	SPM_CRS_MT_TYPE *crs_mt = (SPM_CRS_MT_TYPE *)spm;
+	ELEM_TYPE *x = in->elements;
+	ELEM_TYPE *y = out->elements;
+	ELEM_TYPE *values = crs_mt->crs->values;
+	const unsigned long row_start = crs_mt->row_start;
+	const unsigned long row_end = crs_mt->row_end;
+	register ELEM_TYPE yr;
+	unsigned long i,j,k;
+
+	size_t nnz = crs_mt->crs->nz;
+	size_t nrows = crs_mt->crs->nrows;
+	size_t row_size = nnz / nrows + (nnz % nrows != 0);
+	for (i = row_start; i < row_end; i++) {
+		size_t rs = i*row_size;
+		yr = (ELEM_TYPE) 0;
+		for (j = 0, k = 0; j < row_size; j++, k++)
+			yr += values[rs+j]*x[k];
+
+		y[i] = yr;
+	}
+}
+
+XSPMV_MT_METH_INIT(
+	SPM_CRS_MT_NAME(_noxmiss_multiply),
+	SPM_CRS_MT_NAME(_init_mmf_noxmiss),
+	SPM_CRS_MT_NAME(_size),
+	SPM_CRS_MT_NAME(_destroy),
+	sizeof(ELEM_TYPE)
+)
+
+XSPMV_MT_METH_INIT(
+	SPM_CRS_MT_NAME(_norowptr_multiply),
+	SPM_CRS_MT_NAME(_init_mmf_noxmiss),
+	SPM_CRS_MT_NAME(_size),
+	SPM_CRS_MT_NAME(_destroy),
+	sizeof(ELEM_TYPE)
+)
+
+XSPMV_MT_METH_INIT(
+	SPM_CRS_MT_NAME(_nocolind_multiply),
+	SPM_CRS_MT_NAME(_init_mmf_noxmiss),
+	SPM_CRS_MT_NAME(_size),
+	SPM_CRS_MT_NAME(_destroy),
+	sizeof(ELEM_TYPE)
+)
+
+XSPMV_MT_METH_INIT(
+	SPM_CRS_MT_NAME(_norowptr_nocolind_multiply),
+	SPM_CRS_MT_NAME(_init_mmf_noxmiss),
+	SPM_CRS_MT_NAME(_size),
+	SPM_CRS_MT_NAME(_destroy),
+	sizeof(ELEM_TYPE)
+)
+
+#endif  /* SPM_BENCH */
 
 // Multiplication for one-based indexing of rows and column indices.
 void SPM_CRS_MT_NAME(_multiply_base_one)(void *spm, VECTOR_TYPE *in,

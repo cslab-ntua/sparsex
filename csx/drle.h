@@ -90,6 +90,8 @@ public:
      */
     DeltaRLE::Stats GenerateStats(SPM *spm, uint64_t rs, uint64_t re);
     DeltaRLE::Stats GenerateStats(uint64_t rs, uint64_t re);
+    void GenerateDeltaStats(SPM *spm, uint64_t rs, uint64_t re,
+                            DeltaRLE::Stats &stats);
 
     /**
      *  Generate statistics for all available patterns for the matrix owned by
@@ -161,7 +163,7 @@ public:
      *  @return     score of the type.
      *  @see GenAllStats()
      */
-    uint64_t GetTypeScore(SpmIterOrder type);
+    long GetTypeScore(SpmIterOrder type);
 
     /**
      *  Encode all the patterns of the specified type.
@@ -305,8 +307,8 @@ private:
      *  @param stats stats of the sub-matrix so far.
      */
     void UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
-                     DeltaRLE::Stats &stats);
-    void UpdateStats(std::vector<uint64_t> &xs, DeltaRLE::Stats &stats);
+                     DeltaRLE::Stats &stats,
+                     std::vector<SpmRowElem*> &elems);
 
     /**
      *  Add stats of a type.
@@ -324,7 +326,8 @@ private:
      *  @param align block's main dimension.
      */
     void UpdateStatsBlock(std::vector<uint64_t> &xs,
-                          DeltaRLE::Stats &stats, uint64_t align);
+                          DeltaRLE::Stats &stats, uint64_t align,
+                          std::vector<SpmRowElem*> &elems);
 
     /**
      *  Used when windows mode is enabled to adapt the stats.

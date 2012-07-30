@@ -355,6 +355,7 @@ public:
         }
     };
 
+    // Stats[0] -> delta values (encoded with this DRLE)
     typedef std::map<uint64_t, DeltaRLE::StatsVal> Stats;
 
 protected:
@@ -408,13 +409,16 @@ class SpmPattern
 {
 public:
     DeltaRLE *pattern;
+    bool in_pattern;    // only for statistics
+    bool pattern_start; // only for statistics (pattern start)
 
-    SpmPattern(void) : pattern(NULL) { }
+    SpmPattern(void) : pattern(NULL), in_pattern(false), pattern_start(false) { }
     SpmPattern(const SpmPattern &spm_p)
     {
         DeltaRLE *p;
-
         this->pattern = ((p = spm_p.pattern) == NULL) ? NULL : p->Clone();
+        this->in_pattern = spm_p.in_pattern;
+        this->pattern_start = spm_p.pattern_start;
     }
 
     ~SpmPattern()
@@ -434,6 +438,8 @@ public:
         DeltaRLE *p;
 
         this->pattern = ((p = spm_p.pattern) == NULL) ? NULL : p->Clone();
+        this->in_pattern = spm_p.in_pattern;
+        this->pattern_start = spm_p.pattern_start;
         return *this;
     }
 };

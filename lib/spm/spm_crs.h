@@ -33,6 +33,11 @@ void *CRS_NAME(val_type, ci_bits, _init_mmf)(char *mmf_file, \
                                              uint64_t *cols_nr, \
                                              uint64_t *nz_nr, void *metadata); \
 \
+void *CRS_NAME(val_type, ci_bits, _init_mmf_noxmiss)(char *mmf_file, \
+                                             uint64_t *rows_nr, \
+                                             uint64_t *cols_nr, \
+                                             uint64_t *nz_nr, void *metadata); \
+\
 void CRS_NAME(val_type, ci_bits, _destroy)(void *crs); \
 \
 uint64_t CRS_NAME(val_type, ci_bits, _size)(void *spm); \

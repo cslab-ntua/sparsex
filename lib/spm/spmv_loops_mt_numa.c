@@ -73,7 +73,6 @@ static void *do_spmv_thread(void *arg)
 
 	spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
 	tsc_shut(&thread_tsc);
-
 	return NULL;
 }
 

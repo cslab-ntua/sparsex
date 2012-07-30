@@ -16,6 +16,7 @@
 #include <inttypes.h> /* PRIu64 */
 #include <libgen.h>
 #include <assert.h>
+#include <float.h>
 
 #include "method.h"
 #include "spmv_method.h"
@@ -50,7 +51,37 @@ static void parse_block_dims(const char *arg, int *r, int *c)
 	free(dims);
 }
 
-int is_numa(char *method)
+static double calc_imbalance(void *m)
+{
+	spm_mt_t *spm_mt = (spm_mt_t *) m;
+	size_t i;
+
+	double min_time = DBL_MAX;
+	double max_time = 0.0;
+	double total_time = 0.0;
+	size_t worst = -1;
+	for (i = 0; i < spm_mt->nr_threads; ++i) {
+		spm_mt_thread_t *spm = &(spm_mt->spm_threads[i]);
+		double thread_time = spm->secs;
+		total_time += thread_time;
+		if (thread_time > max_time) {
+			max_time = thread_time;
+			worst = i;
+		}
+
+		if (thread_time < min_time)
+			min_time = thread_time;
+	}
+
+	double ideal_time = total_time / spm_mt->nr_threads;
+	printf("Worst thread: %zd\n", worst);
+	printf("Expected perf. improvement: %.2f %%\n",
+	       100*(max_time / ideal_time - 1));
+	return (max_time - min_time) / min_time;
+}
+
+#ifdef SPM_NUMA
+static int is_numa(char *method)
 {
 	char *numa_string = method + strlen(method) - strlen("numa_multiply");
 
@@ -58,6 +89,7 @@ int is_numa(char *method)
 		return 1;
 	return 0;
 }
+#endif
 
 int main(int argc, char **argv)
 {
@@ -303,6 +335,8 @@ int main(int argc, char **argv)
 			}
 
 			double flops = (double)(loops_nr*nnz*2) / ((double) 1000*1000*t);
+			double imbalance = calc_imbalance(m);
+			printf("Load imbalance: %.2f %%\n", 100*imbalance);
 			if (spmv_meth->flag != 3)
 				printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method,
 				       basename(mmf_file), spmv_meth->size_fn(m), t, flops);

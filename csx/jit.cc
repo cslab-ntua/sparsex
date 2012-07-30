@@ -419,7 +419,6 @@ void CsxJit::GenCode(std::ostream &log)
 
         // Substitute and compile into an LLVM module
         compiler_->SetLogStream(&log);
-        //compiler_->SetDebugMode(true);
         module_ = DoCompile(source_tmpl.Substitute(hooks));
         if (!module_) {
             log << "compilation failed for thread " << thread_id_ << "\n";
@@ -433,7 +432,6 @@ void CsxJit::GenCode(std::ostream &log)
 
         // Substitute and compile into an LLVM module
         compiler_->SetLogStream(&log);
-        //compiler_->SetDebugMode(true);
         module_ = DoCompile(source_tmpl.Substitute(hooks));
         if (!module_) {
             log << "compilation failed for thread " << thread_id_ << "\n";

@@ -428,7 +428,7 @@ void *PreprocessThread(void *thread_info)
         data->buffer << "==> Thread: #" << data->thread_no << std::endl;
 
         // Initialize the DRLE manager.
-        DrleMg = new DRLE_Manager(data->spm, 4, 255-1, 0.05, data->wsize,
+        DrleMg = new DRLE_Manager(data->spm, 4, 255, 0.05, data->wsize,
                                   DRLE_Manager::SPLIT_BY_NNZ,
                                   data->sampling_portion, data->samples_max,
                                   data->split_blocks, false);

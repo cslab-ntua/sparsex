@@ -9,8 +9,43 @@
  */
 
 #include "spmv.h"
+#include <cstdio>
+#include <cfloat>
 
 static const char *program_name;
+
+//
+// FIXME: This is a duplicate of calc_imbalance() in libspmv
+// 
+static double CalcImbalance(void *m)
+{
+    spm_mt_t *spm_mt = (spm_mt_t *) m;
+    size_t i;
+    
+    double min_time = DBL_MAX;
+    double max_time = 0.0;
+    double total_time = 0.0;
+    size_t worst = -1;
+    for (i = 0; i < spm_mt->nr_threads; ++i) {
+        spm_mt_thread_t *spm = &(spm_mt->spm_threads[i]);
+        double thread_time = spm->secs;
+        printf("thread %zd: %f\n", i, thread_time);
+        total_time += thread_time;
+        if (thread_time > max_time) {
+            max_time = thread_time;
+            worst = i;
+        }
+
+        if (thread_time < min_time)
+            min_time = thread_time;
+    }
+
+    double ideal_time = total_time / spm_mt->nr_threads;
+    printf("Worst thread: %zd\n", worst);
+    printf("Expected perf. improvement: %.2f %%\n",
+           100*(max_time / ideal_time - 1));
+    return (max_time - min_time) / min_time;
+}
 
 void PrintUsage(std::ostream &os)
 {
@@ -61,6 +96,8 @@ int main(int argc, char **argv)
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
+        double imbalance = CalcImbalance(spm_mt);
+        std::cout << "Load imbalance: " << 100*imbalance << "%\n";
         std::cout << "=== END BENCHMARK ===" << std::endl;
         PutSpmMt(spm_mt);
     }

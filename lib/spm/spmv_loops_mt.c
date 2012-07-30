@@ -34,6 +34,7 @@ static void *do_spmv_thread(void *arg)
 	SPMV_NAME(_fn_t) *spmv_mt_fn = spm_mt_thread->spmv_fn;
 	setaffinity_oncpu(spm_mt_thread->cpu);
 	int i;
+    tsc_t thread_tsc;
 
 #ifdef SPMV_PRFCNT
 	prfcnt_t *prfcnt = (prfcnt_t *) spm_mt_thread->data;
@@ -41,9 +42,12 @@ static void *do_spmv_thread(void *arg)
 	prfcnt_start(prfcnt);
 #endif
 
+    tsc_init(&thread_tsc);
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
+        tsc_start(&thread_tsc);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
+        tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 	}
 
@@ -51,6 +55,8 @@ static void *do_spmv_thread(void *arg)
 	prfcnt_pause(prfcnt);
 #endif
 
+    spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
+    tsc_shut(&thread_tsc);
 	return NULL;
 }
 
@@ -69,7 +75,7 @@ static void *do_spmv_thread_main_swap(void *arg)
 	prfcnt_t *prfcnt;
 #endif
 	SPMV_NAME(_fn_t) *spmv_mt_fn;
-	tsc_t tsc;
+	tsc_t total_tsc, thread_tsc;
 
 	spm_mt_thread = arg;
 	spmv_mt_fn = spm_mt_thread->spmv_fn;
@@ -82,8 +88,9 @@ static void *do_spmv_thread_main_swap(void *arg)
 
 	// Assert this is a square matrix and swap is ok.
 	assert(x->size == y->size);
-	tsc_init(&tsc);
-	tsc_start(&tsc);
+	tsc_init(&total_tsc);
+	tsc_init(&thread_tsc);
+	tsc_start(&total_tsc);
 #ifdef SPMV_PRFCNT
 	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
 	prfcnt_start(prfcnt);
@@ -91,16 +98,20 @@ static void *do_spmv_thread_main_swap(void *arg)
 	int i;
 	for (i = 0; i < loops_nr; i++) {
 		pthread_barrier_wait(&barrier);
+		tsc_start(&thread_tsc);
 		spmv_mt_fn(spm_mt_thread->spm, x, y);
+		tsc_pause(&thread_tsc);
 		pthread_barrier_wait(&barrier);
 		SWAP(x, y);
 	}
-	tsc_pause(&tsc);
+	tsc_pause(&total_tsc);
 #ifdef SPMV_PRFCNT
 	prfcnt_pause(prfcnt);
 #endif
-	secs = tsc_getsecs(&tsc);
-	tsc_shut(&tsc);
+	spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
+	secs = tsc_getsecs(&total_tsc);
+	tsc_shut(&total_tsc);
+	tsc_shut(&thread_tsc);
 
 	return NULL;
 }

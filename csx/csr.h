@@ -132,10 +132,10 @@ public:
     { }
 
     iterator(CSR<IndexType, ValueType> *csr, IndexType cnt)
-        : csr_(csr)
+        : csr_(csr),
+          curr_row_(0),
+          curr_elem_(0)
     {
-        curr_row_ = 0;
-        curr_elem_ = 0;
         for (IndexType i = 0; i < cnt; i++)
             ++(*this);
     }
@@ -171,13 +171,12 @@ public:
         assert(curr_row_ <= csr_->nr_rows_ && "out of bounds");
         assert(curr_elem_ < csr_->nr_nzeros_ && "out of bounds");
 
-        CooElem ret;
-        ret.y = static_cast<uint64_t>(curr_row_ + !csr_->zero_based_);
-        ret.x = static_cast<uint64_t>(csr_->colind_[curr_elem_]);
+        CooElem ret;    // CooElem's are one-based!
+        ret.y = static_cast<uint64_t>(curr_row_ + 1);
+        ret.x = static_cast<uint64_t>(csr_->colind_[curr_elem_] + csr_->zero_based_);
         ret.val = static_cast<double>(csr_->values_[curr_elem_]);
-        // std::cout << "(" << ret.y << ", " << ret.x << ", " << ret.val
-        //           << ")" << std::endl;
-        // std::cout << ret << std::endl;
+//         std::cout << "(" << ret.y << ", " << ret.x << ", " << ret.val
+//                   << ")" << std::endl;
         return ret;
     }
 

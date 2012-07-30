@@ -30,7 +30,6 @@ void *SPM_VBL_NAME(_init_mmf)(char *mmf_file, uint64_t *nrows, uint64_t *ncols,
 	                                            nnz, metadata);
 	SPM_VBL_TYPE *vbl = SPM_VBL_NAME(_init_crs)(crs);
 	SPM_CRS_NAME(_destroy)(crs);
-
 	return vbl;
 }
 

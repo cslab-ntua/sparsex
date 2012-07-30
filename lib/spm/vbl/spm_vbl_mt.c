@@ -22,6 +22,8 @@
 #include "spm_vbl.h"
 #include "spm_vbl_mt.h"
 
+#include "tsc.h"
+
 static void SPM_VBL_MT_NAME(_split)(SPM_VBL_TYPE *vbl,
                                     SPM_CRS_IDX_TYPE nr_splits,
                                     SPM_CRS_IDX_TYPE *splits,
@@ -38,12 +40,16 @@ void *SPM_VBL_MT_NAME(_init_mmf)(char *mmf_file,
 	SPM_VBL_TYPE *vbl;
 	SPM_VBL_MT_TYPE *vbl_mt;
 	SPM_CRS_TYPE *crs;
+	tsc_t init_tsc;
 
 	// set affinity of the current thread
 	mt_get_options(&nr_cpus, &cpus);
 	setaffinity_oncpu(cpus[0]);
 
 	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr, metadata);
+
+	tsc_init(&init_tsc);
+	tsc_start(&init_tsc);
 	vbl = SPM_VBL_NAME(_init_crs)(crs);
 
 	spm_mt = malloc(sizeof(spm_mt_t));
@@ -84,6 +90,10 @@ void *SPM_VBL_MT_NAME(_init_mmf)(char *mmf_file,
 	free(bsplits);
 	free(cpus);
 	SPM_CRS_NAME(_destroy)(crs);
+
+	tsc_pause(&init_tsc);
+	printf("VBL conversion time: %f\n", tsc_getsecs(&init_tsc));
+	tsc_shut(&init_tsc);
 	return spm_mt;
 }
 

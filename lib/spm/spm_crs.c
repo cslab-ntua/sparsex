@@ -17,10 +17,24 @@
 #include "mmf.h"
 #include "spmv_method.h"
 
+// Set to true when in special benchmark context. It is used to implement
+// the noxmiss benchmark (sequential access pattern in the x vector)
+static int SpmBenchContext = 0;
+
+void *SPM_CRS_NAME(_init_mmf_noxmiss)(char *mmf_file, uint64_t *nrows, uint64_t *ncols,
+                                      uint64_t *nnz, void *metadata)
+{
+	SpmBenchContext = 1;
+	return SPM_CRS_NAME(_init_mmf)(mmf_file, nrows, ncols, nnz, metadata);
+}
+
+
 void *SPM_CRS_NAME(_init_mmf)(char *mmf_file, uint64_t *nrows, uint64_t *ncols,
                               uint64_t *nnz, void *metadata)
 {
 	SPM_CRS_TYPE *crs;
+	size_t row_size = 0;
+
 	crs = malloc(sizeof(SPM_CRS_TYPE));
 	if (!crs){
 		perror("malloc failed\n");
@@ -31,6 +45,16 @@ void *SPM_CRS_NAME(_init_mmf)(char *mmf_file, uint64_t *nrows, uint64_t *ncols,
 	crs->nrows = *nrows;
 	crs->ncols = *ncols;
 	crs->nz = *nnz;
+
+	if (SpmBenchContext) {
+#define iceil(a,b) ((a) / (b) + ((a) % (b) != 0))
+		row_size = iceil(crs->nz, crs->nrows);
+		crs->ncols = row_size*iceil(crs->ncols, row_size);
+
+		crs->nz = row_size * crs->nrows;
+		printf("%zd, %zd, %zd\n", row_size, crs->ncols, crs->nz);
+#undef iceil
+	}
 
 	// Allocate space for arrays.
 	crs->values = malloc(sizeof(ELEM_TYPE)*crs->nz);
@@ -68,8 +92,19 @@ void *SPM_CRS_NAME(_init_mmf)(char *mmf_file, uint64_t *nrows, uint64_t *ncols,
 		// Update values and col_ind arrays.
 		crs->values[val_i] = (ELEM_TYPE)val;
 		crs->col_ind[val_i] = (SPM_CRS_IDX_TYPE) col;
+		if (SpmBenchContext) {
+			// Implement the noxmiss benchmark
+			crs->col_ind[val_i] = val_i % row_size;
+		}
+
 		val_i++;
 	}
+
+	if (SpmBenchContext) {
+		for (; val_i < crs->nz; val_i++)
+			crs->col_ind[val_i] = val_i % crs->ncols;
+	}
+
 	crs->row_ptr[row_i++] = val_i;
 
 	// More sanity checks.
@@ -96,7 +131,7 @@ uint64_t SPM_CRS_NAME(_size)(void *spm)
 
 	ret = crs->nz * (sizeof(ELEM_TYPE) + sizeof(UINT_TYPE(SPM_CRS_BITS)))
 	    + (crs->nrows + 1) * sizeof(UINT_TYPE(SPM_CRS_BITS));
-	
+
 	return ret;
 }
 
@@ -116,7 +151,7 @@ void SPM_CRS_NAME(_multiply) (void *spm, VECTOR_TYPE *in, VECTOR_TYPE *out)
 		yr = (ELEM_TYPE) 0;
 		for( j = row_ptr[i]; j < row_ptr[i+1]; j++)
 			yr += (values[j] * x[col_ind[j]]);
-		
+
 		y[i] = yr;
 	}
 }

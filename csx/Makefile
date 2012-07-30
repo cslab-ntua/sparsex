@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv libcsx.a libcsx.so
+all: spmv libcsx.a libcsx.so libcsx_test
 
 # Configuration
 llvmconf     = llvm-config
@@ -46,6 +46,7 @@ ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 endif
 
 CXX_COMPILE = $(CXX) $(CPPFLAGS) $(CXXFLAGS)
+CC_COMPILE  = $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK        = $(LD) $(LDFLAGS)
 ARCHIVE     = $(AR) $(AR_FLAGS)
 
@@ -67,6 +68,9 @@ drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 %.o: %.cc %.h
 	$(CXX_COMPILE) -c $<
 
+%.o: %.c %.h
+	$(CC_COMPILE) -c $<
+
 elmerif.o: elmerif.cc elmerif.h spmv.h spm.h csr.h
 	$(CXX_COMPILE) -DSPM_CRS_BITS=32 -c $<
 jit.o: spm.h csx.h drle.h template_text.h jit_util.h jit_config.h
@@ -74,8 +78,9 @@ compiler.o: jit_util.h
 spmv.o: mmf.h csx.h drle.h jit.h ctl_ll.h $(spm_dir)/spm_mt.h $(spm_dir)/mt_lib.h $(spm_dir)/spmv_method.h $(spm_dir)/spm_crs.h $(spm_dir)/spm_mt.h $(prfcnt_dir)/timer.h
 elmerif.o: csr.h spmv.h
 spm.o: mmf.h $(dynarray_dir)/dynarray.h
-drle.o: spm.h
+drle.o: spm.h spm_bits.h
 main.o: spmv.h
+libcsx_test.o: elmerif.h $(spm_dir)/spm_crs.h
 
 libcsx.so: $(CSX_OBJECTS) elmerif.o
 	$(LINK) -shared $^ $(LIBS) $(dynarray_dep) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) -o $@
@@ -86,5 +91,8 @@ libcsx.a: $(CSX_OBJECTS)
 spmv: main.o libcsx.a
 	$(LINK) $(LIBS) $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
 
+libcsx_test: libcsx.so $(spm_dir)/libspmv.o libcsx_test.o
+	$(LINK) $(LIBS) $^ -o $@
+
 clean:
-	rm -f *.o libcsx.so libcsx.a spmv
+	rm -f *.o libcsx.so libcsx.a spmv libcsx_test

@@ -23,6 +23,8 @@
 #include "spm_bcsr_mt.h"
 #include "mult/multiply.h"
 
+#include "tsc.h"
+
 static void SPM_BCSR_MT_NAME(_split)(SPM_BCSR_TYPE *mat,
                                      SPM_CRS_IDX_TYPE nr_splits,
                                      SPM_CRS_IDX_TYPE *splits);
@@ -38,6 +40,7 @@ void *SPM_BCSR_MT_NAME(_init_mmf)(char *mmf_file,
 	SPM_BCSR_TYPE *bcsr;
 	SPM_BCSR_MT_TYPE *bcsr_mt;
 	SPM_CRS_TYPE *crs;
+	tsc_t init_tsc;
 
 	assert(metadata);
 
@@ -46,6 +49,9 @@ void *SPM_BCSR_MT_NAME(_init_mmf)(char *mmf_file,
 	setaffinity_oncpu(cpus[0]);
 
 	crs = SPM_CRS_NAME(_init_mmf)(mmf_file, rows_nr, cols_nr, nz_nr, metadata);
+
+	tsc_init(&init_tsc);
+	tsc_start(&init_tsc);
 	bcsr_metadata_t *meta = (bcsr_metadata_t *) metadata;
 	bcsr = SPM_BCSR_NAME(_init_crs)(crs, meta->br, meta->bc,
 	                                BCSR_PAD_MAX(meta->br, meta->bc));
@@ -86,6 +92,9 @@ void *SPM_BCSR_MT_NAME(_init_mmf)(char *mmf_file,
 	free(splits);
 	free(cpus);
 	SPM_CRS_NAME(_destroy)(crs);
+	tsc_pause(&init_tsc);
+	printf("BCSR conversion time: %f\n", tsc_getsecs(&init_tsc));
+	tsc_shut(&init_tsc);
 	return spm_mt;
 }
 

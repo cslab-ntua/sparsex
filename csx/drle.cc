@@ -24,6 +24,7 @@
 
 #include "spm.h"
 #include "drle.h"
+#include "delta.h"
 
 namespace bll = boost::lambda;
 
@@ -37,8 +38,28 @@ struct RLE {
     T val;
 };
 
+//
+//  FIXME: MaxDelta() could be possibly merged with DeltaEncode()
+// 
+uint64_t MaxDelta(std::vector<uint64_t> xs)
+{
+    uint64_t prev_x, curr_x, max_delta;
+
+    max_delta = 0;
+    prev_x = curr_x = xs[0];
+    for (size_t i = 1; i < xs.size(); ++i) {
+        curr_x = xs[i];
+        uint64_t delta = curr_x - prev_x;
+        if (delta > max_delta)
+            max_delta = delta;
+        prev_x = curr_x;
+    }
+
+    return max_delta;
+}
+
 template<typename T>
-T DeltaEncode(T input)
+T DeltaEncode(T input, size_t &max_delta)
 {
     T output;
     typename T::iterator in, out;
@@ -48,13 +69,24 @@ T DeltaEncode(T input)
     in = input.begin();
     out = output.begin();
     prev = *out++ = *in++;
+    max_delta = 0;
     while (in < input.end()) {
         curr = *in++;
-        *out++ = curr - prev;
+        size_t delta = curr - prev;
+        *out++ = delta;
+        if (delta > max_delta)
+            max_delta = delta;
         prev = curr;
     }
 
     return output;
+}
+
+template<typename T>
+T DeltaEncode(T input)
+{
+    size_t max_delta;
+    return DeltaEncode(input, max_delta);
 }
 
 template<typename T>
@@ -153,21 +185,65 @@ DeltaRLE::Stats DRLE_Manager::GenerateStats(SPM *spm, uint64_t rs, uint64_t re)
 {
     std::vector<uint64_t> xs;
     DeltaRLE::Stats stats;
+    std::vector<SpmRowElem*> elems;
 
     for (uint64_t i = rs; i < re; ++i) {
-        for (const SpmRowElem *elem = spm->RowBegin(i);
+        for (SpmRowElem *elem = spm->RowBegin(i);
              elem != spm->RowEnd(i); ++elem) {
             if (elem->pattern == NULL) {
                 xs.push_back(elem->x);
+                elems.push_back(elem);
                 continue;
             }
 
-            UpdateStats(spm, xs, stats);
+            UpdateStats(spm, xs, stats, elems);
         }
 
-        UpdateStats(spm, xs, stats);
+        UpdateStats(spm, xs, stats, elems);
     }
+
     return stats;
+}
+
+void DRLE_Manager::GenerateDeltaStats(SPM *spm, uint64_t rs, uint64_t re,
+                                      DeltaRLE::Stats &stats)
+{
+    std::vector<uint64_t> xs;
+    
+    for (uint64_t i = rs; i < re; ++i) {
+        int delta_bytes = 0;
+        for (SpmRowElem *elem = spm->RowBegin(i);
+             elem != spm->RowEnd(i); ++elem) {
+            if (!elem->in_pattern)
+                xs.push_back(elem->x);
+            else
+                elem->in_pattern = false;   // reset the marking
+
+            if (elem->pattern_start) {
+                // new pattern in the row creates a new delta unit
+                if (xs.size()) {
+                    delta_bytes = DeltaSize_getBytes(getDeltaSize(MaxDelta(xs)));
+                    stats[0].npatterns +=
+                        xs.size() / max_limit_ + (xs.size() % max_limit_ != 0);
+
+                    stats[0].nnz += ((4 - delta_bytes)*xs.size()) / 4;
+                    xs.clear();
+                }
+                elem->pattern_start = false;    // reset the marking
+            }
+
+            assert(!elem->pattern_start);
+            assert(!elem->in_pattern);
+        }
+        
+        if (xs.size()) {
+            delta_bytes = DeltaSize_getBytes(getDeltaSize(MaxDelta(xs)));
+            stats[0].npatterns +=
+                xs.size() / max_limit_ + (xs.size() % max_limit_ != 0);
+            stats[0].nnz += ((4 - delta_bytes)*xs.size()) / 4;
+            xs.clear();
+        }
+    }
 }
 
 void DRLE_Manager::GenAllStats()
@@ -177,6 +253,11 @@ void DRLE_Manager::GenAllStats()
     
     stats_.clear();
     deltas_to_encode_.clear();
+
+    // first generate stats for the delta type
+#ifdef SPM_HEUR_NEW
+    GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), stats_[NONE]);
+#endif
     for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
         if (xforms_ignore_[t])
             continue;
@@ -239,6 +320,10 @@ void DRLE_Manager::GenAllStats()
             else
                 deltas_to_encode_[type].insert(tmp->first);
         }
+
+#ifdef SPM_HEUR_NEW
+        GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), *sp);
+#endif
     }
 }
 
@@ -292,18 +377,17 @@ void DRLE_Manager::RemoveAll()
 SpmIterOrder DRLE_Manager::ChooseType()
 {
     SpmIterOrder ret;
-    uint64_t max_out;
+    long max_score;
     DRLE_Manager::StatsMap::iterator iter;
 
     ret = NONE;
-    max_out = 0;
+    max_score = 0;
     for (iter = stats_.begin(); iter != stats_.end(); ++iter){
-        uint64_t out = GetTypeScore(iter->first);
-
-        if (out == 0) {
+        long score = GetTypeScore(iter->first);
+        if (score < 0) {
             AddIgnore(iter->first);
-        } else if (out > max_out) {
-            max_out = out;
+        } else if (score > max_score) {
+            max_score = score;
             ret = iter->first;
         }
     }
@@ -311,11 +395,11 @@ SpmIterOrder DRLE_Manager::ChooseType()
     return ret;
 }
 
-uint64_t DRLE_Manager::GetTypeScore(SpmIterOrder type)
+long DRLE_Manager::GetTypeScore(SpmIterOrder type)
 {
     DeltaRLE::Stats *sp;
     DeltaRLE::Stats::iterator iter;
-    uint64_t ret;
+    long ret;
 
     ret = 0;
     if (stats_.find(type) == stats_.end())
@@ -323,16 +407,38 @@ uint64_t DRLE_Manager::GetTypeScore(SpmIterOrder type)
         
     sp = &stats_[type];
 
-    uint64_t nr_nzeros_encoded = 0;
-    uint64_t nr_patterns = 0;
+    long nr_nzeros_encoded = 0;
+    long nr_patterns = 0;
+    long nr_deltas = spm_->nr_deltas_;
 
     for (iter = sp->begin(); iter != sp->end(); ++iter) {
-        nr_nzeros_encoded += iter->second.nnz;
-        nr_patterns += iter->second.npatterns;
+        if (iter->first == 0 && type != NONE) {
+            nr_deltas += iter->second.npatterns;
+        } else {
+            nr_nzeros_encoded += iter->second.nnz;
+            nr_patterns += iter->second.npatterns;
+        }
     }
 
-    ret = nr_nzeros_encoded - nr_patterns;
-    return ret;
+#ifdef SPM_HEUR_NEW
+    long nr_switches;
+    if (type == NONE)
+        nr_switches = nr_deltas;
+    else
+        nr_switches = nr_deltas + nr_patterns;
+
+    double coeff;
+    char *coeff_str = getenv("_COEFF");
+    if (coeff_str)
+        coeff = atof(coeff_str);
+    else
+        coeff = 1.;
+
+     ret = (nr_nzeros_encoded - nr_patterns)*coeff - nr_switches;
+#else
+     ret = nr_nzeros_encoded - nr_patterns;
+#endif
+     return ret;
 }
 
 void DRLE_Manager::Encode(SpmIterOrder type)
@@ -433,6 +539,9 @@ void DRLE_Manager::EncodeAll(std::ostream &os)
         os << "Encode to " << SpmTypesNames[type] << std::endl;
         
         Encode(type);
+
+        // Add the deltas produced by this encoding
+        spm_->nr_deltas_ += stats_[type][0].npatterns;
 
         enc_seq[counter++] = type;
         timer_pause(&timers_[PRE_TIMER_ENCODE]);
@@ -587,6 +696,7 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
                 SpmRowElem *last_elem = &encoded.back();
                 rle_start = col;
                 rle_freq = rle.freq;
+#ifndef SPM_NUMA
                 if (last_elem->pattern == NULL) {
                     // include the previous element, too
                     rle_start -= rle.val;
@@ -594,6 +704,7 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
                     encoded.pop_back();
                     --vi;
                 }
+#endif
             } else {
                 // we are the first unit in the row
                 rle_start = col;
@@ -1087,49 +1198,79 @@ void DRLE_Manager::UpdateStats(SpmIterOrder type, DeltaRLE::Stats stats)
     }
 }
 
-void DRLE_Manager::UpdateStats(std::vector<uint64_t> &xs,
-                               DeltaRLE::Stats &stats)
-{
-    UpdateStats(spm_, xs, stats);
-}
-
 void DRLE_Manager::UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
-                               DeltaRLE::Stats &stats)
+                               DeltaRLE::Stats &stats,
+                               std::vector<SpmRowElem*> &elems)
 {
     std::vector< RLE<uint64_t> > rles;
     uint64_t block_align = IsBlockType(spm->type_);
 
     if (block_align) {
-        DRLE_Manager::UpdateStatsBlock(xs, stats, block_align);
+        DRLE_Manager::UpdateStatsBlock(xs, stats, block_align, elems);
         return;
     }
 
+    assert(xs.size() == elems.size());
     if (xs.size() == 0)
         return;
 
     rles = RLEncode(DeltaEncode(xs));
     uint64_t col = 0;
     bool last_rle_patt = false; // turn on for encoded units
+    std::vector<SpmRowElem*>::iterator ei = elems.begin();
+    std::vector<SpmRowElem*>::iterator ee = elems.end();
     FOREACH(RLE<uint64_t> &rle, rles) {
-        int real_limit = (col && !last_rle_patt) ? min_limit_ - 1 : min_limit_;
+#ifndef SPM_NUMA
+        long real_limit = (col && !last_rle_patt) ? min_limit_ - 1 : min_limit_;
+#else
+        long real_limit = min_limit_;
+#endif
         if (rle.freq > 1 && rle.freq >= real_limit) {
-            uint64_t real_nnz = (col && !last_rle_patt) ?
+#ifndef SPM_NUMA
+            long real_nnz = (col && !last_rle_patt) ?
                 rle.freq + 1 : rle.freq;
+#else
+            long real_nnz = rle.freq;
+#endif
+            long rem_nnz = real_nnz % max_limit_;
             stats[rle.val].nnz += real_nnz;
-            stats[rle.val].npatterns += (real_nnz) / max_limit_ +
-                                        (real_nnz % max_limit_ != 0);
+            stats[rle.val].npatterns += real_nnz / max_limit_ + (rem_nnz != 0);
+            if (rem_nnz && rem_nnz < min_limit_) {
+                // remove the pattern for the remainder elements; too short
+                stats[rle.val].npatterns--;
+                stats[rle.val].nnz -= rem_nnz;
+            } else {
+                rem_nnz = 0;
+            }
+
+            if (real_nnz > rle.freq)
+                --ei;
+
+            // Mark the elements of the pattern and its start
+            (*ei)->pattern_start = true;
+            for (long i = 0; i < real_nnz - rem_nnz; ++i) {
+                assert(ei < ee);
+                (*ei)->in_pattern = true;
+                ++ei;
+            }
+
             last_rle_patt = true;
         } else {
             last_rle_patt = false;
+            ei += rle.freq;
         }
+
         col += rle.val;
     }
+
     xs.clear();
+    elems.clear();
 }
 
 void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
                                     DeltaRLE::Stats &stats,
-                                    uint64_t block_align)
+                                    uint64_t block_align,
+                                    std::vector<SpmRowElem*> &elems)
 {
     std::vector<RLE<uint64_t> > rles;
 
@@ -1140,15 +1281,16 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
     rles = RLEncode(DeltaEncode(xs));
 
     uint64_t unit_start = 0;
-
+    std::vector<SpmRowElem*>::iterator ei = elems.begin();
+    std::vector<SpmRowElem*>::iterator ee = elems.end();
     FOREACH (RLE<uint64_t> &rle, rles) {
         unit_start += rle.val;
         if (rle.val == 1) {
             // Start of the real block is at `unit_start - 1' with
             // one-based indexing. When computing the `%' we need
             // zero-based indexing.
-            uint64_t nr_elem;
-            uint64_t skip_front;
+            long nr_elem;
+            long skip_front;
 
             if (unit_start == 1) {
                 skip_front = 0;
@@ -1160,23 +1302,39 @@ void DRLE_Manager::UpdateStatsBlock(std::vector<uint64_t> &xs,
                 nr_elem = rle.freq + 1;
             }
             
+            if (nr_elem > rle.freq)
+                --ei;
+
             if (nr_elem > skip_front)
                 nr_elem -= skip_front;
             else
                 nr_elem = 0;
 
-            uint64_t other_dim = nr_elem / block_align;
+            long other_dim = nr_elem / block_align;
 
+            ei += std::min(skip_front, nr_elem);
             if (other_dim >= 2) {
                 stats[other_dim].nnz += other_dim * block_align;
                 stats[other_dim].npatterns++;
-            }
-        }
 
+                // Mark the elements
+                (*ei)->pattern_start = true;
+                for (uint64_t i = 0; i < nr_elem; ++i) {
+                    assert(ei < ee);
+                    if (i < stats[other_dim].nnz)
+                        (*ei)->in_pattern = true;
+                    ++ei;
+                }
+            }
+        } else {
+            ei += rle.freq;
+        }
+        
         unit_start += rle.val * (rle.freq - 1);
     }
 
     xs.clear();
+    elems.clear();
 }
 
 void DRLE_Manager::CorrectStats(SpmIterOrder type, double factor)
@@ -1322,7 +1480,12 @@ void DRLE_Manager::OutStats(std::ostream &os)
 {
     DRLE_Manager::StatsMap::iterator iter;
     for (iter = stats_.begin(); iter != stats_.end(); ++iter){
-         if (!iter->second.empty()) {
+#if SPM_HEUR_NEW
+        bool valid_stat = (iter->first == 0) || (iter->first != 0 && iter->second.size() > 1);
+#else
+        bool valid_stat = !iter->second.empty();
+#endif
+        if (valid_stat) {
              os << SpmTypesNames[iter->first] << "\ts:" 
                 << GetTypeScore(iter->first);
              DRLE_OutStats(iter->second, *(spm_), os);

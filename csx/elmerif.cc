@@ -9,6 +9,7 @@
  */
 #include <iostream>
 #include <math.h>
+#include <cassert>
 #include <cfloat>
 #include "spm.h"
 #include "spmv.h"
@@ -65,35 +66,36 @@ void __attribute__ ((destructor)) finalize() {
 }
 
 #ifdef _DEBUG_
-elmer_value_t *y_copy = 0;
-elmer_value_t *values_last = 0;
+static __thread elmer_value_t *y_copy = 0;
+static __thread elmer_value_t *values_last = 0;
+static __thread struct csr_s {
+    elmer_index_t *rowptr_;
+    elmer_index_t *colind_;
+    elmer_value_t *values_;
+    elmer_index_t nr_rows_;
+} shadow_csr_;
 
-static void matvec_csr(const elmer_index_t *rowptr,
-                       const elmer_index_t *colind,
-                       const elmer_value_t *values,
-                       elmer_index_t nr_rows,
+static void matvec_csr(struct csr_s *csr,
                        const elmer_value_t *x,
                        elmer_value_t *y)
 {
     elmer_index_t i, j;
-    for (i = 0; i < nr_rows; ++i) {
+    for (i = 0; i < csr->nr_rows_; ++i) {
         register elmer_value_t yi_ = 0;
-        for (j = rowptr[i] - CSX_IDX_OFFSET;
-             j < rowptr[i+1] - CSX_IDX_OFFSET; ++j) {
-            yi_ += values[j]*x[colind[j] - CSX_IDX_OFFSET];
+        for (j = csr->rowptr_[i] - CSX_IDX_OFFSET;
+             j < csr->rowptr_[i+1] - CSX_IDX_OFFSET; ++j) {
+            yi_ += csr->values_[j]*x[csr->colind_[j] - CSX_IDX_OFFSET];
         }
 
         y[i] = yi_;
     }
 }
 
-static bool equal(elmer_value_t *v1, elmer_value_t *v2,
-                    elmer_index_t n)
+static bool equal(elmer_value_t *v1, elmer_value_t *v2, elmer_index_t n)
 {
     for (elmer_index_t i = 0; i < n; ++i) {
-        if (fabs(v1[i] - v2[i]) > DBL_EPSILON) {
-            std::cout << "Element " << i << " differs: "
-                      << v1[i] << " != " << v2[i] << std::endl;
+        if (fabs(v1[i] - v2[i]) > 1e-6) {
+            printf("Element %d differs: %.6lf != %.6lf\n", i, v1[i], v2[i]);
             return false;
         }
     }
@@ -101,7 +103,7 @@ static bool equal(elmer_value_t *v1, elmer_value_t *v2,
     return true;
 }
 
-#endif
+#endif  // _DEBUG_
 
 void *csx_mattune(elmer_index_t *rowptr,
                   elmer_index_t *colind,
@@ -114,7 +116,7 @@ void *csx_mattune(elmer_index_t *rowptr,
     csx::SPM *spms;
     spm_mt_t *spm_mt;
     uint64_t nr_nzeros = rowptr[nr_rows] - CSX_IDX_OFFSET;
-    uint64_t ws = (nr_rows + nr_nzeros)*sizeof(elmer_index_t) +
+    uint64_t ws = (nr_rows + nr_nzeros + 1)*sizeof(elmer_index_t) +
         nr_nzeros*sizeof(elmer_value_t);
     std::cout << "Rows: " << nr_rows << " "
               << "Cols: " << nr_cols << " "
@@ -138,6 +140,14 @@ void *csx_mattune(elmer_index_t *rowptr,
     timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
     delete[] spms;
 #endif        
+
+#ifdef _DEBUG_
+    // Initialize the shadow CSR for debugging
+    shadow_csr_.rowptr_ = rowptr;
+    shadow_csr_.colind_ = colind;
+    shadow_csr_.values_ = values;
+    shadow_csr_.nr_rows_ = nr_rows;
+#endif  // _DEBUG_
     return spm_mt;
 }
 
@@ -149,10 +159,25 @@ void csx_matvec(void *spm, elmer_value_t *x, elmer_index_t nr_x,
     vector_double_t *vec_x = vector_double_create_from_buff(x, nr_x);
     vector_double_t *vec_y = vector_double_create_from_buff(y, nr_y);
 
+#ifdef _DEBUG_
+    if (!y_copy)
+        y_copy = (elmer_value_t *) malloc(nr_y*sizeof(*y_copy));
+    memcpy(y_copy, y, nr_y*sizeof(*y_copy));
+    matvec_csr(&shadow_csr_, x, y_copy);
+#endif  // _DEBUG_
+
     ++nr_calls;
     timer_start(&timers[TIMER_SPMV]);
     spmv_double_matvec_mt(spm_mt, vec_x, vec_y);
     timer_pause(&timers[TIMER_SPMV]);
+
+#ifdef _DEBUG_
+    std::cout << "Checking result... ";
+    if (equal(vec_y->elements, y_copy, nr_y))
+        std::cout << "DONE" << std::endl;
+    else
+        std::cout << "FAILED" << std::endl;
+#endif  // _DEBUG_
 }
 
 void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
@@ -167,11 +192,6 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
     elmer_value_t *y_ = (elmer_value_t *) v;
 
     timer_start(&timers[TIMER_TOTAL]);
-#ifdef _DEBUG_
-    if (!y_copy)
-        y_copy = (elmer_value_t *) malloc(n_*sizeof(*y_copy));
-    memcpy(y_copy, y_, n_*sizeof(*y_copy));
-    
 #if 0
     size_t nnz = rowptr_[n_] - 1;
     if (!values_last) {
@@ -187,22 +207,12 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
 
     memcpy(values_last, values_, nnz*sizeof(*values_last));
 #endif
-    matvec_csr(rowptr_, colind_, values_, n_, x_, y_copy);
-#endif
 
     if (!*tuned || reinit_) {
         *tuned = csx_mattune(rowptr_, colind_, values_, n_, n_);
     }
 
     csx_matvec(*tuned, x_, n_, y_, n_);
-
-#ifdef _DEBUG_
-    std::cout << "Checking result... ";
-    if (equal(vec_y->elements, y_copy, n_))
-        std::cout << "DONE" << std::endl;
-    else
-        std::cout << "FAILED" << std::endl;
-#endif
     timer_pause(&timers[TIMER_TOTAL]);
 }
 

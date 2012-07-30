@@ -66,10 +66,9 @@ void spm_csx32_double_multiply(void *spm, vector_double_t *in,
 	uint8_t *ctl = csx->ctl;
 	uint8_t *ctl_end = ctl + csx->ctl_size;
 	uint8_t size, flags;
-	uint64_t i;
 	uint8_t patt_id;
 
-	for (i = 0; i < csx->nrows; i++)
+	for (uint64_t i = 0; i < csx->nrows; i++)
 		y_curr[i] = 0;
 
 	do {

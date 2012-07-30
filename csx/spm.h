@@ -56,6 +56,7 @@ private:
     
     // Maximum possible rowptr_size after transformations.
     uint64_t max_rowptr_size_;
+    uint64_t nr_deltas_;
 
     // These are mainly SPM construction classes, so make them friends
     friend class Builder;
@@ -331,9 +332,9 @@ private:
             spm = ret + i;
             limit = (mat.GetNrNonzeros() - cnt) / (nr - i);
             spm->nr_nzeros_ = spm->SetElems(iter, iter_end,
-                                            row_start + !mat.IsZeroBased(),
+                                            row_start + 1,
                                             limit,
-                                            limit + mat.GetNrRows() + !mat.IsZeroBased(),
+                                            limit + mat.GetNrRows() - 1,
                                             mat.GetNrRows() + 1);
             spm->nr_rows_ = spm->rowptr_size_ - 1;
             spm->nr_cols_ = mat.GetNrCols();

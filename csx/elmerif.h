@@ -10,6 +10,8 @@
 #ifndef ELMERIF_H__
 #define ELMERIF_H__
 
+#include <stdint.h>
+
 /* Elmer types for CSR implementation */
 typedef int32_t elmer_index_t;
 typedef double elmer_value_t;

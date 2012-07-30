@@ -58,6 +58,8 @@ std::ostream &operator<<(std::ostream &out, const SpmCooElem e)
 std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
 {
     out << "x:" << elem.x;
+    out << " in_pattern:" << elem.in_pattern;
+    out << " pattern_start:" << elem.pattern_start;
     if (elem.pattern) {
         out << *(elem.pattern);
         out << " vals:{ ";
@@ -226,6 +228,8 @@ void MakeRowElem(const SpmCooElem &p, SpmRowElem *ret)
 {
     ret->x = p.x;
     ret->val = p.val;
+    ret->in_pattern = p.in_pattern;
+    ret->pattern_start = p.pattern_start;
     ret->pattern = (p.pattern == NULL) ? NULL : (p.pattern)->Clone();
 }
 
@@ -233,6 +237,8 @@ void MakeRowElem(const SpmRowElem &p, SpmRowElem *ret)
 {
     ret->x = p.x;
     ret->val = p.val;
+    ret->in_pattern = p.in_pattern;
+    ret->pattern_start = p.pattern_start;
     ret->pattern = (p.pattern == NULL) ? NULL : (p.pattern)->Clone();
 }
 
@@ -868,8 +874,10 @@ SpmCooElem SPM::PntIter::operator*()
     e = spm_->elems_ + elem_idx_;
     ret.x = e->x;
     ret.val = e->val;
-    p = e-> pattern;
+    p = e->pattern;
     ret.pattern = (p == NULL) ? NULL : p->Clone();
+    ret.in_pattern = e->in_pattern;
+    ret.pattern_start = e->pattern_start;
     if (p != NULL)
         delete p;
         

@@ -1,4 +1,4 @@
-override MAKE_CPPFLAGS += -I./ -I../
+override MAKE_CPPFLAGS += -I./ -I../ -I../../prfcnt
 override CPPFLAGS += $(MAKE_CPPFLAGS)
 override LDFLAGS += $(MAKE_LDFLAGS)
 
