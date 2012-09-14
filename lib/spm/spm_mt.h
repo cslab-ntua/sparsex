@@ -30,6 +30,7 @@ struct spm_mt_thread {
 	VECTOR_TYPE *x, *y;
 	uint64_t size_assigned;
 	double secs;
+	void *data;
 };
 
 typedef struct spm_mt_thread spm_mt_thread_t;
