@@ -148,9 +148,11 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 		xnodes[xpart] = chosen_node;
 	}
 	*/
-	size_t *parts = malloc(sizeof(*parts)*spm_mt->nr_threads);
-	int *nodes = malloc(sizeof(*nodes)*spm_mt->nr_threads);
-	if (!parts || !nodes) {
+	size_t *xparts = malloc(sizeof(*xparts)*spm_mt->nr_threads);
+	size_t *yparts = malloc(sizeof(*yparts)*spm_mt->nr_threads);
+	int *xnodes = malloc(sizeof(*xnodes)*spm_mt->nr_threads);
+	int *ynodes = malloc(sizeof(*ynodes)*spm_mt->nr_threads);
+	if (!xparts || !yparts || !xnodes || !ynodes) {
 		perror("malloc");
 		exit(1);
 	}
@@ -158,28 +160,29 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	for (i = 0; i < spm_mt->nr_threads; i++) {
 		spm_mt_thread_t *spm = spm_mt->spm_threads + i;
 
-		parts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
-		nodes[i] = spm->node;
+		xparts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
+		yparts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
+		xnodes[i] = spm->node;
+		ynodes[i] = spm->node;
 		if (fn)
 			spm->spmv_fn = fn;
     }
 
 	// Allocate an interleaved x.
 	int alloc_err = 0;
-
-	x = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
-	                                     nodes);
+	x = VECTOR_NAME(_create_interleaved)(rows_nr, xparts, spm_mt->nr_threads,
+	                                     xnodes);
 	VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
-	alloc_err = check_interleaved(x->elements, parts, spm_mt->nr_threads,
-	                              nodes);
+	alloc_err = check_interleaved(x->elements, xparts, spm_mt->nr_threads,
+	                              xnodes);
 	print_alloc_status("input vector", alloc_err);
 
 	// Allocate an interleaved y.
-	y = VECTOR_NAME(_create_interleaved)(rows_nr, parts, spm_mt->nr_threads,
-	                                     nodes);
+	y = VECTOR_NAME(_create_interleaved)(rows_nr, yparts, spm_mt->nr_threads,
+	                                     ynodes);
 	VECTOR_NAME(_init)(y, 0);
-	alloc_err = check_interleaved(y->elements, parts, spm_mt->nr_threads,
-	                              nodes);
+	alloc_err = check_interleaved(y->elements, yparts, spm_mt->nr_threads,
+	                              ynodes);
 	print_alloc_status("output vector", alloc_err);
 
 	// Run benchmark.
@@ -197,10 +200,11 @@ float SPMV_NAME(_bench_mt_loop_numa)(spm_mt_t *spm_mt, unsigned long loops,
 	// free(count);
 	// free(xparts);
 	// free(xnodes);
-	free(parts);
-	free(nodes);
+	free(xparts);
+	free(yparts);
+	free(xnodes);
+	free(ynodes);
 	free(tids);
-
 	return secs;
 }
 

@@ -17,59 +17,110 @@
 #include <sys/mman.h>
 #include <assert.h>
 
-static void fix_interleaving(size_t nr_parts, size_t *parts, const int *nodes)
+#define ALIGN_ADDR(addr, bound) (void *)((unsigned long) addr & ~(bound-1))
+
+static int get_best_node(const size_t *node_scores, int nr_nodes)
 {
-	int i, rem;
-	int curr_page_size, max_page_size;
-	int curr_part, chosen_node;
-	int pagesize = numa_pagesize();
-	int nr_nodes = numa_num_possible_nodes();
-	int *page_to_nodes = (int *) malloc(nr_nodes * sizeof(int));
+    int j;
+    int ret = 0;
+    size_t max_score = node_scores[0];
+    for (j = 1; j < nr_nodes; j++)
+        if (node_scores[j] > max_score) {
+            max_score = node_scores[j];
+            ret = j;
+        }
 
-	for (curr_part = 0; curr_part < nr_parts - 1; curr_part++) {
-		rem = parts[curr_part] % pagesize;
-
-		// If a page is divided to more than one cpu ...
-		if (rem != 0) {
-			// Initialize parameters.
-			for (i = 0; i < nr_nodes; i++)
-				page_to_nodes[i] = 0;
-			page_to_nodes[nodes[curr_part]] = rem;
-			curr_page_size = rem;
-			parts[curr_part] -= rem;
-
-			// Calculate page partitions to nodes.
-			for (i = 1; curr_part + i < nr_parts && 
-			     curr_page_size + parts[curr_part+i] < pagesize; i++) {
-				page_to_nodes[nodes[curr_part+i]] += parts[curr_part+i];
-				curr_page_size += parts[curr_part+i];
-				parts[curr_part+i] = 0;
-			}
-
-			if (curr_part + i < nr_parts) {
-				page_to_nodes[nodes[curr_part+i]] += pagesize - curr_page_size;
-				parts[curr_part+i] -= pagesize - curr_page_size;
-				curr_page_size = pagesize;
-			}
-
-			// Assign current page to the proper node.
-			max_page_size = page_to_nodes[0];
-			chosen_node = 0;
-			for (i = 1; i < nr_nodes; i++) {
-				if (max_page_size < page_to_nodes[i]) {
-					max_page_size = page_to_nodes[i];
-					chosen_node = i;
-				}
-			}
-
-			// Assign current page to the proper CPU.
-			for (i = 0; nodes[curr_part+i] != chosen_node; i++);
-			parts[curr_part+i] += curr_page_size;
-		}
-	}
+    return ret;
 }
 
-#define ALIGN_ADDR(addr, bound) (void *)((unsigned long) addr & ~(bound-1))
+/**
+ *  Fixes the user-specified interleaving to meet system's
+ *  requirements. The updated partition sizes and allocation nodes are
+ *  returned in `parts' and `nodes', respectively.
+ *
+ *  The adjustment is performed in two phases:
+ *
+ *  (a) Merging of very small partitions (less than the system's page
+ *      size), in order to meet the system's allocation
+ *      granularity. The partitions are merged from left to right,
+ *      starting from a small partition and continuing until the size
+ *      of the formed partition exceeds the system's page size. The
+ *      `parts' array is updated accordingly; zeros are set in merged
+ *      partitions. Each newly formed partition is assigned at the
+ *      node with the largest allocation size according to the
+ *      original partition list.
+ *  (b) Fixing the partition boundaries, so that each partition starts
+ *      at a multiple of the system's page size.
+ */ 
+static void fix_interleaving(size_t nr_parts, size_t *parts, int *nodes)
+{
+    int i;
+	int nr_nodes = numa_num_configured_nodes();
+    int pagesize = numa_pagesize();
+    size_t *node_scores = calloc(nr_nodes, sizeof(*node_scores));
+    if (!node_scores) {
+        perror("malloc");
+        exit(1);
+    }
+
+    // merge small partitions
+    size_t base_part = 0;
+    node_scores[nodes[0]] = parts[0];
+    for (i = 1; i < nr_parts; i++) {
+        size_t part_score = parts[i];
+        if (parts[base_part] < pagesize) {
+            // merge with base partition
+            parts[base_part] += parts[i];
+            parts[i] = 0;
+        } else {
+            // assign partition to the node with the highest score
+            nodes[base_part] = get_best_node(node_scores, nr_nodes);
+            
+            // reset the scores
+            memset(node_scores, 0, nr_nodes*sizeof(*node_scores));
+            base_part = i;
+        }
+
+        node_scores[nodes[i]] += part_score;
+    }
+
+    // fix the last merger
+    nodes[base_part] = get_best_node(node_scores, nr_nodes);
+
+    // adjust partition size to multiples of system's page size
+    size_t rem = 0;
+    ssize_t size_adjust = 0;   // can be negative
+    for (i = 0; i < nr_parts; i++) {
+        if (!parts[i])
+            continue;
+
+        parts[i] += size_adjust;   // adjustment from previous partition
+        rem = parts[i] % pagesize;
+
+        // find next valid partition
+        size_t next_part = i+1;
+        while (next_part != nr_parts && !parts[next_part])
+            next_part++;
+
+        //
+        // If at last partition, always execute the else path.
+        // Otherwise, take the remainder of the page, if the largest part is
+        // in the current partition, assuring, however, that the next
+        // partition will have at least one page.
+        // 
+        if (next_part != nr_parts &&
+            ((rem < pagesize / 2) ||
+             (parts[next_part] + rem < 2*pagesize))) {
+            parts[i] -= rem;
+            size_adjust = rem;
+        } else {
+            parts[i] += pagesize - rem;
+            size_adjust = rem - pagesize;
+        }
+    }
+
+    free(node_scores);
+}
 
 /**
  *  Allocate contiguous memory with a custom interleaving of pages on
@@ -90,7 +141,7 @@ static void fix_interleaving(size_t nr_parts, size_t *parts, const int *nodes)
  *          returned, otherwise NULL is returned.
  */
 void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
-                        const int *nodes)
+                        int *nodes)
 {
 	int i;
 	void *ret = NULL;
@@ -111,18 +162,20 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
 	struct bitmask *nodemask = numa_allocate_nodemask();
 
 	/*
-	 * Bind parts to specific nodes
-	 * All parts must be page aligned
+	 * Fix the interleaving and bind parts to specific nodes
 	 */
 	fix_interleaving(nr_parts, parts, nodes);
 
 	void *curr_part = ret;
-
 	for (i = 0; i < nr_parts; i++) {
+        if (!parts[i])
+            continue;
+
 		// Bind part to the proper node.
 		numa_bitmask_setbit(nodemask, nodes[i]);
-		if (parts[i] != 0 && mbind(curr_part, parts[i], MPOL_BIND,
-		                           nodemask->maskp, nodemask->size, 0) < 0) {
+		if (parts[i] != 0 &&
+            mbind(curr_part, parts[i], MPOL_BIND,
+                  nodemask->maskp, nodemask->size, 0) < 0) {
 			perror("mbind");
 			exit(1);
 		}
@@ -131,6 +184,7 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts,
 		/* Clear the mask for the next round */
 		numa_bitmask_clearbit(nodemask, nodes[i]);
 	}
+
 	numa_bitmask_free(nodemask);
 exit:
 	return ret;

@@ -83,7 +83,7 @@ VECTOR_TYPE *VECTOR_NAME(_create_onnode)(unsigned long size, int node)
 }
 
 VECTOR_TYPE *VECTOR_NAME(_create_interleaved)(unsigned long size, size_t *parts,
-                                              int nr_parts, const int *nodes)
+                                              int nr_parts, int *nodes)
 {
 	VECTOR_TYPE *v = alloc_onnode(sizeof(VECTOR_TYPE), nodes[0]);
 
