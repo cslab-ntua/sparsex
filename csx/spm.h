@@ -175,7 +175,7 @@ public:
                       SPM::Builder *SpmBld);
 
     /**
-     *  Loads a matrix from file.
+     *  Loads a matrix from a MMF file.
      *
      *  @param filename name of the file that matrix is kept.
      *  @param in       buffer from which the matrix is taken.
@@ -185,17 +185,20 @@ public:
     static SPM *LoadMMF(std::istream &in=std::cin);
 
     /**
-     *  Loads matrix from a file specifying the number of threads.
+     *  Loads matrix from a MMF file specifying the number of threads.
      *
-     *  @param filename name of the file that matrix is kept.
+     *  @param filename name of the file where the matrix is kept.
      *  @param in       buffer from which the matrix is taken.
      *  @param mmf      handler of MMF class.
      *  @param nr       number of threads to be used.
      *  @return         spm class object with the characteristics of the matrix.
      */
-    static SPM *LoadMMF_mt(const char *mmf_file, const long nr);
-    static SPM *LoadMMF_mt(std::istream &in, const long nr);
-    static SPM *LoadMMF_mt(MMF &mmf, const long nr);
+    static SPM *LoadMMF_mt(const char *filename, const long nr);
+    static SPM *LoadMMF_mt(std::istream &in, const long nr)
+    {
+        MMF mmf(in);
+        return DoLoadMatrix<MMF>(mmf, nr);
+    };
     
     /**
      *  Loads matrix from CSR format.

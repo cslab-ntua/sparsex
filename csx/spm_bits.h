@@ -151,6 +151,23 @@ struct CooElem : public RowElem {
 };
 
 /**
+ *  "Less" Sorting Functor for coordinate elements. Can be used by std::sort.
+ */ 
+struct CooElemSorter {
+    public:
+        bool operator() (const CooElem &lhs, const CooElem &rhs) const
+        {
+            if (lhs.y < rhs.y) return true;
+            if (lhs.y > rhs.y) return false;
+
+            if (lhs.x < rhs.x) return true;
+            if (lhs.x > rhs.x) return false;
+
+            return false;
+        }
+};
+
+/**
  * Compares two coordinate elements. This function imposes a lexicographical
  * order in the elements of the matrix.
  *

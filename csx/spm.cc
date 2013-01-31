@@ -262,12 +262,19 @@ SPM *SPM::LoadMMF_mt(const char *mmf_file, const long nr)
     std::ifstream mmf;
 
     mmf.open(mmf_file);
-    ret = LoadMMF_mt(mmf, nr);
+
+    if (mmf.good()) {
+        ret = LoadMMF_mt(mmf, nr);
+    } else {
+        std::cerr << "File error!" << std::endl;
+        exit(1);
+    }
+
     mmf.close();
     return ret;
 }
 
-SPM *SPM::LoadMMF_mt(std::istream &in, const long nr)
+/*SPM *SPM::LoadMMF_mt(std::istream &in, const long nr)
 {
     MMF mmf(in);
     return LoadMMF_mt(mmf, nr);
@@ -284,20 +291,21 @@ SPM *SPM::LoadMMF_mt(MMF &mmf, const long nr)
     row_start = limit = cnt = 0;
     for (long i = 0; i < nr; ++i) {
         spm = ret + i;
-        limit = (mmf.nnz - cnt) / (nr - i);
+        limit = (mmf.GetNrNonzeros() - cnt) / (nr - i);
         spm->nr_nzeros_ = spm->SetElems(iter, iter_end, row_start + 1, limit,
-                                        limit + mmf.nrows - 1, mmf.nrows + 1);
+                                        limit + mmf.GetNrRows() - 1,
+                                        mmf.GetNrRows() + 1);
         spm->nr_rows_ = spm->rowptr_size_ - 1;
-        spm->nr_cols_ = mmf.ncols;
+        spm->nr_cols_ = mmf.GetNrCols();
         spm->row_start_ = row_start;
         row_start += spm->nr_rows_;
         spm->type_ = HORIZONTAL;
         cnt += spm->nr_nzeros_;
     }
 
-    assert((uint64_t)cnt == mmf.nnz);
+    assert((uint64_t)cnt == mmf.GetNrNonzeros());
     return ret;
-}
+}*/
 
 SPM *SPM::LoadMMF(std::istream &in)
 {
@@ -310,7 +318,14 @@ SPM *SPM::LoadMMF(const char *mmf_file)
     std::ifstream mmf;
 
     mmf.open(mmf_file);
-    ret = LoadMMF(mmf);
+
+    if (mmf.good()) {
+        ret = LoadMMF(mmf);
+    } else {
+        std::cerr << "File error!" << std::endl;
+        exit(1);
+    }
+
     mmf.close();
     return ret;
 }
@@ -974,7 +989,14 @@ SPMSym *SPMSym::LoadMMF_mt(const char *mmf_file, const long nr)
     std::ifstream mmf;
 
     mmf.open(mmf_file);
-    ret = LoadMMF_mt(mmf, nr);
+
+    if (mmf.good()) {
+        ret = LoadMMF_mt(mmf, nr);
+    } else {
+        std::cerr << "File error!" << std::endl;
+        exit(1);
+    }
+
     mmf.close();
     return ret;
 }
@@ -992,16 +1014,17 @@ SPMSym *SPMSym::LoadMMF_mt(MMF &mmf, const long nr)
     MMF::iterator iter = mmf.begin();
     MMF::iterator iter_end = mmf.end();
 
-    assert(mmf.nrows == mmf.ncols);
-    nr_nzeros = (mmf.nnz + mmf.ncols) / 2;
-    n = mmf.ncols;
+    assert(mmf.GetNrRows() == mmf.GetNrCols());
+    nr_nzeros = (mmf.GetNrNonzeros() + mmf.GetNrCols()) / 2;
+    n = mmf.GetNrCols();
     ret = new SPMSym[nr];
     row_start = limit = cnt = 0;
     for (long i = 0; i < nr; ++i) {
         spm_sym = ret + i;
         limit = (nr_nzeros - cnt) / (nr - i);
         nnz = spm_sym->SetElems(iter, iter_end, row_start + 1, limit,
-                                limit + 2 * mmf.nrows - 1, mmf.nrows + 1);
+                                limit + 2 * mmf.GetNrRows() - 1,
+                                mmf.GetNrRows() + 1);
         spm_sym->lower_matrix_->SetNrNonzeros(nnz - spm_sym->GetDiagonalSize());
         spm_sym->lower_matrix_->SetNrRows(spm_sym->lower_matrix_->GetNrRows());
         spm_sym->lower_matrix_->SetNrCols(n);

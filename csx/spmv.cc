@@ -595,7 +595,7 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine,
     // Set affinity for the serial part of the preproprecessing.
     setaffinity_oncpu(threads_cpus[0]);
 
-    // Initalization of the multithreaded sparse matrix representation
+    // Initialization of the multithreaded sparse matrix representation
     spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
 
     spm_mt->nr_threads = nr_threads;
@@ -626,7 +626,7 @@ spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine,
     timer_init(&timer);
     timer_start(&timer);
 
-    // Initalize and setup threads
+    // Initialize and setup threads
     threads = (pthread_t *) xmalloc(nr_threads * sizeof(pthread_t));
 
     data = new thread_info_t[nr_threads];
@@ -780,7 +780,7 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     double secs, flops;
     long loops_nr = 128;
 
-    getMmfHeader(mmf_name, nrows, ncols, nnz);
+    ReadMmfSizeLine(mmf_name, nrows, ncols, nnz);
     int nr_outer_loops = GetOptionOuterLoops();
     
     for (int i = 0; i < nr_outer_loops; ++i) {
