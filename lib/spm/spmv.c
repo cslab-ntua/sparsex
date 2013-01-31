@@ -63,6 +63,7 @@ static double calc_imbalance(void *m)
 	for (i = 0; i < spm_mt->nr_threads; ++i) {
 		spm_mt_thread_t *spm = &(spm_mt->spm_threads[i]);
 		double thread_time = spm->secs;
+		printf("Thread %zd time: %lf\n", i, thread_time);
 		total_time += thread_time;
 		if (thread_time > max_time) {
 			max_time = thread_time;
