@@ -79,6 +79,21 @@ void ParseElement(std::vector<std::string> &arguments, IndexType &y,
 
 } //end csx namespace
 
+boost::unordered_map<csx::MMF::MmfInfo, const std::string> csx::MMF::names_ =
+                     boost::assign::map_list_of 
+                     (Banner, "%%MatrixMarket")
+                     (Matrix, "matrix")
+                     (Coordinate, "coordinate")
+                     (Real, "real")
+                     (Double, "double")
+                     (Integer, "integer") 
+                     (General, "general")
+                     (Symmetric, "symmetric")
+                     (Indexing0, "0-base")
+                     (Indexing1, "1-base")
+                     (ColumnWise, "column")
+                     (RowWise, "row");
+
 MMF::MMF(std::istream &in)
   : 
     nr_rows_(0),
@@ -90,19 +105,6 @@ MMF::MMF(std::istream &in)
     zero_based_(false),
     file_mode_(0)
 {
-    names_ = boost::assign::map_list_of 
-             (Banner, "%%MatrixMarket")
-             (Matrix, "matrix")
-             (Coordinate, "coordinate")
-             (Real, "real")
-             (Double, "double")
-             (Integer, "integer") 
-             (General, "general")
-             (Symmetric, "symmetric")
-             (Indexing0, "0-base")
-             (Indexing1, "1-base")
-             (ColumnWise, "column")
-             (RowWise, "row");
 
     std::vector<std::string> arguments;
 

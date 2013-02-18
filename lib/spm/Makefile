@@ -39,11 +39,6 @@ override LDFLAGS += $(MAKE_LDFLAGS)
 LIBS         = -lm -lpthread -lnuma
 COMPILE      = $(CC) $(CPPFLAGS) $(CFLAGS)
 
-#ifeq ($(CPU),NIAGARA)
-#	CFLAGS += -m64
-#	LD = ld -melf64_sparc
-#endif
-#
 export CC
 export CFLAGS
 export MAKE_CPPFLAGS
@@ -156,7 +151,7 @@ spmv.o: spmv.c
 	$(COMPILE) -c $< -o $@
 
 spmv: spmv.o libspmv.o
-	$(CC) $(LDFLAGS) $(LIBS) $^ -o $@
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 ## Usefull fallbacks
 %.s: %.c

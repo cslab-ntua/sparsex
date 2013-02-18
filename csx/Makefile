@@ -83,12 +83,12 @@ main.o: spmv.h
 libcsx_test.o: elmerif.h $(spm_dir)/spm_crs.h
 
 libcsx.so: $(CSX_OBJECTS) elmerif.o
-	$(LINK) -shared $^ $(LIBS) $(dynarray_dep) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) -o $@
+	$(LINK) -shared $^ $(dynarray_dep) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS) -o $@
 
 libcsx.a: $(CSX_OBJECTS)
 	$(ARCHIVE) $@ $^
 
-spmv: main.o libcsx.a
+spmv: main.o libcsx.so
 	$(LINK) $(LIBS) $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(dynarray_dep) -o $@
 
 libcsx_test: libcsx.so $(spm_dir)/libspmv.o libcsx_test.o

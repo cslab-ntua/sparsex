@@ -79,6 +79,7 @@ private:
     int file_mode_;     // 0 for MMF files, 1 for regular files
     std::vector<CooElem> matrix_;
 
+
     enum MmfInfo {
         Banner,
         Matrix,
@@ -93,8 +94,7 @@ private:
         ColumnWise,
         RowWise
     };
-
-    boost::unordered_map<MmfInfo, const std::string> names_;
+    static boost::unordered_map<MmfInfo, const std::string> names_;
 
     void ParseMmfHeaderLine(std::vector<std::string> &arguments);
     void ParseMmfSizeLine(std::vector<std::string> &arguments); 
