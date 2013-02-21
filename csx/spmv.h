@@ -29,7 +29,6 @@
 #include "csx.h"
 #include "drle.h"
 #include "jit.h"
-#include "llvm_jit_help.h"
 #include "spmv.h"
 
 #include <numa.h>
