@@ -38,7 +38,7 @@ public:
     ~ClangCompiler() {
         // Take back the ownership of the invocation so as to avoid double
         // delete() corruption; the invocation will be released from our dtor
-        compiler_->takeInvocation();
+        //compiler_->takeInvocation();
     };
 
     Module *Compile(const std::string &source, LLVMContext *context) const;
@@ -80,6 +80,7 @@ public:
 private:
     // Set up the code generation options depending on debug mode
     void SetCodeGenOptions();
+    void SetHeaderSearchOptions();
     OwningPtr<CompilerInvocation> invocation_;
     OwningPtr<CompilerInstance> compiler_;
     bool keep_temporaries_;

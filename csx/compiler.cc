@@ -13,18 +13,19 @@
 #include "compiler.h"
 #include "jit_util.h"
 
+#include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/Version.h>
 #include <clang/CodeGen/CodeGenAction.h>
 #include <clang/Frontend/CodeGenOptions.h>
 #include <clang/Frontend/HeaderSearchOptions.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <llvm/ADT/StringRef.h>
-#include "llvm/Target/TargetOptions.h"
+#include <llvm/Target/TargetOptions.h>
 #include <fstream>
 
 static std::string GetClangResourcePath(const char *prefix)
 {
-    return std::string(prefix) + "/lib/clang/" + CLANG_VERSION_STRING +
+    return std::string(prefix) + "/clang/" + CLANG_VERSION_STRING +
         "/include";
 }
 
@@ -38,7 +39,7 @@ ClangCompiler::ClangCompiler(const char *prefix)
         new TextDiagnosticPrinter(errs(), DiagnosticOptions());
 
     IntrusiveRefCntPtr<DiagnosticIDs> diag_id(new DiagnosticIDs());
-    Diagnostic diags(diag_id, diag_client);
+    DiagnosticsEngine diags(diag_id, diag_client);
 
     // Create a dummy invocation of the compiler, so as to set it up
     // and we will replace the source file afterwards
@@ -49,12 +50,7 @@ ClangCompiler::ClangCompiler(const char *prefix)
     invocation_->setLangDefaults(IK_C, LangStandard::lang_c99);
 
     // Setup the include path
-    HeaderSearchOptions &header_search =
-        invocation_->getHeaderSearchOpts();
-    header_search.AddPath(GetClangResourcePath(prefix),
-                          frontend::System, false, false, false);
-    header_search.AddPath("/usr/include/x86_64-linux-gnu", frontend::System,
-                          false, false, false);
+    SetHeaderSearchOptions();
 
     // Setup diagnostic options
     DiagnosticOptions &diag_options = invocation_->getDiagnosticOpts();
@@ -103,6 +99,23 @@ Module *ClangCompiler::Compile(const std::string &source,
         RemoveFile(tmpfile);
     return llvm_codegen->takeModule();
 }
+
+void ClangCompiler::SetHeaderSearchOptions()
+{
+    HeaderSearchOptions &header_search =
+        invocation_->getHeaderSearchOpts();
+    header_search.AddPath("/usr/include", frontend::System,
+                          false, false, false);
+    header_search.AddPath("/usr/local/include", frontend::System,
+                          false, false, false);
+    header_search.AddPath("/opt/include", frontend::System,
+                          false, false, false);
+    header_search.AddPath("/usr/include/x86_64-linux-gnu", frontend::System,
+                          false, false, false);
+    header_search.AddPath(GetClangResourcePath(CLANG_PREFIX),
+                          frontend::System, false, false, false);
+}
+
 
 void ClangCompiler::SetCodeGenOptions()
 {

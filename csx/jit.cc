@@ -8,23 +8,26 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#include <iostream>
-#include <sstream>
-#include <cassert>
-
-#include "llvm/Analysis/Verifier.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/Target/TargetData.h"
-#include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetSelect.h"
-#include "llvm/Support/StandardPasses.h"
-
 #include "spm.h"
 #include "csx.h"
 #include "drle.h"
 #include "jit.h"
 #include "jit_config.h"
 #include "jit_util.h"
+
+#include <llvm/Analysis/Verifier.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/JIT.h>
+#include <llvm/PassManager.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Target/TargetData.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+
+#include <iostream>
+#include <sstream>
+#include <cassert>
 
 using namespace llvm;
 using namespace csx;
@@ -37,7 +40,10 @@ CsxExecutionEngine &csx::CsxJitInit(void)
 
 CsxJit::CsxJit(CsxManager *csxmg, CsxExecutionEngine *engine, unsigned int tid,
                bool symmetric)
-    : csxmg_(csxmg), module_(0), engine_(engine), thread_id_(tid),
+    : csxmg_(csxmg),
+      module_(0),
+      engine_(engine),
+      thread_id_(tid),
       symmetric_(symmetric)
 {
     context_ = new LLVMContext();
@@ -449,24 +455,14 @@ Module *CsxJit::DoCompile(const std::string &source) const
 
 void CsxJit::DoOptimizeModule()
 {
+    PassManagerBuilder pm_builder;
     PassManager pm;
-    pm.add(new TargetData(module_));
-    createStandardModulePasses(
-        &pm,
-        /* -O3 */ 3,
-        /* OptimizeSize */ false,
-        /* UnitAtATime      */  true,
-        /* UnrollLoops      */  true,
-        /* SimplifyLibCalls */  true,
-        /* HaveExceptions   */  false,
-        /* InliningPass     */ createFunctionInliningPass());
-                               
-    createStandardLTOPasses(
-        &pm,
-        /* Internalize     */ true,
-        /* RunInliner      */ true,
-        /* VerifyEach      */ false);
 
+    pm_builder.OptLevel = 3;
+    pm_builder.populateModulePassManager(pm);
+    pm_builder.populateLTOPassManager(pm,
+                                      true /* Internalize */,
+                                      true /* RunInliner */);
     pm.run(*module_);
     return;
 }

@@ -109,8 +109,8 @@ private:
     std::string DoGenBlockSymCase(SpmIterOrder type, int r, int c);
     TemplateText *GetSymMultTemplate(SpmIterOrder type);
 
-    CsxManager  *csxmg_;
-    Module      *module_;
+    CsxManager *csxmg_;
+    Module *module_;
     CsxExecutionEngine *engine_;
     LLVMContext *context_;
     ClangCompiler *compiler_;
