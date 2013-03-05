@@ -32,7 +32,7 @@ void ReadMmfSizeLine(const char *mmf_file, uint64_t &nr_rows, uint64_t &nr_cols,
 
     in.open(mmf_file);
     in.seekg(0, std::ios::beg);
-    
+
     // Ignore comments
     while (in.peek() == '%') {
         in.ignore(2048, '\n');
@@ -43,8 +43,8 @@ void ReadMmfSizeLine(const char *mmf_file, uint64_t &nr_rows, uint64_t &nr_cols,
         std::cerr << "Size line error" << std::endl;
         exit(1);
     }
-    ParseElement(arguments, nr_rows, nr_cols, nr_nzeros);
 
+    ParseElement(arguments, nr_rows, nr_cols, nr_nzeros);
     in.close();
 }
 

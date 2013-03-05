@@ -1,0 +1,44 @@
+1. C API
+   -- BLAS for matrix operations
+   -- PETSc (?)
+   -- Matrix tuning
+      * Pattern setup
+   -- [50%] Matrix I/O
+      * [DONE] from file (enriched MM, etc.)
+      * [DONE] from CSR
+      * from CSX file
+      * to CSX file
+   -- Matrix access
+      * set matrix values in CSX
+   -- Matrix reordering (RCM)
+   -- Multithreaded setup
+      * Threads/Thread pool?
+      * NUMA setup
+   -- Numify interface (e.g., vectors, etc.)
+   -- Support for symmetrics
+   -- Timing framework
+      * SpMV, preproc, etc.
+
+2. Refactoring
+   -- Homogenize variable types
+   -- Variable naming
+   -- Code cleanup (also thgoud)
+   -- Classes/Structures revisiting
+   -- Memory management (leaks, etc.)
+   -- SPM indexing
+
+3. User config & installation
+   -- autotools (configure;make;install)
+   -- config.h
+
+4. Testing
+   -- Command-line interface
+      * use of options
+   -- Test suite
+
+5. Documentation
+   -- doxygen
+   -- User guide & Manual
+
+6. Demo
+   -- Libcsx vs. pOSKI

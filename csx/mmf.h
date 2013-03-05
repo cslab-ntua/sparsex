@@ -17,13 +17,13 @@
 
 #include "spm_bits.h"
 
-#include <iostream>
-#include <iterator>
-#include <vector>
 #include <algorithm>
 #include <boost/bind/bind.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
+#include <iostream>
+#include <iterator>
+#include <vector>
 
 namespace csx {
 
@@ -39,7 +39,6 @@ void ParseElement(std::vector<std::string> &arguments, IndexType &y,
 class MMF
 {
 public:
-
     MMF(std::istream &in);
     
     size_t GetNrRows() const 
@@ -94,6 +93,7 @@ private:
         ColumnWise,
         RowWise
     };
+
     static boost::unordered_map<MmfInfo, const std::string> names_;
 
     void ParseMmfHeaderLine(std::vector<std::string> &arguments);

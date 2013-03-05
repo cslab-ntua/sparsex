@@ -784,7 +784,7 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     int nr_outer_loops = GetOptionOuterLoops();
     
     for (int i = 0; i < nr_outer_loops; ++i) {
-	if (!spm_mt->symmetric) {
+        if (!spm_mt->symmetric) {
             secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
             printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n", "csx",

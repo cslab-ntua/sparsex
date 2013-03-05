@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv libcsx.a libcsx.so libcsx_test
+all: spmv libcsx.a libcsx.so libcsx_test dynamic_array_test
 
 # Configuration
 llvmconf     = llvm-config
@@ -40,7 +40,7 @@ LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 CLANG_LDFLAGS   = -Wl,--start-group -lclangAnalysis -lclangAST -lclangBasic -lclangCodeGen -lclangDriver -lclangFrontend -lclangFrontendTool -lclangIndex -lclangLex -lclangParse -lclangRewrite -lclangSema -lclangSerialization -lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangStaticAnalyzerFrontend -Wl,--end-group
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
-CSX_OBJECTS = spmv.o jit.o mmf.o spm.o csx.o drle.o template_text.o jit_util.o compiler.o $(spm_dir)/libspmv.o
+CSX_OBJECTS = spmv.o jit.o mmf.o spm.o csx.o drle.o template_text.o jit_util.o compiler.o $(spm_dir)/libspmv.o dynamic_array.o
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	override CPPFLAGS += -DSPM_NUMA
@@ -82,6 +82,7 @@ spm.o: mmf.h $(dynarray_dir)/dynarray.h
 drle.o: spm.h spm_bits.h
 main.o: spmv.h
 libcsx_test.o: elmerif.h $(spm_dir)/spm_crs.h
+dynamic_array.o: allocators.h
 
 libcsx.so: $(CSX_OBJECTS) elmerif.o
 	$(LINK) -shared -o $@ $^ $(dynarray_dep) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS)
@@ -94,6 +95,9 @@ spmv: main.o libcsx.so
 
 libcsx_test: libcsx_test.o libcsx.so $(spm_dir)/libspmv.o
 	$(LINK) -o $@ $^ $(LIBS)
+
+dynamic_array_test: dynamic_array.o
+	$(LINK) -o $@ $^
 
 clean:
 	rm -f *.o libcsx.so libcsx.a spmv libcsx_test
