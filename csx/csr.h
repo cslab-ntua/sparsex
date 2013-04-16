@@ -21,7 +21,7 @@ namespace csx {
 /**
  *  Read-only wrapper of CSR.
  */ 
-template<typename IndexType, typename ValueType>
+template<typename IndexType = int, typename ValueType = double>
 class CSR
 {
 public:
@@ -54,7 +54,10 @@ public:
         return static_cast<uint64_t>(nr_cols_);
     }
 
-    bool IsZeroBased() { return zero_based_; }
+    bool IsZeroBased() const
+    {
+        return zero_based_;
+    }
 
     // CooElem iterator
     class iterator;

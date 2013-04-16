@@ -60,7 +60,6 @@ private:
 
     // These are mainly SPM construction classes, so make them friends
     friend class Builder;
-    friend class VirtualBuilder;
     friend class CsxManager;
     friend class DRLE_Manager;
 
@@ -150,7 +149,6 @@ public:
     SpmRowElem *RowEnd(uint64_t ridx = 0);
 
     class Builder;
-    class VirtualBuilder;
 
     /**
      *  Function for filling the matrix using point iterators

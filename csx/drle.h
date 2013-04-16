@@ -384,7 +384,6 @@ private:
     size_t *selected_splits_;
     double sampling_portion_;
     uint64_t samples_max_;
-    static const uint64_t max_sampling_tries_ = 3;
     bool symmetric_;
     bool split_blocks_;
     bool onedim_blocks_;

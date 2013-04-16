@@ -82,7 +82,7 @@ spm.o: mmf.h $(dynarray_dir)/dynarray.h
 drle.o: spm.h spm_bits.h
 main.o: spmv.h
 libcsx_test.o: elmerif.h $(spm_dir)/spm_crs.h
-dynamic_array.o: allocators.h
+dynamic_array.o: allocators.h $(dynarray_dir)/dynarray.h
 
 libcsx.so: $(CSX_OBJECTS) elmerif.o
 	$(LINK) -shared -o $@ $^ $(dynarray_dep) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS)
@@ -97,7 +97,7 @@ libcsx_test: libcsx_test.o libcsx.so $(spm_dir)/libspmv.o
 	$(LINK) -o $@ $^ $(LIBS)
 
 dynamic_array_test: dynamic_array.o
-	$(LINK) -o $@ $^
+	$(LINK) -o $@ $^ $(dynarray_dep) -lnuma
 
 clean:
 	rm -f *.o libcsx.so libcsx.a spmv libcsx_test

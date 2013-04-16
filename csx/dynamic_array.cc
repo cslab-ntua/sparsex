@@ -9,6 +9,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 #include "dynamic_array.h"
+#include "dynarray.h"
 #include "allocators.h"
 #include "timer.h"
 
@@ -35,19 +36,29 @@ private:
 
 int main(void)
 {
-    const size_t array_size = 100000000;
+    const size_t array_size = 50000000;
 //    const size_t array_size = 100;
     const size_t capacity = 10;
-    DynamicArray<MyClass> dynarray(capacity);
-    vector<MyClass> vec(capacity);
-
+    DynamicArray<int> dynarray(capacity);
+    vector<int> vec(capacity);
+    dynarray_t *da;
     xtimer_t timer;
+
+    da = dynarray_create(sizeof(int), 1024, 10);
+    timer_init(&timer);
+    timer_start(&timer);
+    for (size_t i = 0; i < array_size; ++i) {
+        int *value = (int *) dynarray_alloc(da);
+        *value = i;
+    }
+    timer_pause(&timer);
+    std::cout << "C dynarray impl.: " << timer_secs(&timer) << " s\n";
 
     timer_init(&timer);
     timer_start(&timer);
     for (size_t i = 0; i < array_size; ++i) {
-        MyClass my(i, i+1);
-        dynarray.Append(my);
+        //MyClass my(i, i+1);
+        dynarray.Append(i);
     }
     timer_pause(&timer);
     std::cout << "Dynamic array impl.: " << timer_secs(&timer) << " s\n";
@@ -55,8 +66,8 @@ int main(void)
     timer_init(&timer);
     timer_start(&timer);
     for (size_t i = 0; i < array_size; ++i) {
-        MyClass my(i, i+1);
-        vec.push_back(my);
+        //MyClass my(i, i+1);
+        vec.push_back(i);
     }
 
     timer_pause(&timer);

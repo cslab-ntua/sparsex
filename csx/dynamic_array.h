@@ -14,6 +14,7 @@
 #include "allocators.h"
 #include <cassert>
 #include <cstddef>
+#include <memory>
 
 using namespace std;
 
@@ -90,7 +91,7 @@ public:
     void ShrinkToFit()
     {
         Resize(size_);
-        assert((size_ == capacity_) && "shrink failed");
+        assert((size_ == capacity_) && "[BUG] shrink failed");
     }
 
     const Allocator &GetAllocator() const

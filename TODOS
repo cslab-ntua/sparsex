@@ -11,11 +11,11 @@
    -- Matrix access
       * set matrix values in CSX
    -- Matrix reordering (RCM)
-   -- Multithreaded setup
-      * Threads/Thread pool?
+   -- [50%] Multithreaded setup
+      * [DONE] Threads/Thread pool?
       * NUMA setup
    -- Numify interface (e.g., vectors, etc.)
-   -- Support for symmetrics
+   -- [DONE] Support for symmetrics
    -- Timing framework
       * SpMV, preproc, etc.
 
