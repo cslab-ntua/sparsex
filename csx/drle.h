@@ -20,10 +20,11 @@
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
-
-extern "C" {
 #include "timer.h"
-}
+
+/*extern "C" {
+#include "timer.h"
+}*/
 
 namespace csx {
 
@@ -232,7 +233,8 @@ private:
      *  @see DoEncodeBlockAlt()
      */
     void DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
-                  std::vector<SpmRowElem> &encoded);
+                  //std::vector<SpmRowElem> &encoded);
+                  std::vector<SpmElem> &encoded);
 
     /**
      *  Encode elements for a block type of patterns.
@@ -242,7 +244,8 @@ private:
      *  @param encoded vector to append the encoded elements.
      */
     void DoEncodeBlock(std::vector<uint64_t> &xs, std::vector<double> &vs,
-                       std::vector<SpmRowElem> &encoded);
+                       //std::vector<SpmRowElem> &encoded);
+                       std::vector<SpmElem> &encoded);
 
     /**
      *  Encode elements from a block when the split_blocks_ function is active.
@@ -252,14 +255,17 @@ private:
      *  @param encoded vector to append the encoded elements.
      */
     void DoEncodeBlockAlt(std::vector<uint64_t> &xs, std::vector<double> &vs,
-                          std::vector<SpmRowElem> &encoded);
+                          //std::vector<SpmRowElem> &encoded);
+                          std::vector<SpmElem> &encoded);
+
     /**
      *  Decode a CSX element.
      *
      *  @param elem   element to decode.
      *  @param newrow vector to append the decoded elements.
      */
-    void DoDecode(const SpmRowElem *elem, std::vector<SpmRowElem> &newrow);
+    //void DoDecode(const SpmRowElem *elem, std::vector<SpmRowElem> &newrow);
+    void DoDecode(const SpmElem *elem, std::vector<SpmElem> &newrow);
 
     /**
      *  Encode the elements of a row.
@@ -268,8 +274,10 @@ private:
      *  @param rend   last element of row.
      *  @param newrow vector to append the encoded elements.
      */
-    void EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
-                   std::vector<SpmRowElem> &newrow);
+    /*void EncodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
+                   std::vector<SpmRowElem> &newrow);*/
+    void EncodeRow(const SpmElem *rstart, const SpmElem *rend,
+                   std::vector<SpmElem> &newrow);
 
     /**
      *  Decode the elements of a row.
@@ -278,8 +286,10 @@ private:
      *  @param rend   last element of row.
      *  @param newrow vector to append the decoded elements.
      */
-    void DecodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
-                   std::vector<SpmRowElem> &newrow);
+    /*void DecodeRow(const SpmRowElem *rstart, const SpmRowElem *rend,
+      std::vector<SpmRowElem> &newrow);*/
+    void DecodeRow(const SpmElem *rstart, const SpmElem *rend,
+                   std::vector<SpmElem> &newrow);
 
     /**
      *  Cut the blocks that pass the max elements limit.
@@ -308,7 +318,8 @@ private:
      */
     void UpdateStats(SPM *spm, std::vector<uint64_t> &xs,
                      DeltaRLE::Stats &stats,
-                     std::vector<SpmRowElem*> &elems);
+                     //std::vector<SpmRowElem*> &elems);
+                     std::vector<SpmElem*> &elems);
 
     /**
      *  Add stats of a type.
@@ -327,7 +338,8 @@ private:
      */
     void UpdateStatsBlock(std::vector<uint64_t> &xs,
                           DeltaRLE::Stats &stats, uint64_t align,
-                          std::vector<SpmRowElem*> &elems);
+                          //std::vector<SpmRowElem*> &elems);
+                          std::vector<SpmElem*> &elems);
 
     /**
      *  Used when windows mode is enabled to adapt the stats.
@@ -391,7 +403,8 @@ private:
     StatsMap stats_;
     std::map<SpmIterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;
-    xtimer_t pre_timers_[PRE_TIMER_END];
+    //xtimer_t pre_timers_[PRE_TIMER_END];
+    Timer pre_timers_[PRE_TIMER_END];
 };
 
 /**

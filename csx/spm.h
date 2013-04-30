@@ -46,7 +46,8 @@ class SPM
 private:
     uint64_t nr_rows_, nr_cols_, nr_nzeros_;
     SpmIterOrder type_;
-    SpmRowElem *elems_;
+    //SpmRowElem *elems_;
+    SpmElem *elems_;
     uint64_t elems_size_;
     uint64_t *rowptr_;
     uint64_t rowptr_size_;
@@ -101,7 +102,11 @@ public:
         return elems_size_;
     }
     
-    SpmRowElem *GetElems()
+    /*SpmRowElem *GetElems()
+    {
+        return elems_;
+        }*/
+    SpmElem *GetElems()
     {
         return elems_;
     }
@@ -146,8 +151,10 @@ public:
         rowptr_size_ = rowptr_size;
     }
 
-    SpmRowElem *RowBegin(uint64_t ridx = 0);
-    SpmRowElem *RowEnd(uint64_t ridx = 0);
+    //SpmRowElem *RowBegin(uint64_t ridx = 0);
+    //SpmRowElem *RowEnd(uint64_t ridx = 0);
+    SpmElem *RowBegin(uint64_t ridx = 0);
+    SpmElem *RowEnd(uint64_t ridx = 0);
 
     class Builder;
     class VirtualBuilder;
@@ -312,7 +319,7 @@ public:
 /**
  *  """bkk"""
  */
-private:
+//private:
     template<typename MatrixType>
     static SPM *DoLoadMatrix(MatrixType &mat, long nr)
     {
@@ -343,6 +350,7 @@ private:
         return ret;
     }
 
+private:
     void print_prod(uint64_t row_no)
     {
         for (uint64_t i = rowptr_[row_no]; i < rowptr_[row_no+1]; ++i) {
@@ -377,7 +385,8 @@ public:
      *
      *  @return pointer to element allocated.
      */
-    virtual SpmRowElem *AllocElem();
+    //virtual SpmRowElem *AllocElem();
+    virtual SpmElem *AllocElem();
 
     /**
      *  Allocates a number of elements in the new matrix.
@@ -385,7 +394,8 @@ public:
      *  @param  nr number of elements to be allocated.
      *  @return    pointer to the first allocated element.
      */
-    virtual SpmRowElem *AllocElems(uint64_t nr);
+    //virtual SpmRowElem *AllocElems(uint64_t nr);
+    virtual SpmElem *AllocElems(uint64_t nr);
 
     /**
      *  Counts elements already allocated in the matrix.
@@ -424,7 +434,7 @@ public:
     bool operator==(const PntIter &pi);
     bool operator!=(const PntIter &pi);
     void operator++();
-    SpmCooElem operator*();
+    SpmElem operator*();
     std::ostream &operator<<(std::ostream &out);
 
 private:
@@ -596,7 +606,8 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
                        unsigned long limit, uint64_t nr_elems, uint64_t nrows,
                        SPM::Builder *SpmBld)
 {
-    SpmRowElem *elem;
+    //SpmRowElem *elem;
+    SpmElem *elem;
     uint64_t row_prev, row;
 
     row_prev = first_row;
@@ -635,7 +646,8 @@ uint64_t SPMSym::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
                           uint64_t nrows, SPMSym::Builder *spm_sym_bld)
 {
     double *value;
-    SpmRowElem *elem;
+    //SpmRowElem *elem;
+    SpmElem *elem;
     uint64_t row_prev, row, col;
 
     row_prev = first_row;

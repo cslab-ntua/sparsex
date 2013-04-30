@@ -131,8 +131,19 @@ static inline int IsBlockType(SpmIterOrder t)
         return 0;
 }
 
+/*static inline int IsBlockType(SpmIterOrder t)
+{
+    if (t > BLOCK_TYPE_START && t < BLOCK_COL_START)
+        return t - BLOCK_TYPE_START;
+    else if (t > BLOCK_COL_START && t < BLOCK_TYPE_END)
+        return t - BLOCK_COL_START;
+    else
+        return 0;
+}
+*/
+
 /**
- *  Holds column and value or values of CSX elements.
+ *  Holds column and value or values of CSX elememts.
  */
 struct RowElem {
     uint64_t x;         ///< the column index
@@ -464,7 +475,7 @@ public:
 /**
  *  A generic sparse matrix coordinate element that can also be a pattern.
  */
-class SpmCooElem: public CooElem, public SpmPattern {};
+class SpmElem: public CooElem, public SpmPattern {};
 
 /**
  *  A generic sparse matrix row element that can also be a pattern.
@@ -472,15 +483,17 @@ class SpmCooElem: public CooElem, public SpmPattern {};
 class SpmRowElem: public RowElem, public SpmPattern {};
 
 /**
- *  Fills a sparse matrix row element (<tt>dst</tt>) from a source element
+ *  Fills a sparse matrix element (<tt>dst</tt>) from a source element
  *  (<tt>src</tt>) element.
  *
  *  @param src  element to copy from.
  *  @param dst  element to fill.
  */
+void MakeRowElem(const CooElem &src, SpmElem *dst);
+void MakeRowElem(const SpmElem &src, SpmElem *dst);
 void MakeRowElem(const CooElem &src, SpmRowElem *dst);
-void MakeRowElem(const SpmCooElem &src, SpmRowElem *dst);
-void MakeRowElem(const SpmRowElem &src, SpmRowElem *dst);
+//void MakeRowElem(const SpmElem &src, SpmRowElem *dst);
+//void MakeRowElem(const SpmRowElem &src, SpmRowElem *dst);
 
 typedef boost::function<void (CooElem &p)> TransformFn;
 
@@ -490,8 +503,8 @@ typedef boost::function<void (CooElem &p)> TransformFn;
 std::ostream &operator<<(std::ostream &os, const DeltaRLE::StatsVal &stats);
 std::ostream &operator<<(std::ostream &os, const DeltaRLE &p);
 std::ostream &operator<<(std::ostream &out, CooElem p);
-std::ostream &operator<<(std::ostream &out, const SpmCooElem e);
-std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
+std::ostream &operator<<(std::ostream &out, const SpmElem e);
+//std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
 
 }   // namespace csx
 

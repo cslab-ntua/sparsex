@@ -1,7 +1,7 @@
 /*
  * mmf.cc -- Matrix Market Format routines
  *
- * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2011,      Vasileios Karakasis
  * Copyright (C) 2011,      Theodoros Gkountouvas
@@ -21,6 +21,7 @@
 #include <boost/lexical_cast.hpp>
 
 using namespace csx;
+using namespace std;
 
 namespace csx {
 
@@ -28,19 +29,19 @@ namespace csx {
 void ReadMmfSizeLine(const char *mmf_file, uint64_t &nr_rows, uint64_t &nr_cols,
                      uint64_t &nr_nzeros)
 {
-    std::ifstream in;
+    ifstream in;
 
     in.open(mmf_file);
-    in.seekg(0, std::ios::beg);
+    in.seekg(0, ios::beg);
     
     // Ignore comments
     while (in.peek() == '%') {
-        in.ignore(2048, '\n');
+        in.ignore(numeric_limits<std::streamsize>::max(), '\n');
     }
 
-    std::vector<std::string> arguments;
+    vector<string> arguments;
     if (!(DoRead(in, arguments))) {
-        std::cerr << "Size line error" << std::endl;
+        cerr << "Size line error" << endl;
         exit(1);
     }
     ParseElement(arguments, nr_rows, nr_cols, nr_nzeros);
@@ -49,9 +50,9 @@ void ReadMmfSizeLine(const char *mmf_file, uint64_t &nr_rows, uint64_t &nr_cols,
 }
 
 // Returns false at EOF
-bool DoRead(std::istream &in, std::vector<std::string> &arguments)
+bool DoRead(istream &in, vector<string> &arguments)
 {
-    std::string buff;
+    string buff;
 
     if (getline(in, buff).eof()) {
         return false;
@@ -64,22 +65,22 @@ bool DoRead(std::istream &in, std::vector<std::string> &arguments)
 }
 
 template <typename IndexType, typename ValueType>
-void ParseElement(std::vector<std::string> &arguments, IndexType &y,
-                  IndexType &x, ValueType &v)
+void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x, 
+                  ValueType &v)
 {
     if (arguments.size() == 3) {
-        y = boost::lexical_cast<IndexType,std::string>(arguments[0]);
-        x = boost::lexical_cast<IndexType,std::string>(arguments[1]);
-        v = boost::lexical_cast<ValueType,std::string>(arguments[2]);
+        y = boost::lexical_cast<IndexType,string>(arguments[0]);
+        x = boost::lexical_cast<IndexType,string>(arguments[1]);
+        v = boost::lexical_cast<ValueType,string>(arguments[2]);
     } else {
-        std::cerr << "Bad input: less arguments in line" << std::endl;
+        cerr << "Bad input: less arguments in line" << endl;
         exit(1);
     }
 }
 
 } //end csx namespace
 
-boost::unordered_map<csx::MMF::MmfInfo, const std::string> csx::MMF::names_ =
+boost::unordered_map<csx::MMF::MmfInfo, const string> csx::MMF::names_ =
                      boost::assign::map_list_of 
                      (Banner, "%%MatrixMarket")
                      (Matrix, "matrix")
@@ -94,7 +95,7 @@ boost::unordered_map<csx::MMF::MmfInfo, const std::string> csx::MMF::names_ =
                      (ColumnWise, "column")
                      (RowWise, "row");
 
-MMF::MMF(std::istream &in)
+MMF::MMF(istream &in)
   : 
     nr_rows_(0),
     nr_cols_(0),
@@ -103,10 +104,10 @@ MMF::MMF(std::istream &in)
     symmetric_(false), 
     col_wise_(false),
     zero_based_(false),
+    reordered_(false),
     file_mode_(0)
 {
-
-    std::vector<std::string> arguments;
+    vector<string> arguments;
 
     DoRead(in, arguments);
     ParseMmfHeaderLine(arguments);
@@ -117,14 +118,14 @@ MMF::MMF(std::istream &in)
     }
 }
 
-void MMF::ParseMmfHeaderLine(std::vector<std::string> &arguments)
+void MMF::ParseMmfHeaderLine(vector<string> &arguments)
 {
     // Check if header line exists
     if (arguments[0] != names_[Banner]) {
         if (arguments[0].length() > 2 && arguments[0][0] == '%'&&
             arguments[0][1] == '%') {
             // Header exists but is erroneous so exit
-            std::cerr << "Header line error" << std::endl;
+            cerr << "Header line error" << endl;
             exit(1);
         } else {
             // Parse as size line
@@ -135,22 +136,22 @@ void MMF::ParseMmfHeaderLine(std::vector<std::string> &arguments)
 
     size_t length;
     if ((length = arguments.size()) < 5) {
-        std::cerr << "Header line error: less arguments" << std::endl;
+        cerr << "Header line error: less arguments" << endl;
         exit(1);
     }
 
     // Convert to lowercase just in case
-    BOOST_FOREACH(std::string &t, arguments) {
+    BOOST_FOREACH(string &t, arguments) {
         boost::algorithm::to_lower(t);
     }
 
     if (arguments[1] != names_[Matrix]) {
-        std::cerr << "Unsupported object" << std::endl;
+        cerr << "Unsupported object" << endl;
         exit(1);
     }
 
     if (arguments[2] != names_[Coordinate]) {
-        std::cerr << "Unsupported matrix format" << std::endl;
+        cerr << "Unsupported matrix format" << endl;
         exit(1);
     }
 
@@ -161,7 +162,7 @@ void MMF::ParseMmfHeaderLine(std::vector<std::string> &arguments)
     } else if (arguments[3] == names_[Integer]) {
        //set(INTEGER);
     } else {
-        std::cerr << "Unsupported value format" << std::endl;
+        cerr << "Unsupported value format" << endl;
         exit(1);
     }*/
 
@@ -170,7 +171,7 @@ void MMF::ParseMmfHeaderLine(std::vector<std::string> &arguments)
     } else if (arguments[4] == names_[Symmetric]) {
         symmetric_ = true;
     } else {
-        std::cerr << "Unsupported symmetry" << std::endl;
+        cerr << "Unsupported symmetry" << endl;
         exit(1);
     }
     
@@ -184,7 +185,7 @@ void MMF::ParseMmfHeaderLine(std::vector<std::string> &arguments)
     }
 }
 
-void MMF::ParseMmfSizeLine(std::vector<std::string> &arguments)
+void MMF::ParseMmfSizeLine(vector<string> &arguments)
 {
     bool ignore_comments = false;
 
@@ -194,10 +195,10 @@ void MMF::ParseMmfSizeLine(std::vector<std::string> &arguments)
 
     if (!file_mode_ || ignore_comments) {
         while (in_.peek() == '%') {
-            in_.ignore(2048, '\n');
+            in_.ignore(numeric_limits<std::streamsize>::max(), '\n');
         }
         if (!DoRead(in_, arguments)) {
-            std::cerr << "Size line error" << std::endl;
+            cerr << "Size line error" << endl;
             exit(1);
         }
     }
@@ -211,11 +212,10 @@ void MMF::DoLoadMmfMatrix()
     uint64_t tmp;
 
     if (symmetric_) {
-        matrix_.reserve((nr_nzeros_<<1) - nr_rows_);
+        matrix_.reserve(nr_nzeros_ << 1);
         for (size_t i = 0; i < nr_nzeros_; i++) {
             if (!MMF::GetNext(elem.y, elem.x, elem.val)) {
-                std::cerr << "Requesting dereference, but mmf ended"
-                          << std::endl;
+                cerr << "Requesting dereference, but mmf ended" << endl;
                 exit(1);
             }
             matrix_.push_back(elem);
@@ -226,24 +226,24 @@ void MMF::DoLoadMmfMatrix()
                 matrix_.push_back(elem);          
             }
         }
+        nr_nzeros_ = matrix_.size();
     } else {
         matrix_.reserve(nr_nzeros_);
         for (size_t i = 0; i < nr_nzeros_; i++) {
             if (!MMF::GetNext(elem.y, elem.x, elem.val)) {
-                std::cerr << "Requesting dereference, but mmf ended"
-                          << std::endl;
+                cerr << "Requesting dereference, but mmf ended" << endl;
                 exit(1);
             }
             matrix_.push_back(elem);
         }
     }
 
-    std::sort(matrix_.begin(), matrix_.end(), CooElemSorter());
+    sort(matrix_.begin(), matrix_.end(), CooElemSorter());
 }
 
 bool MMF::GetNext(uint64_t &y, uint64_t &x, double &v)
 {
-    std::vector<std::string> arguments;
+    vector<string> arguments;
 
     if (!DoRead(in_, arguments)) {
         return false;
@@ -257,6 +257,32 @@ bool MMF::GetNext(uint64_t &y, uint64_t &x, double &v)
     }
 
     return true;
+}
+
+void MMF::GetCoordinates(size_t index, uint64_t &row, uint64_t &col)
+{
+    row = matrix_[index].y;
+    col = matrix_[index].x;
+}
+
+void MMF::SetCoordinates(size_t index, uint64_t row, uint64_t col)
+{
+    matrix_[index].y = row;
+    matrix_[index].x = col;
+}
+
+void MMF::Sort()
+{
+    sort(matrix_.begin(), matrix_.end(), CooElemSorter());
+}
+
+void MMF::Print()
+{
+    cout << "Elements of Matrix" << endl;
+    cout << "------------------" << endl;
+    for (size_t i = 0; i < nr_nzeros_; i++) {
+        cout << matrix_[i].y << " " << matrix_[i].x << " " << matrix_[i].val << endl;
+    }
 }
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

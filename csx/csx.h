@@ -147,8 +147,10 @@ private:
      *  @rstart first element of the row.
      *  @rend   last element of the row.
      */
-    void DoRow(const SpmRowElem *rstart, const SpmRowElem *rend);
-    void DoSymRow(const SpmRowElem *rstart, const SpmRowElem *rend);
+    //void DoRow(const SpmRowElem *rstart, const SpmRowElem *rend);
+    //void DoSymRow(const SpmRowElem *rstart, const SpmRowElem *rend);
+    void DoRow(const SpmElem *rstart, const SpmElem *rend);
+    void DoSymRow(const SpmElem *rstart, const SpmElem *rend);
 
     /**
      *  Set flags that concern change of row.
@@ -171,12 +173,14 @@ private:
      *
      *  @param elem elements of current pattern.
      */
-    void AddPattern(const SpmRowElem &elem);
+    //void AddPattern(const SpmRowElem &elem);
+    void AddPattern(const SpmElem &elem);
 
     /**
      *  @param xs  elements found before pattern.
      */
-    void PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem);
+    //void PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem);
+    void PreparePat(std::vector<uint64_t> &xs, const SpmElem &elem);
 
     SPM *spm_;
     SPMSym *spm_sym_;

@@ -23,7 +23,12 @@
 #include <string>
 #include <numa.h>
 #include <sched.h>
+#include <boost/thread/thread.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 
+#include "runtime.h"
+#include "timer.h"
 #include "spm.h"
 #include "mmf.h"
 #include "csx.h"
@@ -55,7 +60,7 @@ extern "C" {
     #define SPMV_CHECK_SYM_FN spmv_double_check_sym_mt_loop
     #define SPMV_BENCH_SYM_FN spmv_double_bench_sym_mt_loop
 #endif // SPM_NUMA
-#include "timer.h"
+//#include "timer.h"
 #include "ctl_ll.h"
 #include <libgen.h>
 }
@@ -63,32 +68,6 @@ extern "C" {
 using namespace csx;
 
 double pre_time;
-
-///> Thread data essential for parallel preprocessing
-typedef struct thread_info {
-    unsigned int thread_no;
-    unsigned int cpu;
-    csx::SPM *spm;
-    csx::SPMSym *spm_sym;
-    spm_mt_thread_t *spm_encoded;
-    csx::CsxManager *csxmg;
-    uint64_t wsize;
-    std::ostringstream buffer;
-    int *xform_buf;
-    double sampling_prob;
-    uint64_t samples_max;
-    double sampling_portion;
-    bool split_blocks;
-    bool symmetric;
-    int **deltas;
-} thread_info_t;
-
-/**
- *  Parallel Preprocessing.
- *
- *  @param thread_info parameters of matrix needed by each thread.
- */
-void *PreprocessThread(void *thread_info);
 
 /**
  *  Routine responsible for making a map for the symmetric representation of
@@ -108,19 +87,29 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym);
 uint64_t MapSize(void *spm);
 
 /**
+ *  Parallel Preprocessing.
+ *
+ *  @param threadConfig parameters of matrix needed by each thread.
+ *  @param csxConfig    CSX configuration
+ */
+void PreprocessThread(ThreadContext &threadConfig, const CsxContext &csxConfig);
+
+/**
  *  Routine responsible for retrieving the CSX or CSX-Sym sparse matrix format
  *  according to the command line parameters.
  *  
  *  @param mmf_fname    name of the sparse matrix file.
- *  @param engine       """bkk"""
- *  @param split_blocks whether or not split-blocks update is on/off.
- *  @param symmetric    true if CSX-Sym format is used, false otherwise. 
  *  @param spms         an initial sparse matrix format if it exists.
+ *  @param spms_sym     an initial symmetric sparse matrix format if it exists.
+ *  @param run_config   runtime configuration
+ *  @param csx_config   CSX configuration
  *  @return             the (multithreaded) CSX or CSX-Sym sparse matrix.
  */
-spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine,
-                   bool split_blocks, bool symmetric, SPM *spms = NULL);
-                   
+spm_mt_t *BuildCsx(char *mmf_fname, const RuntimeContext &run_config,
+                   const CsxContext &csx_config); 
+spm_mt_t *BuildCsx(SPM *spms, SPMSym *spms_sym, const RuntimeContext &run_config,
+                   const CsxContext &csx_config);    
+              
 /**
  *  Deallocation of CSX or CSX-Sym sparse matrix.
  *  

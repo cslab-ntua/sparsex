@@ -182,7 +182,8 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
 
     if (!symmetric) {
         for (uint64_t i = 0; i < spm_->GetNrRows(); i++) {
-            const SpmRowElem *rbegin, *rend;
+            //const SpmRowElem *rbegin, *rend;
+            const SpmElem *rbegin, *rend;
     
             rbegin = spm_->RowBegin(i);
             rend = spm_->RowEnd(i);
@@ -206,7 +207,8 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
         }
     } else {
         for (uint64_t i = 0; i < spm_->GetNrRows(); i++) {
-            const SpmRowElem *rbegin, *rend;
+            //const SpmRowElem *rbegin, *rend;
+            const SpmElem *rbegin, *rend;
     
             rbegin = spm_->RowBegin(i);
             rend = spm_->RowEnd(i);
@@ -246,12 +248,14 @@ csx_double_t *CsxManager::MakeCsx(bool symmetric)
  *     current row.
  *  2. Size is the number of elements that will be calculated.
  */
-void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
+//void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
+void CsxManager::DoRow(const SpmElem *rbegin, const SpmElem *rend)
 {
     std::vector<uint64_t> xs;
 
     last_col_ = 1;
-    for (const SpmRowElem *spm_elem = rbegin; spm_elem < rend; spm_elem++) {
+    //for (const SpmRowElem *spm_elem = rbegin; spm_elem < rend; spm_elem++) {
+    for (const SpmElem *spm_elem = rbegin; spm_elem < rend; spm_elem++) {
         if (debug)
             std::cerr << "\t" << *spm_elem << "\n";
 
@@ -285,10 +289,12 @@ void CsxManager::DoRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
  *     current row.
  *  2. Size is the number of elements that will be calculated.
  */
-void CsxManager::DoSymRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
+//void CsxManager::DoSymRow(const SpmRowElem *rbegin, const SpmRowElem *rend)
+void CsxManager::DoSymRow(const SpmElem *rbegin, const SpmElem *rend)
 {
     std::vector<uint64_t> xs;
-    const SpmRowElem *spm_elem = rbegin;
+    //const SpmRowElem *spm_elem = rbegin;
+    const SpmElem *spm_elem = rbegin;
 
     last_col_ = 1;
     for ( ; spm_elem < rend && spm_elem->x < spm_->GetRowStart() + 1; 
@@ -431,7 +437,8 @@ void CsxManager::AddXs(std::vector<uint64_t> &xs)
     return;
 }
 
-void CsxManager::AddPattern(const SpmRowElem &elem)
+//void CsxManager::AddPattern(const SpmRowElem &elem)
+void CsxManager::AddPattern(const SpmElem &elem)
 {
     uint8_t *ctl_flags, *ctl_size;
     long pat_size, pat_id;
@@ -465,7 +472,8 @@ void CsxManager::AddPattern(const SpmRowElem &elem)
 }
 
 // return ujmp
-void CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem)
+//void CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmRowElem &elem)
+void CsxManager::PreparePat(std::vector<uint64_t> &xs, const SpmElem &elem)
 {
     if (xs.size() != 0)
         AddXs(xs);

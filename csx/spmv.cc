@@ -12,12 +12,7 @@
 
 #include "spmv.h"
 
-
-///> Max deltas that an encoding type may have. This is restricted by the
-///  number of bits used for encoding the different patterns in CSX.
-///
-///  @see ctl_ll.h
-#define DELTAS_MAX  CTL_PATTERNS_MAX
+using namespace csx;
 
 // malloc wrapper
 #define xmalloc(x)                         \
@@ -34,160 +29,6 @@
     ret_;                                  \
 })
 
-using namespace csx;
-
-static int SplitString(char *str, char **str_buf, const char *start_sep,
-                       const char *end_sep)
-{
-    char *token = strtok(str, start_sep);
-    int next = 0;
-    int str_length = strcspn(token, end_sep);
-
-    str_buf[next] = (char *) xmalloc((str_length + 1) * sizeof(char));
-    strncpy(str_buf[next], token, str_length);
-    str_buf[next][str_length] = 0;
-    ++next;
-    while ((token = strtok(NULL, start_sep)) != NULL) {
-        str_length = strcspn(token, end_sep);
-        str_buf[next] = (char *) xmalloc((str_length - 1) * sizeof(char));
-        strncpy(str_buf[next], token, str_length);
-        str_buf[next][str_length] = 0;
-        ++next;
-    }
-
-    return next;
-}
-
-static void GetOptionXform(int **xform_buf)
-{
-    char *xform_orig = getenv("XFORM_CONF");
-
-    *xform_buf = (int *) xmalloc(XFORM_MAX * sizeof(int));
-    if (xform_orig && strlen(xform_orig)) {
-        int next;
-        int t;
-        char *token, *xform;
-
-        // Copy environment variable to avoid being altered from strtok()
-        xform = (char *) xmalloc(strlen(xform_orig)+1);
-        strncpy(xform, xform_orig, strlen(xform_orig)+1);
-
-        next = 0;
-        t = atoi(strtok(xform, ","));
-        (*xform_buf)[next] = t;
-        ++next;
-        while ((token = strtok(NULL, ",")) != NULL) {
-            t = atoi(token);
-            (*xform_buf)[next] = t;
-            ++next;
-        }
-
-        (*xform_buf)[next] = -1;
-        free(xform);
-    } else {
-        (*xform_buf)[0] = 0;
-        (*xform_buf)[1] = -1;
-    }
-
-    std::cout << "Encoding type: ";
-    for (unsigned int i = 0; (*xform_buf)[i] != -1; i++) {
-        if (i != 0)
-            std::cout << ", ";
-
-        std::cout << SpmTypesNames[(*xform_buf)[i]];
-    }
-
-    std::cout << std::endl;
-}
-
-static void GetOptionEncodeDeltas(int ***deltas)
-{
-    char *encode_deltas_env = getenv("ENCODE_DELTAS");
-    if (encode_deltas_env && strlen(encode_deltas_env)) {
-        // Copy environment variable to avoid being altered from strtok()
-        char *encode_deltas_str = (char *) xmalloc(strlen(encode_deltas_env)+1);
-        strncpy(encode_deltas_str, encode_deltas_env,
-                strlen(encode_deltas_env)+1);
-
-        // Init matrix deltas.
-        *deltas = (int **) xmalloc(XFORM_MAX * sizeof(int *));
-
-        for (int i = 0; i < XFORM_MAX; i++) {
-            (*deltas)[i] = (int *) xmalloc(DELTAS_MAX * sizeof(int));
-        }
-
-        // Fill deltas with the appropriate data.
-        char **temp = (char **) xmalloc(XFORM_MAX * sizeof(char *));
-        int temp_size = SplitString(encode_deltas_str, temp, "{", "}");
-
-        for (int i = 0; i < temp_size; i++) {
-            int j = 0;
-            char *token = strtok(temp[i], ",");
-
-            (*deltas)[i][j] = atoi(token);
-            ++j;
-            while ((token = strtok(NULL, ",")) != NULL) {
-                (*deltas)[i][j] = atoi(token);
-                ++j;
-            }
-
-            (*deltas)[i][j] = -1;
-            free(temp[i]);
-        }
-
-        free(temp);
-
-        // Print deltas
-        std::cout << "Deltas to Encode: ";
-        for (int i = 0; i < temp_size; i++) {
-            if (i != 0)
-                std::cout << "}, ";
-            std::cout << "{";
-            assert((*deltas)[i][0] != -1);
-            std::cout << (*deltas)[i][0];
-            for (int j = 1; (*deltas)[i][j] != -1; j++)
-                std::cout << "," << (*deltas)[i][j];
-        }
-
-        std::cout << "}" << std::endl;
-        free(encode_deltas_str);
-    }
-}
-
-static uint64_t GetOptionWindowSize()
-{
-    const char *wsize_str = getenv("WINDOW_SIZE");
-    uint64_t wsize;
-
-    if (!wsize_str) {
-        wsize = 0;
-        std::cout << "Window size: Not set" << std::endl;
-    }
-    else {
-        wsize = atol(wsize_str);
-        std::cout << "Window size: " << wsize << std::endl;
-    }
-
-    return wsize;
-}
-
-static uint64_t GetOptionSamples()
-{
-    const char *samples = getenv("SAMPLES");
-    uint64_t samples_max;
-
-    if (!samples) {
-        samples_max = std::numeric_limits<uint64_t>::max();
-        std::cout << "Number of samples: Not set" << std::endl;
-    }
-    else {
-        samples_max = atol(samples);
-        std::cout << "Number of samples: " << samples_max << std::endl;
-    }
-
-    return samples_max;
-}
-
 static int GetOptionOuterLoops()
 {
     const char *loops_env = getenv("OUTER_LOOPS");
@@ -200,23 +41,6 @@ static int GetOptionOuterLoops()
     }
     
     return ret;
-}
-
-static double GetOptionPortion()
-{
-    const char *sampling_portion_str = getenv("SAMPLING_PORTION");
-    double sampling_portion;
-
-    if (!sampling_portion_str) {
-        sampling_portion = 0.0;
-        std::cout << "Sampling portion: Not set" << std::endl;
-    }
-    else {
-        sampling_portion = atof(sampling_portion_str);
-        std::cout << "Sampling portion: " << sampling_portion << std::endl;
-    }
-
-    return sampling_portion;
 }
 
 void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
@@ -254,7 +78,8 @@ void MakeMap(spm_mt_t *spm_mt, SPMSym *spm_sym)
         end = spm->GetRowStart() + spm->GetNrRows();
         
         for (uint32_t j = 0; j < spm->GetNrRows(); j++) {
-            for (SpmRowElem *elem = spm->RowBegin(j); elem != spm->RowEnd(j);
+            //for (SpmRowElem *elem = spm->RowBegin(j); elem != spm->RowEnd(j);
+            for (SpmElem *elem = spm->RowBegin(j); elem != spm->RowEnd(j);
                  elem++) {
                 col = elem->x;
                 assert(col < end);
@@ -415,58 +240,56 @@ uint64_t MapSize(void *spm)
     return size;
 }
 
-void *PreprocessThread(void *thread_info)
+void PreprocessThread(ThreadContext &thread_data, const CsxContext &csx_config)
 {
-    thread_info_t *data = (thread_info_t *) thread_info;
-    
     // Set CPU affinity.
-    setaffinity_oncpu(data->cpu);
+    setaffinity_oncpu(thread_data.GetCpu());
     
     // If symmetric option not set ...
-    if (!data->symmetric) {
+    if (!csx_config.IsSymmetric()) {
         DRLE_Manager *DrleMg;
-        data->buffer << "==> Thread: #" << data->thread_no << std::endl;
+        thread_data.GetBuffer() << "==> Thread: #" << thread_data.GetId() << std::endl;
 
         // Initialize the DRLE manager.
-        DrleMg = new DRLE_Manager(data->spm, 4, 255, 0.05, data->wsize,
+        DrleMg = new DRLE_Manager(thread_data.GetSpm(), 4, 255, 0.05, csx_config.GetWindowSize(),
                                   DRLE_Manager::SPLIT_BY_NNZ,
-                                  data->sampling_portion, data->samples_max,
-                                  data->split_blocks, false);
+                                  csx_config.GetSamplingPortion(), csx_config.GetMaxSamples(),
+                                  csx_config.IsSplitBlocks(), false);
                                   
         // Adjust the ignore settings properly.
         DrleMg->IgnoreAll();
-        for (int i = 0; data->xform_buf[i] != -1; ++i)
-            DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
+        for (int i = 0; *(csx_config.GetXform()+i) != -1; ++i)
+            DrleMg->RemoveIgnore(static_cast<SpmIterOrder>(*(csx_config.GetXform()+i)));
 
         // If the user supplies the deltas choices, encode the matrix
         // with the order given in XFORM_CONF, otherwise find
         // statistical data for the types in XFORM_CONF, choose the
         // best choise, encode it and proceed likewise until there is
         // no satisfying encoding.
-        if (data->deltas)
-            DrleMg->EncodeSerial(data->xform_buf, data->deltas);
+        if (csx_config.GetDeltas())
+            DrleMg->EncodeSerial(csx_config.GetXform(), csx_config.GetDeltas());
         else
-            DrleMg->EncodeAll(data->buffer);
+            DrleMg->EncodeAll(thread_data.GetBuffer());
 
         // DrleMg->MakeEncodeTree();
 
-        csx_double_t *csx = data->csxmg->MakeCsx(false);
-        data->spm_encoded->spm = csx;
-        data->spm_encoded->nr_rows = csx->nrows;
-        data->spm_encoded->row_start = csx->row_start;
+        csx_double_t *csx = thread_data.GetCsxManager()->MakeCsx(false);
+        thread_data.GetSpmEncoded()->spm = csx;
+        thread_data.GetSpmEncoded()->nr_rows = csx->nrows;
+        thread_data.GetSpmEncoded()->row_start = csx->row_start;
 
 #ifdef SPM_NUMA
         int alloc_err = 0;
         alloc_err = check_region(csx->ctl, csx->ctl_size * sizeof(uint8_t),
-                                 data->spm_encoded->node);
-        data->buffer << "allocation check for ctl field... "
+                                 thread_data.GetSpmEncoded()->node);
+        thread_data.GetBuffer() << "allocation check for ctl field... "
                      << ((alloc_err) ?
                         "FAILED (see above for more info)" : "DONE")
                      << std::endl;
 
         alloc_err = check_region(csx->values, csx->nnz * sizeof(*csx->values),
-                                 data->spm_encoded->node);
-        data->buffer << "allocation check for values field... "
+                                 thread_data.GetSpmEncoded()->node);
+        thread_data.GetBuffer() << "allocation check for values field... "
                      << ((alloc_err) ?
                         "FAILED (see above for more info)" : "DONE")
                      << std::endl;
@@ -476,73 +299,73 @@ void *PreprocessThread(void *thread_info)
         DRLE_Manager *DrleMg1;
         DRLE_Manager *DrleMg2;
 
-        data->buffer << "==> Thread: #" << data->thread_no << std::endl;
+        thread_data.GetBuffer() << "==> Thread: #" << thread_data.GetId() << std::endl;
         
-        data->spm_sym->DivideMatrix();
+        thread_data.GetSpmSym()->DivideMatrix();
         
         // Initialize the DRLE manager
-        DrleMg1 = new DRLE_Manager(data->spm_sym->GetFirstMatrix(), 4, 255-1, 
-                                   0.05, data->wsize,
+        DrleMg1 = new DRLE_Manager(thread_data.GetSpmSym()->GetFirstMatrix(), 4, 255-1, 
+                                   0.05, csx_config.GetWindowSize(),
                                    DRLE_Manager::SPLIT_BY_NNZ,
-                                   data->sampling_portion, data->samples_max,
+                                   csx_config.GetSamplingPortion(), csx_config.GetMaxSamples(),
                                    false);
-        DrleMg2 = new DRLE_Manager(data->spm_sym->GetSecondMatrix(), 4, 255-1, 
-                                   0.05, data->wsize,
+        DrleMg2 = new DRLE_Manager(thread_data.GetSpmSym()->GetSecondMatrix(), 4, 255-1, 
+                                   0.05, csx_config.GetWindowSize(),
                                    DRLE_Manager::SPLIT_BY_NNZ,
-                                   data->sampling_portion, data->samples_max,
+                                   csx_config.GetSamplingPortion(), csx_config.GetMaxSamples(),
                                    false);
                         
         // Adjust the ignore settings properly
         DrleMg1->IgnoreAll();
         DrleMg2->IgnoreAll();
-        for (int i = 0; data->xform_buf[i] != -1; ++i) {
+        for (int i = 0; *(csx_config.GetXform()+i) != -1; ++i) {
             DrleMg1->
-                RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
+                RemoveIgnore(static_cast<SpmIterOrder>(*(csx_config.GetXform()+i)));
             DrleMg2->
-                RemoveIgnore(static_cast<SpmIterOrder>(data->xform_buf[i]));
+                RemoveIgnore(static_cast<SpmIterOrder>(*(csx_config.GetXform()+i)));
         }
         
         // If the user supplies the deltas choices, encode the matrix with the
         // order given in XFORM_CONF, otherwise find statistical data for the 
         // types in XFORM_CONF, choose the best choise, encode it and proceed 
         // likewise until there is no satisfying encoding.
-        if (data->deltas) {
-            DrleMg1->EncodeSerial(data->xform_buf, data->deltas);
-            DrleMg2->EncodeSerial(data->xform_buf, data->deltas);
+        if (csx_config.GetDeltas()) {
+            DrleMg1->EncodeSerial(csx_config.GetXform(), csx_config.GetDeltas());
+            DrleMg2->EncodeSerial(csx_config.GetXform(), csx_config.GetDeltas());
         } else {
-            DrleMg1->EncodeAll(data->buffer);
-            DrleMg2->EncodeAll(data->buffer);
+            DrleMg1->EncodeAll(thread_data.GetBuffer());
+            DrleMg2->EncodeAll(thread_data.GetBuffer());
         }
-        data->spm_sym->MergeMatrix();
+        thread_data.GetSpmSym()->MergeMatrix();
 
-        csx_double_sym_t *csx = data->csxmg->MakeCsxSym();
-        data->spm_encoded->spm = csx;
-        data->spm_encoded->row_start = csx->lower_matrix->row_start;
-        data->spm_encoded->nr_rows = csx->lower_matrix->nrows;
+        csx_double_sym_t *csx = thread_data.GetCsxManager()->MakeCsxSym();
+        thread_data.GetSpmEncoded()->spm = csx;
+        thread_data.GetSpmEncoded()->row_start = csx->lower_matrix->row_start;
+        thread_data.GetSpmEncoded()->nr_rows = csx->lower_matrix->nrows;
 
 #ifdef SPM_NUMA
         int alloc_err;
         
         alloc_err = check_region(csx->lower_matrix->ctl,
                                  csx->lower_matrix->ctl_size * sizeof(uint8_t),
-                                 data->spm_encoded->node);
-        data->buffer << "allocation check for ctl field... "
+                                 thread_data.GetSpmEncoded()->node);
+        thread_data.GetBuffer() << "allocation check for ctl field... "
                      << ((alloc_err) ?
                         "FAILED (see above for more info)" : "DONE")
                      << std::endl;
 
         alloc_err = check_region(csx->lower_matrix->values,
                                  csx->lower_matrix->nnz * sizeof(double),
-                                 data->spm_encoded->node);
-        data->buffer << "allocation check for values field... "
+                                 thread_data.GetSpmEncoded()->node);
+        thread_data.GetBuffer() << "allocation check for values field... "
                      << ((alloc_err) ?
                         "FAILED (see above for more info)" : "DONE")
                      << std::endl;
                      
-	alloc_err = check_region(csx->dvalues,
+        alloc_err = check_region(csx->dvalues,
 	                         csx->lower_matrix->nrows * sizeof(double),
-	                         data->spm_encoded->node);
-        data->buffer << "allocation check for dvalues field... "
+                                 thread_data.GetSpmEncoded()->node);
+        thread_data.GetBuffer() << "allocation check for dvalues field... "
                      << ((alloc_err) ?
                         "FAILED (see above for more info)" : "DONE")
                      << std::endl;
@@ -551,145 +374,118 @@ void *PreprocessThread(void *thread_info)
         delete DrleMg1;
         delete DrleMg2;
     }
-    return 0;
 }
 
-spm_mt_t *GetSpmMt(char *mmf_fname, CsxExecutionEngine &engine,
-                   bool split_blocks, bool symmetric, SPM *spms)
+spm_mt_t *BuildCsx(char *mmf_fname, const RuntimeContext &rt_config,
+                   const CsxContext &csx_config)
 {
-    unsigned int nr_threads, *threads_cpus;
     spm_mt_t *spm_mt;
-    bool own_spms = !spms;
-    int *xform_buf = NULL;
-    int **deltas = NULL;
-    thread_info_t *data;
-    pthread_t *threads;
+    SPM *spms = NULL;
     SPMSym *spms_sym = NULL;
 
-    // Get MT_CONF
-    mt_get_options(&nr_threads, &threads_cpus);
-    setaffinity_oncpu(threads_cpus[0]);
-    std::cout << "MT_CONF=";
-    for (unsigned int i = 0; i < nr_threads; i++) {
-        if (i != 0)
-            std::cout << ",";
-        std::cout << threads_cpus[i];
+    // Load Matrix
+    if (!csx_config.IsSymmetric()) {
+        spms = SPM::LoadMMF_mt(mmf_fname, rt_config.GetNrThreads());
+    } else {
+        spms_sym = SPMSym::LoadMMF_mt(mmf_fname, rt_config.GetNrThreads());
     }
-    std::cout << std::endl;
+    
+    spm_mt = BuildCsx(spms, spms_sym, rt_config, csx_config);
 
-    // Get XFORM_CONF
-    GetOptionXform(&xform_buf);
+    // Cleanup
+    if (spms)
+        delete[] spms;
+    if (spms_sym)
+        delete[] spms_sym;
 
-    // Get ENCODE_DELTAS
-    GetOptionEncodeDeltas(&deltas);
+    return spm_mt;
+}
 
-    // Get WINDOW_SIZE
-    uint64_t wsize = GetOptionWindowSize();
-
-    // Get SAMPLES
-    uint64_t samples_max = GetOptionSamples();
-
-    // Get SAMPLING_PORTION
-    double sampling_portion = GetOptionPortion();
+spm_mt_t *BuildCsx(SPM *spms, SPMSym *spms_sym, const RuntimeContext &rt_config,
+                   const CsxContext &csx_config)
+{
+    spm_mt_t *spm_mt;
+    size_t nr_threads = rt_config.GetNrThreads();
 
     // Set affinity for the serial part of the preproprecessing.
-    setaffinity_oncpu(threads_cpus[0]);
+    setaffinity_oncpu(rt_config.GetAffinity(0));
 
     // Initialization of the multithreaded sparse matrix representation
     spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
 
     spm_mt->nr_threads = nr_threads;
-    spm_mt->symmetric = symmetric;
+    spm_mt->symmetric = csx_config.IsSymmetric();
     spm_mt->spm_threads =
         (spm_mt_thread_t *) xmalloc(sizeof(spm_mt_thread_t) * nr_threads);
 
-    for (unsigned int i = 0; i < nr_threads; i++) {
-        spm_mt->spm_threads[i].cpu = threads_cpus[i];
-        spm_mt->spm_threads[i].node = numa_node_of_cpu(threads_cpus[i]);
+    for (size_t i = 0; i < nr_threads; i++) {
+        spm_mt->spm_threads[i].cpu = rt_config.GetAffinity(i);
+        spm_mt->spm_threads[i].node =
+            numa_node_of_cpu(rt_config.GetAffinity(i));
         spm_mt->spm_threads[i].id = i;
     }
 
-    // Load the appropriate sub-matrix to each thread
-    if (!symmetric) {
-        if (!spms)
-            spms = SPM::LoadMMF_mt(mmf_fname, nr_threads);
-    } else {
-        if (!spms_sym) {
-            spms_sym = SPMSym::LoadMMF_mt(mmf_fname, nr_threads);
-            // Switch Reduction Phase
-            MakeMap(spm_mt, spms_sym);
-        }
+    if (spms_sym) {
+        // Switch Reduction Phase
+        MakeMap(spm_mt, spms_sym);
     }
-    
+
     // Start timer for preprocessing
-    xtimer_t timer;
-    timer_init(&timer);
-    timer_start(&timer);
+    //xtimer_t timer;
+    //timer_init(&timer);
+    //timer_start(&timer);
 
-    // Initialize and setup threads
-    threads = (pthread_t *) xmalloc(nr_threads * sizeof(pthread_t));
+    csx::Timer timer;
+    timer.Start();
 
-    data = new thread_info_t[nr_threads];
-    for (unsigned int i = 0; i < nr_threads; i++) {
-        if (!symmetric) {
-            data[i].spm = spms + i;
-            data[i].spm_sym = NULL;
-            data[i].csxmg = new CsxManager(data[i].spm);
-        } else {
-            data[i].spm = NULL;
-            data[i].spm_sym = spms_sym + i;
-            data[i].csxmg = new CsxManager(spms_sym + i);
-        }
-        data[i].spm_encoded = &spm_mt->spm_threads[i];
-        data[i].wsize = wsize;
-        data[i].thread_no = i;
-        data[i].cpu = threads_cpus[i];
-        data[i].xform_buf = xform_buf;
-        data[i].sampling_portion = sampling_portion;
-        data[i].samples_max = samples_max;
-        data[i].split_blocks = split_blocks;
-        data[i].symmetric = symmetric;
-        data[i].deltas = deltas;
-        data[i].buffer.str("");
-#ifdef SPM_NUMA
-        // Enable the full-column-index optimization for NUMA architectures
-        data[i].csxmg->SetFullColumnIndices(true);
-#endif
+    // Setup thread context
+    std::vector<ThreadContext> mt_context(nr_threads);
+
+    for (size_t i = 0; i < nr_threads; i++) {
+        mt_context[i].SetId(i);
+        mt_context[i].SetCpu(rt_config.GetAffinity(i));
+        mt_context[i].SetNode(numa_node_of_cpu(rt_config.GetAffinity(i)));
+        mt_context[i].SetData(spms, spms_sym, spm_mt, csx_config.IsSymmetric()); 
+    }
+    // Start preprocessing
+    std::vector<boost::shared_ptr<boost::thread> > threads(nr_threads-1);
+
+    for (size_t i = 0; i < nr_threads-1; ++i) {
+        threads[i] = boost::make_shared<boost::thread>
+            (PreprocessThread, 
+             boost::ref(mt_context[i+1]),
+             boost::ref(csx_config));
     }
     
-    // Start parallel preprocessing
-    for (unsigned int i = 0; i < nr_threads; i++)
-        pthread_create(&threads[i], NULL, PreprocessThread,
-                       (void *) &data[i]);
+    // Let main thread do some work
+    PreprocessThread(mt_context[0],csx_config);
 
-    for (unsigned int i = 0; i < nr_threads; ++i)
-        pthread_join(threads[i], NULL);
+    for (size_t i = 0; i < nr_threads-1; ++i) {
+        threads[i]->join();
+    }
 
     // CSX JIT compilation
     CsxJit **Jits = new CsxJit*[nr_threads];
-    for (unsigned int i = 0; i < nr_threads; ++i) {
-        Jits[i] = new CsxJit(data[i].csxmg, &engine, i, symmetric);
-        Jits[i]->GenCode(data[i].buffer);
-        std::cout << data[i].buffer.str();
+    for (size_t i = 0; i < nr_threads; ++i) {
+        Jits[i] = new CsxJit(mt_context[i].GetCsxManager(),
+                             &rt_config.GetEngine(),
+                             i, csx_config.IsSymmetric());
+        Jits[i]->GenCode(mt_context[i].GetBuffer());    
+        std::cout << mt_context[i].GetBuffer().str();
     }
 
-    for (unsigned int i = 0; i < nr_threads; i++)
+    for (size_t i = 0; i < nr_threads; i++)
         spm_mt->spm_threads[i].spmv_fn = Jits[i]->GetSpmvFn();
-    
-    // Cleanup.
-    free(threads);
-    free(threads_cpus);
-    free(xform_buf);
-    
+
+    // Cleanup
     delete[] Jits;
-    delete[] data;
-    if (own_spms)
-        delete[] spms;
 
     // Preprocessing finished; stop timer
-    timer_pause(&timer);
-    pre_time = timer_secs(&timer);
-    
+    //timer_pause(&timer);
+    //pre_time = timer_secs(&timer);
+    timer.Pause();
+    pre_time = timer.ElapsedTime();
+
     return spm_mt;
 }
 

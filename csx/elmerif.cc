@@ -14,13 +14,14 @@
 #include "spm.h"
 #include "spmv.h"
 #include "jit.h"
+#include "timer.h"
 
 extern "C" {
 #include "elmerif.h"
 #include "mt_lib.h"
 #include "spmv_matvec_mt.h"
 #include "spm_crs_mt.h"
-#include "timer.h"
+//#include "timer.h"
 }
 
 //
@@ -39,7 +40,8 @@ enum {
 };
 
 static uint64_t nr_calls = 0;
-xtimer_t timers[TIMER_END];
+//xtimer_t timers[TIMER_END];
+csx::Timer timers[TIMER_END];
 
 const char *timer_desc[] = {
     "Convert to internal repr.",
@@ -50,7 +52,8 @@ const char *timer_desc[] = {
 
 void __attribute__ ((constructor)) init() {
     for (int i = 0; i < TIMER_END; ++i) {
-        timer_init(&timers[i]);
+        //timer_init(&timers[i]);
+        timers[i].SetDescription(timer_desc[i]);
     }
 }
 
@@ -60,8 +63,10 @@ void __attribute__ ((destructor)) finalize() {
 
     // Print timer statistics
     for (int i = 0; i < TIMER_END; ++i) {
-        std::cout << timer_desc[i] << ": "
-                  << timer_secs(&timers[i]) << std::endl;
+        //std::cout << timer_desc[i] << ": "
+        //          << timer_secs(&timers[i]) << std::endl;
+        std::cout << timers[i].GetDescription() << ": "
+                  << timers[i].ElapsedTime() << std::endl;
     }
 }
 
@@ -129,15 +134,19 @@ void *csx_mattune(elmer_index_t *rowptr,
                                          (uint32_t *) colind,
                                          values, nr_rows, nr_threads, cpus);
 #else
-    timer_start(&timers[TIMER_CONSTRUCT_INTERN]);
+    //timer_start(&timers[TIMER_CONSTRUCT_INTERN]);
+    timers[TIMER_CONSTRUCT_INTERN].Start();
     spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
         (rowptr, colind, values, nr_rows, nr_cols, !CSX_IDX_OFFSET, nr_threads);
-    timer_pause(&timers[TIMER_CONSTRUCT_INTERN]);
+    //timer_pause(&timers[TIMER_CONSTRUCT_INTERN]);
+    timers[TIMER_CONSTRUCT_INTERN].Pause();
 
-    timer_start(&timers[TIMER_CONSTRUCT_CSX]);
+    //timer_start(&timers[TIMER_CONSTRUCT_CSX]);
+    timers[TIMER_CONSTRUCT_CSX].Start();
     CsxExecutionEngine &engine = CsxJitInit();
-    spm_mt = GetSpmMt(NULL, engine, true, false, spms);
-    timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
+    //spm_mt = GetSpmMt(NULL, engine, true, false, spms);
+    //timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
+    timers[TIMER_CONSTRUCT_CSX].Pause();
     delete[] spms;
 #endif        
 
@@ -167,9 +176,11 @@ void csx_matvec(void *spm, elmer_value_t *x, elmer_index_t nr_x,
 #endif  // _DEBUG_
 
     ++nr_calls;
-    timer_start(&timers[TIMER_SPMV]);
+    //timer_start(&timers[TIMER_SPMV]);
+    timers[TIMER_SPMV].Start();
     spmv_double_matvec_mt(spm_mt, vec_x, vec_y);
-    timer_pause(&timers[TIMER_SPMV]);
+    //timer_pause(&timers[TIMER_SPMV]);
+    timers[TIMER_SPMV].Pause();
 
 #ifdef _DEBUG_
     std::cout << "Checking result... ";
@@ -191,7 +202,8 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
     elmer_value_t *x_ = (elmer_value_t *) u;
     elmer_value_t *y_ = (elmer_value_t *) v;
 
-    timer_start(&timers[TIMER_TOTAL]);
+    //timer_start(&timers[TIMER_TOTAL]);
+    timers[TIMER_TOTAL].Start();
 #if 0
     size_t nnz = rowptr_[n_] - 1;
     if (!values_last) {
@@ -213,7 +225,8 @@ void elmer_matvec_(void **tuned, void *n, void *rowptr, void *colind,
     }
 
     csx_matvec(*tuned, x_, n_, y_, n_);
-    timer_pause(&timers[TIMER_TOTAL]);
+    //timer_pause(&timers[TIMER_TOTAL]);
+    timers[TIMER_SPMV].Pause();
 }
 
 

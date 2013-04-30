@@ -9,6 +9,7 @@
  */
 
 #include "spmv.h"
+#include "runtime.h"
 #include <cstdio>
 #include <cfloat>
 
@@ -88,11 +89,29 @@ int main(int argc, char **argv)
     }
     argv = &argv[optind];
     
-    // Initialize the CSX JIT execution engine
-    CsxExecutionEngine &engine = CsxJitInit();
+    // Initialization of runtime configuration
+    RuntimeContext &rt_context = RuntimeContext::GetInstance();
+    CsxContext csx_context;
+    
+    Configuration config;
+    config = ConfigFromEnv(config);
+
+    rt_context.SetRuntimeContext(config);
+    csx_context.SetCsxContext(config);
+
+    // Load matrix    
+    SPM *spms = NULL;
+    SPMSym *spms_sym = NULL;
+    if (!csx_context.IsSymmetric()) {
+        spms = SPM::LoadMMF_mt(argv[0], rt_context.GetNrThreads());
+    } else {
+        spms_sym = SPMSym::LoadMMF_mt(argv[0], rt_context.GetNrThreads());
+    }
+
     for (int i = 0; i < remargc; i++) {    
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        spm_mt = GetSpmMt(argv[i], engine, split_blocks, symmetric);
+        spm_mt = BuildCsx(spms, spms_sym, rt_context, csx_context);
+        //spm_mt = BuildCsx(argv[0], runtime_context, csx_context);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);

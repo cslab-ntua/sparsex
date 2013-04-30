@@ -25,16 +25,15 @@ template<typename IndexType, typename ValueType>
 class CSR
 {
 public:
-    CSR(const IndexType *rowptr,
-        const IndexType *colind,
-        const ValueType *values, IndexType nr_rows, IndexType nr_cols,
-        bool zero_based)
+    CSR(IndexType *rowptr, IndexType *colind, ValueType *values,
+        IndexType nr_rows, IndexType nr_cols, bool zero_based)
         : rowptr_(rowptr),
           colind_(colind),
           values_(values),
           nr_rows_(nr_rows),
           nr_cols_(nr_cols),
-          zero_based_(zero_based)
+          zero_based_(zero_based),
+          symmetric_(false) //FIXME: give symmetric argument
     {
         nr_nzeros_ = rowptr_[nr_rows] - !zero_based_;
     }
@@ -55,6 +54,7 @@ public:
     }
 
     bool IsZeroBased() { return zero_based_; }
+    bool IsSymmetric() { return symmetric_; }
 
     // CooElem iterator
     class iterator;
@@ -94,14 +94,17 @@ public:
         os << " ]";
     }
 
-private:
-    const IndexType *rowptr_;
-    const IndexType *colind_;
-    const ValueType *values_;
+    //ValueType GetValue(IndexType row, IndexType col);
+    //bool SetValue(IndexType row, IndexType col, ValueType new_val);
+
+//private:
+    IndexType *rowptr_;
+    IndexType *colind_;
+    ValueType *values_;
     IndexType nr_rows_;
     IndexType nr_cols_;
     IndexType nr_nzeros_;
-    bool zero_based_;
+    bool zero_based_, symmetric_;
 };
 
 template<typename IndexType, typename ValueType>
