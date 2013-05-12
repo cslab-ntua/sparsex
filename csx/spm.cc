@@ -34,7 +34,7 @@ std::ostream &operator<<(std::ostream &os, const DeltaRLE &p)
 
 std::ostream &operator<<(std::ostream &out, CooElem p)
 {
-    out << "(" << std::setw(2) << p.y << "," << std::setw(2) << p.x << ")";
+    out << "(" << std::setw(2) << p.row << "," << std::setw(2) << p.col << ")";
     return out;
 }
 
@@ -57,7 +57,7 @@ std::ostream &operator<<(std::ostream &out, const SpmElem e)
 
 /*std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem)
 {
-    out << "x:" << elem.x;
+    out << "x:" << elem.col;
     out << " in_pattern:" << elem.in_pattern;
     out << " pattern_start:" << elem.pattern_start;
     if (elem.pattern) {
@@ -84,22 +84,22 @@ std::ostream &operator<<(std::ostream &out, const SpmElem e)
     static inline void BLOCK_ROW_MAP_NAME(r)                            \
         (const CooElem &src, CooElem &dst)                              \
     {                                                                   \
-        uint64_t src_x = src.x;                                         \
-        uint64_t src_y = src.y;                                         \
+        uint64_t src_x = src.col;                                         \
+        uint64_t src_y = src.row;                                         \
                                                                         \
-        dst.y = (src_y - 1) / r + 1;                                    \
-        dst.x = (src_y - 1) % r + r * (src_x - 1) + 1;                  \
+        dst.row = (src_y - 1) / r + 1;                                    \
+        dst.col = (src_y - 1) % r + r * (src_x - 1) + 1;                  \
     }
 
 #define DEFINE_BLOCK_ROW_RMAP_FN(r)                                     \
     static inline void BLOCK_ROW_RMAP_NAME(r)                           \
         (const CooElem &src, CooElem &dst)                              \
     {                                                                   \
-        uint64_t src_x = src.x;                                         \
-        uint64_t src_y = src.y;                                         \
+        uint64_t src_x = src.col;                                         \
+        uint64_t src_y = src.row;                                         \
                                                                         \
-        dst.y = r * (src_y - 1) + (src_x - 1) % r + 1;                  \
-        dst.x = (src_x - 1) / r + 1;                                    \
+        dst.row = r * (src_y - 1) + (src_x - 1) % r + 1;                  \
+        dst.col = (src_x - 1) / r + 1;                                    \
     }
 
 #define DEFINE_BLOCK_COL_MAP_FN(c)                                      \
@@ -120,11 +120,11 @@ std::ostream &operator<<(std::ostream &out, const SpmElem e)
 
 static inline void pnt_map_V(const CooElem &src, CooElem &dst)
 {
-    uint64_t src_x = src.x;
-    uint64_t src_y = src.y;
+    uint64_t src_x = src.col;
+    uint64_t src_y = src.row;
 
-    dst.x = src_y;
-    dst.y = src_x;
+    dst.col = src_y;
+    dst.row = src_x;
 }
 
 static inline void pnt_rmap_V(const CooElem &src, CooElem &dst)
@@ -134,52 +134,52 @@ static inline void pnt_rmap_V(const CooElem &src, CooElem &dst)
 
 static inline void pnt_map_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
-    uint64_t src_x = src.x;
-    uint64_t src_y = src.y;
+    uint64_t src_x = src.col;
+    uint64_t src_y = src.row;
 
     assert(nrows + src_x - src_y > 0);
-    dst.y = nrows + src_x - src_y;
-    dst.x = (src_x < src_y) ? src_x : src_y;
+    dst.row = nrows + src_x - src_y;
+    dst.col = (src_x < src_y) ? src_x : src_y;
 }
 
 static inline void pnt_rmap_D(const CooElem &src, CooElem &dst, uint64_t nrows)
 {
-    uint64_t src_x = src.x;
-    uint64_t src_y = src.y;
+    uint64_t src_x = src.col;
+    uint64_t src_y = src.row;
 
     if (src_y < nrows) {
-        dst.x = src_x;
-        dst.y = nrows + src_x - src_y;
+        dst.col = src_x;
+        dst.row = nrows + src_x - src_y;
     } else {
-        dst.y = src_x;
-        dst.x = src_y + src_x - nrows;
+        dst.row = src_x;
+        dst.col = src_y + src_x - nrows;
     }
 }
 
 static inline void pnt_map_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 {
-    uint64_t src_x = src.x;
-    uint64_t src_y = src.y;
+    uint64_t src_x = src.col;
+    uint64_t src_y = src.row;
     uint64_t dst_y;
 
-    dst.y = dst_y = src_x + src_y - 1;
-    dst.x = (dst_y <= ncols) ? src_y : ncols + 1 - src_x;
+    dst.row = dst_y = src_x + src_y - 1;
+    dst.col = (dst_y <= ncols) ? src_y : ncols + 1 - src_x;
 }
 
 static inline void pnt_rmap_rD(const CooElem &src, CooElem &dst, uint64_t ncols)
 {
-    uint64_t src_x = src.x;
-    uint64_t src_y = src.y;
+    uint64_t src_x = src.col;
+    uint64_t src_y = src.row;
 
     if (src_y <= ncols) {
-        dst.y = src_x;
-        dst.x = src_y + 1 - src_x;
+        dst.row = src_x;
+        dst.col = src_y + 1 - src_x;
     } else {
-        dst.y = src_x + src_y - ncols;
-        dst.x = ncols + 1 - src_x;
+        dst.row = src_x + src_y - ncols;
+        dst.col = ncols + 1 - src_x;
     }
 
-    dst.y = src_y - dst.x + 1;
+    dst.row = src_y - dst.col + 1;
 }
 
 DEFINE_BLOCK_ROW_MAP_FN(1)
@@ -220,23 +220,23 @@ DEFINE_BLOCK_COL_RMAP_FN(8)
 
 void MakeRowElem(const CooElem &p, SpmRowElem *ret)
 {
-    ret->x = p.x;
+    ret->col = p.col;
     ret->val = p.val;
     ret->pattern = NULL;
 }
 
 void MakeRowElem(const CooElem &p, SpmElem *ret)
 {
-    ret->y = p.y;
-    ret->x = p.x;
+    ret->row = p.row;
+    ret->col = p.col;
     ret->val = p.val;
     ret->pattern = NULL;
 }
 
 void MakeRowElem(const SpmElem &p, SpmElem *ret)
 {
-    ret->y = p.y;
-    ret->x = p.x;
+    ret->row = p.row;
+    ret->col = p.col;
     ret->val = p.val;
     ret->in_pattern = p.in_pattern;
     ret->pattern_start = p.pattern_start;
@@ -245,7 +245,7 @@ void MakeRowElem(const SpmElem &p, SpmElem *ret)
 
 /*void MakeRowElem(const SpmElem &p, SpmRowElem *ret)
 {
-    ret->x = p.x;
+    ret->col = p.col;
     ret->val = p.val;
     ret->in_pattern = p.in_pattern;
     ret->pattern_start = p.pattern_start;
@@ -254,7 +254,7 @@ void MakeRowElem(const SpmElem &p, SpmElem *ret)
 
 void MakeRowElem(const SpmRowElem &p, SpmRowElem *ret)
 {
-    ret->x = p.x;
+    ret->col = p.col;
     ret->val = p.val;
     ret->in_pattern = p.in_pattern;
     ret->pattern_start = p.pattern_start;
@@ -380,8 +380,8 @@ void SPM::PrintElems(std::ostream &out)
     for (p = p_start; p != p_end; ++p) {
         if ((*p).pattern == NULL) {
             out << std::setiosflags(std::ios::scientific)
-                << row_start_ + (*p).y << " "
-                << (*p).x << " " << (*p).val << " cnt:" << cnt++ << "\n";
+                << row_start_ + (*p).row << " "
+                << (*p).col << " " << (*p).val << " cnt:" << cnt++ << "\n";
             continue;
         }
 
@@ -407,8 +407,8 @@ void SPM::PrintElems(std::ostream &out)
             if (rxform_fn)
                 rxform_fn(e);
                 
-            out << std::setiosflags(std::ios::scientific) << row_start_ + e.y
-                << " " << e.x << " " << *vals++ << " cnt:" << cnt++ << "\n";
+            out << std::setiosflags(std::ios::scientific) << row_start_ + e.row
+                << " " << e.col << " " << *vals++ << " cnt:" << cnt++ << "\n";
         }
 
         out << "=== END OF PATTERN ===" << std::endl;
@@ -589,8 +589,8 @@ void SPM::Transform(SpmIterOrder t, uint64_t rs, uint64_t re)
     p0 = PointsBegin(rs);
     pe = PointsEnd(re); 
     for (p = p0; p != pe; ++p) {
-    //std::cout << "row: " << (*p).y;
-    //std::cout<< " col: " << (*p).x << " " << (*p).val << std::endl;
+    //std::cout << "row: " << (*p).row;
+    //std::cout<< " col: " << (*p).col << " " << (*p).val << std::endl;
         SpmElem p_new = SpmElem(*p);    //why cast???
         xform_fn(p_new);
         elems.push_back(p_new);
@@ -1078,10 +1078,10 @@ SpmElem SPM::PntIter::operator*()
     SpmElem *e;
     DeltaRLE *p;
   
-    ret.y = row_idx_ + 1;
+    ret.row = row_idx_ + 1;
     e = spm_->elems_ + elem_idx_;
-    //std::cout << "row2: " << e->y<< " " << e->x << " " << e->val << std::endl;
-    ret.x = e->x;
+    //std::cout << "row2: " << e->row<< " " << e->col << " " << e->val << std::endl;
+    ret.col = e->col;
     ret.val = e->val;
     p = e->pattern;
     ret.pattern = (p == NULL) ? NULL : p->Clone();
@@ -1187,7 +1187,7 @@ void SPMSym::DivideMatrix()
     for (unsigned long i = 0; i < nr_rows; i++) {
         for (unsigned long j = rowptr[i]; j < rowptr[i+1]; j++) {
             elem = elems + j;
-            if (elem->x < row_start + 1) {
+            if (elem->col < row_start + 1) {
                 if (rows1 < i) {
                     spmbld1->NewRow(i - rows1);
                     rows1 = i;
@@ -1330,8 +1330,8 @@ void PrintTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
 
     for (i = 1; i <= y; i++) {
         for (j = 1; j <= x;  j++) {
-            p.y = i;
-            p.x = j;
+            p.row = i;
+            p.col = j;
             xform_fn(p);
             out << p << " ";
         }
@@ -1364,17 +1364,17 @@ void TestTransform(uint64_t y, uint64_t x, TransformFn xform_fn,
     
     for (i = 1; i <= y; i++) {
         for (j = 1; j <= x;  j++){
-            p0.y = i;
-            p0.x = j;
+            p0.row = i;
+            p0.col = j;
             xform_fn(p0);
-            p1.y = p0.y;
-            p1.x = p0.x;
+            p1.row = p0.row;
+            p1.col = p0.col;
             rxform_fn(p1);
-            if (p1.y != i || p1.x != j) {
+            if (p1.row != i || p1.col != j) {
                 std::cout << "Error for " << i << "," << j << std::endl;
-                std::cout << "Transformed: " << p0.y << "," << p0.x
+                std::cout << "Transformed: " << p0.row << "," << p0.col
                           << std::endl;
-                std::cout << "rTransformed:" << p1.y << "," << p1.x
+                std::cout << "rTransformed:" << p1.row << "," << p1.col
                           << std::endl;
                 exit(1);
             }

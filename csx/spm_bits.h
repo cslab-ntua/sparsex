@@ -146,7 +146,7 @@ static inline int IsBlockType(SpmIterOrder t)
  *  Holds column and value or values of CSX elememts.
  */
 struct RowElem {
-    uint64_t x;         ///< the column index
+    uint64_t col;         ///< the column index
     union {
         double val;     ///< the value of the element
         double *vals;   ///< the value of the elements, if RowElem refers to
@@ -158,7 +158,7 @@ struct RowElem {
  *  Coordinate element, i.e., holds row and column information.
  */
 struct CooElem : public RowElem {
-    uint64_t y; ///< the row of the element
+    uint64_t row; ///< the row of the element
 };
 
 /**
@@ -168,11 +168,11 @@ struct CooElemSorter {
     public:
         bool operator() (const CooElem &lhs, const CooElem &rhs) const
         {
-            if (lhs.y < rhs.y) return true;
-            if (lhs.y > rhs.y) return false;
+            if (lhs.row < rhs.row) return true;
+            if (lhs.row > rhs.row) return false;
 
-            if (lhs.x < rhs.x) return true;
-            if (lhs.x > rhs.x) return false;
+            if (lhs.col < rhs.col) return true;
+            if (lhs.col > rhs.col) return false;
 
             return false;
         }
@@ -193,9 +193,9 @@ static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 {
     int64_t ret;
 
-    ret = p0.y - p1.y;
+    ret = p0.row - p1.row;
     if (ret == 0)
-        ret = p0.x - p1.x;
+        ret = p0.col - p1.col;
 
     if (ret > 0)
         return 1;
@@ -328,7 +328,7 @@ public:
         virtual CooElem Next() {
             CooElem ret(start_);
             assert(nr_ <= rle_->size_ && "out of pattern");
-            ret.x += nr_ * rle_->delta_;
+            ret.col += nr_ * rle_->delta_;
             nr_ += 1;
             return ret;
         }

@@ -21,12 +21,16 @@
 #include "runtime.h"
 #include "mmf.h"
 #include "csr.h"
+#include "rcm_impl.h"
 
 using namespace boost;
 
+typedef pair<size_t, size_t> Pair;
 typedef adjacency_list<vecS, vecS, undirectedS, 
                        property<vertex_color_t, default_color_type,
                        property<vertex_degree_t,int> > > Graph;
+typedef graph_traits<Graph>::vertex_descriptor Vertex;
+typedef graph_traits<Graph>::vertices_size_type size_type;
 
 // FIXME: return permutation in order to reorder the rest of the linear system
 
@@ -48,7 +52,7 @@ void FindPerm(vector<size_t> &perm, vector<size_t> &inv_perm, Graph &graph);
  *  @param perm        permutation from the old ordering to the new one.
  *  @return            spm class object with the characteristics of the matrix.
  */
-SPM *LoadMMF_RCM(const char *file_name, RuntimeContext &rt_config);
+SPM *LoadMMF_RCM(const char *file_name, const RuntimeContext &rt_config);
 void ReorderMatMMF(MMF &mat, const vector<size_t> &perm);
 Graph& ConstructGraphMMF(Graph &graph, MMF &mat);
 
@@ -71,14 +75,12 @@ Graph& ConstructGraphMMF(Graph &graph, MMF &mat);
 template<typename IndexType, typename ValueType>
 SPM *LoadCSR_RCM(IndexType *rowptr, IndexType *colind, ValueType *values,
                  size_t nr_rows, size_t nr_cols, bool zero_based,
-                 RuntimeContext &rt_config);
+                 const RuntimeContext &rt_config);
 template<typename IndexType, typename ValueType>
-void ReorderMatCSR(CSR<IndexType, ValueType> &mat, vector<size_t> &perm,
+void ReorderMatCSR(CSR<IndexType, ValueType> &mat, const vector<size_t> &perm,
                    vector<size_t> &inv_perm);
 template<typename IterT>
 Graph& ConstructGraphCSR(Graph &graph, IterT &iter, const IterT &iter_end,
                          size_t nr_nzeros, bool symmetric);
-
-#include "rcm.cc"
 
 #endif // RCM_H__

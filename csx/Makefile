@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: spmv libcsx.a libcsx.so libcsx_test rcm_test
+all: spmv libcsx.a libcsx.so libcsx_test dynamic_array_test rcm_test
 
 # Configuration
 llvmconf     = llvm-config
@@ -40,7 +40,7 @@ LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 CLANG_LDFLAGS   = -Wl,--start-group -lclangAnalysis -lclangAST -lclangBasic -lclangCodeGen -lclangDriver -lclangFrontend -lclangFrontendTool -lclangIndex -lclangLex -lclangParse -lclangRewrite -lclangSema -lclangSerialization -lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangStaticAnalyzerFrontend -Wl,--end-group
 dynarray_dep    = $(dynarray_dir)/dynarray.o
 
-CSX_OBJECTS = timer.o rcm.o spmv.o runtime.o jit.o mmf.o spm.o csx.o drle.o template_text.o jit_util.o compiler.o $(spm_dir)/libspmv.o
+CSX_OBJECTS = timer.o rcm.o runtime.o spmv.o jit.o mmf.o spm.o csx.o drle.o template_text.o jit_util.o compiler.o $(spm_dir)/libspmv.o dynamic_array.o
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	override CPPFLAGS += -DSPM_NUMA
@@ -72,7 +72,7 @@ drle_test: mmf.o spm.o drle.o test.o drle_test.cc
 %.o: %.c %.h
 	$(CC_COMPILE) -c $<
 
-rcm.o: runtime.h mmf.h csr.h csr_iterator.h
+rcm.o: runtime.h mmf.h csr.h csr_iterator.h rcm_impl.h
 runtime.o: csx.h spm.h jit.h $(spm_dir)/spm_mt.h $(spm_dir)/mt_lib.h
 elmerif.o: elmerif.cc elmerif.h spmv.h spm.h csr.h
 	$(CXX_COMPILE) -DSPM_CRS_BITS=32 -c $<
@@ -84,7 +84,8 @@ spm.o: mmf.h $(dynarray_dir)/dynarray.h
 drle.o: spm.h spm_bits.h
 main.o: spmv.h runtime.h runtime.cc
 libcsx_test.o: elmerif.h $(spm_dir)/spm_crs.h
-rcm_test.o: rcm.h runtime.h spmv.h
+rcm_test.o: rcm.h rcm_impl.h runtime.h spmv.h spm.h csr.h
+dynamic_array.o: allocators.h $(dynarray_dir)/dynarray.h
 
 libcsx.so: $(CSX_OBJECTS) elmerif.o
 	$(LINK) -shared -o $@ $^ $(dynarray_dep) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS)
@@ -101,5 +102,8 @@ libcsx_test: libcsx_test.o libcsx.so $(spm_dir)/libspmv.o
 rcm_test: rcm_test.o libcsx.so
 	$(LINK) -o $@ $^ $(LIBS)
 
+dynamic_array_test: dynamic_array.o timer.o
+	$(LINK) -o $@ $^ $(dynarray_dep) -lnuma
+
 clean:
-	rm -f *.o libcsx.so libcsx.a spmv libcsx_test rcm_test
+	rm -f *.o libcsx.so libcsx.a spmv libcsx_test rcm_test  dynamic_array_test

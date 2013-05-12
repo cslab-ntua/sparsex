@@ -61,7 +61,6 @@ private:
 
     // These are mainly SPM construction classes, so make them friends
     friend class Builder;
-    friend class VirtualBuilder;
     friend class CsxManager;
     friend class DRLE_Manager;
 
@@ -157,7 +156,6 @@ public:
     SpmElem *RowEnd(uint64_t ridx = 0);
 
     class Builder;
-    class VirtualBuilder;
 
     /**
      *  Function for filling the matrix using point iterators
@@ -341,6 +339,7 @@ public:
             spm->nr_rows_ = spm->rowptr_size_ - 1;
             spm->nr_cols_ = mat.GetNrCols();
             spm->row_start_ = row_start;
+            //cout << "SPM: " << i << " "  << row_start;
             row_start += spm->nr_rows_;
             spm->type_ = HORIZONTAL;
             cnt += spm->nr_nzeros_;
@@ -612,9 +611,9 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
 
     row_prev = first_row;
     for (; pi != pnts_end; ++pi) {
-        row = (*pi).y;
+        row = (*pi).row;
         if (row != row_prev) {
-            assert(row > row_prev);
+            //assert(row > row_prev);
             if (limit && SpmBld->GetElemsCnt() >= limit)
                 break;
             SpmBld->NewRow(row - row_prev);
@@ -622,6 +621,7 @@ uint64_t SPM::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
         }
 
         elem = SpmBld->AllocElem();
+        //cout << (*pi).row << " " << (*pi).col << " " << (*pi).val << endl;
         MakeRowElem(*pi, elem);
     }
 
@@ -652,8 +652,8 @@ uint64_t SPMSym::SetElems(IterT &pi, const IterT &pnts_end, uint64_t first_row,
 
     row_prev = first_row;
     for (; pi != pnts_end; ++pi) {
-        row = (*pi).y;
-        col = (*pi).x;
+        row = (*pi).row;
+        col = (*pi).col;
         
         if (row > col) {
             if (row != row_prev) {

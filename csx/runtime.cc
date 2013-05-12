@@ -19,6 +19,10 @@
 using namespace std;
 using namespace csx;
 
+#define BLOCK_ROW 5
+#define BLOCK_COL 6
+#define ALL       7
+
 static std::map<string, int> XformOpt = boost::assign::map_list_of
     ("none", 0)
     ("h", 1)
@@ -35,7 +39,7 @@ Configuration::Map Configuration::map_ = boost::assign::map_list_of
     (Affinity, "0")
     (Xform, "0")
     (WindowSize, "0")
-    (Samples, "MAX")    
+    (Samples, "__MAX__")    
     (SamplingPortion, "0.0")
     (Symmetric, "false")
     (SplitBlocks, "true")
@@ -46,7 +50,7 @@ Configuration::Map Configuration::map_ = boost::assign::map_list_of
     (FullColumnIndices, "false")
 #endif
     (MinLimit, "4")
-    (MaxLimit, "MAX")  //default -> long max
+    (MaxLimit, "__MAX__")  //default -> long max
     (MinPercentage, "0.1");
 
 Configuration::PropertyMap Configuration::conf_(Configuration::map_);
@@ -153,13 +157,13 @@ static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
 
         // Find xform
         int option = XformOpt[pair[0]];
-        if (option < 5)
+        if (option < BLOCK_ROW)
             (*xform_buf)[index++] = option;
-        else if (option == 5) {  // BlockRow 
+        else if (option == BLOCK_ROW) {
             for (size_t j = 7; j < 14; j++)
                 (*xform_buf)[index++] = j;
         }
-        else if (option == 6) {  // BlockCol 
+        else if (option == BLOCK_COL) {
             for (size_t j = 16; j < 23; j++)
                 (*xform_buf)[index++] = j;
         } else {    // All
@@ -180,12 +184,12 @@ static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
             }
             (*deltas)[delta_index][delta_tokens.size()] = -1;
             delta_index++;
-            if (option == 5 || option == 6) {
+            if (option == BLOCK_ROW || option == BLOCK_COL) {
                 for (size_t k = 0; k < 7; k++) {
                     (*deltas)[delta_index + k] = (*deltas)[delta_index - 1];
                 }
                 delta_index += 7;
-            } else if (option == 7) {
+            } else if (option == ALL) {
                 for (size_t k = 0; k < 17; k++) {
                     (*deltas)[delta_index + k] = (*deltas)[delta_index - 1];
                 }
@@ -233,7 +237,7 @@ static void ParseOptionWindowSize(string str, size_t &wsize)
 
 static void ParseOptionSamples(string str, size_t &samples_max)
 {
-    if (str == "MAX")
+    if (str == "__MAX__")
         samples_max = std::numeric_limits<uint64_t>::max();
     else
         samples_max = boost::lexical_cast<size_t, string>(str);
@@ -255,12 +259,6 @@ static void ParseOptionSplitBlocks(string str, bool &split_blocks)
 {
     (str == "true") ? split_blocks = true : split_blocks = false;   
 } 
-
-static void ParseOptionOneDimBlocks(string str, bool &onedim_blocks)
-{
-    (str == "true") ? onedim_blocks = true : onedim_blocks = false;   
-}      
-
 
 void RuntimeContext::SetRuntimeContext(const Configuration &conf)
 {
@@ -415,9 +413,9 @@ static void ParseOptionDeltas(string str, int ***deltas)
         }
         cout << "}" << endl;
     }
-}
+    }*/
 
-static void ParseOptionXform(string str, int **xform_buf)
+/*static void ParseOptionXform(string str, int **xform_buf)
 {
     vector<string> xform_split;
 

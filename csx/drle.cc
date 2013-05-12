@@ -192,7 +192,7 @@ DeltaRLE::Stats DRLE_Manager::GenerateStats(SPM *spm, uint64_t rs, uint64_t re)
         for (SpmElem *elem = spm->RowBegin(i);
              elem != spm->RowEnd(i); ++elem) {
             if (elem->pattern == NULL) {
-                xs.push_back(elem->x);
+                xs.push_back(elem->col);
                 elems.push_back(elem);
                 continue;
             }
@@ -217,7 +217,7 @@ void DRLE_Manager::GenerateDeltaStats(SPM *spm, uint64_t rs, uint64_t re,
         for (SpmElem *elem = spm->RowBegin(i);
              elem != spm->RowEnd(i); ++elem) {
             if (!elem->in_pattern)
-                xs.push_back(elem->x);
+                xs.push_back(elem->col);
             else
                 elem->in_pattern = false;   // reset the marking
 
@@ -742,7 +742,7 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
                 SpmElem *last_elem;
                 long curr_freq = std::min(max_limit_, rle_freq);
                 
-                elem.x = rle_start;
+                elem.col = rle_start;
                 encoded.push_back(elem);
                 last_elem = &encoded.back();
                 last_elem->pattern = new DeltaRLE(curr_freq, rle.val,
@@ -762,7 +762,7 @@ void DRLE_Manager::DoEncode(std::vector<uint64_t> &xs, std::vector<double> &vs,
         // add individual elements
         for (int i = 0; i < rle_freq; ++i) {
             col += rle.val;
-            elem.x = col;
+            elem.col = col;
             elem.val = *vi++;
             encoded.push_back(elem);
         }
@@ -842,7 +842,7 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
 
             // Add elements skipped from start
             for (uint64_t i = 0; i < skip_front; ++i) {
-                elem.x = rle_start + i;
+                elem.col = rle_start + i;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
@@ -860,7 +860,7 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
 
             for (uint64_t i = 0; i < nr_blocks; ++i) {
                 // Add the blocks
-                elem.x = rle_start + skip_front + i * nr_elem_block;
+                elem.col = rle_start + skip_front + i * nr_elem_block;
                 encoded.push_back(elem);
                 last_elem = &encoded.back();
                 last_elem->pattern = new BlockRLE(nr_elem_block,
@@ -873,14 +873,14 @@ void DRLE_Manager::DoEncodeBlock(std::vector<uint64_t> &xs,
 
             // Add the remaining elements
             for (uint64_t i = 0; i < skip_back; ++i) {
-                elem.x = rle_start + skip_front + nr_elem_block * nr_blocks + i;
+                elem.col = rle_start + skip_front + nr_elem_block * nr_blocks + i;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
         } else {
             // add individual elements
             for (int i = 0; i < rle.freq; ++i) {
-                elem.x = col + i * rle.val;
+                elem.col = col + i * rle.val;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
@@ -952,7 +952,7 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
 
             // Add elements skipped from start
             for (uint64_t i = 0; i < skip_front; ++i) {
-                elem.x = rle_start++;
+                elem.col = rle_start++;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
@@ -966,7 +966,7 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
                     //We have a new block RLE
                     uint64_t nr_elem_block = block_align * (*i);
                     
-                    elem.x = rle_start;
+                    elem.col = rle_start;
                     rle_start += nr_elem_block;
                     encoded.push_back(elem);
                     last_elem = &encoded.back();
@@ -983,14 +983,14 @@ void DRLE_Manager::DoEncodeBlockAlt(std::vector<uint64_t> &xs,
             // Add the remaining elements
             skip_back += nr_elem;
             for (uint64_t i = 0; i < skip_back; ++i) {
-                elem.x = rle_start++;
+                elem.col = rle_start++;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
         } else {
             // add individual elements
             for (int i = 0; i < rle.freq; ++i) {
-                elem.x = col + i * rle.val;
+                elem.col = col + i * rle.val;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
@@ -1015,9 +1015,9 @@ void DRLE_Manager::DoDecode(const SpmElem *elem,
     SpmElem new_elem;
 
     new_elem.pattern = NULL;
-    cur_x = elem->x;
+    cur_x = elem->col;
     for (i = 0; i < elem->pattern->GetSize(); ++i) {
-        new_elem.x = cur_x;
+        new_elem.col = cur_x;
         new_elem.val = elem->vals[i];
         newrow.push_back(new_elem);
         cur_x = elem->pattern->GetNextCol(cur_x);
@@ -1040,7 +1040,7 @@ void DRLE_Manager::EncodeRow(const SpmElem *rstart, const SpmElem *rend,
     //for (const SpmRowElem *e = rstart; e < rend; ++e) {
     for (const SpmElem *e = rstart; e < rend; ++e) {
         if (e->pattern == NULL) {
-            xs.push_back(e->x);
+            xs.push_back(e->col);
             vs.push_back(e->val);
             continue;
         }

@@ -275,7 +275,7 @@ void CsxManager::DoRow(const SpmElem *rbegin, const SpmElem *rend)
         if (xs.size() == CTL_SIZE_MAX)
              AddXs(xs);
 
-        xs.push_back(spm_elem->x);
+        xs.push_back(spm_elem->col);
         values_[values_idx_++] = spm_elem->val;
     }
 
@@ -297,7 +297,7 @@ void CsxManager::DoSymRow(const SpmElem *rbegin, const SpmElem *rend)
     const SpmElem *spm_elem = rbegin;
 
     last_col_ = 1;
-    for ( ; spm_elem < rend && spm_elem->x < spm_->GetRowStart() + 1; 
+    for ( ; spm_elem < rend && spm_elem->col < spm_->GetRowStart() + 1; 
          spm_elem++) {
         if (debug)
             std::cerr << "\t" << *spm_elem << "\n";
@@ -318,7 +318,7 @@ void CsxManager::DoSymRow(const SpmElem *rbegin, const SpmElem *rend)
         if (xs.size() == CTL_SIZE_MAX)
              AddXs(xs);
 
-        xs.push_back(spm_elem->x);
+        xs.push_back(spm_elem->col);
         values_[values_idx_++] = spm_elem->val;
     }
 
@@ -345,7 +345,7 @@ void CsxManager::DoSymRow(const SpmElem *rbegin, const SpmElem *rend)
         if (xs.size() == CTL_SIZE_MAX)
              AddXs(xs);
 
-        xs.push_back(spm_elem->x);
+        xs.push_back(spm_elem->col);
         values_[values_idx_++] = spm_elem->val;
     }
 
@@ -454,9 +454,9 @@ void CsxManager::AddPattern(const SpmElem &elem)
     UpdateNewRow(ctl_flags);
 
     if (full_column_indices_)
-        ucol = elem.x;
+        ucol = elem.col;
     else
-        ucol = elem.x - last_col_;
+        ucol = elem.col - last_col_;
         
     if (debug)
         std::cerr << "AddPattern ujmp " << ucol << "\n";
@@ -466,7 +466,7 @@ void CsxManager::AddPattern(const SpmElem &elem)
     else
         da_put_ul(ctl_da_, ucol);
 
-    last_col_ = elem.pattern->ColIncreaseJmp(spm_->type_, elem.x);
+    last_col_ = elem.pattern->ColIncreaseJmp(spm_->type_, elem.col);
     if (debug)
         std::cerr << "last_col:" << last_col_ << "\n";
 }

@@ -17,13 +17,13 @@
 
 #include "spm_bits.h"
 
-#include <iostream>
-#include <iterator>
-#include <vector>
 #include <algorithm>
 #include <boost/bind/bind.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
+#include <iostream>
+#include <iterator>
+#include <vector>
 
 using namespace std;
 
@@ -56,7 +56,7 @@ public:
 
     size_t GetNrNonzeros() const
     {
-        if (symmetric_)
+        if (symmetric_ || col_wise_)
             return matrix_.size();
         else 
             return nr_nzeros_;
@@ -77,7 +77,6 @@ public:
         return zero_based_;
     }
 
-    // Functions used in reordering
     void GetCoordinates(size_t index, uint64_t &row, uint64_t &col);
     void SetCoordinates(size_t index, uint64_t row, uint64_t col);
     void Sort();
@@ -99,7 +98,6 @@ public:
     }
 
     class iterator;
-    friend class iterator;
     iterator begin();
     iterator end();
 
@@ -124,6 +122,7 @@ private:
         ColumnWise,
         RowWise
     };
+
     static boost::unordered_map<MmfInfo, const string> names_;
 
     void ParseMmfHeaderLine(vector<string> &arguments);
@@ -189,7 +188,7 @@ public:
 private:
     void DoSet()
     {
-        valid_ = mmf_->GetNext(elem_.y, elem_.x, elem_.val);
+        valid_ = mmf_->GetNext(elem_.row, elem_.col, elem_.val);
     }
 
     MMF *mmf_;

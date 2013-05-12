@@ -151,8 +151,11 @@ public:
     {
         if (xform_buf_)
             free(xform_buf_);
-        if (deltas_)
-            free(deltas_);  //free properly
+        if (deltas_) {
+            for (size_t i = 0; i < XFORM_MAX; i++)
+                free(deltas_[i]);
+            free(deltas_);
+        }
     }
 
     void SetCsxContext(const Configuration &conf);

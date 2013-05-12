@@ -33,7 +33,7 @@ void ReadMmfSizeLine(const char *mmf_file, uint64_t &nr_rows, uint64_t &nr_cols,
 
     in.open(mmf_file);
     in.seekg(0, ios::beg);
-    
+
     // Ignore comments
     while (in.peek() == '%') {
         in.ignore(numeric_limits<std::streamsize>::max(), '\n');
@@ -44,8 +44,8 @@ void ReadMmfSizeLine(const char *mmf_file, uint64_t &nr_rows, uint64_t &nr_cols,
         cerr << "Size line error" << endl;
         exit(1);
     }
-    ParseElement(arguments, nr_rows, nr_cols, nr_nzeros);
 
+    ParseElement(arguments, nr_rows, nr_cols, nr_nzeros);
     in.close();
 }
 
@@ -214,15 +214,15 @@ void MMF::DoLoadMmfMatrix()
     if (symmetric_) {
         matrix_.reserve(nr_nzeros_ << 1);
         for (size_t i = 0; i < nr_nzeros_; i++) {
-            if (!MMF::GetNext(elem.y, elem.x, elem.val)) {
+            if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
                 cerr << "Requesting dereference, but mmf ended" << endl;
                 exit(1);
             }
             matrix_.push_back(elem);
-            if (elem.y != elem.x) {
-                tmp = elem.y;
-                elem.y = elem.x;
-                elem.x = tmp;
+            if (elem.row != elem.col) {
+                tmp = elem.row;
+                elem.row = elem.col;
+                elem.col = tmp;
                 matrix_.push_back(elem);          
             }
         }
@@ -230,7 +230,7 @@ void MMF::DoLoadMmfMatrix()
     } else {
         matrix_.reserve(nr_nzeros_);
         for (size_t i = 0; i < nr_nzeros_; i++) {
-            if (!MMF::GetNext(elem.y, elem.x, elem.val)) {
+            if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
                 cerr << "Requesting dereference, but mmf ended" << endl;
                 exit(1);
             }
@@ -261,14 +261,14 @@ bool MMF::GetNext(uint64_t &y, uint64_t &x, double &v)
 
 void MMF::GetCoordinates(size_t index, uint64_t &row, uint64_t &col)
 {
-    row = matrix_[index].y;
-    col = matrix_[index].x;
+    row = matrix_[index].row;
+    col = matrix_[index].col;
 }
 
 void MMF::SetCoordinates(size_t index, uint64_t row, uint64_t col)
 {
-    matrix_[index].y = row;
-    matrix_[index].x = col;
+    matrix_[index].row = row;
+    matrix_[index].col = col;
 }
 
 void MMF::Sort()
@@ -281,7 +281,7 @@ void MMF::Print()
     cout << "Elements of Matrix" << endl;
     cout << "------------------" << endl;
     for (size_t i = 0; i < nr_nzeros_; i++) {
-        cout << matrix_[i].y << " " << matrix_[i].x << " " << matrix_[i].val << endl;
+        cout << matrix_[i].row << " " << matrix_[i].col << " " << matrix_[i].val << endl;
     }
 }
 

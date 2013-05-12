@@ -134,6 +134,16 @@ void *csx_mattune(elmer_index_t *rowptr,
                                          (uint32_t *) colind,
                                          values, nr_rows, nr_threads, cpus);
 #else
+    // Initialization of runtime configuration
+    RuntimeContext &rt_context = RuntimeContext::GetInstance();
+    CsxContext csx_context;
+    
+    Configuration config;
+    config = ConfigFromEnv(config);
+
+    rt_context.SetRuntimeContext(config);
+    csx_context.SetCsxContext(config);
+
     //timer_start(&timers[TIMER_CONSTRUCT_INTERN]);
     timers[TIMER_CONSTRUCT_INTERN].Start();
     spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
@@ -143,8 +153,9 @@ void *csx_mattune(elmer_index_t *rowptr,
 
     //timer_start(&timers[TIMER_CONSTRUCT_CSX]);
     timers[TIMER_CONSTRUCT_CSX].Start();
-    CsxExecutionEngine &engine = CsxJitInit();
+    //CsxExecutionEngine &engine = CsxJitInit();
     //spm_mt = GetSpmMt(NULL, engine, true, false, spms);
+    spm_mt = BuildCsx(spms, NULL, rt_context, csx_context);
     //timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
     timers[TIMER_CONSTRUCT_CSX].Pause();
     delete[] spms;
