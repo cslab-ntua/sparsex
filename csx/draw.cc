@@ -7,9 +7,10 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#include "spm.h"
 
+#include "SparseInternal.h"
 #include "draw.h"
+#include "MatrixLoading.h"
 
 #include <cairomm/context.h>
 #include <cairomm/surface.h>
@@ -26,7 +27,7 @@ extern "C"{
 
 using namespace csx;
 
-void Draw(SPM &spm,
+void Draw(SparsePartition<uint64_t, double> &spm,
           const char *filename,
 		  int row_start, int row_end,
 		  const int width, const int height, bool symmetric=false)
@@ -34,7 +35,7 @@ void Draw(SPM &spm,
 	//Cairo::RefPtr<Cairo::PdfSurface> surface;
 	Cairo::RefPtr<Cairo::ImageSurface> surface;
 	Cairo::RefPtr<Cairo::Context> cr;
-	SPM::PntIter p, p_start, p_end;
+	typename SparsePartition<uint64_t, double>::PntIter p, p_start, p_end;
 	double max_cols, max_rows, x_pos, y_pos;
 	boost::function<double (double v, double max_coord, double max_v)> coord_fn;
 	boost::function<double (double a)> x_coord, y_coord;
@@ -66,7 +67,8 @@ void Draw(SPM &spm,
 	p_start = spm.PointsBegin(row_start);
 	p_end = spm.PointsEnd(row_end);
 	for (p = p_start; p != p_end; ++p){
-		SpmCooElem elem = *p;
+		// SpmCooElem elem = *p;
+		Elem elem = *p;
 		if (elem.pattern == NULL){
 			x_pos = x_coord(elem.x);
 			y_pos = y_coord(elem.y);
@@ -130,9 +132,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	SPM *Spm;
+	SparsePartition<uint64_t, double> *Spm;
+	SparseInternal<uint64_t, double> *Spi;
 
-	Spm = SPM::LoadMMF(argv[optind]);
+	Spi = LoadMMF<uint64_t, double>(argv[optind]);
+    Spm = Spi->GetPartition(0);
 	Draw(*Spm, out_file, 0, 0, 800, 800, symmetric);
 
 	return 0;

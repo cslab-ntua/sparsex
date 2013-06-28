@@ -8,7 +8,6 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-
 #ifndef RUNTIME_H__
 #define RUNTIME_H__
 
@@ -24,7 +23,7 @@
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
 
-#include "spm.h"
+#include "SparseInternal.h"
 #include "csx.h"
 #include "jit.h"
 
@@ -34,7 +33,8 @@ extern "C" {
 }
 
 using namespace std;
-using namespace csx;
+
+namespace csx {
 
 /* Runtime configuration class */
 class Configuration
@@ -84,7 +84,8 @@ private:
  * Loads runtime configuration set by the user
  * in the global property map "config_map"
  */
-Configuration &ConfigFromEnv(Configuration &conf);
+Configuration &ConfigFromEnv(Configuration &conf, bool symmetric,
+                             bool split_blocks);
 
 /* Singleton class holding runtime information */
 class RuntimeContext
@@ -205,16 +206,18 @@ private:
 };
 
 /* Class responsible for holding per thread information */
+template<class InternalType>
 class ThreadContext
 {
 public:
+    typedef typename InternalType::index_t index_t;
+    typedef typename InternalType::value_t value_t;
 
     ThreadContext() : 
         id_(0), 
         cpu_(0), 
         node_(0), 
         spm_(NULL), 
-        spm_sym_(NULL),
         spm_encoded_(NULL),
         csxmg_(NULL),
         buffer_(NULL),
@@ -237,7 +240,13 @@ public:
         node_ = node;
     }
 
-    void SetData(SPM* spms, SPMSym *spms_sym, spm_mt_t *spm_mt, bool symmetric);
+    //template<typename IndexType, typename ValueType>
+    void SetData(csx::SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt);
+
+#if 0   // SYM
+    void SetDataSym(SparsePartitionSym<index_t, value_t> *spms,
+                    spm_mt_t *spm_mt);
+#endif  // SYM    
  
     size_t GetId() const
     {
@@ -254,14 +263,9 @@ public:
         return node_;
     }
 
-    SPM *GetSpm()
+    InternalType *GetSpm()
     {
         return spm_;
-    }
-
-    SPMSym *GetSpmSym()
-    {
-        return spm_sym_;
     }
 
     spm_mt_thread_t *GetSpmEncoded()
@@ -269,24 +273,57 @@ public:
         return spm_encoded_;
     }
 
-    CsxManager *GetCsxManager()
+    CsxManager<index_t, value_t> *GetCsxManager()
     {
         return csxmg_;
     }
 
-    ostringstream &GetBuffer()
+    ostringstream& GetBuffer()
     {
         return *buffer_;
     }
 
 private:
     size_t id_, cpu_, node_;
-    SPM *spm_;
-    SPMSym *spm_sym_;
+    InternalType *spm_;
     spm_mt_thread_t *spm_encoded_;
-    CsxManager *csxmg_; //smart pointer???
+    CsxManager<index_t, value_t> *csxmg_;
     ostringstream *buffer_;
     double sampling_prob_;
 };
+
+template<class InternalType>
+void ThreadContext<InternalType>::
+SetData(SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt)
+{
+    spm_ = spms->GetPartition(id_);
+    csxmg_ = new CsxManager<index_t, value_t>(spm_);
+    spm_encoded_ = &spm_mt->spm_threads[id_]; 
+    buffer_ = new ostringstream("");
+#ifdef SPM_NUMA
+    // Enable the full-column-index optimization for NUMA architectures
+    csxmg_->SetFullColumnIndices(true);
+#endif
+}
+
+#if 0   // SYM
+
+template<class InternalType>
+void ThreadContext<InternalType>::
+SetDataSym(SparsePartitionSym<index_t, value_t> *spms, spm_mt_t *spm_mt)
+{
+    spm_ = spms + id_;
+    csxmg_ = new CsxManager<index_t, value_t>(spms + id_);
+    spm_encoded_ = &spm_mt->spm_threads[id_]; 
+    buffer_ = new ostringstream("");
+#ifdef SPM_NUMA
+    // Enable the full-column-index optimization for NUMA architectures
+    csxmg_->SetFullColumnIndices(true);
+#endif
+}
+
+#endif  // SYM
+
+}   // end of namespace csx
 
 #endif // RUNTIME_H__

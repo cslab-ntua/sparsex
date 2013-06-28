@@ -11,6 +11,8 @@
 #ifndef CSX_DELTA_H__
 #define CSX_DELTA_H__
 
+#include <inttypes.h>
+
 namespace csx {
 
 // Size for the delta-encoded units

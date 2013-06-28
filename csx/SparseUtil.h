@@ -1,6 +1,6 @@
 /* -*- C++ -*-
  *
- * spm_bits.h --  Essentials of SPM.
+ * SparseUtil.h --  Essentials of SparseInternal/SparsePartition.
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
@@ -8,18 +8,17 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPM_BITS_H__
-#define SPM_BITS_H__
+#ifndef SPARSEUTIL_H__
+#define SPARSEUTIL_H__
 
 #include <ostream>
+#include <iomanip>
 #include <inttypes.h>
 #include <map>
-#include <ostream>
 #include <stdint.h>
 #include <boost/function.hpp>
 
-namespace csx
-{
+namespace csx {
 
 #define STRINGIFY__(s) #s
 #define STRINGIFY(s)  STRINGIFY__(s)
@@ -54,9 +53,9 @@ typedef enum
     BLOCK_COL_TYPE_NAME(8),
     BLOCK_TYPE_END,
     XFORM_MAX
-} SpmIterOrder;
+} IterOrder;
 
-const SpmIterOrder SpmTypes[] =
+const IterOrder SpmTypes[] =
 {
     NONE,
     HORIZONTAL,
@@ -115,13 +114,42 @@ const char *SpmTypesNames[] =
     "__XFORM_MAX__"
 };
 
+inline bool is_row_block(IterOrder t)
+{
+    if (t > BLOCK_TYPE_START && t < BLOCK_COL_START)
+        return true;
+    return false;
+}
+
+inline bool is_col_block(IterOrder t)
+{
+    if (t > BLOCK_COL_START && t < BLOCK_TYPE_END)
+        return true;
+    return false;
+}
+
+inline int gcd(int i, int j)
+{
+    if (j == 0)
+        return i;
+    return gcd(j, i%j);
+}
+
+inline int lcm(int i, int j)
+{
+    if (i >= j)
+        return i * j / gcd(i,j);
+    else
+        return i * j / gcd(j,i);
+}
+
 /**
  * Determines if the input is a block type or not.
  *
  * @param t a type of pattern.
  * @return  block alignment if <tt>t</tt> is a block type, 0 otherwise.
  */
-static inline int IsBlockType(SpmIterOrder t)
+inline int IsBlockType(IterOrder t)
 {
     if (t > BLOCK_TYPE_START && t < BLOCK_COL_START)
         return t - BLOCK_TYPE_START;
@@ -130,43 +158,29 @@ static inline int IsBlockType(SpmIterOrder t)
     else
         return 0;
 }
-
-/*static inline int IsBlockType(SpmIterOrder t)
-{
-    if (t > BLOCK_TYPE_START && t < BLOCK_COL_START)
-        return t - BLOCK_TYPE_START;
-    else if (t > BLOCK_COL_START && t < BLOCK_TYPE_END)
-        return t - BLOCK_COL_START;
-    else
-        return 0;
-}
-*/
-
-/**
- *  Holds column and value or values of CSX elememts.
- */
-struct RowElem {
-    uint64_t col;         ///< the column index
-    union {
-        double val;     ///< the value of the element
-        double *vals;   ///< the value of the elements, if RowElem refers to
-                        ///  an encoded pattern
-    };
-};
 
 /**
  *  Coordinate element, i.e., holds row and column information.
  */
-struct CooElem : public RowElem {
-    uint64_t row; ///< the row of the element
+template<typename IndexType, typename ValueType>
+struct CooElem {
+    IndexType row;        ///< the row index
+    IndexType col;        ///< the column index
+    union {
+        ValueType val;   ///< the value of the element
+        ValueType *vals; ///< the value of the elements, if Elem refers to
+                         ///  an encoded pattern
+    };
 };
 
 /**
  *  "Less" Sorting Functor for coordinate elements. Can be used by std::sort.
  */ 
+template<typename IndexType, typename ValueType>
 struct CooElemSorter {
     public:
-        bool operator() (const CooElem &lhs, const CooElem &rhs) const
+        bool operator() (const CooElem<IndexType, ValueType> &lhs,
+                         const CooElem<IndexType, ValueType> &rhs) const
         {
             if (lhs.row < rhs.row) return true;
             if (lhs.row > rhs.row) return false;
@@ -189,7 +203,9 @@ struct CooElemSorter {
  *           0 if 'p0' and 'p1' refer to the same matrix element.
  *  @see CooElem
  */
-static inline int CooCmp(const CooElem &p0, const CooElem &p1)
+template<typename IndexType, typename ValueType>
+inline int CooCmp(const CooElem<IndexType, ValueType> &p0,
+                         const CooElem<IndexType, ValueType> &p1)
 {
     int64_t ret;
 
@@ -214,7 +230,7 @@ static inline int CooCmp(const CooElem &p0, const CooElem &p1)
 class DeltaRLE
 {
 public:
-    DeltaRLE(uint32_t size, uint32_t delta, SpmIterOrder type)
+    DeltaRLE(uint32_t size, uint32_t delta, IterOrder type)
         : size_(size), delta_(delta)
     {
         type_ = type;
@@ -242,7 +258,7 @@ public:
      *
      *  @return the type of this RLE pattern.
      */
-    virtual SpmIterOrder GetType() const
+    virtual IterOrder GetType() const
     {
         return type_;
     }
@@ -266,7 +282,7 @@ public:
      *  @return       number of columns to procceed in order to go to the next
      *                CSX element.
      */
-    virtual long ColIncrease(SpmIterOrder order) const
+    virtual long ColIncrease(IterOrder order) const
     {
         long ret = (order == type_) ? (size_ * delta_) : 1;
         return ret;
@@ -280,7 +296,7 @@ public:
      *  @return      number of columns to procceed in order to go to the next
      *               CSX element.
      */
-    virtual uint64_t ColIncreaseJmp(SpmIterOrder order, uint64_t jmp) const
+    virtual uint64_t ColIncreaseJmp(IterOrder order, uint64_t jmp) const
     {
         long ret = jmp;
         if (order == type_)
@@ -307,7 +323,7 @@ public:
     class Generator
     {
     public:
-        Generator(CooElem start, DeltaRLE *rle)
+        Generator(CooElem<uint64_t, double> start, DeltaRLE *rle)
             : start_(start), rle_(rle), nr_(0) { }
 
         /**
@@ -325,8 +341,8 @@ public:
          *
          *  @return next element
          */
-        virtual CooElem Next() {
-            CooElem ret(start_);
+        virtual CooElem<uint64_t, double> Next() {
+            CooElem<uint64_t, double> ret(start_);
             assert(nr_ <= rle_->size_ && "out of pattern");
             ret.col += nr_ * rle_->delta_;
             nr_ += 1;
@@ -334,7 +350,7 @@ public:
         }
 
     private:
-        CooElem start_;
+        CooElem<uint64_t, double> start_;
         DeltaRLE *rle_;
         uint64_t nr_;
     };
@@ -345,7 +361,7 @@ public:
      *  @param  start starting element
      *  @return an object of Generator class.
      */
-    virtual Generator *generator(CooElem start)
+    virtual Generator *generator(CooElem<uint64_t, double> start)
     {
         Generator *g = new DeltaRLE::Generator(start, this);
         return g;
@@ -390,7 +406,7 @@ protected:
     uint32_t size_, delta_;
 
 private:
-    SpmIterOrder type_;
+    IterOrder type_;
 };
 
 /**
@@ -400,7 +416,7 @@ private:
  */
 class BlockRLE : public DeltaRLE {
 public:
-    BlockRLE(uint32_t size, uint32_t other_dim, SpmIterOrder type)
+    BlockRLE(uint32_t size, uint32_t other_dim, IterOrder type)
         : DeltaRLE(size, 1, (assert(IsBlockType(type)), type))
     {
         other_dim_ = other_dim;
@@ -475,12 +491,20 @@ public:
 /**
  *  A generic sparse matrix coordinate element that can also be a pattern.
  */
-class SpmElem: public CooElem, public SpmPattern {};
+template<typename IndexType, typename ValueType> 
+struct Elem : public CooElem<IndexType, ValueType>, public SpmPattern {};
 
-/**
- *  A generic sparse matrix row element that can also be a pattern.
- */
-class SpmRowElem: public RowElem, public SpmPattern {};
+
+template<typename IndexType, typename ValueType>
+inline bool elem_cmp_less(const Elem<IndexType, ValueType> &e0,
+                          const Elem<IndexType, ValueType> &e1)
+{
+    int ret;
+
+    ret = CooCmp(static_cast<CooElem<IndexType, ValueType> >(e0),
+                 static_cast<CooElem<IndexType, ValueType> >(e1));
+    return (ret < 0);
+}
 
 /**
  *  Fills a sparse matrix element (<tt>dst</tt>) from a source element
@@ -489,25 +513,99 @@ class SpmRowElem: public RowElem, public SpmPattern {};
  *  @param src  element to copy from.
  *  @param dst  element to fill.
  */
-void MakeRowElem(const CooElem &src, SpmElem *dst);
-void MakeRowElem(const SpmElem &src, SpmElem *dst);
-void MakeRowElem(const CooElem &src, SpmRowElem *dst);
-//void MakeRowElem(const SpmElem &src, SpmRowElem *dst);
-//void MakeRowElem(const SpmRowElem &src, SpmRowElem *dst);
+template<typename IndexType, typename ValueType>
+void MakeRowElem(const CooElem<IndexType, ValueType> &p,
+                 Elem<IndexType, ValueType> *ret)
+{
+    ret->row = p.row;
+    ret->col = p.col;
+    ret->val = p.val;
+    ret->pattern = NULL;
+}
 
-typedef boost::function<void (CooElem &p)> TransformFn;
+template<typename IndexType, typename ValueType>
+void MakeRowElem(const Elem<IndexType, ValueType> &p,
+                 Elem<IndexType, ValueType> *ret)
+{
+    ret->row = p.row;
+    ret->col = p.col;
+    ret->val = p.val;
+    ret->in_pattern = p.in_pattern;
+    ret->pattern_start = p.pattern_start;
+    ret->pattern = (p.pattern == NULL) ? NULL : (p.pattern)->Clone();
+}
 
 /**
- * Forward declarations for stream operations
+ * Stream operations
  */
-std::ostream &operator<<(std::ostream &os, const DeltaRLE::StatsVal &stats);
-std::ostream &operator<<(std::ostream &os, const DeltaRLE &p);
-std::ostream &operator<<(std::ostream &out, CooElem p);
-std::ostream &operator<<(std::ostream &out, const SpmElem e);
-//std::ostream &operator<<(std::ostream &out, const SpmRowElem &elem);
+std::ostream &operator<<(std::ostream &os, const DeltaRLE::StatsVal &stats)
+{
+    os << "nnz: " << stats.nnz;
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const DeltaRLE &p)
+{
+    os << " (";
+    p.PrintOn(os);
+    os << " type:" << p.GetType() << ") ";
+    return os;
+}
+
+template<typename IndexType, typename ValueType>
+std::ostream &operator<<(std::ostream &out, CooElem<IndexType, ValueType> p)
+{
+    out << "(" << std::setw(2) << p.row << "," << std::setw(2) << p.col << ")";
+    return out;
+}
+
+template<typename IndexType, typename ValueType>
+std::ostream &operator<<(std::ostream &out, const Elem<IndexType, ValueType> e)
+{
+    out << static_cast<CooElem<IndexType, ValueType> >(e);
+    if (e.pattern != NULL) {
+        out << "->[" << *(e.pattern) << "]";
+        out << " vals:{ ";
+        for (int i = 0; i < e.pattern->GetSize(); i++)
+            out << e.vals[i] << " ";
+            
+        out << "}\n";
+    } else {
+        out << "v: " << e.val;
+    }
+
+    return out;
+}
+
+// template<typename IndexType, typename ValueType>
+// std::ostream &operator<<(std::ostream &out,
+//                          const Elem<IndexType, ValueType> &elem)
+// {
+//     out << "row:" << elem.row;
+//     out << "col:" << elem.col;
+//     out << " in_pattern:" << elem.in_pattern;
+//     out << " pattern_start:" << elem.pattern_start;
+//     if (elem.pattern) {
+//         out << *(elem.pattern);
+//         out << " vals:{ ";
+//         for (int i = 0; i < elem.pattern->GetSize(); i++)
+//             out << elem.vals[i] << " ";
+            
+//         out << "}";
+//     } else {
+//         out << " v:" << elem.val;
+//     }
+
+//     return out;
+// }
+
+template<typename IndexType, typename ValueType>
+struct TransformFnType {
+    typedef boost::function<void (CooElem<IndexType, ValueType> &p)> TransformFn;
+};
 
 }   // namespace csx
 
-#endif  // SPM_BITS_H__
+#endif  // SPARSEUTIL_H__
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

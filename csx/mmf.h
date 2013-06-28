@@ -1,6 +1,6 @@
 /* -*- C++ -*-
  *
- * mmf.h -- Matrix Market Format routines
+ * mmf.h --  Matrix Market Format routines
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -11,50 +11,59 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-
 #ifndef MMF_H__
 #define MMF_H__
 
-#include "spm_bits.h"
-
+#include <iostream>
+#include <fstream>
+#include <iterator>
+#include <vector>
 #include <algorithm>
+#include <string>
+#include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/bind/bind.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
-#include <iostream>
-#include <iterator>
-#include <vector>
 
 using namespace std;
 
 namespace csx {
 
-// To be removed
-void ReadMmfSizeLine(const char *mmf_file, uint64_t &nr_rows, uint64_t &nr_cols,
-                     uint64_t &nr_nzeros);
-
-bool DoRead(istream &in, vector<string> &arguments);
-template <typename IndexType, typename ValueType>
-void ParseElement(vector<string> &arguments, IndexType &y,IndexType &x,
+void ReadMmfSizeLine(const char *mmf_file, size_t& nr_rows, size_t& nr_cols,
+                     size_t& nr_nzeros);
+bool DoRead(ifstream &in, vector<string> &arguments);
+template<typename IndexType, typename ValueType>
+void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x, 
                   ValueType &v);
 
+// Forward declarations
+template<typename IndexType, typename ValueType>
+struct CooElem;
+template<typename IndexType, typename ValueType>
+struct CooElemSorter;
+
+template<typename IndexType, typename ValueType>
 class MMF
 {
 public:
+    typedef IndexType index_t;
+    typedef ValueType value_t;
 
-    MMF(istream &in);
-    
-    size_t GetNrRows() const 
+    MMF(ifstream &in);
+
+    IndexType GetNrRows() const 
     {
         return nr_rows_;
     }
 
-    size_t GetNrCols() const
+    IndexType GetNrCols() const
     {
         return nr_cols_;
     }
 
-    size_t GetNrNonzeros() const
+    IndexType GetNrNonzeros() const
     {
         if (symmetric_ || col_wise_)
             return matrix_.size();
@@ -77,17 +86,55 @@ public:
         return zero_based_;
     }
 
-    void GetCoordinates(size_t index, uint64_t &row, uint64_t &col);
-    void SetCoordinates(size_t index, uint64_t row, uint64_t col);
-    void Sort();
-    void Print();
+    bool IsReordered() const
+    {
+        return reordered_;
+    }
+
+    void GetCoordinates(IndexType idx, IndexType &row, IndexType &col)
+    {
+        row = matrix_[idx].row;
+        col = matrix_[idx].col;
+    }
+
+    void SetCoordinates(IndexType idx, IndexType row, IndexType col)
+    {
+        matrix_[idx].row = row;
+        matrix_[idx].col = col;
+    }
+
+    void Sort()
+    {
+        sort(matrix_.begin(), matrix_.end(),
+             CooElemSorter<IndexType, ValueType>());
+    }
+
+    void Print(std::ostream &os) const
+    {
+        os << "Elements of Matrix" << endl;
+        os << "------------------" << endl;
+        if (symmetric_ || col_wise_) {
+            for (size_t i = 0; i < matrix_.size(); i++) {
+                os << matrix_[i].row << " " << matrix_[i].col << " "
+                   << matrix_[i].val << endl;
+            }
+        }//  else {
+        //     iterator iter = begin();
+        //     iterator iter_end = end();
+        //     for (;iter != iter_end; ++iter) {
+        //         cout << (*iter).row << " " << (*iter).col << " "
+        //              << (*iter).val << endl;
+        //     }
+        // }
+        os << endl;
+    }
 
     void InitMatrix(size_t size)
     {
         matrix_.reserve(size);
     }
     
-    void InsertElement(CooElem elem)
+    void InsertElement(CooElem<IndexType, ValueType> elem)
     {
         matrix_.push_back(elem);
     }
@@ -102,11 +149,11 @@ public:
     iterator end();
 
 private:
-    size_t nr_rows_, nr_cols_, nr_nzeros_;
-    istream &in_;
+    IndexType nr_rows_, nr_cols_, nr_nzeros_;
+    ifstream &in_;
     bool symmetric_, col_wise_, zero_based_, reordered_;
     int file_mode_;     // 0 for MMF files, 1 for regular files
-    vector<CooElem> matrix_;
+    vector<CooElem<IndexType, ValueType> > matrix_;
 
     enum MmfInfo {
         Banner,
@@ -128,15 +175,20 @@ private:
     void ParseMmfHeaderLine(vector<string> &arguments);
     void ParseMmfSizeLine(vector<string> &arguments); 
     void DoLoadMmfMatrix();
-    bool GetNext(uint64_t &y, uint64_t &x, double &val);
+    bool GetNext(IndexType &y, IndexType &x, ValueType &val);
+
+// protected:
+//     ~MMF() {}
 };
 
-class MMF::iterator : public std::iterator<forward_iterator_tag, CooElem>
+template<typename IndexType, typename ValueType>
+class MMF<IndexType, ValueType>::iterator 
+    : public std::iterator<forward_iterator_tag, CooElem<IndexType, ValueType> >
 {
 public:
     iterator() {}
     
-    iterator(MMF *mmf, uint64_t cnt)
+    iterator(MMF *mmf, size_t cnt)
       :
         mmf_(mmf),
         cnt_(cnt)
@@ -165,12 +217,13 @@ public:
     void operator++()
     {
         ++cnt_;
-        if (!mmf_->symmetric_ || !mmf_->col_wise_ || !mmf_->reordered_) {
-            this->DoSet();
+        if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_) {
+            return;
         }
+        this->DoSet();
     }
 
-    CooElem operator*()
+    CooElem<IndexType, ValueType> operator*()
     {
         if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_) {
             return mmf_->matrix_[cnt_];
@@ -192,22 +245,268 @@ private:
     }
 
     MMF *mmf_;
-    uint64_t cnt_;
-    CooElem elem_;
+    size_t cnt_;
+    CooElem<IndexType, ValueType> elem_;
     bool valid_;
 };
 
-MMF::iterator MMF::begin()
+template<typename IndexType, typename ValueType>
+typename MMF<IndexType, ValueType>::iterator MMF<IndexType, ValueType>::begin()
 {
-    return MMF::iterator(this, 0);
+    return iterator(this, 0);
 }
 
-MMF::iterator MMF::end()
+template<typename IndexType, typename ValueType>
+typename MMF<IndexType, ValueType>::iterator MMF<IndexType, ValueType>::end()
 {
     if (this->symmetric_ || this->col_wise_ || this->reordered_) {
-        return MMF::iterator(this, this->matrix_.size());
+        return iterator(this, matrix_.size());
     } else {
-        return MMF::iterator(this, this->nr_nzeros_);
+        return iterator(this, nr_nzeros_);
+    }
+}
+
+
+/*
+ * Implementation of class MMF
+ */
+template<typename IndexType, typename ValueType>
+boost::unordered_map<typename MMF<IndexType, ValueType>::MmfInfo, const string>
+MMF<IndexType, ValueType>::names_ =
+                     boost::assign::map_list_of 
+                     (Banner, "%%MatrixMarket")
+                     (Matrix, "matrix")
+                     (Coordinate, "coordinate")
+                     (Real, "real")
+                     (Double, "double")
+                     (Integer, "integer") 
+                     (General, "general")
+                     (Symmetric, "symmetric")
+                     (Indexing0, "0-base")
+                     (Indexing1, "1-base")
+                     (ColumnWise, "column")
+                     (RowWise, "row");
+
+template<typename IndexType, typename ValueType>
+MMF<IndexType, ValueType>::MMF(ifstream &in)
+  : 
+    nr_rows_(0),
+    nr_cols_(0),
+    nr_nzeros_(0),
+    in_(in),
+    symmetric_(false), 
+    col_wise_(false),
+    zero_based_(false),
+    reordered_(false),
+    file_mode_(0)
+{
+    vector<string> arguments;
+
+    DoRead(in_, arguments);
+    ParseMmfHeaderLine(arguments);
+    ParseMmfSizeLine(arguments);
+
+    if (symmetric_ || col_wise_) {
+        DoLoadMmfMatrix();
+    }
+}
+
+template<typename IndexType, typename ValueType>
+void MMF<IndexType, ValueType>::ParseMmfHeaderLine(vector<string> &arguments)
+{
+    // Check if header line exists
+    if (arguments[0] != names_[Banner]) {
+        if (arguments[0].length() > 2 && arguments[0][0] == '%'&&
+            arguments[0][1] == '%') {
+            // Header exists but is erroneous so exit
+            cerr << "Header line error" << endl;
+            exit(1);
+        } else {
+            // Parse as size line
+            file_mode_ = 1;
+            return;
+        }        
+    }
+
+    size_t length;
+    if ((length = arguments.size()) < 5) {
+        cerr << "Header line error: less arguments" << endl;
+        exit(1);
+    }
+
+    // Convert to lowercase just in case
+    BOOST_FOREACH(string &t, arguments) {
+        boost::algorithm::to_lower(t);
+    }
+
+    if (arguments[1] != names_[Matrix]) {
+        cerr << "Unsupported object" << endl;
+        exit(1);
+    }
+
+    if (arguments[2] != names_[Coordinate]) {
+        cerr << "Unsupported matrix format" << endl;
+        exit(1);
+    }
+
+    /*if (arguments[3] == names_[Real]) {
+        //set(REAL);
+    } else if (arguments[3] == names_[Double]) {
+        //set(DOUBLE);
+    } else if (arguments[3] == names_[Integer]) {
+       //set(INTEGER);
+    } else {
+        cerr << "Unsupported value format" << endl;
+        exit(1);
+    }*/
+
+    if (arguments[4] == names_[General]) {
+        symmetric_ = false;
+    } else if (arguments[4] == names_[Symmetric]) {
+        symmetric_ = true;
+    } else {
+        cerr << "Unsupported symmetry" << endl;
+        exit(1);
+    }
+    
+    if (length > 5) {
+        for (size_t i = 5; i < length; i++) {
+            if (arguments[i] == names_[Indexing0]) zero_based_ = true;
+            else if (arguments[i] == names_[Indexing1]) zero_based_ = false;
+            else if (arguments[i] == names_[ColumnWise]) col_wise_ = true;
+            else if (arguments[i] == names_[RowWise]) col_wise_ = false;
+        }
+    }
+}
+
+template<typename IndexType, typename ValueType>
+void MMF<IndexType, ValueType>::ParseMmfSizeLine(vector<string> &arguments)
+{
+    bool ignore_comments = false;
+
+    if (file_mode_ && arguments[0][0] == '%') {
+        ignore_comments = true;
+    }
+
+    if (!file_mode_ || ignore_comments) {
+        while (in_.peek() == '%') {
+            in_.ignore(numeric_limits<std::streamsize>::max(), '\n');
+        }
+        if (!DoRead(in_, arguments)) {
+            cerr << "Size line error" << endl;
+            exit(1);
+        }
+    }
+    ParseElement(arguments, nr_rows_, nr_cols_, nr_nzeros_);
+}
+
+template<typename IndexType, typename ValueType>
+void MMF<IndexType, ValueType>::DoLoadMmfMatrix()
+{
+    CooElem<IndexType, ValueType> elem;
+    IndexType tmp;
+
+    if (symmetric_) {
+        matrix_.reserve(nr_nzeros_ << 1);
+        for (size_t i = 0; i < nr_nzeros_; i++) {
+            if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
+                cerr << "Requesting dereference, but mmf ended" << endl;
+                exit(1);
+            }
+            matrix_.push_back(elem);
+            if (elem.row != elem.col) {
+                tmp = elem.row;
+                elem.row = elem.col;
+                elem.col = tmp;
+                matrix_.push_back(elem);          
+            }
+        }
+    } else {
+        matrix_.reserve(nr_nzeros_);
+        for (size_t i = 0; i < nr_nzeros_; i++) {
+            if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
+                cerr << "Requesting dereference, but mmf ended" << endl;
+                exit(1);
+            }
+            matrix_.push_back(elem);
+        }
+    }
+
+    sort(matrix_.begin(), matrix_.end(), CooElemSorter<IndexType, ValueType>());
+}
+
+template<typename IndexType, typename ValueType>
+bool MMF<IndexType, ValueType>::GetNext(IndexType &y, IndexType &x, ValueType &v)
+{
+    vector<string> arguments;
+
+    if (!DoRead(in_, arguments)) {
+        return false;
+    }
+
+    ParseElement(arguments, y, x, v);
+
+    if (zero_based_) {
+        y++;
+        x++;
+    }
+
+    return true;
+}
+
+// For testing purposes
+void ReadMmfSizeLine(const char *mmf_file, size_t &nr_rows, size_t &nr_cols,
+                     size_t &nr_nzeros)
+{
+    ifstream in;
+
+    in.open(mmf_file);
+    in.seekg(0, ios::beg);
+
+    // Ignore comments
+    while (in.peek() == '%') {
+        in.ignore(numeric_limits<std::streamsize>::max(), '\n');
+    }
+
+    vector<string> arguments;
+    if (!(DoRead(in, arguments))) {
+        cerr << "Size line error" << endl;
+        exit(1);
+    }
+
+    ParseElement(arguments, nr_rows, nr_cols, nr_nzeros);
+    in.close();
+}
+
+// Returns false at EOF
+bool DoRead(ifstream &in, vector<string> &arguments)
+{
+    string buff;
+
+    if (getline(in, buff).eof()) {
+        return false;
+    }
+
+    buff = boost::trim_left_copy(buff);
+    buff = boost::trim_right_copy(buff);
+    boost::split(arguments, buff, boost::algorithm::is_any_of(" "),
+        boost::algorithm::token_compress_on);
+    
+    return true;
+}
+
+template<typename IndexType, typename ValueType>
+void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x, 
+                  ValueType &v)
+{
+    if (arguments.size() == 3) {
+        y = boost::lexical_cast<IndexType,string>(arguments[0]);
+        x = boost::lexical_cast<IndexType,string>(arguments[1]);
+        v = boost::lexical_cast<ValueType,string>(arguments[2]);
+    } else {
+        cerr << arguments.size() << " " << arguments[3] << endl;
+        cerr << "Bad input: less arguments in line" << endl;
+        exit(1);
     }
 }
 

@@ -16,7 +16,7 @@
 #include <inttypes.h>
 #include <iterator>
 #include <vector>
-#include "spm_bits.h"
+#include "SparseUtil.h"
 
 using namespace std;
 
@@ -29,6 +29,9 @@ template<typename IndexType = int, typename ValueType = double>
 class CSR
 {
 public:
+    typedef IndexType index_t;
+    typedef ValueType value_t;
+
     CSR(IndexType *rowptr, IndexType *colind, ValueType *values,
         IndexType nr_rows, IndexType nr_cols, bool zero_based)
         : rowptr_(rowptr),
@@ -58,19 +61,19 @@ public:
         nr_nzeros_ = rowptr_[nr_rows] - !zero_based_;
     }
 
-    uint64_t GetNrNonzeros() const
+    IndexType GetNrNonzeros() const
     {
-        return static_cast<uint64_t>(nr_nzeros_);
+        return static_cast<IndexType>(nr_nzeros_);
     }
 
-    uint64_t GetNrRows() const 
+    IndexType GetNrRows() const 
     {
-        return static_cast<uint64_t>(nr_rows_);
+        return static_cast<IndexType>(nr_rows_);
     }
 
-    uint64_t GetNrCols() const
+    IndexType GetNrCols() const
     {
-        return static_cast<uint64_t>(nr_cols_);
+        return static_cast<IndexType>(nr_cols_);
     }
 
     bool IsSymmetric() const
@@ -81,6 +84,11 @@ public:
     bool IsZeroBased() const
     {
         return zero_based_;
+    }
+
+    bool IsReordered() const
+    {
+        return reordered_;
     }
 
     void SetReordered(vector<size_t> &inv_perm)
@@ -109,29 +117,41 @@ public:
             return iterator(this, nr_nzeros_);
     }
 
-    void Print(std::ostream &os) const
+    void Print(std::ostream &os)
     {
-        os << "Number of rows: " << nr_rows_ << std::endl
-           << "Number of cols: " << nr_cols_ << std::endl
-           << "Number of nonzeros: " << nr_nzeros_ << std::endl;
+        if (!reordered_) {
+            os << "Number of rows: " << nr_rows_ << std::endl
+               << "Number of cols: " << nr_cols_ << std::endl
+               << "Number of nonzeros: " << nr_nzeros_ << std::endl;
 
-        os << "Dump of rowptr: " << std::endl;
-        os << "[ ";
-        for (IndexType i = 0; i <= nr_rows_; ++i)
-            os << rowptr_[i] << " ";
-        os << " ]" << std::endl;
+            os << "Dump of rowptr: " << std::endl;
+            os << "[ ";
+            for (IndexType i = 0; i <= nr_rows_; ++i)
+                os << rowptr_[i] << " ";
+            os << " ]" << std::endl;
 
-        os << "Dump of colind: " << std::endl;
-        os << "[ ";
-        for (IndexType i = 0; i < nr_nzeros_; ++i)
-            os << colind_[i] << " ";
-        os << " ]" << std::endl;
+            os << "Dump of colind: " << std::endl;
+            os << "[ ";
+            for (IndexType i = 0; i < nr_nzeros_; ++i)
+                os << colind_[i] << " ";
+            os << " ]" << std::endl;
         
-        os << "Dump of values: " << std::endl;
-        os << "[ ";
-        for (IndexType i = 0; i < nr_nzeros_; ++i)
-            os << values_[i] << " ";
-        os << " ]";
+            os << "Dump of values: " << std::endl;
+            os << "[ ";
+            for (IndexType i = 0; i < nr_nzeros_; ++i)
+                os << values_[i] << " ";
+            os << " ]";
+        } else {
+            iterator iter = begin();
+            iterator iter_end = end();
+            
+            os << "Elements of Matrix" << endl;
+            os << "------------------" << endl;
+            for (;iter != iter_end; ++iter)
+                os << "(" << std::setw(2) << (*iter).row << "," 
+                   << std::setw(2) << (*iter).col << "): "
+                   << std::setw(2) << (*iter).val << std::endl;
+        }
     }
 
     ValueType GetValue(IndexType row, IndexType col) const;
@@ -146,6 +166,9 @@ public:
     IndexType nr_nzeros_;
     bool zero_based_, symmetric_, reordered_;
     vector<size_t> permutation_;
+
+//protected:
+    ~CSR() {}
 };
 
 /*
@@ -199,7 +222,8 @@ std::ostream &operator<<(std::ostream &os,
  */ 
 template<typename IndexType, typename ValueType>
 class CSR<IndexType, ValueType>::iterator :
-        public std::iterator<std::forward_iterator_tag, CooElem>
+        public std::iterator<std::forward_iterator_tag,
+                             CooElem<IndexType, ValueType> >
 {
 public:
     iterator()
@@ -316,16 +340,16 @@ public:
             assert(curr_elem_ == csr_->nr_nzeros_);
     }*/
 
-    CooElem operator*()
+    CooElem<IndexType, ValueType> operator*()
     {
         assert(curr_row_ <= csr_->nr_rows_ && "out of bounds");
         assert(curr_elem_ < csr_->nr_nzeros_ && "out of bounds");
 
-        CooElem ret;    // CooElem's are one-based!
-        if (csr_->reordered_) ret.row = static_cast<uint64_t>(row_index_ + 1);
-        else ret.row = static_cast<uint64_t>(curr_row_ + 1);
-        ret.col = static_cast<uint64_t>(csr_->colind_[curr_elem_] + csr_->zero_based_);
-        ret.val = static_cast<double>(csr_->values_[curr_elem_]);
+        CooElem<IndexType, ValueType> ret;    // CooElem's are one-based!
+        if (csr_->reordered_) ret.row = static_cast<IndexType>(row_index_ + 1);
+        else ret.row = static_cast<IndexType>(curr_row_ + 1);
+        ret.col = static_cast<IndexType>(csr_->colind_[curr_elem_] + csr_->zero_based_);
+        ret.val = static_cast<ValueType>(csr_->values_[curr_elem_]);
 //         std::cout << "(" << ret.row << ", " << ret.col << ", " << ret.val
 //                   << ")" << std::endl;
         return ret;

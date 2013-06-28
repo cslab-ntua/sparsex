@@ -17,11 +17,12 @@
 #include <boost/algorithm/string/regex.hpp>
 
 using namespace std;
-using namespace csx;
 
 #define BLOCK_ROW 5
 #define BLOCK_COL 6
 #define ALL       7
+
+namespace csx {
 
 static std::map<string, int> XformOpt = boost::assign::map_list_of
     ("none", 0)
@@ -55,8 +56,19 @@ Configuration::Map Configuration::map_ = boost::assign::map_list_of
 
 Configuration::PropertyMap Configuration::conf_(Configuration::map_);
 
-Configuration &ConfigFromEnv(Configuration &conf)
+Configuration &ConfigFromEnv(Configuration &conf, bool symmetric,
+                             bool split_blocks)
 {
+    if (symmetric)
+        conf.SetProperty(Configuration::Symmetric, "true");
+    else 
+        conf.SetProperty(Configuration::Symmetric, "false");
+
+    if (split_blocks)
+        conf.SetProperty(Configuration::SplitBlocks, "true");
+    else 
+        conf.SetProperty(Configuration::SplitBlocks, "false");
+
     const char *mt_conf_str = getenv("MT_CONF");
     if (mt_conf_str)
         conf.SetProperty(Configuration::Affinity, string(mt_conf_str));
@@ -144,7 +156,8 @@ static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
 
     vector<string> split_in_pairs;
     boost::algorithm::find_all_regex(split_in_pairs, str, 
-                                     boost::regex("[a-z]+(\\{[0-9]+(,[0-9]+)*\\})?"));
+                                     boost::regex
+                                     ("[a-z]+(\\{[0-9]+(,[0-9]+)*\\})?"));
 
     vector<string> pair;
     vector<string> delta_tokens;
@@ -180,7 +193,8 @@ static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
             boost::algorithm::find_all_regex(delta_tokens, pair[1], 
                                              boost::regex("[0-9]+"));
             for (size_t j = 0; j < delta_tokens.size(); j++) {
-                (*deltas)[delta_index][j] = boost::lexical_cast<int,string>(delta_tokens[j]);
+                (*deltas)[delta_index][j] = boost::lexical_cast<int,string>
+                    (delta_tokens[j]);
             }
             (*deltas)[delta_index][delta_tokens.size()] = -1;
             delta_index++;
@@ -207,7 +221,7 @@ static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
     }
     cout << endl;   
 
-    // In case there are no deltas release memory
+    // In case there are no deltas free memory
     if (pair.size() == 1) {
         for (size_t i = 0; i < XFORM_MAX; i++) {
             free((*deltas)[i]);
@@ -260,9 +274,12 @@ static void ParseOptionSplitBlocks(string str, bool &split_blocks)
     (str == "true") ? split_blocks = true : split_blocks = false;   
 } 
 
+}
+
 void RuntimeContext::SetRuntimeContext(const Configuration &conf)
 {
-    ParseOptionMT(conf.GetProperty(Configuration::Affinity), &affinity_, nr_threads_);
+    ParseOptionMT(conf.GetProperty(Configuration::Affinity), &affinity_,
+                  nr_threads_);
 
     // Initialize the CSX JIT execution engine
     engine_ = &CsxJitInit();
@@ -273,31 +290,12 @@ void CsxContext::SetCsxContext(const Configuration &conf)
     ParseOptionSymmetric(conf.GetProperty(Configuration::Symmetric), symmetric_);
     ParseOptionSplitBlocks(conf.GetProperty(Configuration::SplitBlocks),
                            split_blocks_);
-    ParseOptionXform(conf.GetProperty(Configuration::Xform), &xform_buf_, &deltas_);
+    ParseOptionXform(conf.GetProperty(Configuration::Xform),
+                     &xform_buf_, &deltas_);
     ParseOptionWindowSize(conf.GetProperty(Configuration::WindowSize), wsize_); 
     ParseOptionSamples(conf.GetProperty(Configuration::Samples), samples_max_);
     ParseOptionPortion(conf.GetProperty(Configuration::SamplingPortion),
                        sampling_portion_);
-}
-
-void ThreadContext::SetData(SPM* spms, SPMSym *spms_sym, spm_mt_t *spm_mt,
-                            bool symmetric)
-{
-    if (!symmetric) {
-        spm_ = spms + id_;
-        spm_sym_ = NULL;
-        csxmg_ = new CsxManager(spms + id_); //changed
-    } else {
-        spm_ = NULL;
-        spm_sym_ = spms_sym + id_;
-        csxmg_ = new CsxManager(spms_sym + id_);
-    }
-    spm_encoded_ = &spm_mt->spm_threads[id_]; 
-    buffer_ = new ostringstream("");
-#ifdef SPM_NUMA
-    // Enable the full-column-index optimization for NUMA architectures
-    csxmg_->SetFullColumnIndices(true);
-#endif
 }
 
 /*static int SplitString(char *str, char **str_buf, const char *start_sep,

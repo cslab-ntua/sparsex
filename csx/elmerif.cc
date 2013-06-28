@@ -11,7 +11,7 @@
 #include <math.h>
 #include <cassert>
 #include <cfloat>
-#include "spm.h"
+#include "SparseInternal.h"
 #include "spmv.h"
 #include "jit.h"
 #include "timer.h"
@@ -118,7 +118,7 @@ void *csx_mattune(elmer_index_t *rowptr,
 {
     unsigned int nr_threads;
     unsigned int *cpus __attribute__ ((unused));
-    csx::SPM *spms;
+    csx::SparseInternal<elmer_index_t, elmer_value_t> *spms;
     spm_mt_t *spm_mt;
     uint64_t nr_nzeros = rowptr[nr_rows] - CSX_IDX_OFFSET;
     uint64_t ws = (nr_rows + nr_nzeros + 1)*sizeof(elmer_index_t) +
@@ -139,14 +139,14 @@ void *csx_mattune(elmer_index_t *rowptr,
     CsxContext csx_context;
     
     Configuration config;
-    config = ConfigFromEnv(config);
+    config = ConfigFromEnv(config, false, true);
 
     rt_context.SetRuntimeContext(config);
     csx_context.SetCsxContext(config);
 
     //timer_start(&timers[TIMER_CONSTRUCT_INTERN]);
     timers[TIMER_CONSTRUCT_INTERN].Start();
-    spms = csx::SPM::LoadCSR_mt<elmer_index_t, elmer_value_t>
+    spms = csx::LoadCSR_mt<elmer_index_t, elmer_value_t>
         (rowptr, colind, values, nr_rows, nr_cols, !CSX_IDX_OFFSET, nr_threads);
     //timer_pause(&timers[TIMER_CONSTRUCT_INTERN]);
     timers[TIMER_CONSTRUCT_INTERN].Pause();
@@ -155,7 +155,7 @@ void *csx_mattune(elmer_index_t *rowptr,
     timers[TIMER_CONSTRUCT_CSX].Start();
     //CsxExecutionEngine &engine = CsxJitInit();
     //spm_mt = GetSpmMt(NULL, engine, true, false, spms);
-    spm_mt = BuildCsx(spms, NULL, rt_context, csx_context);
+    spm_mt = BuildCsx(spms, rt_context, csx_context);
     //timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
     timers[TIMER_CONSTRUCT_CSX].Pause();
     delete[] spms;

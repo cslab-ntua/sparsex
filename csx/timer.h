@@ -9,11 +9,11 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-
 #ifndef TIMER_H__
 #define TIMER_H__
 
 #include <sys/time.h>
+#include <string>
 
 namespace csx {
 

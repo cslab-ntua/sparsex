@@ -9,6 +9,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+#ifndef CSR_ITERATOR_H__
+#define CSR_ITERATOR_H__
 
 #include <iostream>
 #include <algorithm>
@@ -110,3 +112,5 @@ struct CSR_Comp : public std::binary_function<
         return (boost::get<0>(t1) < boost::get<0>(t2)); 
     } 
 };
+
+#endif

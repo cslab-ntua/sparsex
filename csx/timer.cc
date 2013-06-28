@@ -10,9 +10,10 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
+#include "timer.h"
 #include <stdlib.h>
 #include <iostream>
-#include "timer.h"
+
 
 using namespace std;
 using namespace csx;
