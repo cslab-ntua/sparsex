@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2012-2013, Athena Elafrou
+ * Copyright (C) 2013,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -19,6 +20,7 @@
 #include <sched.h>
 #include <string>
 #include <boost/algorithm/string.hpp>
+#include <boost/bimap.hpp>
 #include <boost/property_map/property_map.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
@@ -37,55 +39,66 @@ using namespace std;
 namespace csx {
 
 /* Runtime configuration class */
-class Configuration
+class RuntimeConfiguration
 {
 public:
-    Configuration() {}
-    ~Configuration() {}
-
-    template<typename Field>
-    string GetProperty(Field field) const
-    {
-        return get(conf_, field);
-    }
-
-    template<typename Field>
-    void SetProperty(Field field, string new_value)
-    {
-        put(conf_, field, new_value);
-    }
-
-    enum ConfigInfo {
-        /* User-defined */
-        NrThreads,
-        Affinity,
-        Xform,
-        WindowSize,
-        Samples,
-        SamplingPortion,
-        Symmetric,
-        SplitBlocks, 
-        /* Implementation-defined */
-        OneDimBlocks,
-        FullColumnIndices,
-        MinLimit,
-        MaxLimit,
-        MinPercentage
+    enum Property {
+        RtNrThreads,
+        RtCpuAffinity,
+        PreprocXform,
+        PreprocSampling,
+        PreprocNrSamples,
+        PreprocSamplingPortion,
+        PreprocWindowSize,
+        MatrixSymmetric,
+        MatrixSplitBlocks,
+        MatrixFullColind,
+        MatrixOneDimBlocks,
+        MatrixMinUnitSize,
+        MatrixMaxUnitSize,
+        MatrixMinCoverage,
     };
 
-private:
-    typedef boost::unordered_map<ConfigInfo, string> Map;
-    typedef boost::associative_property_map<Map> PropertyMap;
-    static Map map_;
-    static PropertyMap conf_;
-};
+    static RuntimeConfiguration &GetInstance()
+    {
+        static RuntimeConfiguration instance;
+        return instance;
+    }
 
-/* 
- * Loads runtime configuration set by the user
- * in the global property map "config_map"
- */
-Configuration &ConfigFromEnv(Configuration &conf, bool symmetric,
-                             bool split_blocks);
+    RuntimeConfiguration &LoadFromEnv();
+
+    const string &GetProperty(const Property &key) const
+    {
+        PropertyMap::const_iterator iter = property_map_.find(key);
+        return iter->second;
+    }
+
+    void SetProperty(const Property &key, const string &value)
+    {
+        property_map_.insert(make_pair(key, value));
+    }
+
+private:
+    typedef std::map<Property, string> PropertyMap;
+    typedef boost::bimap<Property, string> MnemonicMap;
+
+    RuntimeConfiguration()
+        : property_map_(DefaultProperties())
+    {
+        InitPropertyMnemonics();
+    }
+    
+    ~RuntimeConfiguration() {}
+
+    /**
+     *  Load default CSX runtime properties
+     */
+    PropertyMap DefaultProperties();
+    void InitPropertyMnemonics();
+
+    PropertyMap property_map_;
+    MnemonicMap mnemonic_map_;
+};
 
 /* Singleton class holding runtime information */
 class RuntimeContext
@@ -98,7 +111,7 @@ public:
         return instance;
     }
 
-    void SetRuntimeContext(const Configuration &conf);
+    void SetRuntimeContext(const RuntimeConfiguration &conf);
 
     size_t GetNrThreads() const
     {
@@ -116,11 +129,11 @@ public:
     }
 
 private:
-
-    RuntimeContext() : 
-        nr_threads_(1), 
-        affinity_(NULL),
-        engine_(NULL) {}
+    RuntimeContext()
+        : nr_threads_(1), 
+          affinity_(NULL),
+          engine_(NULL)
+    {}
 
     ~RuntimeContext()
     {
@@ -138,28 +151,13 @@ private:
 class CsxContext
 {
 public:
-
-    CsxContext() :
-        symmetric_(false),
-        split_blocks_(true),
-        xform_buf_(NULL), 
-        deltas_(NULL),
-        wsize_(0),
-        samples_max_(0), 
-        sampling_portion_(0) {}
-
-    ~CsxContext()
+    static CsxContext &GetInstance()
     {
-        if (xform_buf_)
-            free(xform_buf_);
-        if (deltas_) {
-            for (size_t i = 0; i < XFORM_MAX; i++)
-                free(deltas_[i]);
-            free(deltas_);
-        }
+        static CsxContext instance;
+        return instance;
     }
 
-    void SetCsxContext(const Configuration &conf);
+    void SetCsxContext(const RuntimeConfiguration &conf);
 
     bool IsSymmetric() const
     {
@@ -197,6 +195,26 @@ public:
     }
 
 private:
+    CsxContext()
+        : symmetric_(false),
+          split_blocks_(true),
+          xform_buf_(NULL), 
+          deltas_(NULL),
+          wsize_(0),
+          samples_max_(0), 
+          sampling_portion_(0) {}
+
+    ~CsxContext()
+    {
+        if (xform_buf_)
+            free(xform_buf_);
+        if (deltas_) {
+            for (size_t i = 0; i < XFORM_MAX; i++)
+                free(deltas_[i]);
+            free(deltas_);
+        }
+    }
+
     bool symmetric_, split_blocks_;
     int *xform_buf_;
     int **deltas_;

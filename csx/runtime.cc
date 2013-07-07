@@ -2,10 +2,10 @@
  * runtime.cc -- Front-end utilities for runtime configuration
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2009-2012, Vasileios Karakasis
- * Copyright (C) 2010-2012, Theodoros Gkountouvas
+ * Copyright (C) 2009-2013, Vasileios Karakasis
  * Copyright (C) 2012-2013, Athena Elafrou
+ * Copyright (C) 2010-2012, Theodoros Gkountouvas
+ * Copyright (C) 2009-2011, Kornilios Kourtis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -21,7 +21,6 @@ using namespace std;
 #define BLOCK_ROW 5
 #define BLOCK_COL 6
 #define ALL       7
-
 namespace csx {
 
 static std::map<string, int> XformOpt = boost::assign::map_list_of
@@ -34,72 +33,99 @@ static std::map<string, int> XformOpt = boost::assign::map_list_of
     ("bc", 6)
     ("all", 7);
 
-// Initialization of local static data members
-Configuration::Map Configuration::map_ = boost::assign::map_list_of
-    (NrThreads, "1")
-    (Affinity, "0")
-    (Xform, "0")
-    (WindowSize, "0")
-    (Samples, "__MAX__")    
-    (SamplingPortion, "0.0")
-    (Symmetric, "false")
-    (SplitBlocks, "true")
-    (OneDimBlocks, "false")
-#ifdef SPM_NUMA
-    (FullColumnIndices, "true")
-#else
-    (FullColumnIndices, "false")
-#endif
-    (MinLimit, "4")
-    (MaxLimit, "__MAX__")  //default -> long max
-    (MinPercentage, "0.1");
-
-Configuration::PropertyMap Configuration::conf_(Configuration::map_);
-
-Configuration &ConfigFromEnv(Configuration &conf, bool symmetric,
-                             bool split_blocks)
+/**
+ *  Load default CSX runtime properties
+ */
+RuntimeConfiguration::PropertyMap RuntimeConfiguration::DefaultProperties()
 {
-    if (symmetric)
-        conf.SetProperty(Configuration::Symmetric, "true");
-    else 
-        conf.SetProperty(Configuration::Symmetric, "false");
+    return boost::assign::map_list_of
+        (RtNrThreads, "1")
+        (RtCpuAffinity, "0")
+        (PreprocXform, "none")
+        (PreprocSampling, "true")
+        (PreprocNrSamples, "48")
+        (PreprocSamplingPortion, "0.01")
+        (PreprocWindowSize, "auto")
+        (MatrixSymmetric, "false")
+        (MatrixSplitBlocks, "true")
+#ifdef SPM_NUMA
+        (MatrixFullColind, "true")
+#else
+        (MatrixFullColind, "false")
+#endif            
+        (MatrixMinUnitSize, "4")
+        (MatrixMaxUnitSize, "255")
+        (MatrixMinCoverage, "0.1");
+}
 
-    if (split_blocks)
-        conf.SetProperty(Configuration::SplitBlocks, "true");
-    else 
-        conf.SetProperty(Configuration::SplitBlocks, "false");
+void RuntimeConfiguration::InitPropertyMnemonics()
+{
+    mnemonic_map_.insert(MnemonicMap::value_type(RtNrThreads,
+                                                 "libcsx.rt.nr_threads"));
+    mnemonic_map_.insert(MnemonicMap::value_type(RtCpuAffinity,
+                                                 "libcsx.rt.cpu_affinity"));
+    mnemonic_map_.insert(MnemonicMap::value_type(PreprocXform,
+                                                 "libcsx.preproc.xform"));
+    mnemonic_map_.insert(MnemonicMap::value_type(PreprocSampling,
+                                                 "libcsx.preproc.sampling"));
+    mnemonic_map_.insert(MnemonicMap::value_type(
+                             PreprocNrSamples,
+                             "libcsx.preproc.sampling.nr_samples"));
+    mnemonic_map_.insert(MnemonicMap::value_type(
+                             PreprocSamplingPortion,
+                             "libcsx.preproc.sampling.portion"));
+    mnemonic_map_.insert(MnemonicMap::value_type(MatrixSymmetric,
+                                                 "libcsx.matrix.symmetric"));
+    mnemonic_map_.insert(MnemonicMap::value_type(MatrixSplitBlocks,
+                                                 "libcsx.matrix.split_blocks"));
+    mnemonic_map_.insert(MnemonicMap::value_type(MatrixFullColind,
+                                                 "libcsx.matrix.full_colind"));
+    mnemonic_map_.insert(MnemonicMap::value_type(
+                             MatrixMinUnitSize,
+                             "libcsx.matrix.min_unit_size"));
+    mnemonic_map_.insert(MnemonicMap::value_type(
+                             MatrixMaxUnitSize,
+                             "libcsx.matrix.max_unit_size"));
+    mnemonic_map_.insert(MnemonicMap::value_type(
+                             MatrixMinCoverage,
+                             "libcsx.matrix.min_coverage"));
+}
 
+
+RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
+{
     const char *mt_conf_str = getenv("MT_CONF");
     if (mt_conf_str)
-        conf.SetProperty(Configuration::Affinity, string(mt_conf_str));
+        SetProperty(RuntimeConfiguration::RtCpuAffinity, string(mt_conf_str));
 
     const char *xform_conf_str = getenv("XFORM_CONF");
     if (xform_conf_str)
-        conf.SetProperty(Configuration::Xform, string(xform_conf_str));
+        SetProperty(RuntimeConfiguration::PreprocXform, string(xform_conf_str));
 
     const char *wsize_str = getenv("WINDOW_SIZE");
     if (wsize_str) {
-        conf.SetProperty(Configuration::WindowSize, string(wsize_str));
+        SetProperty(RuntimeConfiguration::PreprocWindowSize, string(wsize_str));
     } else {
         cout << "Window size: Not set" << endl;
     }
 
     const char *samples_str = getenv("SAMPLES");
     if (samples_str) {
-        conf.SetProperty(Configuration::Samples, string(samples_str));
+        SetProperty(RuntimeConfiguration::PreprocNrSamples,
+                    string(samples_str));
     } else {
         cout << "Number of samples: Not set" << endl;
     }
 
     const char *sampling_portion_str = getenv("SAMPLING_PORTION");
     if (sampling_portion_str) {
-        conf.SetProperty(Configuration::SamplingPortion,
-                         string(sampling_portion_str));
+        SetProperty(RuntimeConfiguration::PreprocSamplingPortion,
+                    string(sampling_portion_str));
     } else {
         cout << "Sampling portion: Not set" << endl;
     }
     
-    return conf;
+    return *this;
 }
 
 ///> Max deltas that an encoding type may have. This is restricted by the
@@ -276,183 +302,31 @@ static void ParseOptionSplitBlocks(string str, bool &split_blocks)
 
 }
 
-void RuntimeContext::SetRuntimeContext(const Configuration &conf)
+void RuntimeContext::SetRuntimeContext(const RuntimeConfiguration &conf)
 {
-    ParseOptionMT(conf.GetProperty(Configuration::Affinity), &affinity_,
-                  nr_threads_);
+    ParseOptionMT(conf.GetProperty(RuntimeConfiguration::RtCpuAffinity),
+                  &affinity_, nr_threads_);
 
     // Initialize the CSX JIT execution engine
     engine_ = &CsxJitInit();
 }
 
-void CsxContext::SetCsxContext(const Configuration &conf)
+void CsxContext::SetCsxContext(const RuntimeConfiguration &conf)
 {
-    ParseOptionSymmetric(conf.GetProperty(Configuration::Symmetric), symmetric_);
-    ParseOptionSplitBlocks(conf.GetProperty(Configuration::SplitBlocks),
+    ParseOptionSymmetric(conf.GetProperty(
+                             RuntimeConfiguration::MatrixSymmetric),
+                         symmetric_);
+    ParseOptionSplitBlocks(conf.GetProperty(
+                               RuntimeConfiguration::MatrixSplitBlocks),
                            split_blocks_);
-    ParseOptionXform(conf.GetProperty(Configuration::Xform),
+    ParseOptionXform(conf.GetProperty(RuntimeConfiguration::PreprocXform),
                      &xform_buf_, &deltas_);
-    ParseOptionWindowSize(conf.GetProperty(Configuration::WindowSize), wsize_); 
-    ParseOptionSamples(conf.GetProperty(Configuration::Samples), samples_max_);
-    ParseOptionPortion(conf.GetProperty(Configuration::SamplingPortion),
+    ParseOptionWindowSize(conf.GetProperty(
+                              RuntimeConfiguration::PreprocWindowSize),
+                          wsize_); 
+    ParseOptionSamples(conf.GetProperty(RuntimeConfiguration::PreprocNrSamples),
+                       samples_max_);
+    ParseOptionPortion(conf.GetProperty(
+                           RuntimeConfiguration::PreprocSamplingPortion),
                        sampling_portion_);
 }
-
-/*static int SplitString(char *str, char **str_buf, const char *start_sep,
-                       const char *end_sep)
-{
-    char *token = strtok(str, start_sep);
-    int next = 0;
-    int str_length = strcspn(token, end_sep);
-
-    str_buf[next] = (char *) xmalloc((str_length + 1) * sizeof(char));
-    strncpy(str_buf[next], token, str_length);
-    str_buf[next][str_length] = 0;
-    ++next;
-    while ((token = strtok(NULL, start_sep)) != NULL) {
-        str_length = strcspn(token, end_sep);
-        str_buf[next] = (char *) xmalloc((str_length - 1) * sizeof(char));
-        strncpy(str_buf[next], token, str_length);
-        str_buf[next][str_length] = 0;
-        ++next;
-    }
-
-    return next;
-}
-
-static void GetOptionEncodeDeltas(int ***deltas)
-{
-    char *encode_deltas_env = getenv("ENCODE_DELTAS");
-    if (encode_deltas_env && strlen(encode_deltas_env)) {
-        // Copy environment variable to avoid being altered from strtok()
-        char *encode_deltas_str = (char *) xmalloc(strlen(encode_deltas_env)+1);
-        strncpy(encode_deltas_str, encode_deltas_env,
-                strlen(encode_deltas_env)+1);
-
-        // Init matrix deltas.
-        *deltas = (int **) xmalloc(XFORM_MAX * sizeof(int *));
-
-        for (int i = 0; i < XFORM_MAX; i++) {
-            (*deltas)[i] = (int *) xmalloc(DELTAS_MAX * sizeof(int));
-        }
-
-        // Fill deltas with the appropriate data.
-        char **temp = (char **) xmalloc(XFORM_MAX * sizeof(char *));
-        int temp_size = SplitString(encode_deltas_str, temp, "{", "}");
-
-        for (int i = 0; i < temp_size; i++) {
-            int j = 0;
-            char *token = strtok(temp[i], ",");
-
-            (*deltas)[i][j] = atoi(token);
-            ++j;
-            while ((token = strtok(NULL, ",")) != NULL) {
-                (*deltas)[i][j] = atoi(token);
-                ++j;
-            }
-
-            (*deltas)[i][j] = -1;
-            free(temp[i]);
-        }
-
-        free(temp);
-
-        // Print deltas
-        cout << "Deltas to Encode: ";
-        for (int i = 0; i < temp_size; i++) {
-            if (i != 0)
-                cout << "}, ";
-            cout << "{";
-            assert((*deltas)[i][0] != -1);
-            cout << (*deltas)[i][0];
-            for (int j = 1; (*deltas)[i][j] != -1; j++)
-                cout << "," << (*deltas)[i][j];
-        }
-
-        cout << "}" << endl;
-        free(encode_deltas_str);
-    }
-}
-
-static void ParseOptionDeltas(string str, int ***deltas)
-{
-    if (!str.empty()) {
-        vector<string> deltas_split;
-        boost::algorithm::find_all_regex(deltas_split, str,
-                                         boost::regex("[0-9]+(,[0-9]+)*"));
-
-        // Init matrix deltas.
-        *deltas = (int **) xmalloc((deltas_split.size()) * sizeof(int *));
-
-        for (size_t i = 0; i < deltas_split.size(); i++) {
-            (*deltas)[i] = (int *) xmalloc(DELTAS_MAX * sizeof(int));
-        }
-
-        for (size_t i = 0; i < deltas_split.size(); i++) {
-            vector<string> tokens;
-            boost::split(tokens, deltas_split[i], boost::algorithm::is_any_of(","),
-                         boost::algorithm::token_compress_on);
-            for (size_t j = 0; j < tokens.size(); j++) {
-                (*deltas)[i][j] = boost::lexical_cast<int,string>(tokens[j]);
-            }
-            (*deltas)[i][tokens.size()] = -1;
-        }
-
-        // Print deltas
-        cout << "Deltas to Encode: ";
-        for (size_t i = 0; i < deltas_split.size(); i++) {
-            if (i != 0)
-                cout << "}, ";
-            cout << "{";
-            assert((*deltas)[i][0] != -1);
-            cout << (*deltas)[i][0];
-            for (size_t j = 1; (*deltas)[i][j] != -1; j++)
-                cout << "," << (*deltas)[i][j];
-        }
-        cout << "}" << endl;
-    }
-    }*/
-
-/*static void ParseOptionXform(string str, int **xform_buf)
-{
-    vector<string> xform_split;
-
-    boost::split(xform_split, str, boost::algorithm::is_any_of(","),
-                 boost::algorithm::token_compress_on);
-
-    *xform_buf = (int *) xmalloc(XFORM_MAX * sizeof(int));
-    size_t index = 0;
-    for (size_t i = 0; i < xform_split.size(); i++) {
-        int option = XformOpt[xform_split[i]];
-        if (option < 5) {
-            (*xform_buf)[index++] = option;
-            continue;
-        }
-        else if (option == 5) {  // BlockRow 
-            for (size_t j = 7; j < 14; j++)
-                (*xform_buf)[index++] = j;
-        }
-        else if (option == 6){  // BlockCol 
-            for (size_t j = 16; j < 23; j++)
-                (*xform_buf)[index++] = j;
-        } else {    // All
-            for (size_t j = 1; j <= 4; j++)
-                (*xform_buf)[index++] = j;
-            for (size_t j = 7; j <= 13; j++)
-                (*xform_buf)[index++] = j;
-            for (size_t j = 16; j <= 22; j++)
-                (*xform_buf)[index++] = j;
-        }        
-    }
-    (*xform_buf)[index] = -1;
-
-    // Printing
-    cout << "Encoding type: ";
-    for (size_t i = 0; (*xform_buf)[i] != -1; i++) {
-        if (i != 0)
-            cout << ", ";
-        cout << SpmTypesNames[(*xform_buf)[i]];
-    }
-    cout << endl;
-}
-*/

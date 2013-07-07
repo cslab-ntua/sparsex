@@ -38,27 +38,27 @@ void PrintUsage(std::ostream &os)
 {
     os << "Usage: " << program_name
        << " [-s] [-b] <mmf_file> ...\n"
-       << "\t-s    Use CSX for symmetric matrices.\n"
-       << "\t-b    Disable the split-blocks optimization.\n"
+       // << "\t-s    Use CSX for symmetric matrices.\n"
+       // << "\t-b    Disable the split-blocks optimization.\n"
        << "\t-h    Print this help message and exit.\n";
 }
 
 int main(int argc, char **argv)
 {
     char c;
-    bool split_blocks = true;
-    bool symmetric = false;
+    // bool split_blocks = true;
+    // bool symmetric = false;
     spm_mt_t *spm_mt;
 
     program_name = argv[0];
     while ((c = getopt(argc, argv, "bsh")) != -1) {
         switch (c) {
-        case 'b':
-            split_blocks = false;
-            break;
-        case 's':
-            symmetric = true;
-            break;
+        // case 'b':
+        //     split_blocks = false;
+        //     break;
+        // case 's':
+        //     symmetric = true;
+        //     break;
         case 'h':
             PrintUsage(std::cerr);
             exit(0);
@@ -90,10 +90,11 @@ int main(int argc, char **argv)
     // uint64_t colind[] = {0,3,5,1,2,4,6,9,1,2,3,4,0,2,3,5,8,1,2,4,6,0,3,5,6,1,4,5,6,7,6,7,3,8,1,9};
     // double values[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1};
 
+    RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
-    CsxContext csx_context;
-    Configuration config;
-    config = ConfigFromEnv(config, symmetric, split_blocks);
+    CsxContext &csx_context = CsxContext::GetInstance();
+
+    config.LoadFromEnv();
     rt_context.SetRuntimeContext(config);
     csx_context.SetCsxContext(config);
 

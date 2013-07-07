@@ -2,7 +2,8 @@
  * main.cc -- Main program for invoking CSX.
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2011-2012, Vasileios Karakasis
+ * Copyright (C) 2011-2013, Vasileios Karakasis
+ * Copyright (C) 2012-2013, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -54,27 +55,27 @@ void PrintUsage(std::ostream &os)
 {
     os << "Usage: " << program_name
        << " [-s] [-b] <mmf_file> ...\n"
-       << "\t-s    Use CSX for symmetric matrices.\n"
-       << "\t-b    Disable the split-blocks optimization.\n"
+       // << "\t-s    Use CSX for symmetric matrices.\n"
+       // << "\t-b    Disable the split-blocks optimization.\n"
        << "\t-h    Print this help message and exit.\n";
 }
 
 int main(int argc, char **argv)
 {   
     char c;
-    bool split_blocks = true;
-    bool symmetric = false;
+    // bool split_blocks = true;
+    // bool symmetric = false;
     spm_mt_t *spm_mt;
 
     program_name = argv[0];
     while ((c = getopt(argc, argv, "bsh")) != -1) {
         switch (c) {
-        case 'b':
-            split_blocks = false;
-            break;
-        case 's':
-            symmetric = true;
-            break;
+        // case 'b':
+        //     split_blocks = false;
+        //     break;
+        // case 's':
+        //     symmetric = true;
+        //     break;
         case 'h':
             PrintUsage(std::cerr);
             exit(0);
@@ -92,12 +93,11 @@ int main(int argc, char **argv)
     argv = &argv[optind];
 
     // Initialization of runtime configuration
+    RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
-    CsxContext csx_context;
-    
-    Configuration config;
-    config = ConfigFromEnv(config, symmetric, split_blocks);
+    CsxContext &csx_context = CsxContext::GetInstance();
 
+    config.LoadFromEnv();
     rt_context.SetRuntimeContext(config);
     csx_context.SetCsxContext(config);
 

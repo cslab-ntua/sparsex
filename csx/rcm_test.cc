@@ -36,10 +36,11 @@ int main(int argc, char **argv)
     uint64_t colind[] = {1,4,2,5,2,3,6,2,5,7};
     double values[] = {1,2,3,4,8,1,6,10,9,7};*/
 
+    RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
-    CsxContext csx_context;
-    Configuration config;
-    config = ConfigFromEnv(config, false, false);
+    CsxContext &csx_context = CsxContext::GetInstance();
+
+    config.LoadFromEnv();
     rt_context.SetRuntimeContext(config);
     csx_context.SetCsxContext(config);
 
