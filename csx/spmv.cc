@@ -11,6 +11,7 @@
  */
 
 #include "spmv.h"
+#include "CsxUtil.h"
 
 // malloc wrapper
 #define xmalloc(x)                         \
@@ -41,186 +42,6 @@ static int GetOptionOuterLoops()
     return ret;
 }
 
-#if 0   // SYM
-void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<uint64_t, double> *spm_sym)
-{
-    spm_mt_thread *spm_thread;
-    SparsePartition<uint64_t, double> *spm;
-    unsigned int *count;
-    bool **initial_map;
-    map_t *map;
-    uint32_t start, end, col, total_count, temp_count, limit;
-    uint32_t ncpus = spm_mt->nr_threads;
-    uint32_t n = spm_sym->GetLowerMatrix()->GetNrCols();
-#ifdef SPM_NUMA
-    int node;
-#endif
-    
-    ///> Init initial_map.
-    count = (unsigned int *) xmalloc(n * sizeof(unsigned int));
-    initial_map = (bool **) xmalloc(ncpus * sizeof(bool *));
-    for (unsigned int i = 0; i < ncpus; i++)
-        initial_map[i] = (bool *) xmalloc(n * sizeof(bool));
-    
-    for (unsigned int i = 0; i < n; i++)
-        count[i] = 0;
-        
-    for (unsigned int i = 0; i < ncpus; i++)
-        for (unsigned int j = 0; j < n; j++)
-            initial_map[i][j] = 0;
-
-    ///> Fill initial map.
-    for (unsigned int i = 0; i < ncpus; i++) {
-        spm = spm_sym[i].GetLowerMatrix();
-
-        start = spm->GetRowStart();
-        end = spm->GetRowStart() + spm->GetNrRows();
-        
-        for (uint32_t j = 0; j < spm->GetNrRows(); j++) {
-            for (Elem<uint64_t, double> *elem = spm->RowBegin(j); elem != spm->RowEnd(j);
-                 elem++) {
-                col = elem->col;
-                assert(col < end);
-                if (col < start + 1 && !initial_map[i][col]) {
-                    initial_map[i][col] = 1;
-                    count[col]++;
-                }
-            }
-        }
-    }
-    total_count = 0;
-    for (unsigned int i = 0; i < n; i++)
-        total_count += count[i];
-    
-    ///> Print initial map.
-    /*
-    for (unsigned int i = 0; i < ncpus; i++) {
-        for (unsigned int j = 0; j < n; j++)
-            std::cout << initial_map[i][j] << " ";
-        std::cout << std::endl;
-    }
-    for (unsigned int i = 0; i < n; i++)
-        std::cout << count[i] << " ";
-    std::cout << std::endl;
-    */
-    
-    ///> Make map.
-    end = 0;
-    for (unsigned int i = 0; i < ncpus - 1; i++) {
-        spm_thread = spm_mt->spm_threads + i;
-#ifdef SPM_NUMA
-        node = spm_thread->node;
-        map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
-#else
-        map = (map_t *) xmalloc(sizeof(map_t));
-#endif
-
-        start = end;
-        limit = total_count / (ncpus - i);
-        temp_count = 0;
-        while (temp_count < limit)
-            temp_count += count[end++];
-        total_count -= temp_count;
-        map->length = temp_count;
-#ifdef SPM_NUMA
-        map->cpus = (unsigned int *) 
-                        numa_alloc_onnode(temp_count * sizeof(unsigned int),
-                                          node);
-        map->elems_pos = (unsigned int *)
-                             numa_alloc_onnode(temp_count *
-                                               sizeof(unsigned int), node);
-#else
-        map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
-        map->elems_pos = 
-            (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
-#endif        
-        temp_count = 0;
-        for (unsigned int j = start; j < end; j++) {
-            for (unsigned int k = 0; k < ncpus; k++) {
-                if (initial_map[k][j] == 1) {
-                     map->cpus[temp_count] = k;
-                     map->elems_pos[temp_count++] = j - 1;
-                }
-            }
-        }
-        assert(temp_count == map->length);
-        
-        spm_thread->map = map;
-    }
-    start = end;
-    end = n;
-    temp_count = total_count;
-    
-    spm_thread = spm_mt->spm_threads + ncpus - 1;
-
-#ifdef SPM_NUMA
-    node = spm_thread->node;
-
-    map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
-    map->cpus = (unsigned int *)
-                    numa_alloc_onnode(temp_count * sizeof(unsigned int), node);
-    map->elems_pos = (unsigned int *)
-                         numa_alloc_onnode(temp_count * sizeof(unsigned int),
-                                           node);
-#else
-    map = (map_t *) xmalloc(sizeof(map_t));
-    map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
-    map->elems_pos = (unsigned int *)
-                         xmalloc(temp_count * sizeof(unsigned int));
-#endif
-
-    map->length = temp_count;
-    temp_count = 0;
-    for (unsigned int j = start; j < end; j++) {
-        for (unsigned int k = 0; k < ncpus; k++) {
-            if (initial_map[k][j] == 1) {
-                map->cpus[temp_count] = k;
-                map->elems_pos[temp_count++] = j - 1;
-            }
-        }
-    }
-    assert(temp_count == map->length); 
-    spm_thread->map = map;
-#ifdef SPM_NUMA
-    int alloc_err = 0;
-    for (unsigned int i = 0; i < ncpus; i++) {
-        node = spm_mt->spm_threads[i].node;
-        map = spm_mt->spm_threads[i].map;
-        
-        alloc_err += check_region(map, sizeof(map_t), node);
-        alloc_err += check_region(map->cpus, 
-                                    map->length * sizeof(unsigned int), node);
-        alloc_err += check_region(map->elems_pos,
-                                    map->length * sizeof(unsigned int), node);
-    }
-    
-    std::cout << "allocation check for map... "
-              << ((alloc_err) ?
-                 "FAILED (see above for more info)" : "DONE")
-              << std::endl;
-
-#endif
-    ///> Print final map.
-    /*
-    for (unsigned int i = 0; i < ncpus; i++) {
-        spm_thread = spm_mt->spm_threads + i;
-        map = spm_thread->map;
-        std::cout << "Thread " << i << std::endl;
-        for (unsigned int j = 0; j < map->length; j++) {
-            std::cout << "(" << map->cpus[j] << ", " << map->elems_pos[j]
-                      << ")" << std::endl;
-        }
-        std::cout << std::endl;
-    }
-    */
-    
-    ///> Release initial map.
-    for (unsigned int i = 0; i < ncpus; i++)
-        free(initial_map[i]);
-    free(initial_map);
-    free(count);
-}
-
 uint64_t MapSize(void *spm)
 {
     unsigned int i;
@@ -237,7 +58,6 @@ uint64_t MapSize(void *spm)
     
     return size;
 }
-#endif  // SYM    
 
 spm_mt_t *PrepareSpmMt(const RuntimeContext &rt_config,
                        const CsxContext &csx_config)
@@ -260,26 +80,6 @@ spm_mt_t *PrepareSpmMt(const RuntimeContext &rt_config,
     return spm_mt;
 }
 
-void PutSpmMt(spm_mt_t *spm_mt)
-{
-    if (!spm_mt->symmetric) {
-        for (unsigned i = 0; i < spm_mt->nr_threads; i++) {
-            csx_double_t *csx = (csx_double_t *) spm_mt->spm_threads[i].spm;
-            
-            DestroyCsx(csx);
-        }
-    } else {
-        for (unsigned i = 0; i < spm_mt->nr_threads; i++) {
-            csx_double_sym_t *csx_sym =
-                (csx_double_sym_t *) spm_mt->spm_threads[i].spm;
-            
-            DestroyCsxSym(csx_sym);
-        }
-    }
-    free(spm_mt->spm_threads);
-    free(spm_mt);
-}
-
 void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     void *crs;
@@ -298,51 +98,6 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     std::cout << "Check Passed" << std::endl;
 }
 
-uint64_t CsxSize(void *spm_mt)
-{
-    return (uint64_t) CsxSize((spm_mt_t *) spm_mt);
-}
-
-static unsigned long CsxSize(spm_mt_t *spm_mt)
-{
-    unsigned long ret;
-
-    ret = 0;
-    for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
-        spm_mt_thread_t *t = spm_mt->spm_threads + i;
-        csx_double_t *csx = (csx_double_t *)t->spm;
-        
-        ret += csx->nnz * sizeof(double);
-        ret += csx->ctl_size;
-    }
-
-    return ret;
-}
-
-uint64_t CsxSymSize(void *spm_mt)
-{
-    return (uint64_t) CsxSymSize((spm_mt_t *) spm_mt);
-}
-
-#if 0   // SYM
-static unsigned long CsxSymSize(spm_mt_t *spm_mt)
-{
-    unsigned long ret;
-
-    ret = 0;
-    for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
-        spm_mt_thread_t *t = spm_mt->spm_threads + i;
-        csx_double_sym_t *csx_sym = (csx_double_sym_t *)t->spm;
-        csx_double_t *csx = csx_sym->lower_matrix;
-        
-        ret += (csx->nnz + csx->nrows) * sizeof(double);
-        ret += csx->ctl_size;
-    }
-
-    return ret;
-}    
-#endif  // SYM
-
 void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     uint64_t nrows, ncols, nnz;
@@ -357,17 +112,16 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
             secs = SPMV_BENCH_FN(spm_mt, loops_nr, nrows, ncols, NULL);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
             printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n", "csx",
-                   basename(mmf_name), CsxSize(spm_mt), pre_time, secs,
-                   flops);
-        }/* else {
+                   basename(mmf_name), CsxSize<int, double>(spm_mt),
+                   pre_time, secs, flops);
+        } else {
             secs = SPMV_BENCH_SYM_FN(spm_mt, loops_nr, nrows, ncols, NULL);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
             // Switch Reduction Phase
             printf("m:%s f:%s ms:%lu s:%lu pt:%lf t:%lf r:%lf\n", "csx-sym",
-                   basename(mmf_name), MapSize(spm_mt), CsxSymSize(spm_mt),
-                   pre_time, secs, flops);
-                   }
-         */      
+                   basename(mmf_name), MapSize(spm_mt),
+                   CsxSymSize<int, double>(spm_mt), pre_time, secs, flops);
+        }
     }
 }
 

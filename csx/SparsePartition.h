@@ -31,6 +31,7 @@
 #include "SparseUtil.h"
 #include "dynarray.h"
 #include "timer.h"
+#include "mmf.h"    //CSX-Sym needs this
 
 namespace bll = boost::lambda;
 using namespace std;
@@ -45,28 +46,28 @@ namespace csx {
 template<typename IndexType, typename ValueType>
 class SparsePartition
 {
-public:
+private:
     IndexType nr_rows_, nr_cols_, nr_nzeros_;
-    IndexType elems_size_;
+    IterOrder type_;
+    Elem<IndexType, ValueType> *elems_;
+    size_t elems_size_;
+    IndexType *rowptr_;
     size_t rowptr_size_;
     IndexType row_start_;    /* Row of the original matrix, where this
                                sub-matrix starts. */
-private:
-    IterOrder type_;
-    Elem<IndexType, ValueType> *elems_;
-    IndexType *rowptr_;
     bool elems_mapped_;
+    bool symmetric_;
 
     // Maximum possible rowptr_size after transformations.
     size_t max_rowptr_size_;
     size_t nr_deltas_;
 
 public:
-    typedef IndexType index_t;
-    typedef ValueType value_t;
+    typedef IndexType idx_t;
+    typedef ValueType val_t;
 
     SparsePartition() : type_(NONE), elems_(NULL), rowptr_(NULL),
-                        elems_mapped_(false) {}
+                        elems_mapped_(false), symmetric_(false) {}
 
     ~SparsePartition()
     {
@@ -76,7 +77,7 @@ public:
 
     IndexType GetNrRows() const
     {
-        return rowptr_size_ - 1;
+        return nr_rows_;
     }
 
     IndexType GetNrCols() const
@@ -99,12 +100,12 @@ public:
         return type_;
     }
 
-    IndexType GetElemsSize() const
+    size_t GetElemsSize() const
     {
         return elems_size_;
     }
 
-    IndexType GetRow(size_t idx) const
+    IndexType GetRow(IndexType idx) const
     {
         return rowptr_[idx];
     }
@@ -114,7 +115,7 @@ public:
         return row_start_;
     }
 
-    size_t GetRowPtrSize() const
+    size_t GetRowptrSize() const
     {
         return rowptr_size_;
     }
@@ -143,6 +144,11 @@ public:
     {
         elems_mapped_ = elems_mapped;
     }
+
+    void SetSymmetric(bool symmetric)
+    {
+        symmetric_ = symmetric;
+    }
  
     void SetRowStart(IndexType row_start)
     {
@@ -164,7 +170,7 @@ public:
         nr_deltas_ += nr;
     }
 
-    Elem<IndexType, ValueType>& operator[](const size_t idx)
+    Elem<IndexType, ValueType>& operator[](const IndexType idx)
     {
         assert(idx >= 0 && idx < nr_nzeros_ && "Index out of bounds!");
         return *(elems_ + idx);
@@ -183,7 +189,6 @@ public:
     }
 
     class Builder;
-    //class BuilderSym;
 
     /**
      *  Function for filling the matrix using point iterators
@@ -199,18 +204,18 @@ public:
      */
     template<typename IterT>
     IndexType SetRows(IterT &pi, const IterT &pnts_end, IndexType first_row,
-                      size_t limit, IndexType nr_rows);
+                      unsigned long limit, IndexType nr_rows);
     template<typename IterT>
     IndexType SetRows(IterT &pi, const IterT &pnts_end, IndexType first_row,
-                      size_t limit, IndexType nr_rows,
+                      unsigned long limit, IndexType nr_rows,
                       SparsePartition::Builder *Bld);
     template <typename IterT>
     IndexType SetElems(IterT &pnts_start, const IterT &pnts_end,
-                       IndexType first_row, size_t limit = 0,
+                       IndexType first_row, unsigned long limit = 0,
                        IndexType nr_elems = 0, IndexType nr_rows = 0);
     template <typename IterT>
     IndexType SetElems(IterT &pnts_start, const IterT &pnts_end,
-                       IndexType first_row, size_t limit,
+                       IndexType first_row, unsigned long limit,
                        IndexType nr_elems, IndexType nr_rows,
                        SparsePartition::Builder *Bld);
 
@@ -371,142 +376,139 @@ public:
     SparsePartition *sp_;
     dynarray_t *da_elems_;
     dynarray_t *da_rowptr_;
-    IndexType elems_cnt_;
+    size_t elems_cnt_;
 };
 
-#if 0
- 
-template<typename IndexType, typename ValueType>
-class SparsePartition<IndexType, ValueType>::BuilderSym
-{
-public:
-    /**
-     *  Constructs a Builder object.
-     *
-     *  @param sp       the matrix to be built.
-     *  @param nr_elems an initial guess of the nonzero elements.
-     *  @param nr_rows  an initial guess of the number of rows.
-     */
-    BuilderSym(SparsePartition *sp, IndexType nr_rows = 0,
-               IndexType nr_elems = 0)
-    {
-        IndexType *rowptr;
+// template<typename IndexType, typename ValueType>
+// class SparsePartition<IndexType, ValueType>::BuilderSym
+// {
+// public:
+//     /**
+//      *  Constructs a Builder object.
+//      *
+//      *  @param sp       the matrix to be built.
+//      *  @param nr_elems an initial guess of the nonzero elements.
+//      *  @param nr_rows  an initial guess of the number of rows.
+//      */
+//     BuilderSym(SparsePartition *sp, IndexType nr_rows = 0,
+//                IndexType nr_elems = 0)
+//         : sp_(sp)
+//     {
+//         IndexType *rowptr;
     
-        if (sp_->elems_mapped_) {
-            da_elems_ = dynarray_init_frombuff
-                (sizeof(Elem<IndexType, ValueType>), sp_->elems_size_,
-                 sp_->elems_, sp_->elems_size_);
-            dynarray_seek(da_elems_, 0);
-        } else {
-            da_elems_ =
-                dynarray_create(sizeof(Elem<IndexType, ValueType>), 512,
-                                nr_elems);
-        }
-        da_rowptr_ = dynarray_create(sizeof(IndexType), 512, nr_rows);
-        rowptr = (IndexType *) dynarray_alloc(da_rowptr_);
-        *rowptr = 0;
-    }
+//         if (sp_->elems_mapped_) {
+//             da_elems_ = dynarray_init_frombuff
+//                 (sizeof(Elem<IndexType, ValueType>), sp_->elems_size_,
+//                  sp_->elems_, sp_->elems_size_);
+//             dynarray_seek(da_elems_, 0);
+//         } else {
+//             da_elems_ =
+//                 dynarray_create(sizeof(Elem<IndexType, ValueType>), 512,
+//                                 nr_elems);
+//         }
+//         da_rowptr_ = dynarray_create(sizeof(IndexType), 512, nr_rows);
+//         rowptr = (IndexType *) dynarray_alloc(da_rowptr_);
+//         *rowptr = 0;
+//     }
 
-    virtual ~BuilderSym()
-    {
-        assert(da_elems_ == NULL && "da_elems_ not destroyed");
-        assert(da_rowptr_ == NULL && "da_rowptr_ not destroyed");
-    }
+//     virtual ~BuilderSym()
+//     {
+//         assert(da_elems_ == NULL && "da_elems_ not destroyed");
+//         assert(da_rowptr_ == NULL && "da_rowptr_ not destroyed");
+//     }
 
-    /**
-     *  Allocates a new element in the new matrix.
-     *
-     *  @return pointer to element allocated.
-     */
-    virtual Elem<IndexType, ValueType> *AllocElem()
-    {
-        if (sp_->elems_mapped_)
-            assert(dynarray_size(da_elems_) < sp_->elems_size_ &&
-                   "out of bounds");
-        return (Elem<IndexType, ValueType> *) dynarray_alloc(da_elems_);
-    }
+//     /**
+//      *  Allocates a new element in the new matrix.
+//      *
+//      *  @return pointer to element allocated.
+//      */
+//     virtual Elem<IndexType, ValueType> *AllocElem()
+//     {
+//         if (sp_->elems_mapped_)
+//             assert(dynarray_size(da_elems_) < sp_->elems_size_ &&
+//                    "out of bounds");
+//         return (Elem<IndexType, ValueType> *) dynarray_alloc(da_elems_);
+//     }
 
-    /**
-     *  Allocates a number of elements in the new matrix.
-     *
-     *  @param  nr number of elements to be allocated.
-     *  @return    pointer to the first allocated element.
-     */
-    virtual Elem<IndexType, ValueType> *AllocElems(size_t nr)
-    {
-        if (sp_->elems_mapped_)
-            assert(dynarray_size(da_elems_) + nr < sp_->elems_size_ &&
-                   "out of bounds");
-        return (Elem<IndexType, ValueType> *) dynarray_alloc_nr(da_elems_, nr);
-    }
+//     /**
+//      *  Allocates a number of elements in the new matrix.
+//      *
+//      *  @param  nr number of elements to be allocated.
+//      *  @return    pointer to the first allocated element.
+//      */
+//     virtual Elem<IndexType, ValueType> *AllocElems(size_t nr)
+//     {
+//         if (sp_->elems_mapped_)
+//             assert(dynarray_size(da_elems_) + nr < sp_->elems_size_ &&
+//                    "out of bounds");
+//         return (Elem<IndexType, ValueType> *) dynarray_alloc_nr(da_elems_, nr);
+//     }
 
-    /**
-     *  Counts elements already allocated in the matrix.
-     *
-     *  @return number of elements allocated.
-     */
-    virtual size_t GetElemsCnt()
-    {
-        return dynarray_size(da_elems_);
-    }
+//     /**
+//      *  Counts elements already allocated in the matrix.
+//      *
+//      *  @return number of elements allocated.
+//      */
+//     virtual size_t GetElemsCnt()
+//     {
+//         return dynarray_size(da_elems_);
+//     }
 
-    /**
-     *  Allocate elements for the next row.
-     *
-     *  @param rdiff number of empty rows between the current and the new row.
-     */
-    virtual void NewRow(IndexType rdiff = 1)
-    {
-        IndexType *rowptr;
-        size_t elems_cnt;
+//     /**
+//      *  Allocate elements for the next row.
+//      *
+//      *  @param rdiff number of empty rows between the current and the new row.
+//      */
+//     virtual void NewRow(IndexType rdiff = 1)
+//     {
+//         IndexType *rowptr;
+//         size_t elems_cnt;
 
-        elems_cnt = GetElemsCnt();
-        rowptr = (IndexType *) dynarray_alloc_nr(da_rowptr_, rdiff);
-        for (IndexType i = 0; i < rdiff; i++)
-            rowptr[i] = elems_cnt;
-    }
+//         elems_cnt = GetElemsCnt();
+//         rowptr = (IndexType *) dynarray_alloc_nr(da_rowptr_, rdiff);
+//         for (IndexType i = 0; i < rdiff; i++)
+//             rowptr[i] = elems_cnt;
+//     }
 
-    /**
-     *  Finalizes the construction of the new matrix.
-     */
-    virtual void Finalize()
-    {
-        IndexType *last_rowptr;
+//     /**
+//      *  Finalizes the construction of the new matrix.
+//      */
+//     virtual void Finalize()
+//     {
+//         IndexType *last_rowptr;
 
-        last_rowptr = (IndexType *) dynarray_get_last(da_rowptr_);
-        if (*last_rowptr != dynarray_size(da_elems_)) {
-            NewRow();
-        }
+//         last_rowptr = (IndexType *) dynarray_get_last(da_rowptr_);
+//         if (*last_rowptr != dynarray_size(da_elems_)) {
+//             NewRow();
+//         }
 
-        if (!sp_->elems_mapped_ && sp_->elems_)
-            free(sp_->elems_);
+//         if (!sp_->elems_mapped_ && sp_->elems_)
+//             free(sp_->elems_);
 
-        if (sp_->rowptr_)
-            free(sp_->rowptr_);
+//         if (sp_->rowptr_)
+//             free(sp_->rowptr_);
 
-        if (sp_->elems_mapped_) {
-            //assert(sp_->elems_size_ == dynarray_size(da_elems_));
-        }
-        sp_->elems_size_ = dynarray_size(da_elems_);
+//         if (sp_->elems_mapped_) {
+//             //assert(sp_->elems_size_ == dynarray_size(da_elems_));
+//         }
+//         sp_->elems_size_ = dynarray_size(da_elems_);
     
-        if (sp_->elems_mapped_)
-            free(da_elems_);
-        else
-            sp_->elems_ = (Elem<IndexType, ValueType> *)
-                dynarray_destroy(da_elems_);
+//         if (sp_->elems_mapped_)
+//             free(da_elems_);
+//         else
+//             sp_->elems_ = (Elem<IndexType, ValueType> *)
+//                 dynarray_destroy(da_elems_);
 
-        sp_->rowptr_size_ = dynarray_size(da_rowptr_);
-        sp_->rowptr_ = (IndexType *) dynarray_destroy(da_rowptr_);
-        da_elems_ = da_rowptr_ = NULL;
-    }
+//         sp_->rowptr_size_ = dynarray_size(da_rowptr_);
+//         sp_->rowptr_ = (IndexType *) dynarray_destroy(da_rowptr_);
+//         da_elems_ = da_rowptr_ = NULL;
+//     }
 
-public:
-    SparsePartition *sp_;
-    dynarray_t *da_elems_;
-    dynarray_t *da_rowptr_;
-};
-
-#endif  // SYM
+// public:
+//     SparsePartition *sp_;
+//     dynarray_t *da_elems_;
+//     dynarray_t *da_rowptr_;
+// };
 
 /**
  *  Iterators for moving between elements inside the matrix.
@@ -532,8 +534,6 @@ private:
     IndexType elem_idx_;
 };
 
-#if 0   // SYM
-
 /**
  *  Internal representation of a sparse symmetric matrix. This class can also 
  *  represent a sub-matrix of a larger one.
@@ -552,6 +552,9 @@ private:
                                                                 elements. */
     
 public:
+    typedef IndexType idx_t;
+    typedef ValueType val_t;
+
     SparsePartitionSym() 
         : lower_matrix_(NULL),
           diagonal_(NULL),
@@ -561,6 +564,9 @@ public:
         lower_matrix_ = new SparsePartition<IndexType, ValueType>;
         m1_ = new SparsePartition<IndexType, ValueType>;
         m2_ = new SparsePartition<IndexType, ValueType>;
+        lower_matrix_->SetSymmetric(true);
+        m1_->SetSymmetric(true);
+        m2_->SetSymmetric(true);
     }
 
     ~SparsePartitionSym()
@@ -623,8 +629,8 @@ public:
      *  @return         spmsym class object with the characteristics of the 
      *                  matrix.
      */
-    static SparsePartitionSym *LoadMMF_mt(MMF<IndexType, ValueType> &mmf,
-                                          const long nr);
+    static SparsePartitionSym<IndexType, ValueType> *LoadMMF_mt(
+        MMF<IndexType, ValueType> &mmf, const long nr);
     
     /**
      *  Divide the matrix (m) to two submatrices (m1 and m2).
@@ -678,28 +684,28 @@ public:
             IndexType nr_rows = 0);
     virtual ~Builder();
     
-    typename SparsePartition<IndexType, ValueType>::BuilderSym *GetLowerBuilder()
+    typename SparsePartition<IndexType, ValueType>::Builder *GetLowerBuilder()
     {
         return spm_bld_;
     }
     
     ValueType *AllocDiagElem();
     IndexType GetDiagElemsCnt();
-    IndexType GetElemsCnt();
+    size_t GetElemsCnt();
     void Finalize();
     
 private:
     SparsePartitionSym<IndexType, ValueType> *spm_sym_;
-    typename SparsePartition<IndexType, ValueType>::BuilderSym *spm_bld_;
+    typename SparsePartition<IndexType, ValueType>::Builder *spm_bld_;
     dynarray_t *da_dvalues_;
 };
 
-#endif  // SYM
+
+/* Helper functions */
 
 template<typename IndexType, typename ValueType>
 void TestMMF(SparsePartition<IndexType, ValueType> *sp, const char *mmf_file);
 
-/* Helper functions */
 #define BLOCK_ROW_MAP_NAME(r)   pnt_map_bR ## r
 #define BLOCK_ROW_RMAP_NAME(r)  pnt_rmap_bR ## r
 #define BLOCK_COL_MAP_NAME(c)   pnt_map_bC ## c
@@ -889,8 +895,8 @@ SetRows(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
 
 template<typename IndexType, typename ValueType> template<typename IterT>
 IndexType SparsePartition<IndexType, ValueType>::
-SetRows(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
-        IndexType nr_rows, SparsePartition::Builder *Bld)
+SetRows(IterT &pi, const IterT &pnts_end, IndexType first_row, 
+        unsigned long limit, IndexType nr_rows, SparsePartition::Builder *Bld)
 {
     IndexType row_prev, row;
 
@@ -912,14 +918,15 @@ SetRows(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
 
 template<typename IndexType, typename ValueType> template<typename IterT>
 IndexType SparsePartition<IndexType, ValueType>::
-SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
-         IndexType nr_elems, IndexType nr_rows, SparsePartition::Builder *Bld)
+SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row, 
+         unsigned long limit, IndexType nr_elems, IndexType nr_rows,
+         SparsePartition::Builder *Bld)
 {
     IndexType row_prev, row;
-    //Elem<IndexType, ValueType> *elem;
-    IndexType cnt;
+    Elem<IndexType, ValueType> *elem;
+    //IndexType cnt;
 
-    cnt = rowptr_[first_row - 1];
+    //cnt = rowptr_[first_row - 1];
     row_prev = first_row;
     for (; pi != pnts_end; ++pi) {
         row = (*pi).row;
@@ -931,11 +938,11 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
             row_prev = row;
         }
 
-        Bld->AllocElem();
-        MakeRowElem(*pi, elems_ + cnt);
-        //elem = Bld->AllocElem();
-        //MakeRowElem<IndexType, ValueType>(*pi, elem);
-        cnt++;
+        //Bld->AllocElem();
+        //MakeRowElem(*pi, elems_ + cnt);
+        elem = Bld->AllocElem();
+        MakeRowElem<IndexType, ValueType>(*pi, elem);
+        //cnt++;
     }
 
     return elems_size_;
@@ -943,11 +950,11 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
 
 template<typename IndexType, typename ValueType> template<typename IterT>
 IndexType SparsePartition<IndexType, ValueType>::
-SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
-         IndexType nr_elems, IndexType nr_rows)
+SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row,
+         unsigned long limit, IndexType nr_elems, IndexType nr_rows)
 {
-    SparsePartition<IndexType, ValueType>::Builder *Bld = new 
-        SparsePartition<IndexType, ValueType>::Builder(this, nr_rows, nr_elems);
+    SparsePartition::Builder *Bld = new 
+        SparsePartition::Builder(this, nr_rows, nr_elems);
 
     SetElems(pi, pnts_end, first_row, limit, nr_elems, nr_rows, Bld);
     Bld->Finalize();
@@ -1033,12 +1040,12 @@ void SparsePartition<IndexType, ValueType>::PrintStats(std::ostream& out)
     IndexType nr_transitions;
     IndexType nr_xform_patterns[XFORM_MAX];
 
-    nr_rows_with_patterns = GetNrRows();
+    nr_rows_with_patterns = GetRowptrSize() - 1;
     nr_patterns = 0;
     nr_nzeros_block = 0;
     nr_transitions = 0;
     memset(nr_xform_patterns, 0, sizeof(nr_xform_patterns));
-    for (size_t i = 0; i < GetNrRows(); i++) {
+    for (size_t i = 0; i < GetRowptrSize() - 1; i++) {
         IndexType pt_size, pt_size_before;
         IterOrder pt_type, pt_type_before;
 
@@ -1111,7 +1118,7 @@ typename SparsePartition<IndexType, ValueType>::PntIter
 SparsePartition<IndexType, ValueType>::PointsEnd(IndexType ridx)
 {
     if (ridx == 0)
-        ridx = GetNrRows();
+        ridx = GetRowptrSize() - 1;
         
     return PntIter(this, ridx);
 }
@@ -1380,22 +1387,25 @@ Transform(IterOrder t, IndexType rs, IndexType re)
 
         k = lcm(old_block_align, new_block_align);
         k /= old_block_align;
-        re = GetNrRows();
+        re = GetRowptrSize() - 1;
         
         e0 = elems.begin();
         ee = e0;
-        for (size_t i = k; i < re; i += k) {
+        for (IndexType i = k; i < re; i += k) {
             es = ee;
             ee += rowptr_[i] - rowptr_[i-k];
-            sort(es, ee, elem_cmp_less<IndexType, ValueType>);
+//            sort(es, ee, elem_cmp_less<IndexType, ValueType>);
+            sort(es, ee, CooElemSorter<IndexType, ValueType>());
         }
         es = ee;
         ee = elems.end();
-        sort(es, ee, elem_cmp_less<IndexType, ValueType>);
+//        sort(es, ee, elem_cmp_less<IndexType, ValueType>);
+        sort(es, ee, CooElemSorter<IndexType, ValueType>());
     } else {
         e0 = elems.begin();
         ee = elems.end();
-        sort(e0, ee, elem_cmp_less<IndexType, ValueType>);
+//        sort(e0, ee, elem_cmp_less<IndexType, ValueType>);
+        sort(e0, ee, CooElemSorter<IndexType, ValueType>());
     }
 
     SetElems(e0, ee, rs + 1, 0, elems_size_, FindNewRowptrSize(t));
@@ -1407,11 +1417,11 @@ template<typename IndexType, typename ValueType>
 SparsePartition<IndexType, ValueType> *SparsePartition<IndexType, ValueType>::
 GetWindow(IndexType rs, IndexType length)
 {
-    if (rs + length > rowptr_size_ - 1)
+    if ((size_t)(rs + length) > rowptr_size_ - 1)
         length = rowptr_size_ - rs - 1;
 
     SparsePartition<IndexType, ValueType> *ret = new
-        SparsePartition<IndexType, ValueType>();
+        SparsePartition<IndexType, ValueType>;
     IndexType es = rowptr_[rs];
     IndexType ee = rowptr_[rs+length];
 
@@ -1428,7 +1438,9 @@ GetWindow(IndexType rs, IndexType length)
     ret->row_start_ = row_start_ + rs;
     ret->type_ = type_;
     ret->elems_mapped_ = true;
-    assert(ret->rowptr_[ret->rowptr_size_-1] == ret->elems_size_);
+    if (symmetric_)
+        ret->symmetric_ = true;
+    assert((size_t)(ret->rowptr_[ret->rowptr_size_-1]) == ret->elems_size_);
 
     return ret;
 }
@@ -1507,6 +1519,10 @@ Builder::Builder(SparsePartition<IndexType, ValueType> *sp,
             (sizeof(Elem<IndexType, ValueType>), sp_->elems_size_,
              sp_->elems_, sp_->elems_size_);
         dynarray_seek(da_elems_, 0);
+    } else {
+        da_elems_ =
+            dynarray_create(sizeof(Elem<IndexType, ValueType>), 512,
+                            nr_elems);
     }
     da_rowptr_ = dynarray_create(sizeof(IndexType), 512, nr_rows);
     rowptr = (IndexType *) dynarray_alloc(da_rowptr_);
@@ -1547,7 +1563,7 @@ Builder::NewRow(IndexType rdiff)
 {
     IndexType *rowptr;
         
-    if (sp_->elems_mapped_)
+    if (sp_->elems_mapped_ || sp_->symmetric_)
         elems_cnt_ = GetElemsCnt();
     rowptr = (IndexType *) dynarray_alloc_nr(da_rowptr_, rdiff);
     for (IndexType i = 0; i < rdiff; i++)
@@ -1561,18 +1577,19 @@ Builder::Finalize()
     IndexType *last_rowptr;
 
     last_rowptr = (IndexType *) dynarray_get_last(da_rowptr_);
-    if (sp_->elems_mapped_) {
-        if (*last_rowptr != dynarray_size(da_elems_))
+    if (sp_->elems_mapped_ || sp_->symmetric_) {
+        if (((unsigned long)*last_rowptr) != dynarray_size(da_elems_))
             NewRow();
     } else {
-        if (*last_rowptr != elems_cnt_)
+        if ((size_t)(*last_rowptr) != elems_cnt_)
             NewRow();
     }
-
+    if (sp_->symmetric_)
+        if (!sp_->elems_mapped_ && sp_->elems_)
+            free(sp_->elems_);
     if (sp_->rowptr_)
         free(sp_->rowptr_);
-
-    if (sp_->elems_mapped_) {
+    if (sp_->elems_mapped_ || sp_->symmetric_) {
         //assert(sp_->elems_size_ == dynarray_size(da_elems_));
         sp_->elems_size_ = dynarray_size(da_elems_);
     } else {
@@ -1581,6 +1598,9 @@ Builder::Finalize()
 
     if (sp_->elems_mapped_)
         free(da_elems_);
+    else if (sp_->symmetric_)
+        sp_->elems_ = (Elem<IndexType, ValueType> *)
+            dynarray_destroy(da_elems_);
 
     sp_->rowptr_size_ = dynarray_size(da_rowptr_);
     sp_->rowptr_ = (IndexType *) dynarray_destroy(da_rowptr_);
@@ -1593,11 +1613,11 @@ Builder::Finalize()
 template<typename IndexType, typename ValueType>
 SparsePartition<IndexType, ValueType>::PntIter::PntIter(SparsePartition *sp,
                                                         IndexType r_idx)
-    : sp_(sp),    
+    : sp_(sp),
       row_idx_(r_idx)
 {
     IndexType *rp = sp_->rowptr_;
-    size_t rp_size = sp_->rowptr_size_;
+    IndexType rp_size = sp_->rowptr_size_;
     
     assert(r_idx < rp_size);
     while (r_idx + 1 < rp_size && rp[r_idx] == rp[r_idx+1])
@@ -1628,10 +1648,10 @@ void SparsePartition<IndexType, ValueType>::PntIter::operator++()
     IndexType *rp = sp_->rowptr_;
     size_t rp_size = sp_->rowptr_size_;
     
-    assert(elem_idx_ < sp_->elems_size_);
-    assert(row_idx_ < rp_size);
+    assert((size_t)elem_idx_ < sp_->elems_size_);
+    assert((size_t)row_idx_ < rp_size);
     elem_idx_++;
-    while (row_idx_ + 1 < rp_size && rp[row_idx_+1] == elem_idx_)
+    while (((size_t)row_idx_ + 1) < rp_size && rp[row_idx_+1] == elem_idx_)
         row_idx_++;
 }
 
@@ -1666,8 +1686,6 @@ PntIter::operator<<(std::ostream &out)
     return out;
 }
 
-#if 0   // SYM
-
 /*
  * SparsePartitionSym class implementation
  */
@@ -1679,16 +1697,18 @@ void SparsePartitionSym<IndexType, ValueType>::DivideMatrix()
     //Elem<IndexType, ValueType> *elems = matrix->GetElems();
     IndexType nr_nzeros = matrix->GetNrNonzeros();
     IndexType row_start = matrix->GetRowStart();
-    IndexType nr_rows = matrix->GetNrRows();
+    IndexType nr_rows = matrix->GetRowptrSize() - 1;
     IndexType nr_cols = matrix->GetNrCols();
     IndexType rows1 = 0;
     IndexType rows2 = 0;
     
     typename SparsePartition<IndexType, ValueType>::Builder *spmbld1 = new
-        typename SparsePartition<IndexType, ValueType>::Builder(m1_, nr_rows + 1,
+        typename SparsePartition<IndexType, ValueType>::Builder(m1_,
+                                                                nr_rows + 1,
                                                                 nr_nzeros);
     typename SparsePartition<IndexType, ValueType>::Builder *spmbld2 = new 
-        typename SparsePartition<IndexType, ValueType>::Builder(m2_, nr_rows + 1,
+        typename SparsePartition<IndexType, ValueType>::Builder(m2_, 
+                                                                nr_rows + 1,
                                                                 nr_nzeros);
     
     //Elem<IndexType, ValueType> *elem;
@@ -1704,8 +1724,8 @@ void SparsePartitionSym<IndexType, ValueType>::DivideMatrix()
     m2_->SetNrCols(nr_cols);
     m2_->SetNrNonzeros(0);
     
-    for (size_t i = 0; i < nr_rows; i++) {
-        for (size_t j = matrix->GetRow(i); j < matrix->GetRow(i+1); j++) {
+    for (IndexType i = 0; i < nr_rows; i++) {
+        for (IndexType j = matrix->GetRow(i); j < matrix->GetRow(i+1); j++) {
             //elem = elems + j;
             elem = matrix->operator[](j);
             if (elem.col < row_start + 1) {
@@ -1729,8 +1749,8 @@ void SparsePartitionSym<IndexType, ValueType>::DivideMatrix()
     spmbld1->Finalize();
     spmbld2->Finalize();
     
-    m1_->SetNrRows(m1_->GetNrRows());
-    m2_->SetNrRows(m2_->GetNrRows());
+    m1_->SetNrRows(m1_->GetRowptrSize() - 1);
+    m2_->SetNrRows(m2_->GetRowptrSize() - 1);
     
     delete spmbld1;
     delete spmbld2;
@@ -1742,20 +1762,22 @@ void SparsePartitionSym<IndexType, ValueType>::MergeMatrix()
     SparsePartition<IndexType, ValueType> *m1 = GetFirstMatrix();
     SparsePartition<IndexType, ValueType> *m2 = GetSecondMatrix();
     SparsePartition<IndexType, ValueType> *temp = new
-        SparsePartition<IndexType, ValueType>();
-    
+        SparsePartition<IndexType, ValueType>;
+
     SparsePartition<IndexType, ValueType> *matrix = lower_matrix_;
     //uint64_t *rowptr1 = m1->GetRowPtr();
     //uint64_t *rowptr2 = m2->GetRowPtr();
     //Elem<IndexType, ValueType> *elems1 = m1->GetElems();
     //Elem<IndexType, ValueType> *elems2 = m2->GetElems();
     IndexType row_start = matrix->GetRowStart();
-    IndexType nr_rows = matrix->GetNrRows();
+    size_t nr_rows = matrix->GetRowptrSize() - 1;
     IndexType nr_cols = matrix->GetNrCols();
     IndexType nr_nzeros = matrix->GetNrNonzeros();
     
+    temp->SetSymmetric(true);
     typename SparsePartition<IndexType, ValueType>::Builder *spmbld = new
-        typename SparsePartition<IndexType, ValueType>::Builder(temp, nr_rows + 1,
+        typename SparsePartition<IndexType, ValueType>::Builder(temp,
+                                                                nr_rows + 1,
                                                                 nr_nzeros);
 
     //Elem<IndexType, ValueType> *elem;
@@ -1767,15 +1789,15 @@ void SparsePartitionSym<IndexType, ValueType>::MergeMatrix()
     temp->SetNrNonzeros(matrix->GetNrNonzeros());
     
     for (size_t i = 0; i < nr_rows; i++) {
-        if (m1_->GetNrRows() > i) {
-            for (size_t j = m1_->GetRow(i); j < m1_->GetRow(i+1); j++) {
+        if ((m1_->GetRowptrSize() - 1) > i) {
+            for (IndexType j = m1_->GetRow(i); j < m1_->GetRow(i+1); j++) {
                 //elem = elems1 + j;
                 elem = m1->operator[](j);
                 MakeRowElem(elem, spmbld->AllocElem());
             }
         }
-        if (m2_->GetNrRows() > i) {
-            for (size_t j = m2_->GetRow(i); j < m2_->GetRow(i+1); j++) {
+        if ((m2_->GetRowptrSize() - 1) > i) {
+            for (IndexType j = m2_->GetRow(i); j < m2_->GetRow(i+1); j++) {
                 //elem = elems2 + j;
                 elem = m2->operator[](j);
                 MakeRowElem(elem, spmbld->AllocElem());
@@ -1786,7 +1808,7 @@ void SparsePartitionSym<IndexType, ValueType>::MergeMatrix()
     
     spmbld->Finalize();
     
-    temp->SetNrRows(temp->GetNrRows());
+    temp->SetNrRows(temp->GetRowptrSize() - 1);
     
     delete spmbld;
     
@@ -1814,7 +1836,7 @@ Builder(SparsePartitionSym *spm_sym, IndexType nr_elems, IndexType nr_rows)
 {
     SparsePartition<IndexType, ValueType> *spm = spm_sym_->GetLowerMatrix();
     
-    spm_bld_ = new typename SparsePartition<IndexType, ValueType>::BuilderSym
+    spm_bld_ = new typename SparsePartition<IndexType, ValueType>::Builder
         (spm, nr_rows, nr_elems);
     da_dvalues_ = dynarray_create(sizeof(ValueType), 512, nr_rows);
 }
@@ -1830,7 +1852,7 @@ template<typename IndexType, typename ValueType>
 ValueType *SparsePartitionSym<IndexType, ValueType>::Builder::AllocDiagElem()
 {
     // assert(dynarray_size(da_dvalues_) <
-    //       spm_sym_->GetLowerMatrix()->GetNrRows() && "out of bounds");
+    //       (spm_sym_->GetLowerMatrix()->GetRowptrSize() - 1) && "out of bounds");
 
     return (ValueType *) dynarray_alloc(da_dvalues_);
 }
@@ -1842,7 +1864,7 @@ IndexType SparsePartitionSym<IndexType, ValueType>::Builder::GetDiagElemsCnt()
 }
 
 template<typename IndexType, typename ValueType>
-IndexType SparsePartitionSym<IndexType, ValueType>::Builder::GetElemsCnt()
+size_t SparsePartitionSym<IndexType, ValueType>::Builder::GetElemsCnt()
 {
     return GetDiagElemsCnt() + spm_bld_->GetElemsCnt();
 }
@@ -1897,8 +1919,8 @@ IndexType SparsePartitionSym<IndexType, ValueType>::
 SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row,
          unsigned long limit, IndexType nr_elems, IndexType nr_rows)
 {
-    SparsePartitionSym::Builder *spm_sym_bld = new SparsePartitionSym::Builder
-        (this, nr_elems, nr_rows);
+    SparsePartitionSym::Builder *spm_sym_bld = 
+        new SparsePartitionSym::Builder(this, nr_elems, nr_rows);
 
     SetElems(pi, pnts_end, first_row, limit, nr_elems, nr_rows, spm_sym_bld);
     spm_sym_bld->Finalize();
@@ -1928,7 +1950,7 @@ LoadMMF_mt(MMF<IndexType, ValueType>& mmf, const long nr)
                                 limit + 2 * mmf.GetNrRows() - 1,
                                 mmf.GetNrRows() + 1);
         spm_sym->lower_matrix_->SetNrNonzeros(nnz - spm_sym->GetDiagonalSize());
-        spm_sym->lower_matrix_->SetNrRows(spm_sym->lower_matrix_->GetNrRows());
+        spm_sym->lower_matrix_->SetNrRows(spm_sym->lower_matrix_->GetRowptrSize() - 1);
         spm_sym->lower_matrix_->SetNrCols(n);
         spm_sym->lower_matrix_->SetRowStart(row_start);
         row_start += spm_sym->GetDiagonalSize();
@@ -1939,8 +1961,6 @@ LoadMMF_mt(MMF<IndexType, ValueType>& mmf, const long nr)
     assert((IndexType) cnt == (IndexType) nr_nzeros);
     return ret;
 }
-
-#endif  // SYM
 
 #endif  // SPARSEPARTITION_H__
 

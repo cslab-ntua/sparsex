@@ -38,55 +38,22 @@ class SparseInternal;
  *                  of the matrix.
  */
 template<typename IndexType, typename ValueType>
-SparseInternal<IndexType, ValueType> *LoadMMF_mt(std::ifstream &in,
-                                                 const long nr_threads = 0)
-{
-    MMF<IndexType, ValueType> mmf(in);
-    return SparseInternal<IndexType, ValueType>::DoLoadMatrix(mmf,
-                                                              nr_threads);
-}
-
-template<typename IndexType, typename ValueType>
 SparseInternal<IndexType, ValueType> *LoadMMF_mt(const char *mmf_file,
                                                  const long nr_threads = 0)
 {
+    MMF<IndexType, ValueType> mmf(mmf_file);
     SparseInternal<IndexType, ValueType> *ret;
-    std::ifstream in;
-
-    in.open(mmf_file);
-    if (in.good()) {
-        ret = LoadMMF_mt<IndexType, ValueType>(in, nr_threads);
-    } else {
-        cerr << "File error!" << endl;
-        exit(1);
-    }
-    in.close();
-
+    ret = SparseInternal<IndexType, ValueType>::DoLoadMatrix(mmf,
+                                                             nr_threads);
     return ret;
-}
-
-template<typename IndexType, typename ValueType>
-SparseInternal<IndexType, ValueType> *LoadMMF(std::ifstream &in)
-{
-    return LoadMMF_mt<IndexType, ValueType>(in, 1);
 }
 
 template<typename IndexType, typename ValueType>
 SparseInternal<IndexType, ValueType> *LoadMMF(const char *mmf_file)
 {
     SparseInternal<IndexType, ValueType> *ret;
-    std::ifstream in;
 
-    in.open(mmf_file);
-
-    if (in.good()) {
-        ret = LoadMMF<IndexType, ValueType>(in);
-    } else {
-        std::cerr << "File error!" << std::endl;
-        exit(1);
-    }
-
-    in.close();
+    ret = LoadMMF_mt<IndexType, ValueType>(mmf_file, 1);
     return ret;
 }
 
@@ -104,32 +71,42 @@ template<typename IndexType, typename ValueType>
 class SparsePartitionSym;
 
 template<typename IndexType, typename ValueType>
-SparsePartitionSym<IndexType, ValueType> *LoadMMF_Sym_mt(std::ifstream &in,
-                                                         const long nr)
-{
-    MMF<IndexType, ValueType> mmf(in);
-    return SparsePartitionSym<IndexType, ValueType>::LoadMMF_mt(mmf, nr);
-}
-
-template<typename IndexType, typename ValueType>
 SparsePartitionSym<IndexType, ValueType> *LoadMMF_Sym_mt(const char *mmf_file,
                                                          const long nr)
 {
+    MMF<IndexType, ValueType> mmf(mmf_file);
     SparsePartitionSym<IndexType, ValueType> *ret;
-    std::ifstream in;
-
-    in.open(mmf_file);
-
-    if (in.good()) {
-        ret = LoadMMF_Sym_mt<IndexType, ValueType>(in, nr);
-    } else {
-        std::cerr << "File error!" << std::endl;
-        exit(1);
-    }
-
-    in.close();
+    ret = SparsePartitionSym<IndexType, ValueType>::LoadMMF_mt(mmf, nr);
     return ret;
 }
+
+// template<typename IndexType, typename ValueType>
+// SparsePartitionSym<IndexType, ValueType> *LoadMMF_Sym_mt(std::ifstream &in,
+//                                                          const long nr)
+// {
+//     MMF<IndexType, ValueType> mmf(in);
+//     return SparsePartitionSym<IndexType, ValueType>::LoadMMF_mt(mmf, nr);
+// }
+
+// template<typename IndexType, typename ValueType>
+// SparsePartitionSym<IndexType, ValueType> *LoadMMF_Sym_mt(const char *mmf_file,
+//                                                          const long nr)
+// {
+//     SparsePartitionSym<IndexType, ValueType> *ret;
+//     std::ifstream in;
+
+//     in.open(mmf_file);
+
+//     if (in.good()) {
+//         ret = LoadMMF_Sym_mt<IndexType, ValueType>(in, nr);
+//     } else {
+//         std::cerr << "File error!" << std::endl;
+//         exit(1);
+//     }
+
+//     in.close();
+//     return ret;
+// }
 
 // template<typename IndexType, typename ValueType>
 // SparsePartitionSym<IndexType, ValueType> *LoadMMF_mt(MMF &mmf, const long nr)

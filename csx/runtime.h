@@ -210,8 +210,8 @@ template<class InternalType>
 class ThreadContext
 {
 public:
-    typedef typename InternalType::index_t index_t;
-    typedef typename InternalType::value_t value_t;
+    typedef typename InternalType::idx_t idx_t;
+    typedef typename InternalType::val_t val_t;
 
     ThreadContext() : 
         id_(0), 
@@ -241,12 +241,9 @@ public:
     }
 
     //template<typename IndexType, typename ValueType>
-    void SetData(csx::SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt);
-
-#if 0   // SYM
-    void SetDataSym(SparsePartitionSym<index_t, value_t> *spms,
+    void SetData(csx::SparseInternal<idx_t, val_t> *spms, spm_mt_t *spm_mt);
+    void SetDataSym(SparsePartitionSym<idx_t, val_t> *spms,
                     spm_mt_t *spm_mt);
-#endif  // SYM    
  
     size_t GetId() const
     {
@@ -273,7 +270,7 @@ public:
         return spm_encoded_;
     }
 
-    CsxManager<index_t, value_t> *GetCsxManager()
+    CsxManager<idx_t, val_t> *GetCsxManager()
     {
         return csxmg_;
     }
@@ -287,17 +284,17 @@ private:
     size_t id_, cpu_, node_;
     InternalType *spm_;
     spm_mt_thread_t *spm_encoded_;
-    CsxManager<index_t, value_t> *csxmg_;
+    CsxManager<idx_t, val_t> *csxmg_;
     ostringstream *buffer_;
     double sampling_prob_;
 };
 
 template<class InternalType>
 void ThreadContext<InternalType>::
-SetData(SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt)
+SetData(SparseInternal<idx_t, val_t> *spms, spm_mt_t *spm_mt)
 {
     spm_ = spms->GetPartition(id_);
-    csxmg_ = new CsxManager<index_t, value_t>(spm_);
+    csxmg_ = new CsxManager<idx_t, val_t>(spm_);
     spm_encoded_ = &spm_mt->spm_threads[id_]; 
     buffer_ = new ostringstream("");
 #ifdef SPM_NUMA
@@ -305,15 +302,13 @@ SetData(SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt)
     csxmg_->SetFullColumnIndices(true);
 #endif
 }
-
-#if 0   // SYM
 
 template<class InternalType>
 void ThreadContext<InternalType>::
-SetDataSym(SparsePartitionSym<index_t, value_t> *spms, spm_mt_t *spm_mt)
+SetDataSym(SparsePartitionSym<idx_t, val_t> *spms, spm_mt_t *spm_mt)
 {
     spm_ = spms + id_;
-    csxmg_ = new CsxManager<index_t, value_t>(spms + id_);
+    csxmg_ = new CsxManager<idx_t, val_t>(spms + id_);
     spm_encoded_ = &spm_mt->spm_threads[id_]; 
     buffer_ = new ostringstream("");
 #ifdef SPM_NUMA
@@ -321,8 +316,6 @@ SetDataSym(SparsePartitionSym<index_t, value_t> *spms, spm_mt_t *spm_mt)
     csxmg_->SetFullColumnIndices(true);
 #endif
 }
-
-#endif  // SYM
 
 }   // end of namespace csx
 

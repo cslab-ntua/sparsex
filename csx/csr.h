@@ -29,9 +29,10 @@ template<typename IndexType = int, typename ValueType = double>
 class CSR
 {
 public:
-    typedef IndexType index_t;
-    typedef ValueType value_t;
+    typedef IndexType idx_t;
+    typedef ValueType val_t;
 
+    CSR(const char *filename) {}  //Dummy
     CSR(IndexType *rowptr, IndexType *colind, ValueType *values,
         IndexType nr_rows, IndexType nr_cols, bool zero_based)
         : rowptr_(rowptr),
@@ -166,9 +167,6 @@ public:
     IndexType nr_nzeros_;
     bool zero_based_, symmetric_, reordered_;
     vector<size_t> permutation_;
-
-//protected:
-    ~CSR() {}
 };
 
 /*

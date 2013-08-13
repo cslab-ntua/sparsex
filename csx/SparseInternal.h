@@ -28,7 +28,7 @@ public:
           nr_cols_(nr_cols),
           nr_nzeros_(nr_nzeros),
           nr_partitions_(nr_partitions),
-          partitions_(NULL)
+          partitions_(0)
     {}
 
     ~SparseInternal()
@@ -110,8 +110,8 @@ private:
     {
     public:
 
-        ElemPool() : nr_elems_(0), data_(NULL) {}
-        ElemPool(IndexType nr_elems) : nr_elems_(nr_elems), data_(NULL) {}
+        ElemPool() : nr_elems_(0), data_(0) {}
+        ElemPool(IndexType nr_elems) : nr_elems_(nr_elems), data_(0) {}
 
         ~ElemPool()
         {
@@ -241,7 +241,7 @@ void SparseInternal<IndexType, ValueType>::BuildPartitions(IndexType nr_nzeros,
         row_start += partition->GetNrRows();
         cnt += partition->GetNrNonzeros();
     }
-    assert((uint64_t) cnt == nr_nzeros_);
+    assert((IndexType) cnt == nr_nzeros_);
 }
 
 template<typename IndexType, typename ValueType>
@@ -255,12 +255,10 @@ BuildPartition(IterT &iter, const IterT &iter_end, size_t id,
 
     ret = partitions_ + id;
     IndexType nr_nzeros = ret->SetRows(iter, iter_end, row_start + 1,
-                                        limit, nr_rows + 1);
+                                       limit, nr_rows + 1);
 
     ret->SetNrNonzeros(nr_nzeros);
-    ret->SetNrRows(ret->GetRowPtrSize() - 1);
-    //ret->SetNrRows(nr_rows);
-    //std::cout << ret->GetNrRows() << std::endl;
+    ret->SetNrRows(ret->GetRowptrSize() - 1);
     ret->SetNrCols(nr_cols);
     ret->SetRowStart(row_start);
     ret->SetType(HORIZONTAL);
@@ -310,7 +308,7 @@ SparseInternal<IndexType, ValueType>::ElemPool::Builder::Builder(ElemPool *pool,
 template<typename IndexType, typename ValueType>
 SparseInternal<IndexType, ValueType>::ElemPool::Builder::~Builder()
 {
-    assert(da_elems_ == NULL && "da_elems_ not destroyed");
+    assert(da_elems_ == 0 && "da_elems_ not destroyed");
 }
 
 template<typename IndexType, typename ValueType>
@@ -324,7 +322,7 @@ template<typename IndexType, typename ValueType>
 void SparseInternal<IndexType, ValueType>::ElemPool::Builder::Finalize()
 {
     pool_->data_ = (Elem<IndexType, ValueType> *) dynarray_destroy(da_elems_);
-    da_elems_ = NULL;
+    da_elems_ = 0;
 }
 
 #endif // CSX_SPARSEINTERNAL_H__

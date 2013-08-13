@@ -20,27 +20,11 @@
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
-#include "timer.h"
+#include "TimingFramework.h"
 
 #define FOREACH BOOST_FOREACH
 
 namespace csx {
-
-enum {
-    PRE_TIMER_TOTAL = 0,
-    PRE_TIMER_STATS,
-    PRE_TIMER_ENCODE,
-    PRE_TIMER_ALLOC,
-    PRE_TIMER_END
-};
-
-const char *pre_timers_desc_[] =
-{
-    "Total Time: ",
-    "Stats Time: ",
-    "Encode Time: ",
-    "Alloc Time: "
-};
 
 /**
  *  Delta Run-Length Encoding Manager.
@@ -69,7 +53,7 @@ public:
                  long min_limit = 4, 
                  long max_limit = std::numeric_limits<long>::max(),
                  double min_perc = .1,
-                 uint64_t sort_window_size = 0,
+                 size_t sort_window_size = 0,
                  split_alg_t split_type = SPLIT_BY_ROWS,
                  double sampling_probability = 1.0,
                  uint64_t samples_max = std::numeric_limits<uint64_t>::max(),
@@ -384,10 +368,10 @@ private:
     long max_limit_;
     double min_perc_;
     bool sort_windows_;
-    uint64_t sort_window_size_;
+    size_t sort_window_size_;
     split_alg_t split_type_;
-    std::vector<IndexType> sort_splits_;
-    std::vector<IndexType> sort_splits_nzeros_;
+    std::vector<uint64_t> sort_splits_;
+    std::vector<uint64_t> sort_splits_nzeros_;
     size_t *selected_splits_;
     double sampling_portion_;
     uint64_t samples_max_;
@@ -397,8 +381,8 @@ private:
     StatsMap stats_;
     std::map<IterOrder, std::set<uint64_t> > deltas_to_encode_;
     std::bitset<XFORM_MAX> xforms_ignore_;
-    //xtimer_t pre_timers_[PRE_TIMER_END];
-    Timer pre_timers_[PRE_TIMER_END];
+    //Timer pre_timers_[PRE_TIMER_END];
+    TimingFramework pre_timers_;
 };
 
 /**
@@ -440,12 +424,13 @@ public:
      */
     Node MakeChild(IterOrder type, std::set<uint64_t> deltas);
 
-private:
+public:
+//private:
     uint32_t depth_;
     std::map<IterOrder, std::set<uint64_t> > deltas_path_;
     IterOrder *type_path_;
     IterOrder *type_ignore_;
-    friend class DRLE_Manager<uint64_t, double>;
+//    friend class DRLE_Manager<uint64_t, double>;
 };
 
 }
@@ -460,7 +445,7 @@ struct RLE {
 //
 //  FIXME: MaxDelta() could be possibly merged with DeltaEncode()
 // 
-template<typename IndexType, typename ValueType>
+template<typename IndexType>
 IndexType MaxDelta(std::vector<IndexType> xs)
 {
     IndexType prev_x, curr_x, max_delta;
@@ -544,7 +529,7 @@ RLEncode(T input)
 template<typename IndexType, typename ValueType>
 DRLE_Manager<IndexType, ValueType>::
 DRLE_Manager(SparsePartition<IndexType, ValueType> *spm, long min_limit,
-             long max_limit, double min_perc, uint64_t sort_window_size,
+             long max_limit, double min_perc, size_t sort_window_size,
              split_alg_t split_type, double sampling_portion,
              uint64_t samples_max, bool split_blocks, bool onedim_blocks)
     : spm_(spm), min_limit_(min_limit),
@@ -556,6 +541,12 @@ DRLE_Manager(SparsePartition<IndexType, ValueType> *spm, long min_limit,
       split_blocks_(split_blocks),
       onedim_blocks_(onedim_blocks)
 {
+    //Set timers
+    pre_timers_.EnableTimer(PRE_TIMER_TOTAL);
+    pre_timers_.EnableTimer(PRE_TIMER_STATS);
+    pre_timers_.EnableTimer(PRE_TIMER_ENCODE);
+    pre_timers_.EnableTimer(PRE_TIMER_ALLOC);
+
     // These are delimiters, ignore them by default.
     AddIgnore(BLOCK_TYPE_START);
     AddIgnore(BLOCK_COL_START);
@@ -592,9 +583,6 @@ DRLE_Manager(SparsePartition<IndexType, ValueType> *spm, long min_limit,
     } else {
         selected_splits_ = 0;
     }
-    
-    //for (int i = 0; i < PRE_TIMER_END; i++)
-        //timer_init(&pre_timers_[i]);
 }
     
 template<typename IndexType, typename ValueType>
@@ -683,14 +671,18 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
     stats_.clear();
     deltas_to_encode_.clear();
 
-    if (sort_windows_ && spm_->GetNrRows() > samples_max_) {
+    if (sort_windows_ && (uint64_t)(spm_->GetRowptrSize() - 1) > samples_max_) {
         uint64_t samples_nnz = 0;
 
         spm_->Transform(HORIZONTAL); 
         for (size_t i = 0; i < samples_max_; ++i) {
-            uint64_t window_start = sort_splits_[selected_splits_[i]];
-            uint64_t window_size =
+            // uint64_t window_start = sort_splits_[selected_splits_[i]];
+            // uint64_t window_size =
+            //              sort_splits_[selected_splits_[i]+1] - window_start;
+            size_t window_start = sort_splits_[selected_splits_[i]];
+            size_t window_size =
                          sort_splits_[selected_splits_[i]+1] - window_start;
+
             SparsePartition<IndexType, ValueType> *window =
                 spm_->GetWindow(window_start, window_size);
 
@@ -705,7 +697,7 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
                     DeltaRLE::Stats w_stats;
 
                     window->Transform(type);
-                    w_stats = GenerateStats(window, 0, window->GetNrRows());
+                    w_stats = GenerateStats(window, 0, window->GetRowptrSize() - 1);
                     UpdateStats(type, w_stats);
                 }
             }
@@ -741,7 +733,7 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
     } else {
     // first generate stats for the delta type
 #ifdef SPM_HEUR_NEW
-        GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), stats_[NONE]);
+        GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1, stats_[NONE]);
 #endif
         for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
             if (xforms_ignore_[t])
@@ -751,7 +743,7 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
             uint64_t block_align = IsBlockType(type);
 
             spm_->Transform(type);
-            stats_[type] = GenerateStats(0, spm_->GetNrRows());
+            stats_[type] = GenerateStats(0, spm_->GetRowptrSize() - 1);
             sp = &stats_[type];
             if (block_align && split_blocks_)
                 CorrectBlockStats(sp, block_align);
@@ -769,7 +761,7 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
                     deltas_to_encode_[type].insert(tmp->first);
             }
 #ifdef SPM_HEUR_NEW
-            GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), *sp);
+            GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1, *sp);
 #endif
         }
     }
@@ -898,9 +890,9 @@ long DRLE_Manager<IndexType, ValueType>::GetTypeScore(IterOrder type)
 template<typename IndexType, typename ValueType>
 void DRLE_Manager<IndexType, ValueType>::Encode(IterOrder type)
 {
-    typename SparsePartition<IndexType, ValueType>::Builder *SpmBld;
+    typename SparsePartition<IndexType, ValueType>::Builder *SpmBld = 0;
     std::vector<Elem<IndexType, ValueType> > new_row;
-    size_t nr_size;
+    uint64_t nr_size;
     Elem<IndexType, ValueType> *elems;
 
     if (type == NONE && ((type = ChooseType()) == NONE))
@@ -909,20 +901,21 @@ void DRLE_Manager<IndexType, ValueType>::Encode(IterOrder type)
     // Transform matrix to the desired iteration order
     spm_->Transform(type);
     
-    SpmBld = new typename SparsePartition<IndexType, ValueType>::Builder
-        //(spm_, spm_->GetElemsSize(), spm_->GetRowPtrSize());
-        (spm_,  spm_->rowptr_size_, spm_->elems_size_);
+    SpmBld = new typename SparsePartition<IndexType, ValueType>::
+        Builder(spm_,  spm_->GetRowptrSize(), spm_->GetElemsSize());
 
-    for (size_t i = 0; i < spm_->GetNrRows(); ++i) {
+    for (size_t i = 0; i < spm_->GetRowptrSize() - 1; ++i) {
         EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
         if (nr_size > 0) {
-            //timer_start(&pre_timers_[PRE_TIMER_ALLOC]);
-            pre_timers_[PRE_TIMER_ALLOC].Start();
+            //pre_timers_[PRE_TIMER_ALLOC].Start();
+            if (pre_timers_.Enabled(PRE_TIMER_ALLOC))
+                pre_timers_.timers_[PRE_TIMER_ALLOC].Start();
             elems = SpmBld->AllocElems(nr_size);
-            //timer_pause(&pre_timers_[PRE_TIMER_ALLOC]);
-            pre_timers_[PRE_TIMER_ALLOC].Pause();
-            for (size_t i = 0; i < nr_size; ++i)
+            //pre_timers_[PRE_TIMER_ALLOC].Pause();
+            if (pre_timers_.Enabled(PRE_TIMER_ALLOC))
+                pre_timers_.timers_[PRE_TIMER_ALLOC].Pause();
+            for (uint64_t i = 0; i < nr_size; ++i)
                 MakeRowElem(new_row[i], elems + i);
         }
 
@@ -938,9 +931,9 @@ void DRLE_Manager<IndexType, ValueType>::Encode(IterOrder type)
 template<typename IndexType, typename ValueType>
 void DRLE_Manager<IndexType, ValueType>::Decode(IterOrder type)
 {
-    typename SparsePartition<IndexType, ValueType>::Builder *SpmBld;
+    typename SparsePartition<IndexType, ValueType>::Builder *SpmBld = 0;
     std::vector<Elem<IndexType, ValueType> > new_row;
-    size_t nr_size;
+    uint64_t nr_size;
     Elem<IndexType, ValueType> *elems;
 
     if (type == NONE)
@@ -950,19 +943,19 @@ void DRLE_Manager<IndexType, ValueType>::Decode(IterOrder type)
     spm_->Transform(type);
 
     // Do the decoding
-    SpmBld = new typename SparsePartition<IndexType, ValueType>::Builder
-        (spm_, spm_->rowptr_size_, spm_->elems_size_);
-    //(spm_, spm_->GetElemsSize(), spm_->GetRowPtrSize());
-    for (size_t i = 0; i < spm_->GetNrRows(); ++i) {
+    SpmBld = new typename SparsePartition<IndexType, ValueType>::
+        Builder(spm_,  spm_->GetRowptrSize(), spm_->GetElemsSize());
+
+    for (size_t i = 0; i < spm_->GetRowptrSize() - 1; ++i) {
         DecodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
         if (nr_size > 0) {
             elems = SpmBld->AllocElems(nr_size);
-            for (size_t i = 0; i < nr_size; ++i)
+            for (uint64_t i = 0; i < nr_size; ++i)
                 MakeRowElem(new_row[i], elems + i);
-	}
+        }
 
-	new_row.clear();
+        new_row.clear();
         SpmBld->NewRow();
     }
 
@@ -979,20 +972,24 @@ void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
     IterOrder enc_seq[22];
     int counter = 0;
 
-    //timer_start(&pre_timers_[PRE_TIMER_TOTAL]);
-    pre_timers_[PRE_TIMER_TOTAL].Start();
+    //pre_timers_[PRE_TIMER_TOTAL].Start();
+    if (pre_timers_.Enabled(PRE_TIMER_TOTAL))
+        pre_timers_.timers_[PRE_TIMER_TOTAL].Start();
     for (;;) {
-        //timer_start(&pre_timers_[PRE_TIMER_STATS]);
-        pre_timers_[PRE_TIMER_STATS].Start();
+        //pre_timers_[PRE_TIMER_STATS].Start();
+        if (pre_timers_.Enabled(PRE_TIMER_STATS))
+            pre_timers_.timers_[PRE_TIMER_STATS].Start();
         GenAllStats();
-        //timer_pause(&pre_timers_[PRE_TIMER_STATS]);
-        pre_timers_[PRE_TIMER_STATS].Pause();
+        //pre_timers_[PRE_TIMER_STATS].Pause();
+        if (pre_timers_.Enabled(PRE_TIMER_STATS))
+            pre_timers_.timers_[PRE_TIMER_STATS].Pause();
         OutStats(os);
         type = ChooseType();
         if (type == NONE)
             break;
-        //timer_start(&pre_timers_[PRE_TIMER_ENCODE]);
-        pre_timers_[PRE_TIMER_ENCODE].Start();
+        //pre_timers_[PRE_TIMER_ENCODE].Start();
+        if (pre_timers_.Enabled(PRE_TIMER_ENCODE))
+            pre_timers_.timers_[PRE_TIMER_ENCODE].Start();
         os << "Encode to " << SpmTypesNames[type] << std::endl;
         
         Encode(type);
@@ -1002,13 +999,15 @@ void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
         spm_->AddNrDeltas(stats_[type][0].npatterns);
 
         enc_seq[counter++] = type;
-        //timer_pause(&pre_timers_[PRE_TIMER_ENCODE]);
-        pre_timers_[PRE_TIMER_ENCODE].Pause();
+        //pre_timers_[PRE_TIMER_ENCODE].Pause();
+        if (pre_timers_.Enabled(PRE_TIMER_ENCODE))
+            pre_timers_.timers_[PRE_TIMER_ENCODE].Pause();
     }
 
     spm_->Transform(HORIZONTAL);
-    //timer_pause(&pre_timers_[PRE_TIMER_TOTAL]);
-    pre_timers_[PRE_TIMER_TOTAL].Pause();
+    //pre_timers_[PRE_TIMER_TOTAL].Pause();
+    if (pre_timers_.Enabled(PRE_TIMER_TOTAL))
+        pre_timers_.timers_[PRE_TIMER_TOTAL].Pause();
 
     os << "Encoding sequence: ";
     if (counter == 0)
@@ -1020,14 +1019,7 @@ void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
         os << ", " << SpmTypesNames[enc_seq[i]];
     os << std::endl;
 
-    
-    double t;
-
-    for (int i = 0; i < PRE_TIMER_END; i++) {
-        //t = timer_secs(&pre_timers_[i]);
-        t = pre_timers_[i].ElapsedTime();
-        os << pre_timers_desc_[i] << t << std::endl;
-    }  
+    pre_timers_.PrintAllStats(os);
 }
 
 template<typename IndexType, typename ValueType>
@@ -1119,7 +1111,7 @@ void DRLE_Manager<IndexType, ValueType>::OutputSortSplits(std::ostream& out)
     for (iter = sort_splits_.begin(); iter != sort_splits_.end() - 1; ++iter) {
         IndexType rs = *iter;
         IndexType re = *(iter + 1);
-        size_t nnz = spm_->GetRow(re) - spm_->GetRow(rs);
+        IndexType nnz = spm_->GetRow(re) - spm_->GetRow(rs);
 
         out << "(rs, re, nnz) = (" << rs << ", " << re << ", " << nnz << ")"
             << std::endl;
@@ -1215,7 +1207,7 @@ DoEncode(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
     vs.clear();
 }
 
-//static uint64_t nr_lines = 0;
+//static uint32_t nr_lines = 0;
 template<typename IndexType, typename ValueType>
 void DRLE_Manager<IndexType, ValueType>::
 DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
@@ -1241,7 +1233,7 @@ DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
     col = 0;
     elem.pattern = NULL;
     FOREACH (RLE<IndexType> rle, rles) {
-        IndexType skip_front, skip_back, nr_elem;
+        uint64_t skip_front, skip_back, nr_elem;
 
         col += rle.val;
         if (col == 1) {
@@ -1268,9 +1260,9 @@ DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
             
         if (rle.val == 1 &&
             deltas_set->find(nr_elem / block_align) != deltas_set->end() &&
-            nr_elem >= (IndexType) 2 * block_align) {
+            nr_elem >= (uint64_t) 2 * block_align) {
 
-            IndexType rle_start;
+            uint64_t rle_start;
 
             if (col != 1) {
                 rle_start = col - 1;
@@ -1281,16 +1273,16 @@ DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
             }
 
             // Add elements skipped from start
-            for (IndexType i = 0; i < skip_front; ++i) {
+            for (uint64_t i = 0; i < skip_front; ++i) {
                 elem.col = rle_start + i;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
 
             // Align max_limit
-            IndexType max_limit = max_limit_ / block_align * block_align;
-            IndexType nr_blocks = nr_elem / max_limit;
-            IndexType nr_elem_block = std::min(max_limit, nr_elem);
+            uint64_t max_limit = max_limit_ / block_align * block_align;
+            uint64_t nr_blocks = nr_elem / max_limit;
+            uint64_t nr_elem_block = std::min(max_limit, nr_elem);
 
             if (nr_blocks == 0)
                 nr_blocks = 1;
@@ -1298,7 +1290,7 @@ DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
                 // Adjust skip_back with leftover items from max_limit alignment
                 skip_back += nr_elem - nr_elem_block * nr_blocks;
 
-            for (IndexType i = 0; i < nr_blocks; ++i) {
+            for (uint64_t i = 0; i < nr_blocks; ++i) {
                 // Add the blocks
                 elem.col = rle_start + skip_front + i * nr_elem_block;
                 encoded.push_back(elem);
@@ -1312,7 +1304,7 @@ DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
             }
 
             // Add the remaining elements
-            for (IndexType i = 0; i < skip_back; ++i) {
+            for (uint64_t i = 0; i < skip_back; ++i) {
                 elem.col = rle_start + skip_front + nr_elem_block * nr_blocks + i;
                 elem.val = *vi++;
                 encoded.push_back(elem);
@@ -1358,7 +1350,7 @@ DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
     col = 0;
     elem.pattern = NULL;
     FOREACH (RLE<IndexType> rle, rles) {
-        IndexType skip_front, skip_back, nr_elem;
+        uint64_t skip_front, skip_back, nr_elem;
 
         col += rle.val;
         if (col == 1) {
@@ -1378,7 +1370,7 @@ DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
         skip_back = nr_elem % block_align;
         nr_elem -= skip_back;
         if (rle.val == 1 && nr_elem >= (uint64_t) 2 * block_align) {
-            IndexType rle_start;
+            uint64_t rle_start;
 
             if (col != 1) {
                 rle_start = col - 1;
@@ -1389,20 +1381,20 @@ DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
             }
 
             // Add elements skipped from start
-            for (IndexType i = 0; i < skip_front; ++i) {
+            for (uint64_t i = 0; i < skip_front; ++i) {
                 elem.col = rle_start++;
                 elem.val = *vi++;
                 encoded.push_back(elem);
             }
 
             // Split Blocks to Match the Appropriate Sizes for Encode
-            IndexType other_dim = nr_elem / block_align;
+            uint64_t other_dim = nr_elem / block_align;
 
             for (std::set<uint64_t>::reverse_iterator i = deltas_set->rbegin();
                                               i != deltas_set->rend(); ++i) {
                 while (other_dim >= *i) {
                     //We have a new block RLE
-                    IndexType nr_elem_block = block_align * (*i);
+                    uint64_t nr_elem_block = block_align * (*i);
                     
                     elem.col = rle_start;
                     rle_start += nr_elem_block;
@@ -1420,7 +1412,7 @@ DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
 
             // Add the remaining elements
             skip_back += nr_elem;
-            for (IndexType i = 0; i < skip_back; ++i) {
+            for (uint64_t i = 0; i < skip_back; ++i) {
                 elem.col = rle_start++;
                 elem.val = *vi++;
                 encoded.push_back(elem);
@@ -1771,7 +1763,8 @@ UpdateStatsBlock(std::vector<IndexType> &xs, DeltaRLE::Stats &stats,
     IndexType unit_start = 0;
     typename std::vector<Elem<IndexType, ValueType>*>::iterator ei =
         elems.begin();
-    typename std::vector<Elem<IndexType, ValueType>*>::iterator ee = elems.end();
+    typename std::vector<Elem<IndexType, ValueType>*>::iterator ee =
+        elems.end();
 
     FOREACH (RLE<IndexType> &rle, rles) {
         unit_start += rle.val;
@@ -1812,6 +1805,7 @@ UpdateStatsBlock(std::vector<IndexType> &xs, DeltaRLE::Stats &stats,
                 for (long i = 0; i < nr_elem; ++i) {
                     assert(ei < ee);
                     if (((uint64_t) i) < stats[other_dim].nnz)
+//                    if (i < stats[other_dim].nnz)
                         (*ei)->in_pattern = true;
                     ++ei;
                 }
@@ -1840,7 +1834,7 @@ CorrectStats(IterOrder type, double factor)
     for (iter = l_stats->begin(); iter != l_stats->end(); ++iter) {
         iter->second.nnz = (uint64_t) (iter->second.nnz * factor);
         iter->second.npatterns = (long) (iter->second.npatterns * factor);
-        assert(iter->second.nnz <= spm_->GetNrNonzeros() &&
+        assert(iter->second.nnz <= (uint64_t) spm_->GetNrNonzeros() &&
                "nonzeros of pattern exceed nonzeros of matrix");
     }
 }
@@ -1906,7 +1900,7 @@ void DRLE_Manager<IndexType, ValueType>::CheckAndSetSorting()
 template<typename IndexType, typename ValueType>
 void DRLE_Manager<IndexType, ValueType>::DoComputeSortSplitsByRows()
 {
-    size_t nr_rows = spm_->GetNrRows();
+    size_t nr_rows = spm_->GetRowptrSize() - 1;
     size_t i;
 
     for (i = 0; i <= nr_rows; i += sort_window_size_)
@@ -1924,7 +1918,7 @@ template<typename IndexType, typename ValueType>
 void DRLE_Manager<IndexType, ValueType>::DoComputeSortSplitsByNNZ()
 {
     size_t nzeros_cnt;
-    size_t nr_rows = spm_->GetNrRows();
+    size_t nr_rows = spm_->GetRowptrSize() - 1;
 
     nzeros_cnt = 0;
     sort_splits_.push_back(0);
@@ -1956,8 +1950,9 @@ void DRLE_Manager<IndexType, ValueType>::DoComputeSortSplitsByNNZ()
 template<typename IndexType, typename ValueType>
 void DRLE_Manager<IndexType, ValueType>::DoCheckSortByRows()
 {
-    assert(sort_window_size_ <= spm_->GetNrRows() && "invalid sort window");
-    if (sampling_portion_ == 0.0 || sort_window_size_ == spm_->GetNrRows())
+    assert(sort_window_size_ <= (size_t)(spm_->GetRowptrSize() - 1) &&
+           "invalid sort window");
+    if (sampling_portion_ == 0.0 || sort_window_size_ == (spm_->GetRowptrSize() - 1))
         sort_windows_ = false;
     else
         sort_windows_ = true;
@@ -1966,8 +1961,8 @@ void DRLE_Manager<IndexType, ValueType>::DoCheckSortByRows()
 template<typename IndexType, typename ValueType>
 void DRLE_Manager<IndexType, ValueType>::DoCheckSortByNNZ()
 {
-    assert(sort_window_size_ <= spm_->elems_size_ && "invalid sort window");
-    if (sampling_portion_ == 0 || sort_window_size_ == spm_->elems_size_)
+    assert(sort_window_size_ <= spm_->GetElemsSize() && "invalid sort window");
+    if (sampling_portion_ == 0 || sort_window_size_ == spm_->GetElemsSize())
         sort_windows_ = false;
     else
         sort_windows_ = true;

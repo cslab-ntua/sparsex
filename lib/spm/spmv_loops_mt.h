@@ -13,6 +13,12 @@
 #include "spmv_method.h"
 #include "spm_mt.h"
 
+float spmv_double_mt(void *A, VECTOR_TYPE *x, VECTOR_TYPE *y,
+                     unsigned long loops);
+
+float spmv_float_mt(void *A, VECTOR_TYPE *x, VECTOR_TYPE *y,
+                    unsigned long loops);
+
 float spmv_double_bench_mt_loop(spm_mt_t *spm_mt, unsigned long loops,
                                 unsigned long rows_nr, unsigned long cols_nr,
                                 spmv_double_fn_t *fn);

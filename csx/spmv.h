@@ -63,7 +63,6 @@ extern "C" {
 
 double pre_time;
 
-#if 0   // SYM
 /**
  *  Routine responsible for making a map for the symmetric representation of
  *  sparse matrices.
@@ -71,7 +70,9 @@ double pre_time;
  *  @param spm_mt  parameters of the multithreaded execution.
  *  @param spm_sym the multithreaded CSX-Sym matrix.
  */
-void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<uint64_t, double> *spm_sym);
+template<typename IndexType, typename ValueType>
+void MakeMap(spm_mt_t *spm_mt,
+             SparsePartitionSym<IndexType, ValueType> *spm_sym);
 
 /**
  *  Find the size of the map including the values accessed by it.
@@ -80,7 +81,6 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<uint64_t, double> *spm_sym);
  *  @return        the size of the map.
  */
 uint64_t MapSize(void *spm);
-#endif  // SYM    
 
 /**
  *  Parallel Preprocessing.
@@ -122,7 +122,7 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
         DrleMg->EncodeAll(data.GetBuffer());
 
     // DrleMg->MakeEncodeTree();
-    csx_double_t *csx = data.GetCsxManager()->MakeCsx(false);
+    csx_double_t *csx = (csx_double_t *) data.GetCsxManager()->MakeCsx(false);
     data.GetSpmEncoded()->spm = csx;
     data.GetSpmEncoded()->nr_rows = csx->nrows;
     data.GetSpmEncoded()->row_start = csx->row_start;
@@ -146,7 +146,6 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
     delete DrleMg;
 }
 
-#if 0   // SYM
 template<typename IndexType, typename ValueType>
 void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType> >& data,
                          const CsxContext &csx_config)
@@ -158,7 +157,7 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType> 
     DRLE_Manager<IndexType, ValueType> *DrleMg2;
 
     data.GetBuffer() << "==> Thread: #" << data.GetId() << std::endl;
-        
+
     data.GetSpm()->DivideMatrix();
         
     // Initialize the DRLE manager
@@ -199,7 +198,7 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType> 
     }
     data.GetSpm()->MergeMatrix();
 
-    csx_double_sym_t *csx = data.GetCsxManager()->MakeCsxSym();
+    csx_double_sym_t *csx = (csx_double_sym_t *) data.GetCsxManager()->MakeCsxSym();
     data.GetSpmEncoded()->spm = csx;
     data.GetSpmEncoded()->row_start = csx->lower_matrix->row_start;
     data.GetSpmEncoded()->nr_rows = csx->lower_matrix->nrows;
@@ -235,7 +234,6 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType> 
     delete DrleMg1;
     delete DrleMg2;
 }
-#endif  // SYM    
 
 /**
  *  Routine responsible for retrieving the CSX or CSX-Sym sparse matrix format
@@ -252,8 +250,8 @@ spm_mt_t *PrepareSpmMt(const RuntimeContext &rt_config,
                        const CsxContext &csx_config);
 
 template<typename IndexType, typename ValueType>
-void DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt,
-             const RuntimeContext &rt_config, const CsxContext &csx_config)
+double DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt,
+               const RuntimeContext &rt_config, const CsxContext &csx_config)
 {
     size_t nr_threads = rt_config.GetNrThreads();
 
@@ -308,11 +306,14 @@ void DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt,
     // Preprocessing finished; stop timer
     timer.Pause();
     pre_time = timer.ElapsedTime();
+
+    return pre_time;
 }
 
 template<typename IndexType, typename ValueType>
 spm_mt_t *BuildCsx(SparseInternal<IndexType, ValueType> *spms,
-                   const RuntimeContext &rt_config, const CsxContext &csx_config)
+                   const RuntimeContext &rt_config, const CsxContext &csx_config,
+                   double &time)
 {
     spm_mt_t *spm_mt;
 
@@ -320,16 +321,15 @@ spm_mt_t *BuildCsx(SparseInternal<IndexType, ValueType> *spms,
     setaffinity_oncpu(rt_config.GetAffinity(0));
     // Initialization of the multithreaded sparse matrix representation
     spm_mt = PrepareSpmMt(rt_config, csx_config); 
-    DoBuild(spms, spm_mt, rt_config, csx_config);
+    time = DoBuild(spms, spm_mt, rt_config, csx_config);
 
     return spm_mt;
 }
 
-#if 0   // SYM
 template<typename IndexType, typename ValueType>
-void DoBuild(SparsePartitionSym<IndexType, ValueType> *spms_sym,
-             spm_mt *spm_mt, const RuntimeContext &rt_config,
-             const CsxContext &csx_config)
+double DoBuildSym(SparsePartitionSym<IndexType, ValueType> *spms_sym,
+                  spm_mt *spm_mt, const RuntimeContext &rt_config,
+                  const CsxContext &csx_config)
 {
     size_t nr_threads = rt_config.GetNrThreads();
 
@@ -365,11 +365,12 @@ void DoBuild(SparsePartitionSym<IndexType, ValueType> *spms_sym,
     }
 
     // CSX JIT compilation
-    CsxJit **Jits = new CsxJit*[nr_threads];
+    CsxJit<IndexType, ValueType> **Jits = 
+        new CsxJit<IndexType, ValueType>*[nr_threads];
     for (size_t i = 0; i < nr_threads; ++i) {
-        Jits[i] = new CsxJit(mt_context[i].GetCsxManager(),
-                                 &rt_config.GetEngine(),
-                                 i, csx_config.IsSymmetric());
+        Jits[i] = new CsxJit<IndexType, ValueType>(mt_context[i].GetCsxManager(),
+                                                   &rt_config.GetEngine(),
+                                                   i, csx_config.IsSymmetric());
         Jits[i]->GenCode(mt_context[i].GetBuffer());    
         std::cout << mt_context[i].GetBuffer().str();
     }
@@ -383,12 +384,14 @@ void DoBuild(SparsePartitionSym<IndexType, ValueType> *spms_sym,
     // Preprocessing finished; stop timer
     timer.Pause();
     pre_time = timer.ElapsedTime();
+
+    return pre_time;
 }
 
 template<typename IndexType, typename ValueType>
 spm_mt_t *BuildCsxSym(SparsePartitionSym<IndexType, ValueType> *spms_sym,
                       const RuntimeContext &rt_config,
-                      const CsxContext &csx_config)
+                      const CsxContext &csx_config, double &time)
 {
     spm_mt_t *spm_mt;
 
@@ -398,11 +401,10 @@ spm_mt_t *BuildCsxSym(SparsePartitionSym<IndexType, ValueType> *spms_sym,
     spm_mt = PrepareSpmMt(rt_config, csx_config); 
     // Switch Reduction Phase
     MakeMap(spm_mt, spms_sym);
-    DoBuild(spms_sym, spm_mt, rt_config, csx_config);
+    time = DoBuildSym(spms_sym, spm_mt, rt_config, csx_config);
 
     return spm_mt;
 }
-#endif  // SYM    
 
 /*template<typename IndexType, typename ValueType>
 spm_mt_t *BuildCsx(const char *mmf_fname, const RuntimeContext &rt_config,
@@ -512,13 +514,6 @@ spm_mt_t *BuildCsx(SparseInternal<IndexType, ValueType> *spi,
     return spm_mt;
     }
 */
-              
-/**
- *  Deallocation of CSX or CSX-Sym sparse matrix.
- *  
- *  @param spm_mt the (multithreaded) CSX or CSX-Sym sparse matrix.
- */
-void PutSpmMt(spm_mt_t *spm_mt);
 
 /**
  *  Check the CSX SpMV result against the baseline single-thread CSR
@@ -534,19 +529,185 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name);
  */
 void BenchLoop(spm_mt_t *spm_mt, char *mmf_name);
 
-/**
- *  Compute the size (in bytes) of the compressed matrix in CSX form.
- *
- *  @param spm_mt  the sparse matrix in CSX format.
- */
-uint64_t CsxSize(void *spm_mt);
+template<typename IndexType, typename ValueType>
+void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym)
+{
+    spm_mt_thread *spm_thread;
+    SparsePartition<IndexType, ValueType> *spm;
+    unsigned int *count;
+    bool **initial_map;
+    map_t *map;
+    uint32_t start, end, col, total_count, temp_count, limit;
+    uint32_t ncpus = spm_mt->nr_threads;
+    uint32_t n = spm_sym->GetLowerMatrix()->GetNrCols();
+#ifdef SPM_NUMA
+    int node;
+#endif
+    
+    ///> Init initial_map.
+    count = (unsigned int *) xmalloc(n * sizeof(unsigned int));
+    initial_map = (bool **) xmalloc(ncpus * sizeof(bool *));
+    for (unsigned int i = 0; i < ncpus; i++)
+        initial_map[i] = (bool *) xmalloc(n * sizeof(bool));
+    
+    for (unsigned int i = 0; i < n; i++)
+        count[i] = 0;
+        
+    for (unsigned int i = 0; i < ncpus; i++)
+        for (unsigned int j = 0; j < n; j++)
+            initial_map[i][j] = 0;
 
-/**
- *  Compute the size (in bytes) of the compressed matrix in CSX-Sym form.
- *
- *  @param spm_mt  the sparse matrix in CSX-Sym format.
- */
-uint64_t CsxSymSize(void *spm_mt);
+    ///> Fill initial map.
+    for (unsigned int i = 0; i < ncpus; i++) {
+        spm = spm_sym[i].GetLowerMatrix();
+
+        start = spm->GetRowStart();
+        end = spm->GetRowStart() + spm->GetRowptrSize() - 1;
+        
+        for (uint32_t j = 0; j < (uint32_t) spm->GetRowptrSize() - 1; j++) {
+            for (Elem<IndexType, ValueType> *elem = spm->RowBegin(j); elem != spm->RowEnd(j);
+                 elem++) {
+                col = elem->col;
+                assert(col < end);
+                if (col < start + 1 && !initial_map[i][col]) {
+                    initial_map[i][col] = 1;
+                    count[col]++;
+                }
+            }
+        }
+    }
+    total_count = 0;
+    for (unsigned int i = 0; i < n; i++)
+        total_count += count[i];
+    
+    ///> Print initial map.
+    /*
+    for (unsigned int i = 0; i < ncpus; i++) {
+        for (unsigned int j = 0; j < n; j++)
+            std::cout << initial_map[i][j] << " ";
+        std::cout << std::endl;
+    }
+    for (unsigned int i = 0; i < n; i++)
+        std::cout << count[i] << " ";
+    std::cout << std::endl;
+    */
+    
+    ///> Make map.
+    end = 0;
+    for (unsigned int i = 0; i < ncpus - 1; i++) {
+        spm_thread = spm_mt->spm_threads + i;
+#ifdef SPM_NUMA
+        node = spm_thread->node;
+        map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
+#else
+        map = (map_t *) xmalloc(sizeof(map_t));
+#endif
+
+        start = end;
+        limit = total_count / (ncpus - i);
+        temp_count = 0;
+        while (temp_count < limit)
+            temp_count += count[end++];
+        total_count -= temp_count;
+        map->length = temp_count;
+#ifdef SPM_NUMA
+        map->cpus = (unsigned int *) 
+                        numa_alloc_onnode(temp_count * sizeof(unsigned int),
+                                          node);
+        map->elems_pos = (unsigned int *)
+                             numa_alloc_onnode(temp_count *
+                                               sizeof(unsigned int), node);
+#else
+        map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
+        map->elems_pos = 
+            (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
+#endif        
+        temp_count = 0;
+        for (unsigned int j = start; j < end; j++) {
+            for (unsigned int k = 0; k < ncpus; k++) {
+                if (initial_map[k][j] == 1) {
+                     map->cpus[temp_count] = k;
+                     map->elems_pos[temp_count++] = j - 1;
+                }
+            }
+        }
+        assert(temp_count == map->length);
+        
+        spm_thread->map = map;
+    }
+    start = end;
+    end = n;
+    temp_count = total_count;
+    
+    spm_thread = spm_mt->spm_threads + ncpus - 1;
+
+#ifdef SPM_NUMA
+    node = spm_thread->node;
+
+    map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
+    map->cpus = (unsigned int *)
+                    numa_alloc_onnode(temp_count * sizeof(unsigned int), node);
+    map->elems_pos = (unsigned int *)
+                         numa_alloc_onnode(temp_count * sizeof(unsigned int),
+                                           node);
+#else
+    map = (map_t *) xmalloc(sizeof(map_t));
+    map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
+    map->elems_pos = (unsigned int *)
+                         xmalloc(temp_count * sizeof(unsigned int));
+#endif
+
+    map->length = temp_count;
+    temp_count = 0;
+    for (unsigned int j = start; j < end; j++) {
+        for (unsigned int k = 0; k < ncpus; k++) {
+            if (initial_map[k][j] == 1) {
+                map->cpus[temp_count] = k;
+                map->elems_pos[temp_count++] = j - 1;
+            }
+        }
+    }
+    assert(temp_count == map->length); 
+    spm_thread->map = map;
+#ifdef SPM_NUMA
+    int alloc_err = 0;
+    for (unsigned int i = 0; i < ncpus; i++) {
+        node = spm_mt->spm_threads[i].node;
+        map = spm_mt->spm_threads[i].map;
+        
+        alloc_err += check_region(map, sizeof(map_t), node);
+        alloc_err += check_region(map->cpus, 
+                                    map->length * sizeof(unsigned int), node);
+        alloc_err += check_region(map->elems_pos,
+                                    map->length * sizeof(unsigned int), node);
+    }
+    
+    std::cout << "allocation check for map... "
+              << ((alloc_err) ?
+                 "FAILED (see above for more info)" : "DONE")
+              << std::endl;
+
+#endif
+    ///> Print final map.
+    /*
+    for (unsigned int i = 0; i < ncpus; i++) {
+        spm_thread = spm_mt->spm_threads + i;
+        map = spm_thread->map;
+        std::cout << "Thread " << i << std::endl;
+        for (unsigned int j = 0; j < map->length; j++) {
+            std::cout << "(" << map->cpus[j] << ", " << map->elems_pos[j]
+                      << ")" << std::endl;
+        }
+        std::cout << std::endl;
+    }
+    */
+    
+    ///> Release initial map.
+    for (unsigned int i = 0; i < ncpus; i++)
+        free(initial_map[i]);
+    free(initial_map);
+    free(count);
+}
 
 #endif // SPMV_H__
 

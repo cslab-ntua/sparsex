@@ -48,10 +48,17 @@ template<typename IndexType, typename ValueType>
 class MMF
 {
 public:
-    typedef IndexType index_t;
-    typedef ValueType value_t;
+    typedef IndexType idx_t;
+    typedef ValueType val_t;
 
-    MMF(ifstream &in);
+    MMF(const char *filename);
+    MMF(IndexType *rowptr, IndexType *colind, ValueType *values,
+        IndexType nr_rows, IndexType nr_cols, bool zero_based) {} //Dummy
+    ~MMF()
+    {
+        if (in.is_open())
+            in.close();
+    }
 
     IndexType GetNrRows() const 
     {
@@ -150,7 +157,7 @@ public:
 
 private:
     IndexType nr_rows_, nr_cols_, nr_nzeros_;
-    ifstream &in_;
+    ifstream in;
     bool symmetric_, col_wise_, zero_based_, reordered_;
     int file_mode_;     // 0 for MMF files, 1 for regular files
     vector<CooElem<IndexType, ValueType> > matrix_;
@@ -288,21 +295,30 @@ MMF<IndexType, ValueType>::names_ =
                      (RowWise, "row");
 
 template<typename IndexType, typename ValueType>
-MMF<IndexType, ValueType>::MMF(ifstream &in)
+MMF<IndexType, ValueType>::MMF(const char* filename)
   : 
     nr_rows_(0),
     nr_cols_(0),
     nr_nzeros_(0),
-    in_(in),
     symmetric_(false), 
     col_wise_(false),
     zero_based_(false),
     reordered_(false),
     file_mode_(0)
 {
+    if (filename) {
+        in.open(filename);
+        if (!in.good()) {
+            std::cerr << "MMF file error!" << std::endl;
+            exit(1);
+        }
+    } else {
+        std::cerr << "MMF file error!" << std::endl;
+        exit(1);
+    }
     vector<string> arguments;
 
-    DoRead(in_, arguments);
+    DoRead(in, arguments);
     ParseMmfHeaderLine(arguments);
     ParseMmfSizeLine(arguments);
 
@@ -389,10 +405,10 @@ void MMF<IndexType, ValueType>::ParseMmfSizeLine(vector<string> &arguments)
     }
 
     if (!file_mode_ || ignore_comments) {
-        while (in_.peek() == '%') {
-            in_.ignore(numeric_limits<std::streamsize>::max(), '\n');
+        while (in.peek() == '%') {
+            in.ignore(numeric_limits<std::streamsize>::max(), '\n');
         }
-        if (!DoRead(in_, arguments)) {
+        if (!DoRead(in, arguments)) {
             cerr << "Size line error" << endl;
             exit(1);
         }
@@ -408,7 +424,7 @@ void MMF<IndexType, ValueType>::DoLoadMmfMatrix()
 
     if (symmetric_) {
         matrix_.reserve(nr_nzeros_ << 1);
-        for (size_t i = 0; i < nr_nzeros_; i++) {
+        for (IndexType i = 0; i < nr_nzeros_; i++) {
             if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
                 cerr << "Requesting dereference, but mmf ended" << endl;
                 exit(1);
@@ -423,7 +439,7 @@ void MMF<IndexType, ValueType>::DoLoadMmfMatrix()
         }
     } else {
         matrix_.reserve(nr_nzeros_);
-        for (size_t i = 0; i < nr_nzeros_; i++) {
+        for (IndexType i = 0; i < nr_nzeros_; i++) {
             if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
                 cerr << "Requesting dereference, but mmf ended" << endl;
                 exit(1);
@@ -440,7 +456,7 @@ bool MMF<IndexType, ValueType>::GetNext(IndexType &y, IndexType &x, ValueType &v
 {
     vector<string> arguments;
 
-    if (!DoRead(in_, arguments)) {
+    if (!DoRead(in, arguments)) {
         return false;
     }
 

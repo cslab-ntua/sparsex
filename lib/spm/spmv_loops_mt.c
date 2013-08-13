@@ -84,7 +84,7 @@ static void *do_spmv_thread_main_swap(void *arg)
 #endif
 	setaffinity_oncpu(spm_mt_thread->cpu);
 
-	VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
+	//VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -1000, (ELEM_TYPE) 1000);
 
 	// Assert this is a square matrix and swap is ok.
 	assert(x->size == y->size);
@@ -114,6 +114,70 @@ static void *do_spmv_thread_main_swap(void *arg)
 	tsc_shut(&thread_tsc);
 
 	return NULL;
+}
+
+float SPMV_NAME(_mt)(void *A, VECTOR_TYPE *X, VECTOR_TYPE *Y,
+                     unsigned long loops)
+{
+    spm_mt_t *spm_mt = (spm_mt_t *) A;
+	int i, err;
+	pthread_t *tids;
+
+	secs = 0.0;
+	x = X;
+	y = Y;
+	loops_nr = loops;
+
+	err = pthread_barrier_init(&barrier, NULL, spm_mt->nr_threads);
+	if (err) {
+		perror("pthread_barrier_init");
+		exit(1);
+	}
+
+	tids = malloc(sizeof(pthread_t)*spm_mt->nr_threads);
+	if (!tids) {
+		perror("malloc");
+		exit(1);
+	}
+
+#ifdef SPMV_PRFCNT
+	for (i = 0; i < spm_mt->nr_threads; i++) {
+		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
+		if (!spm_mt->spm_threads[i].data) {
+			perror("malloc");
+			exit(1);
+		}
+	}
+#endif
+
+	/*
+	 * spawn two kind of threads:
+	 *	- 1	: do_spmv_thread_main_swap -> computes and does swap.
+	 *	- N-1	: do_spmv_thread -> just computes.
+	 */
+	pthread_create(tids, NULL, do_spmv_thread_main_swap, spm_mt->spm_threads);
+	for (i = 1; i < spm_mt->nr_threads; i++)
+		pthread_create(tids+i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
+
+	for (i = 0; i < spm_mt->nr_threads; i++)
+		pthread_join(tids[i], NULL);
+
+#ifdef SPMV_PRFCNT
+	// Report performance counters for every thread.
+	for (i = 0; i < spm_mt->nr_threads; i++) {
+		spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
+		prfcnt_t *prfcnt = (prfcnt_t *) spmv_thread.data;
+		fprintf(stdout, "Perf. counters: thread %d on cpu %d\n", i,
+		        spmv_thread.cpu);
+		prfcnt_report(prfcnt);
+		prfcnt_shut(prfcnt);
+		free(prfcnt);
+	}
+#endif
+
+	pthread_barrier_destroy(&barrier);
+	free(tids);
+	return secs;
 }
 
 float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,

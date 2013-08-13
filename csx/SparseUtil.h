@@ -20,6 +20,20 @@
 
 namespace csx {
 
+#define xmalloc(x)                         \
+({                                         \
+    void *ret_;                            \
+    ret_ = malloc(x);                      \
+    if (ret_ == NULL){                     \
+        std::cerr << __FUNCTION__          \
+                  << " " << __FILE__       \
+                  << ":" << __LINE__       \
+                  << ": malloc failed\n";  \
+        exit(1);                           \
+    }                                      \
+    ret_;                                  \
+})
+
 #define STRINGIFY__(s) #s
 #define STRINGIFY(s)  STRINGIFY__(s)
 #define BLOCK_ROW_TYPE_NAME(r)  BLOCK_R ## r
@@ -192,6 +206,104 @@ struct CooElemSorter {
         }
 };
 
+template<typename IndexType, typename ValueType>
+struct VerticalSorter {
+    public:
+        bool operator() (const CooElem<IndexType, ValueType> &lhs,
+                         const CooElem<IndexType, ValueType> &rhs) const
+        {
+            if (lhs.col < rhs.col) return true;
+            if (lhs.col > rhs.col) return false;
+
+            if (lhs.row < rhs.row) return true;
+            if (lhs.row > rhs.row) return false;
+
+            return false;
+        }
+};
+
+template<typename IndexType, typename ValueType>
+struct DiagonalSorter {
+    public:
+        bool operator() (const CooElem<IndexType, ValueType> &lhs,
+                         const CooElem<IndexType, ValueType> &rhs) const
+        {
+            if ((lhs.col - lhs.row) < (rhs.col - rhs.row)) return true;
+            if ((lhs.col - lhs.row) > (rhs.col - rhs.row)) return false;
+
+            // if (min(lhs.row, lhs.col) < min(rhs.row, rhs.col)) return true;
+            // if (min(lhs.row, lhs.col) > min(rhs.row, rhs.col)) return false;
+
+            return false;
+        }
+};
+
+template<typename IndexType, typename ValueType>
+struct RevDiagonalSorter {
+    public:
+        RevDiagonalSorter(int ncols) : ncols(ncols) {}
+        bool operator() (const CooElem<IndexType, ValueType> &lhs,
+                         const CooElem<IndexType, ValueType> &rhs) const
+        {
+            if ((lhs.col + lhs.row) < (rhs.col + rhs.row)) return true;
+            if ((lhs.col + lhs.row) > (rhs.col + rhs.row)) return false;
+
+            IndexType tmp_col_lhs = ((lhs.col + lhs.row - 1) <= ncols)
+                ? lhs.row : ncols + 1 - lhs.col;
+            IndexType tmp_col_rhs = ((rhs.col + rhs.row - 1) <= ncols)
+                ? rhs.row : ncols + 1 - rhs.col;
+            if (tmp_col_lhs < tmp_col_rhs) return true;
+            if (tmp_col_lhs > tmp_col_rhs) return false;
+
+            return false;
+        }
+    private:
+        int ncols;
+};
+
+template<typename IndexType, typename ValueType>
+struct BlockRowSorter {
+    public:
+        BlockRowSorter(int r) : r(r) {}
+        bool operator() (const CooElem<IndexType, ValueType> &lhs,
+                         const CooElem<IndexType, ValueType> &rhs) const
+        {
+            if (((lhs.row - 1) / r) < ((rhs.row - 1) / r)) return true;
+            if (((lhs.row - 1) / r) > ((rhs.row - 1) / r)) return false;
+                
+            if (((lhs.row - 1) % r + r * (lhs.col - 1)) <
+                ((rhs.row - 1) % r + r * (rhs.col - 1))) return true;
+            if (((lhs.row - 1) % r + r * (lhs.col - 1)) >
+                ((rhs.row - 1) % r + r * (rhs.col - 1))) return false;
+
+            return false;
+        }
+    private:
+        int r;
+};
+
+template<typename IndexType, typename ValueType>
+struct BlockColSorter {
+    public:
+        BlockColSorter(int c) : c(c) {}
+        bool operator() (const CooElem<IndexType, ValueType> &lhs,
+                         const CooElem<IndexType, ValueType> &rhs) const
+        {
+            if (((lhs.col - 1) / c) < ((rhs.col - 1) / c)) return true;
+            if (((lhs.col - 1) / c) > ((rhs.col - 1) / c)) return false;
+                
+            if (((lhs.col - 1) % c + c * (lhs.row - 1)) <
+                ((rhs.col - 1) % c + c * (rhs.row - 1))) return true;
+            if (((lhs.col - 1) % c + c * (lhs.row - 1)) >
+                ((rhs.col - 1) % c + c * (rhs.row - 1))) return false;
+
+            return false;
+        }  
+    private:
+        int c;
+};
+
+
 /**
  * Compares two coordinate elements. This function imposes a lexicographical
  * order in the elements of the matrix.
@@ -205,9 +317,9 @@ struct CooElemSorter {
  */
 template<typename IndexType, typename ValueType>
 inline int CooCmp(const CooElem<IndexType, ValueType> &p0,
-                         const CooElem<IndexType, ValueType> &p1)
+                  const CooElem<IndexType, ValueType> &p1)
 {
-    int64_t ret;
+    int32_t ret;// here is the problem
 
     ret = p0.row - p1.row;
     if (ret == 0)
@@ -263,6 +375,15 @@ public:
         return type_;
     }
 
+    virtual uint32_t GetDelta() const
+    {
+        return delta_;
+    }
+
+    virtual uint32_t GetOtherDim() const
+    {
+        return 0;
+    }
     /**
      *  Retrieves the id of this pattern.
      *

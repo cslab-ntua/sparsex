@@ -1,6 +1,19 @@
+#include "../C-API/mattype.h"
 #include "SparseMatrix.h"
-//#include "SaveRestore.h"
+#include "SparseMatrix_impl.h"
+#include "CsxSaveRestore.h"
+#include "CsxUtil.h"
 #include <cfloat>
+
+/*
+ * Explicit instantiation declarations: prevent implicit instantiations.
+ * Code that would otherwise cause an implicit instantiation has to
+ * use the explicit instatiation definition provided somewhere else in the
+ * program.
+ */
+extern template class SparseMatrix<MMF<index_t, value_t> >;
+extern template class SparseMatrix<CSR<index_t, value_t> >;
+extern template void PutSpmMt<index_t, value_t>(spm_mt_t *spm_mt);
 
 static const char *program_name;
 
@@ -79,15 +92,15 @@ int main(int argc, char **argv)
     // bool zero_based(true);
     // size_t nr_rows = 10;
     // size_t nr_cols = 10;
-    // uint64_t rowptr[] = {1,6,7,11,16,19,23,25,30,34,39};
-    // uint64_t colind[] = {1,2,3,4,9,8,1,2,7,10,1,2,4,6,10,1,2,10,1,2,6,10,3,4,3,4,5,6,8,3,4,5,6,3,4,5,6,10};
-    // uint64_t rowptr[] = {0,5,6,10,15,18,22,24,29,33,38};
-    // uint64_t colind[] = {0,1,2,3,8,7,0,1,6,9,0,1,3,5,9,0,1,9,0,1,5,9,2,3,2,3,4,5,7,2,3,4,5,2,3,4,5,9};
-    // double values[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,26.1,26.2,27,28,29,29.1,29.2,30,31,31.1,31.2,32};
+    // int rowptr[] = {1,6,7,11,16,19,23,25,30,34,39};
+    // int colind[] = {1,2,3,4,9,8,1,2,7,10,1,2,4,6,10,1,2,10,1,2,6,10,3,4,3,4,5,6,8,3,4,5,6,3,4,5,6,10};
+    // int rowptr[] = {0,5,6,10,15,18,22,24,29,33,38};
+    // int colind[] = {0,1,2,3,8,7,0,1,6,9,0,1,3,5,9,0,1,9,0,1,5,9,2,3,2,3,4,5,7,2,3,4,5,2,3,4,5,9};
+    // double values[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,26.1,26.2,27,28,29,29.1,29.2,30,31,31.1,31.2,64};
 
     // // sym2.mm
-    // uint64_t rowptr[] = {0,3,8,12,17,21,25,30,32,34,36};
-    // uint64_t colind[] = {0,3,5,1,2,4,6,9,1,2,3,4,0,2,3,5,8,1,2,4,6,0,3,5,6,1,4,5,6,7,6,7,3,8,1,9};
+    // int rowptr[] = {0,3,8,12,17,21,25,30,64,34,36};
+    // int colind[] = {0,3,5,1,2,4,6,9,1,2,3,4,0,2,3,5,8,1,2,4,6,0,3,5,6,1,4,5,6,7,6,7,3,8,1,9};
     // double values[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1};
 
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
@@ -97,44 +110,25 @@ int main(int argc, char **argv)
     rt_context.SetRuntimeContext(config);
     csx_context.SetCsxContext(config);
 
-    // SparseMatrix<CSR<uint64_t, double> > matrix(rowptr, colind, values, nr_rows,
+    // SparseMatrix<CSR<index_t, value_t> > matrix(rowptr, colind, values, nr_rows,
     //                                             nr_cols, zero_based,
     //                                             rt_context.GetNrThreads());
-    SparseMatrix<MMF<uint64_t, double> > matrix(argv[0]);
+    SparseMatrix<MMF<index_t, value_t> > matrix(argv[0]);
     // matrix.Reorder();
 
     for (int i = 0; i < remargc; i++) {    
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        spm_mt = matrix.CreateCsx(rt_context, csx_context);
+        double pre_time;
+        spm_mt = matrix.CreateCsx(rt_context, csx_context, pre_time);
         //matrix.PrintEncoded(std::cout);
-        //PrintCsx(spm_mt);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
         double imbalance = CalcImbalance(spm_mt);
         std::cout << "Load imbalance: " << 100*imbalance << "%\n";
         std::cout << "=== END BENCHMARK ===" << std::endl;
-        PutSpmMt(spm_mt);
+        PutSpmMt<index_t, value_t>(spm_mt);
     }
 
-    // // Get/Set testing
-    // std::cout << matrix.GetValue(6,6) << std::endl; 
-    // matrix.SetValue(6,6,24);
-    // std::cout << matrix.GetValue(6,6) << std::endl;
-
-    // // Binary testing
-    // SaveCsx(spm_mt, "/home/athena/Desktop/libcsx/csx/dump");
-    // csx_double_t *spm = NULL;
-    // spm = RestoreCsx("/home/athena/Desktop/libcsx/csx/dump");
-    // for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
-    //     std::cout << "Partition " << i << std::endl;
-    //     std::cout << "nnz: " << spm[i].nnz << " " << "cols:" << spm[i].ncols<< " "
-    //               << "rows: " << spm[i].nrows << std::endl;
-    //     std::cout << "Dump of values: ["; 
-    //     for (size_t j = 0; j < spm[i].nnz; j++)
-    //         std::cout << spm[i].values[j] << " ";
-    //     std::cout << "]\n";
-    // }
-    
     return 0;
 }

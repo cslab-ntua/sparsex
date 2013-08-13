@@ -14,7 +14,7 @@
 #include "SparseInternal.h"
 #include "spmv.h"
 #include "jit.h"
-#include "timer.h"
+#include "TimingFramework.h"
 
 extern "C" {
 #include "elmerif.h"
@@ -36,12 +36,12 @@ enum {
     TIMER_CONSTRUCT_CSX,
     TIMER_SPMV,
     TIMER_TOTAL,
-    TIMER_END,
+    TIMER_ENDD,
 };
 
 static uint64_t nr_calls = 0;
 //xtimer_t timers[TIMER_END];
-csx::Timer timers[TIMER_END];
+csx::Timer timers[TIMER_ENDD];
 
 const char *timer_desc[] = {
     "Convert to internal repr.",
@@ -51,7 +51,7 @@ const char *timer_desc[] = {
 };
 
 void __attribute__ ((constructor)) init() {
-    for (int i = 0; i < TIMER_END; ++i) {
+    for (int i = 0; i < TIMER_ENDD; ++i) {
         //timer_init(&timers[i]);
         timers[i].SetDescription(timer_desc[i]);
     }
@@ -62,7 +62,7 @@ void __attribute__ ((destructor)) finalize() {
               << " time(s)" << std::endl;
 
     // Print timer statistics
-    for (int i = 0; i < TIMER_END; ++i) {
+    for (int i = 0; i < TIMER_ENDD; ++i) {
         //std::cout << timer_desc[i] << ": "
         //          << timer_secs(&timers[i]) << std::endl;
         std::cout << timers[i].GetDescription() << ": "
@@ -155,7 +155,9 @@ void *csx_mattune(elmer_index_t *rowptr,
     timers[TIMER_CONSTRUCT_CSX].Start();
     //CsxExecutionEngine &engine = CsxJitInit();
     //spm_mt = GetSpmMt(NULL, engine, true, false, spms);
-    spm_mt = BuildCsx(spms, rt_context, csx_context);
+    double pre_time;
+    spm_mt = BuildCsx<elmer_index_t, elmer_value_t>(spms, rt_context, csx_context,
+                                                    pre_time);
     //timer_pause(&timers[TIMER_CONSTRUCT_CSX]);
     timers[TIMER_CONSTRUCT_CSX].Pause();
     delete[] spms;

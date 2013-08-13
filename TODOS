@@ -3,30 +3,34 @@
    -- PETSc (?)
    -- Matrix tuning
       * [DONE] Pattern setup
-   -- [50%] Matrix I/O
+   -- [DONE] Matrix I/O
       * [DONE] from file (enriched MM, etc.)
       * [DONE] from CSR
-      * from CSX file
-      * to CSX file
-   -- Matrix access
-      * set matrix values in CSX
+      * [DONE] from CSX file
+      * [DONE] to CSX file
+   -- [DONE] Matrix access
+      * [DONE] set matrix values in CSX
    -- [DONE] Matrix reordering (RCM)
    -- [50%] Multithreaded setup
       * [DONE] Threads/Thread pool?
       * NUMA setup (allocators)
    -- [DONE] Support for symmetrics
-   -- [50%] Timing/Profiling framework
+   -- [DONE] Timing/Profiling framework
       * SpMV, preproc, etc.
-   -- Preprocessing optimization
+   -- [DONE] Preprocessing optimization
       * CSX file vs. online preproc.
+   -- Verbosity control
+      * verbosity levels (debug, info, warning, error)
+      * logger (standard / streams, low overhead, use of templates)
+   -- Baseline benchmarking code for all libs (MKL, OSKI, CSX) out-of-the-box
 
 2. Refactoring
-   -- Homogenize variable types (size_t, signed/unsigned)
+   -- Homogenize variable types (size_t, signed/unsigned)->nrows...
    -- Variable naming
    -- [50%] Code cleanup (also thgoud)
    -- [75%] Classes/Structures revisiting
    -- Memory management (leaks, double free corruptions, etc.)
-   -- [80%] SPM indexing (C++ templates?)
+   -- [DONE] SPM indexing (C++ templates?)
 
 3. User config & installation
    -- autotools (configure;make;install)
@@ -46,3 +50,4 @@
 
 7. Symmetrics revisiting
 8. What about libspm C library?
+   -- Rewrite Bench/CheckLoop() in C++ and ditch the rest

@@ -37,7 +37,7 @@ public:
         Clear();
     }
 
-    Timer(const char *desc)
+    Timer(const char *desc, const char *desc2)
         : description_((std::string) desc), 
           elapsed_time_(), 
           timestamp_()

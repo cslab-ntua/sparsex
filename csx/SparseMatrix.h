@@ -8,146 +8,86 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPARSEMATRIX_H__
-#define SPARSEMATRIX_H__
+#ifndef LIBCSX_SPARSEMATRIX_H__
+#define LIBCSX_SPARSEMATRIX_H__
 
 #include "mmf.h"
 #include "csr.h"
 #include "rcm.h"
+//#include "draw.h"
 #include "spmv.h"
 #include "runtime.h"
 #include "SparseInternal.h"
+#include "CsxGetSet.h"
 #include <boost/interprocess/detail/move.hpp>
+
+namespace internal {
 
 template<class MatrixType>
 struct sparse_matrix_traits {
-    typedef typename MatrixType::index_t index_t;
-    typedef typename MatrixType::value_t value_t;
+    typedef typename MatrixType::idx_t idx_t;
+    typedef typename MatrixType::val_t val_t;
 };
+
+} // end namespace internal
+
+/**
+ *  Helper template class that generates a compile time error
+ *  if SparseMatrix class is instantiated with something other
+ *  than this class' template specializations.
+ */
+template<class MatrixType> class AllowInstantiation { AllowInstantiation() {} };
+template<> class AllowInstantiation<MMF<uint64_t, double> > {};
+template<> class AllowInstantiation<CSR<uint64_t, double> > {};
+template<> class AllowInstantiation<MMF<uint32_t, double> > {};
+template<> class AllowInstantiation<CSR<uint32_t, double> > {};
+template<> class AllowInstantiation<MMF<int, double> > {};
+template<> class AllowInstantiation<CSR<int, double> > {};
 
 template<class MatrixType>
 class SparseMatrix : public MatrixType
 {
 public:
-    typedef typename sparse_matrix_traits<MatrixType>::index_t index_t;
-    typedef typename sparse_matrix_traits<MatrixType>::value_t value_t;
+    typedef typename internal::sparse_matrix_traits<MatrixType>::idx_t idx_t;
+    typedef typename internal::sparse_matrix_traits<MatrixType>::val_t val_t;
 
     // CSR-specific constructor
-    SparseMatrix(index_t *rowptr, index_t *colind, value_t *values,
-                 index_t nr_rows, index_t nr_cols, bool zero_based,
-                 size_t nr_threads);
+    SparseMatrix(idx_t *rowptr, idx_t *colind, val_t *values,
+                 idx_t nr_rows, idx_t nr_cols, bool zero_based);
     // MMF-specific constructor
     SparseMatrix(const char* filename);
     ~SparseMatrix();
 
-    void Print(std::ostream &os); //Doesn't work for mmf
-    void PrintEncoded(std::ostream &os) const;
-    void Reorder();
-    value_t GetValue(index_t row_idx, index_t col_idx);
-    void SetValue(index_t row_idx, index_t col_idx, value_t value);
-
+    val_t GetValue(idx_t row_idx, idx_t col_idx);
+    bool SetValue(idx_t row_idx, idx_t col_idx, val_t value);
+    void Reorder(vector<size_t>& perm);
     spm_mt *CreateCsx(const RuntimeContext& rt_config,
-                      const CsxContext& csx_config);
+                      const CsxContext& csx_config, double &time);
+//    void Print(std::ostream &os); //Doesn't work for mmf
+//    void PrintEncoded(std::ostream &os) const;
+//    void Draw(const char* filename, const int width, const int height);
 
 private:
-    SparseInternal<index_t, value_t> *spi_;
+    SparseInternal<idx_t, val_t> *spi_;
     spm_mt *csx_;
+    AllowInstantiation<MatrixType> instantiation;
 };
 
-
-/*
- * SparseMatrix class implementation
+/**
+ *  Helper template class that generates a compile time error
+ *  if SparseMatrix class is instantiated with one of the template
+ *  specializations that follow.
  */
-template<class MatrixType>
-SparseMatrix<MatrixType>::SparseMatrix(index_t *rowptr, index_t *colind,
-                                       value_t *values, index_t nr_rows,
-                                       index_t nr_cols, bool zero_based,
-                                       size_t nr_threads)
-    : MatrixType(boost::interprocess::forward<index_t*>(rowptr),
-                 boost::interprocess::forward<index_t*>(colind), 
-                 boost::interprocess::forward<value_t*>(values),
-                 boost::interprocess::forward<index_t>(nr_rows),
-                 boost::interprocess::forward<index_t>(nr_cols),
-                 boost::interprocess::forward<bool>(zero_based),
-                 boost::interprocess::forward<size_t>(nr_threads)),
-      spi_(NULL),
-      csx_(NULL)
-{}
+// template<class MatrixType> class AllowInstantiation {};
+// template<> class AllowInstantiation<MMF<double, double> >
+// { AllowInstantiation() {} };
+// template<> class AllowInstantiation<CSR<double, double> >
+// { AllowInstantiation() {} };
+// template<> class AllowInstantiation<MMF<float, float> >
+// { AllowInstantiation() {} };
+// template<> class AllowInstantiation<CSR<float, float> >
+// { AllowInstantiation() {} };
 
-// MMF-specific constructor
-template<class MatrixType>
-SparseMatrix<MatrixType>::SparseMatrix(const char* filename)
-    : MatrixType(boost::interprocess::forward
-                 <ifstream&>(*(new ifstream(filename)))),
-      spi_(NULL),
-      csx_(NULL)
-{}
- 
-template<class MatrixType>
-SparseMatrix<MatrixType>::~SparseMatrix()
-{
-    // Release resources
-}
-
-template<class MatrixType>
-void SparseMatrix<MatrixType>::Print(std::ostream &os)
-{
-    MatrixType::Print(os);
-}
-
-template<class MatrixType>
-void SparseMatrix<MatrixType>::PrintEncoded(std::ostream &os) const
-{
-    if (!spi_)
-        std::cout << "Matrix hasn't been encoded yet!" << std::endl;
-    else 
-        spi_->Print(os);
-}
-
-template<class MatrixType>
-void SparseMatrix<MatrixType>::Reorder()
-{
-    DoReorder_RCM(*this);
-}
-
-template<class MatrixType>
-spm_mt *SparseMatrix<MatrixType>::CreateCsx(const RuntimeContext& rt_config,
-                                            const CsxContext& csx_config)
-{
-    spi_ = SparseInternal<index_t, value_t>::DoLoadMatrix
-        (*this, rt_config.GetNrThreads());
-    csx_ = BuildCsx<index_t, value_t>(spi_, rt_config, csx_config);
-    return csx_;
-}
-
-template<class MatrixType>
-typename SparseMatrix<MatrixType>::value_t SparseMatrix<MatrixType>::
-GetValue(index_t row_idx, index_t col_idx)
-{
-    value_t value;
-
-    if (!csx_) {
-        // GetValue from CSR/MMF(attention when iterator is on the file)
-        value = GetValue(row_idx, col_idx);
-    } else {
-        //value = GetValueCsx<index_t, value_t>(csx_, row_idx, col_idx);
-    }
-    return value;
-}
-
-template<class MatrixType>
-void SparseMatrix<MatrixType>::SetValue(index_t row_idx, index_t col_idx,
-                                        value_t value)
-{
-    //bool set;
-
-    if (!csx_) {
-        // SetValue to CSR/MMF
-    } else { 
-        //SetValueCsx<index_t, value_t>(csx_, row_idx, col_idx, value);
-    }
-}
-
-#endif // SPARSEMATRIX_H__
+#endif // LIBCSX_SPARSEMATRIX_H__
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

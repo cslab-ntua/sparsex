@@ -52,7 +52,7 @@ Configuration::Map Configuration::map_ = boost::assign::map_list_of
 #endif
     (MinLimit, "4")
     (MaxLimit, "__MAX__")  //default -> long max
-    (MinPercentage, "0.1");
+    (MinPercentage, "0.05");
 
 Configuration::PropertyMap Configuration::conf_(Configuration::map_);
 
@@ -107,21 +107,6 @@ Configuration &ConfigFromEnv(Configuration &conf, bool symmetric,
 ///
 ///  @see ctl_ll.h
 #define DELTAS_MAX  CTL_PATTERNS_MAX
-
-// malloc wrapper
-#define xmalloc(x)                         \
-({                                         \
-    void *ret_;                            \
-    ret_ = malloc(x);                      \
-    if (ret_ == NULL){                     \
-        cerr << __FUNCTION__          \
-                  << " " << __FILE__       \
-                  << ":" << __LINE__       \
-                  << ": malloc failed\n";  \
-        exit(1);                           \
-    }                                      \
-    ret_;                                  \
-})
 
 static void ParseOptionMT(string str, size_t **affinity, size_t &nr_threads)
 {

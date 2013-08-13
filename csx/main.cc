@@ -7,13 +7,19 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-
+#include "../C-API/mattype.h"
 #include "MatrixLoading.h"
 #include "SparseInternal.h"
-#include "spmv.h"
+#include "CsxGetSet.h"
+#include "CsxUtil.h"
 #include "runtime.h"
+#include "spmv.h"
 #include <cstdio>
 #include <cfloat>
+
+extern template double GetValueCsx<index_t, value_t>(void *, index_t, index_t);
+extern template bool SetValueCsx<index_t, value_t>(void *, index_t, index_t, value_t);
+extern template void PutSpmMt<index_t, value_t>(spm_mt_t *spm_mt);
 
 static const char *program_name;
 
@@ -102,29 +108,46 @@ int main(int argc, char **argv)
     csx_context.SetCsxContext(config);
 
     // Load matrix    
-    SparseInternal<uint64_t, double> *spms = NULL;
-    //SparsePartitionSym<uint64_t, double> *spms_sym = NULL;
+    SparseInternal<index_t, value_t> *spms = NULL;
+    SparsePartitionSym<index_t, value_t> *spms_sym = NULL;
 
     if (!csx_context.IsSymmetric()) {
-        spms = LoadMMF_mt<uint64_t, double>(argv[0], rt_context.GetNrThreads());
-    }/* else {
-        spms_sym = LoadMMF_Sym_mt<uint64_t, double>(argv[0],
-                                                    rt_context.GetNrThreads());
-                                                    }*/
+        spms = LoadMMF_mt<index_t, value_t>(argv[0], rt_context.GetNrThreads());
+    } else {
+        spms_sym = LoadMMF_Sym_mt<index_t, value_t>(argv[0], rt_context.GetNrThreads());
+    }
 
     for (int i = 0; i < remargc; i++) {    
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl; 
-        if (spms)
-            spm_mt = BuildCsx(spms, rt_context, csx_context);
-        // else 
-        // spm_mt = BuildCsxSym(spms_sym, rt_context, csx_context);
+        double pre_time;
+        if (!symmetric)
+            spm_mt = BuildCsx(spms, rt_context, csx_context, pre_time);
+        else 
+            spm_mt = BuildCsxSym(spms_sym, rt_context, csx_context, pre_time);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();
         BenchLoop(spm_mt, argv[i]);
         double imbalance = CalcImbalance(spm_mt);
         std::cout << "Load imbalance: " << 100*imbalance << "%\n";
         std::cout << "=== END BENCHMARK ===" << std::endl;
-        PutSpmMt(spm_mt);
+
+        /* Get/Set testing */
+        spms = LoadMMF_mt<index_t, value_t>(argv[0], rt_context.GetNrThreads());
+        SparsePartition<index_t, value_t>::PntIter iter, iter_end;      
+        for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
+            iter = spms->GetPartition(i)->PointsBegin();
+            iter_end = spms->GetPartition(i)->PointsEnd();
+            for (;iter != iter_end; ++iter) {
+                index_t row = (*iter).row + spms->GetPartition(i)->GetRowStart();
+                index_t col = (*iter).col;
+                //std::cout << "looking for " << row << " " << col << std::endl;
+                value_t value = GetValueCsx<index_t, value_t>(spm_mt, row, col);
+                //std::cout << value << "=" << (*iter).val << std::endl;
+                assert((*iter).val == value);
+            }
+        }
+        /* Cleanup */
+        PutSpmMt<index_t, value_t>(spm_mt);
     }
     
     return 0;
