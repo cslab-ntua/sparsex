@@ -10,7 +10,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsepartition.h"
+#include "SparsePartition.h"
 #include "drle.h"
 #include "delta.h"
 
@@ -28,16 +28,13 @@
 namespace bll = boost::lambda;
 using namespace csx;
 
-bool debug = false;
-
-Node::Node(uint32_t depth) : depth_(depth)
+Node::Node(uint32_t depth)
+  : depth_(depth)
 {
-    uint32_t i;
-    
-    type_path_ = new IterOrder[depth_];
-    type_ignore_ = new IterOrder[XFORM_MAX];
-    for (i = 0; i < ((uint32_t) XFORM_MAX); i++)
-        type_ignore_[i] = NONE;
+    type_path_ = new Encoding::Type[depth_];
+    type_ignore_ = new Encoding::Type[XFORM_MAX];
+    for (Encoding::Type t = Encoding::None; t < Encoding::Max; t++)
+        type_ignore_[t] = Encoding::None;
 }
 
 void Node::PrintNode()
@@ -51,7 +48,7 @@ void Node::PrintNode()
 
     std::cout << std::endl;
     for (uint32_t i = 0; i < depth_; ++i) {
-        IterOrder temp_type = type_path_[i];
+        Encoding::Type temp_type = type_path_[i];
         std::set<uint64_t>::iterator it = deltas_path_[temp_type].begin();
 
         if (i != 0)
@@ -71,11 +68,10 @@ void Node::PrintNode()
     std::cout << std::endl;
 }
 
-void Node::Ignore(IterOrder type)
+void Node::Ignore(Encoding::Type type)
 {
     uint32_t i = 0;
-    
-    while (type_ignore_[i] != NONE) {
+    while (type_ignore_[i] != Encoding::None) {
         assert(type_ignore_[i] != type && "type already ignored");
         ++i;
     }
@@ -83,15 +79,15 @@ void Node::Ignore(IterOrder type)
     type_ignore_[i] = type;
 }
 
-Node Node::MakeChild(IterOrder type, std::set<uint64_t> deltas)
+Node Node::MakeChild(Encoding::Type type, std::set<uint64_t> deltas)
 {
     Node new_node = Node(depth_ + 1);
 
-    for (uint32_t i = 0; i < static_cast<uint32_t>(XFORM_MAX); ++i)
-        new_node.type_ignore_[i] = type_ignore_[i];
+    for (Encoding::Type t = Encoding::None; t < Encoding::Max; ++t)
+        new_node.type_ignore_[t] = type_ignore_[t];
 
-    for (uint32_t i = 0; i < depth_; ++i) {
-        IterOrder temp_type = type_path_[i];
+    for (size_t i = 0; i < depth_; ++i) {
+        Encoding::Type temp_type = type_path_[i];
         new_node.type_path_[i] = temp_type;
         new_node.deltas_path_[temp_type] = deltas_path_[temp_type];
     }

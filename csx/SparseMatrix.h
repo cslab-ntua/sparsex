@@ -46,8 +46,7 @@ public:
     value_t GetValue(index_t row_idx, index_t col_idx);
     void SetValue(index_t row_idx, index_t col_idx, value_t value);
 
-    spm_mt *CreateCsx(const RuntimeContext& rt_config,
-                      const CsxContext& csx_config);
+    spm_mt *CreateCsx(const RuntimeContext& rt_context);
 
 private:
     SparseInternal<index_t, value_t> *spi_;
@@ -111,12 +110,11 @@ void SparseMatrix<MatrixType>::Reorder()
 }
 
 template<class MatrixType>
-spm_mt *SparseMatrix<MatrixType>::CreateCsx(const RuntimeContext& rt_config,
-                                            const CsxContext& csx_config)
+spm_mt *SparseMatrix<MatrixType>::CreateCsx(const RuntimeContext& rt_context)
 {
     spi_ = SparseInternal<index_t, value_t>::DoLoadMatrix
-        (*this, rt_config.GetNrThreads());
-    csx_ = BuildCsx<index_t, value_t>(spi_, rt_config, csx_config);
+        (*this, rt_context.GetNrThreads());
+    csx_ = BuildCsx<index_t, value_t>(spi_);
     return csx_;
 }
 

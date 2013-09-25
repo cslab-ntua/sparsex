@@ -52,8 +52,7 @@ void TemplateText::ReplacePlaceholders()
     std::string::const_iterator s_end = template_text_.end();
     match_results<std::string::const_iterator> match;
 
-    while (regex_search(s_start, s_end, match, placeholder_pattern_,
-                        match_default)) {
+    while (regex_search(s_start, s_end, match, placeholder_pattern_)) {
         std::string key(match[1].first, match[1].second);
         placeholders_[key] = std::string("");
         s_start = match[0].second;

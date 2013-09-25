@@ -13,6 +13,7 @@
 #include "SparseInternal.h"
 #include "spmv.h"
 #include "runtime.h"
+
 #include <cstdio>
 #include <cfloat>
 
@@ -93,30 +94,25 @@ int main(int argc, char **argv)
     argv = &argv[optind];
 
     // Initialization of runtime configuration
-    RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
+    RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
-    CsxContext &csx_context = CsxContext::GetInstance();
 
-    config.LoadFromEnv();
-    rt_context.SetRuntimeContext(config);
-    csx_context.SetCsxContext(config);
+    rt_config.LoadFromEnv();
+    rt_context.SetRuntimeContext(rt_config);
 
-    // Load matrix    
+    // Load matrix
     SparseInternal<uint64_t, double> *spms = NULL;
     //SparsePartitionSym<uint64_t, double> *spms_sym = NULL;
 
-    if (!csx_context.IsSymmetric()) {
+    if (rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
         spms = LoadMMF_mt<uint64_t, double>(argv[0], rt_context.GetNrThreads());
-    }/* else {
-        spms_sym = LoadMMF_Sym_mt<uint64_t, double>(argv[0],
-                                                    rt_context.GetNrThreads());
-                                                    }*/
-
+    }
+    
     for (int i = 0; i < remargc; i++) {    
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl; 
         if (spms)
-            spm_mt = BuildCsx(spms, rt_context, csx_context);
-        // else 
+            spm_mt = BuildCsx(spms);
+        // else
         // spm_mt = BuildCsxSym(spms_sym, rt_context, csx_context);
         CheckLoop(spm_mt, argv[i]);
         std::cerr.flush();

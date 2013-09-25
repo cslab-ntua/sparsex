@@ -89,37 +89,36 @@ uint64_t MapSize(void *spm);
  *  @param csxConfig    CSX configuration
  */
 template<typename IndexType, typename ValueType>
-void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &data,
-                      const CsxContext &csx_config)
+void PreprocessThread(
+    ThreadContext<SparsePartition<IndexType, ValueType> > &data)
 {
+    RuntimeConfiguration &rtconfig = RuntimeConfiguration::GetInstance();
+
     // Set CPU affinity.
     setaffinity_oncpu(data.GetCpu());
     
-    DRLE_Manager<IndexType, ValueType> *DrleMg;
+    EncodingManager<IndexType, ValueType> *DrleMg;
     data.GetBuffer() << "==> Thread: #" << data.GetId() << std::endl;
 
     // Initialize the DRLE manager.
-    DrleMg = new DRLE_Manager<IndexType, ValueType>
-        (data.GetSpm(), 4, 255, 0.05, csx_config.GetWindowSize(),
-         DRLE_Manager<IndexType, ValueType>::SPLIT_BY_NNZ,
-         csx_config.GetSamplingPortion(), csx_config.GetMaxSamples(),
-         csx_config.IsSplitBlocks(), false);
+    DrleMg = new EncodingManager<IndexType, ValueType>(data.GetSpm(), rtconfig);
                                   
     // Adjust the ignore settings properly.
-    DrleMg->IgnoreAll();
-    for (int i = 0; *(csx_config.GetXform()+i) != -1; ++i)
-        DrleMg->RemoveIgnore(static_cast<IterOrder>
-                             (*(csx_config.GetXform()+i)));
+    EncodingSequence encseq(rtconfig.GetProperty<string>(
+                                RuntimeConfiguration::PreprocXform));
 
     // If the user supplies the deltas choices, encode the matrix
     // with the order given in XFORM_CONF, otherwise find
     // statistical data for the types in XFORM_CONF, choose the
     // best choise, encode it and proceed likewise until there is
     // no satisfying encoding.
-    if (csx_config.GetDeltas())
-        DrleMg->EncodeSerial(csx_config.GetXform(), csx_config.GetDeltas());
-    else
+    if (encseq.IsExplicit()) {
+        DrleMg->EncodeSerial(encseq);
+    } else {
+        cout << "hello\n";
+        DrleMg->RemoveIgnore(encseq);
         DrleMg->EncodeAll(data.GetBuffer());
+    }
 
     // DrleMg->MakeEncodeTree();
     csx_double_t *csx = data.GetCsxManager()->MakeCsx(false);
@@ -148,55 +147,44 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
 
 #if 0   // SYM
 template<typename IndexType, typename ValueType>
-void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType> >& data,
-                         const CsxContext &csx_config)
+void PreprocessThreadSym(
+    ThreadContext<SparsePartitionSym<IndexType, ValueType> >& data)
 {
+    RuntimeConfiguration &rtconfig = RuntimeConfiguration::GetInstance();
+
     // Set CPU affinity.
     setaffinity_oncpu(data.GetCpu());
     
-    DRLE_Manager<IndexType, ValueType> *DrleMg1;
-    DRLE_Manager<IndexType, ValueType> *DrleMg2;
+    EncodingManager<IndexType, ValueType> *DrleMg1;
+    EncodingManager<IndexType, ValueType> *DrleMg2;
 
     data.GetBuffer() << "==> Thread: #" << data.GetId() << std::endl;
-        
     data.GetSpm()->DivideMatrix();
         
     // Initialize the DRLE manager
-    DrleMg1 = new DRLE_Manager<IndexType, ValueType>
-        (data.GetSpm()->GetFirstMatrix(), 4, 255-1, 0.05,
-         csx_config.GetWindowSize(),
-         DRLE_Manager<IndexType, ValueType>::SPLIT_BY_NNZ,
-         csx_config.GetSamplingPortion(), csx_config.GetMaxSamples(), false);
-
-    DrleMg2 = new DRLE_Manager<IndexType, ValueType>
-        (data.GetSpm()->GetSecondMatrix(), 4, 255-1, 0.05,
-         csx_config.GetWindowSize(),
-         DRLE_Manager<IndexType, ValueType>::SPLIT_BY_NNZ,
-         csx_config.GetSamplingPortion(), csx_config.GetMaxSamples(), false);
+    DrleMg1 = new EncodingManager<IndexType, ValueType>
+        (data.GetSpm()->GetFirstMatrix(), rtconfig);
+    DrleMg2 = new EncodingManager<IndexType, ValueType>
+        (data.GetSpm()->GetSecondMatrix(), rtconfig);
                      
-    // Adjust the ignore settings properly
-    DrleMg1->IgnoreAll();
-    DrleMg2->IgnoreAll();
-    for (int i = 0; *(csx_config.GetXform()+i) != -1; ++i) {
-        DrleMg1->
-            RemoveIgnore(static_cast<IterOrder>
-                         (*(csx_config.GetXform()+i)));
-        DrleMg2->
-            RemoveIgnore(static_cast<IterOrder>
-                         (*(csx_config.GetXform()+i)));
-    }
-       
-    // If the user supplies the deltas choices, encode the matrix with the
-    // order given in XFORM_CONF, otherwise find statistical data for the 
-    // types in XFORM_CONF, choose the best choise, encode it and proceed 
-    // likewise until there is no satisfying encoding.
-    if (csx_config.GetDeltas()) {
-        DrleMg1->EncodeSerial(csx_config.GetXform(), csx_config.GetDeltas());
-        DrleMg2->EncodeSerial(csx_config.GetXform(), csx_config.GetDeltas());
+    EncodingSequence encseq(rtconfig.GetProperty<string>(
+                                RuntimeConfiguration::PreprocXform));
+
+    // If the user supplies the deltas choices, encode the matrix
+    // with the order given in XFORM_CONF, otherwise find
+    // statistical data for the types in XFORM_CONF, choose the
+    // best choise, encode it and proceed likewise until there is
+    // no satisfying encoding.
+    if (encseq.IsExplicit()) {
+        DrleMg1->EncodeSerial(encseq);
+        DrleMg2->EncodeSerial(encseq);
     } else {
+        DrleMg1->RemoveIgnore(encseq);
+        DrleMg2->RemoveIgnore(encseq);
         DrleMg1->EncodeAll(data.GetBuffer());
         DrleMg2->EncodeAll(data.GetBuffer());
     }
+
     data.GetSpm()->MergeMatrix();
 
     csx_double_sym_t *csx = data.GetCsxManager()->MakeCsxSym();
@@ -244,18 +232,16 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType> 
  *  @param mmf_fname    name of the sparse matrix file.
  *  @param spms         an initial sparse matrix format if it exists.
  *  @param spms_sym     an initial symmetric sparse matrix format if it exists.
- *  @param run_config   runtime configuration
- *  @param csx_config   CSX configuration
  *  @return             the (multithreaded) CSX or CSX-Sym sparse matrix.
  */
-spm_mt_t *PrepareSpmMt(const RuntimeContext &rt_config,
-                       const CsxContext &csx_config);
+spm_mt_t *PrepareSpmMt();
 
 template<typename IndexType, typename ValueType>
-void DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt,
-             const RuntimeContext &rt_config, const CsxContext &csx_config)
+void DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt)
 {
-    size_t nr_threads = rt_config.GetNrThreads();
+    RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
+    RuntimeContext &rt_context = RuntimeContext::GetInstance();
+    size_t nr_threads = rt_context.GetNrThreads();
 
     // Start timer for preprocessing
     csx::Timer timer;
@@ -267,8 +253,8 @@ void DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt,
 
     for (size_t i = 0; i < nr_threads; i++) {
         mt_context[i].SetId(i);
-        mt_context[i].SetCpu(rt_config.GetAffinity(i));
-        mt_context[i].SetNode(numa_node_of_cpu(rt_config.GetAffinity(i)));
+        mt_context[i].SetCpu(rt_context.GetAffinity(i));
+        mt_context[i].SetNode(numa_node_of_cpu(rt_context.GetAffinity(i)));
         mt_context[i].SetData(spms, spm_mt); 
     }
 
@@ -276,13 +262,12 @@ void DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt,
     std::vector<boost::shared_ptr<boost::thread> > threads(nr_threads - 1);
 
     for (size_t i = 0; i < nr_threads - 1; ++i) {
-        threads[i] = boost::make_shared<boost::thread>
-            (PreprocessThread<IndexType, ValueType>, 
-             boost::ref(mt_context[i + 1]),
-             boost::ref(csx_config));
+        threads[i] = boost::make_shared<boost::thread>(
+            PreprocessThread<IndexType, ValueType>, 
+            boost::ref(mt_context[i + 1]));
     }
     // Let main thread do some work
-    PreprocessThread<IndexType, ValueType>(mt_context[0], csx_config);
+    PreprocessThread<IndexType, ValueType>(mt_context[0]);
 
     for (size_t i = 0; i < nr_threads-1; ++i) {
         threads[i]->join();
@@ -292,9 +277,10 @@ void DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt,
     CsxJit<IndexType, ValueType> **Jits =
         new CsxJit<IndexType, ValueType>*[nr_threads];
     for (size_t i = 0; i < nr_threads; ++i) {
-        Jits[i] = new CsxJit<IndexType, ValueType>(mt_context[i].GetCsxManager(),
-                                 &rt_config.GetEngine(),
-                                 i, csx_config.IsSymmetric());
+        Jits[i] = new CsxJit<IndexType, ValueType>(
+            mt_context[i].GetCsxManager(),
+            &rt_context.GetEngine(), i,
+            rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric));
         Jits[i]->GenCode(mt_context[i].GetBuffer());    
         std::cout << mt_context[i].GetBuffer().str();
     }
@@ -311,27 +297,27 @@ void DoBuild(SparseInternal<IndexType, ValueType> *spms, spm_mt *spm_mt,
 }
 
 template<typename IndexType, typename ValueType>
-spm_mt_t *BuildCsx(SparseInternal<IndexType, ValueType> *spms,
-                   const RuntimeContext &rt_config, const CsxContext &csx_config)
+spm_mt_t *BuildCsx(SparseInternal<IndexType, ValueType> *spms)
 {
     spm_mt_t *spm_mt;
+    RuntimeContext &rt_context = RuntimeContext::GetInstance();
 
     // Set affinity for the serial part of the preproprecessing.
-    setaffinity_oncpu(rt_config.GetAffinity(0));
+    setaffinity_oncpu(rt_context.GetAffinity(0));
     // Initialization of the multithreaded sparse matrix representation
-    spm_mt = PrepareSpmMt(rt_config, csx_config); 
-    DoBuild(spms, spm_mt, rt_config, csx_config);
-
+    spm_mt = PrepareSpmMt();
+    DoBuild(spms, spm_mt);
     return spm_mt;
 }
 
 #if 0   // SYM
 template<typename IndexType, typename ValueType>
 void DoBuild(SparsePartitionSym<IndexType, ValueType> *spms_sym,
-             spm_mt *spm_mt, const RuntimeContext &rt_config,
-             const CsxContext &csx_config)
+             spm_mt *spm_mt);
 {
-    size_t nr_threads = rt_config.GetNrThreads();
+    RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
+    RuntimeContext &rt_context = RuntimeContext::GetInstance();
+    size_t nr_threads = rt_context.GetNrThreads();
 
     // Start timer for preprocessing
     csx::Timer timer;
@@ -343,8 +329,8 @@ void DoBuild(SparsePartitionSym<IndexType, ValueType> *spms_sym,
 
     for (size_t i = 0; i < nr_threads; i++) {
         mt_context[i].SetId(i);
-        mt_context[i].SetCpu(rt_config.GetAffinity(i));
-        mt_context[i].SetNode(numa_node_of_cpu(rt_config.GetAffinity(i)));
+        mt_context[i].SetCpu(rt_context.GetAffinity(i));
+        mt_context[i].SetNode(numa_node_of_cpu(rt_context.GetAffinity(i)));
         mt_context[i].SetDataSym(spms_sym, spm_mt); 
     }
 
@@ -352,13 +338,12 @@ void DoBuild(SparsePartitionSym<IndexType, ValueType> *spms_sym,
     std::vector<boost::shared_ptr<boost::thread> > threads(nr_threads - 1);
 
     for (size_t i = 0; i < nr_threads - 1; ++i) {
-        threads[i] = boost::make_shared<boost::thread>
-            (PreprocessThreadSym<IndexType, ValueType>, 
-             boost::ref(mt_context[i + 1]),
-             boost::ref(csx_config));
+        threads[i] = boost::make_shared<boost::thread>(
+            PreprocessThreadSym<IndexType, ValueType>, 
+            boost::ref(mt_context[i + 1]));
     }
     // Let main thread do some work
-    PreprocessThreadSym<IndexType, ValueType>(mt_context[0], csx_config);
+    PreprocessThreadSym<IndexType, ValueType>(mt_context[0]);
 
     for (size_t i = 0; i < nr_threads-1; ++i) {
         threads[i]->join();
@@ -367,9 +352,10 @@ void DoBuild(SparsePartitionSym<IndexType, ValueType> *spms_sym,
     // CSX JIT compilation
     CsxJit **Jits = new CsxJit*[nr_threads];
     for (size_t i = 0; i < nr_threads; ++i) {
-        Jits[i] = new CsxJit(mt_context[i].GetCsxManager(),
-                                 &rt_config.GetEngine(),
-                                 i, csx_config.IsSymmetric());
+        Jits[i] = new CsxJit(
+            mt_context[i].GetCsxManager(),
+            &rt_context.GetEngine(), i,
+            rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric));
         Jits[i]->GenCode(mt_context[i].GetBuffer());    
         std::cout << mt_context[i].GetBuffer().str();
     }
@@ -386,133 +372,22 @@ void DoBuild(SparsePartitionSym<IndexType, ValueType> *spms_sym,
 }
 
 template<typename IndexType, typename ValueType>
-spm_mt_t *BuildCsxSym(SparsePartitionSym<IndexType, ValueType> *spms_sym,
-                      const RuntimeContext &rt_config,
-                      const CsxContext &csx_config)
+spm_mt_t *BuildCsxSym(SparsePartitionSym<IndexType, ValueType> *spms_sym)
 {
     spm_mt_t *spm_mt;
 
     // Set affinity for the serial part of the preproprecessing.
-    setaffinity_oncpu(rt_config.GetAffinity(0));
+    setaffinity_oncpu(rt_context.GetAffinity(0));
     // Initialization of the multithreaded sparse matrix representation
-    spm_mt = PrepareSpmMt(rt_config, csx_config); 
+    spm_mt = PrepareSpmMt(); 
     // Switch Reduction Phase
     MakeMap(spm_mt, spms_sym);
-    DoBuild(spms_sym, spm_mt, rt_config, csx_config);
+    DoBuild(spms_sym, spm_mt);
 
     return spm_mt;
 }
 #endif  // SYM    
 
-/*template<typename IndexType, typename ValueType>
-spm_mt_t *BuildCsx(const char *mmf_fname, const RuntimeContext &rt_config,
-                   const CsxContext &csx_config)
-{
-    spm_mt_t *spm_mt;
-    SparseInternal<IndexType, ValueType> *spi = NULL;
-    SparsePartitionSym<IndexType, ValueType> *spms_sym = NULL;
-
-    // Load Matrix
-    if (!csx_config.IsSymmetric()) {
-        spi = LoadMMF_mt<IndexType, ValueType>(mmf_fname,
-                                               rt_config.GetNrThreads());
-    } else {
-        spms_sym = SparsePartitionSym<IndexType, ValueType>::LoadMMF_mt(mmf_fname,
-                                                  rt_config.GetNrThreads());
-    }
-    //spm_mt = BuildCsx(spi, spms_sym, rt_config, csx_config);
-
-    return spm_mt;
-}*/
-
-/*template<typename IndexType, typename ValueType>
-spm_mt_t *BuildCsx(SparseInternal<IndexType, ValueType> *spi,
-                   SparsePartitionSym<IndexType, ValueType> *spms_sym,
-                   const RuntimeContext &rt_config, const CsxContext &csx_config)
-{
-    spm_mt_t *spm_mt;
-    size_t nr_threads = rt_config.GetNrThreads();
-
-    // Set affinity for the serial part of the preproprecessing.
-    setaffinity_oncpu(rt_config.GetAffinity(0));
-
-    // Initialization of the multithreaded sparse matrix representation
-    spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
-
-    spm_mt->nr_threads = nr_threads;
-    spm_mt->symmetric = csx_config.IsSymmetric();
-    spm_mt->spm_threads =
-        (spm_mt_thread_t *) xmalloc(sizeof(spm_mt_thread_t) * nr_threads);
-
-    for (size_t i = 0; i < nr_threads; i++) {
-        spm_mt->spm_threads[i].cpu = rt_config.GetAffinity(i);
-        spm_mt->spm_threads[i].node =
-            numa_node_of_cpu(rt_config.GetAffinity(i));
-        spm_mt->spm_threads[i].id = i;
-    }
-
-    if (spms_sym) {
-        // Switch Reduction Phase
-        MakeMap(spm_mt, spms_sym);
-    }
-
-    // Start timer for preprocessing
-    csx::Timer timer;
-    timer.Start();
-
-    // Setup thread context
-    std::vector<ThreadContext<IndexType, ValueType> > mt_context(nr_threads);
-
-    for (size_t i = 0; i < nr_threads; i++) {
-        mt_context[i].SetId(i);
-        mt_context[i].SetCpu(rt_config.GetAffinity(i));
-        mt_context[i].SetNode(numa_node_of_cpu(rt_config.GetAffinity(i)));
-        mt_context[i].SetData(spi, spms_sym, spm_mt, csx_config.IsSymmetric()); 
-    }
-
-    // Start preprocessing
-    std::vector<boost::shared_ptr<boost::thread> > threads(nr_threads - 1);
-
-    for (size_t i = 0; i < nr_threads - 1; ++i) {
-        threads[i] = boost::make_shared<boost::thread>
-            (PreprocessThread, 
-             boost::ref(mt_context[i + 1]),
-             boost::ref(csx_config));
-    }
-    
-    // Let main thread do some work
-    PreprocessThread(mt_context[0], csx_config);
-
-    for (size_t i = 0; i < nr_threads-1; ++i) {
-        threads[i]->join();
-    }
-
-    // CSX JIT compilation
-    CsxJit **Jits = new CsxJit*[nr_threads];
-    for (size_t i = 0; i < nr_threads; ++i) {
-        Jits[i] = new CsxJit(mt_context[i].GetCsxManager(),
-                                 &rt_config.GetEngine(),
-                                 i, csx_config.IsSymmetric());
-        Jits[i]->GenCode(mt_context[i].GetBuffer());    
-        std::cout << mt_context[i].GetBuffer().str();
-    }
-
-    for (size_t i = 0; i < nr_threads; i++)
-        spm_mt->spm_threads[i].spmv_fn = Jits[i]->GetSpmvFn();
-
-    // Cleanup
-    delete[] Jits;
-
-    // Preprocessing finished; stop timer
-    //timer_pause(&timer);
-    //pre_time = timer_secs(&timer);
-    timer.Pause();
-    pre_time = timer.ElapsedTime();
-
-    return spm_mt;
-    }
-*/
-              
 /**
  *  Deallocation of CSX or CSX-Sym sparse matrix.
  *  

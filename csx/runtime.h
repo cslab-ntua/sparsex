@@ -12,22 +12,20 @@
 #ifndef RUNTIME_H__
 #define RUNTIME_H__
 
+#include "csx.h"
+#include "jit.h"
+#include "SparseInternal.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <sched.h>
 #include <string>
-#include <boost/algorithm/string.hpp>
 #include <boost/bimap.hpp>
-#include <boost/property_map/property_map.hpp>
-#include <boost/assign/list_of.hpp>
-#include <boost/unordered_map.hpp>
-
-#include "SparseInternal.h"
-#include "csx.h"
-#include "jit.h"
+#include <boost/lexical_cast.hpp>
 
 extern "C" {
 #include "mt_lib.h" //To be removed
@@ -46,7 +44,7 @@ public:
         RtNrThreads,
         RtCpuAffinity,
         PreprocXform,
-        PreprocSampling,
+        PreprocMethod,
         PreprocNrSamples,
         PreprocSamplingPortion,
         PreprocWindowSize,
@@ -57,6 +55,8 @@ public:
         MatrixMinUnitSize,
         MatrixMaxUnitSize,
         MatrixMinCoverage,
+        LogFilename,
+        LogLevel,
     };
 
     static RuntimeConfiguration &GetInstance()
@@ -67,15 +67,16 @@ public:
 
     RuntimeConfiguration &LoadFromEnv();
 
-    const string &GetProperty(const Property &key) const
+    template<typename Target>
+    Target GetProperty(const Property &key) const
     {
         PropertyMap::const_iterator iter = property_map_.find(key);
-        return iter->second;
+        return boost::lexical_cast<Target, string>(iter->second);
     }
 
     void SetProperty(const Property &key, const string &value)
     {
-        property_map_.insert(make_pair(key, value));
+        property_map_[key] = value;
     }
 
 private:
@@ -100,6 +101,27 @@ private:
     MnemonicMap mnemonic_map_;
 };
 
+// Special conversions
+// Support `true' and `false' in boolean conversions
+template<>
+bool RuntimeConfiguration::GetProperty(const Property &key) const
+{
+    PropertyMap::const_iterator iter = property_map_.find(key);
+    assert(iter != property_map_.end());
+    istringstream ss(iter->second);
+    bool ret;
+    ss >> std::boolalpha >> ret;
+    return ret;
+}
+
+template<>
+PreprocessingMethod RuntimeConfiguration::GetProperty(const Property &key) const
+{
+    PropertyMap::const_iterator iter = property_map_.find(key);
+    PreprocessingMethod ret(iter->second);
+    return ret;
+}
+
 /* Singleton class holding runtime information */
 class RuntimeContext
 {
@@ -115,12 +137,12 @@ public:
 
     size_t GetNrThreads() const
     {
-        return nr_threads_;
+        return cpu_affinity_.size();
     }
 
     size_t GetAffinity(size_t tid) const
     {
-        return affinity_[tid];
+        return cpu_affinity_[tid];
     }
 
     CsxExecutionEngine &GetEngine() const
@@ -130,24 +152,28 @@ public:
 
 private:
     RuntimeContext()
-        : nr_threads_(1), 
-          affinity_(NULL),
-          engine_(NULL)
-    {}
+        : engine_(0)
+    {
+        // Initialize the CSX JIT execution engine
+        engine_ = &CsxJitInit();
+    }
 
     ~RuntimeContext()
     {
-        free(affinity_);
+        // do not free engine_; we do not own it
     }
 
     RuntimeContext(const RuntimeContext &); // Do not implement
     RuntimeContext &operator=(const RuntimeContext &); // Do not implement
 
-    size_t nr_threads_, *affinity_;
-    CsxExecutionEngine *engine_;    //smart pointer???
+    vector<size_t> cpu_affinity_;
+    CsxExecutionEngine *engine_;
 };
 
-/* Class holding CSX-related configuration */
+/* Class holding CSX-related configuration
+ * 
+ * OBSOLETE
+ */
 class CsxContext
 {
 public:
@@ -169,7 +195,8 @@ public:
         return split_blocks_;
     }
 
-    int *GetXform() const   //add const
+    int *GetXform() const   // FIXME: const is bogus here; caller can alter
+                            // xform_buf_ ...
     {
         return xform_buf_;
     }
@@ -177,6 +204,17 @@ public:
     int **GetDeltas() const
     {
         return deltas_;
+    }
+    
+    void AddEncoding(pair<Encoding::Type, vector<int> > &encoding)
+    {
+        encoding_seq_.push_back(encoding);
+    }
+
+    const vector<pair<Encoding::Type, vector<int> > >
+    &GetEncodingSequence() const
+    {
+        return encoding_seq_;
     }
 
     size_t GetWindowSize() const
@@ -201,8 +239,10 @@ private:
           xform_buf_(NULL), 
           deltas_(NULL),
           wsize_(0),
+          sampling_(false),
           samples_max_(0), 
-          sampling_portion_(0) {}
+          sampling_portion_(0)
+    { }
 
     ~CsxContext()
     {
@@ -219,8 +259,10 @@ private:
     int *xform_buf_;
     int **deltas_;
     size_t wsize_;
+    bool sampling_;
     size_t samples_max_;
     double sampling_portion_;
+    vector<pair<Encoding::Type, vector<int> > > encoding_seq_;
 };
 
 /* Class responsible for holding per thread information */
@@ -258,7 +300,6 @@ public:
         node_ = node;
     }
 
-    //template<typename IndexType, typename ValueType>
     void SetData(csx::SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt);
 
 #if 0   // SYM

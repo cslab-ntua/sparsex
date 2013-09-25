@@ -11,12 +11,15 @@
 #ifndef SPARSEUTIL_H__
 #define SPARSEUTIL_H__
 
+#include "encodings.h"
 #include <ostream>
 #include <iomanip>
 #include <inttypes.h>
 #include <map>
 #include <stdint.h>
 #include <boost/function.hpp>
+
+using namespace std;
 
 namespace csx {
 
@@ -230,7 +233,7 @@ inline int CooCmp(const CooElem<IndexType, ValueType> &p0,
 class DeltaRLE
 {
 public:
-    DeltaRLE(uint32_t size, uint32_t delta, IterOrder type)
+    DeltaRLE(uint32_t size, uint32_t delta, Encoding::Type type)
         : size_(size), delta_(delta)
     {
         type_ = type;
@@ -258,7 +261,7 @@ public:
      *
      *  @return the type of this RLE pattern.
      */
-    virtual IterOrder GetType() const
+    virtual Encoding::Type GetType() const
     {
         return type_;
     }
@@ -270,7 +273,7 @@ public:
      */
     virtual long GetPatternId() const
     {
-        assert(type_ > NONE && type_ < BLOCK_TYPE_START &&
+        assert(type_ > Encoding::None && type_ < Encoding::BlockRowMin &&
                "not a drle type");
         return type_ * CSX_PID_OFFSET + delta_;
     }
@@ -282,7 +285,7 @@ public:
      *  @return       number of columns to procceed in order to go to the next
      *                CSX element.
      */
-    virtual long ColIncrease(IterOrder order) const
+    virtual long ColIncrease(Encoding::Type order) const
     {
         long ret = (order == type_) ? (size_ * delta_) : 1;
         return ret;
@@ -296,7 +299,7 @@ public:
      *  @return      number of columns to procceed in order to go to the next
      *               CSX element.
      */
-    virtual uint64_t ColIncreaseJmp(IterOrder order, uint64_t jmp) const
+    virtual uint64_t ColIncreaseJmp(Encoding::Type order, uint64_t jmp) const
     {
         long ret = jmp;
         if (order == type_)
@@ -406,7 +409,7 @@ protected:
     uint32_t size_, delta_;
 
 private:
-    IterOrder type_;
+    Encoding::Type type_;
 };
 
 /**
@@ -416,8 +419,8 @@ private:
  */
 class BlockRLE : public DeltaRLE {
 public:
-    BlockRLE(uint32_t size, uint32_t other_dim, IterOrder type)
-        : DeltaRLE(size, 1, (assert(IsBlockType(type)), type))
+    BlockRLE(uint32_t size, uint32_t other_dim, Encoding &enc)
+        : DeltaRLE(size, 1, (assert(enc.GetBlockAlignment()), enc.GetType()))
     {
         other_dim_ = other_dim;
     }

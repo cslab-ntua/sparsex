@@ -10,7 +10,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsepartition.h"
+#include "SparsePartition.h"
 
 #define FOREACH BOOST_FOREACH
 

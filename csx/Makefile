@@ -27,7 +27,7 @@ AR_FLAGS     = cru
 # Always add the following flags
 override CPPFLAGS += -DMULT_TEMPLATE_DIR=\"$(mult_template_dir)\" -DCLANG_PREFIX=\"$(clang_prefix)\" -DCSX_PREFIX=\"$(csx_prefix)\" -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -D_GNU_SOURCE -D__STDC_FORMAT_MACROS
 override CPPFLAGS += -I$(dynarray_dir) -I$(spm_dir) -I$(prfcnt_dir) -I$(llvm_dir)
-override LDFLAGS  += -Wl,--allow-multiple-definition -Wl,--rpath=$(shell pwd)
+override LDFLAGS  += -Wl,--allow-multiple-definition -Wl,--rpath=$(shell pwd) -pthread
 
 # cairomm
 CAIROMM_FLAGS   = $(shell pkg-config cairomm-1.0 --cflags)
@@ -39,8 +39,13 @@ LLVM_CPPFLAGS	=
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 CLANG_LDFLAGS   = -Wl,--start-group -lclangAnalysis -lclangAST -lclangBasic -lclangCodeGen -lclangDriver -lclangFrontend -lclangFrontendTool -lclangIndex -lclangLex -lclangParse -lclangRewrite -lclangSema -lclangSerialization -lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangStaticAnalyzerFrontend -Wl,--end-group
 dynarray_dep    = $(dynarray_dir)/dynarray.o
+libadd = $(dynarray_dir)/dynarray.o $(spm_dir)/libspmv.o
 
-CSX_OBJECTS = timer.o runtime.o spmv.o jit.o csx.o template_text.o jit_util.o compiler.o $(spm_dir)/libspmv.o dynamic_array.o
+DEPDIR = .deps
+df = $(DEPDIR)/$(*F)
+CSX_SRC = compiler.cc csx.cc drle.cc dynamic_array.cc encodings.cc \
+jit.cc jit_util.cc main.cc runtime.cc spmv.cc template_text.cc timer.cc
+CSX_OBJECTS = $(CSX_SRC:%.cc=%.o)
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	override CPPFLAGS += -DSPM_NUMA
@@ -51,49 +56,24 @@ CC_COMPILE  = $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK        = $(LD) $(LDFLAGS)
 ARCHIVE     = $(AR) $(AR_FLAGS)
 
-#draw.o: draw.cc spm.h draw.h
-#	$(CXX_COMPILE) $(CAIROMM_FLAGS) $< -c -o $@
+%.o: %.cc
+	$(CXX_COMPILE) -c -MD -o $@ $<
+	@cp $*.d $(df).P; \
+    sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $(df).P; \
+	rm -f $*.d
 
-#draw: draw.cc sparsepartition.h sparsepartition_impl.hpp draw.h
-#	$(LINK) $(dynarray_dep) $<  -o $@ $(CAIROMM_FLAGS) $(CAIROMM_LIBS) 
+-include $(CSX_SRC:%.cc=$(DEPDIR)/%.P)
 
-csx.o: csx.cc csx.h SparsePartition.h delta.h $(spm_dir)/numa_util.h $(dynarray_dir)/dynarray.h ctl_ll.h
-	$(CXX_COMPILE) -I$(dynarray_dir) $< -c -o $@
-
-test.o: test.cc drle.h SparseParition.h
-	$(CXX_COMPILE) $< -c -o $@
-
-drle_test: mmf.o sparsepartition.o drle.o test.o drle_test.cc
-	$(LINK) $^ -o $@
-
-%.o: %.cc %.h
-	$(CXX_COMPILE) -c $<
-
-%.o: %.c %.h
-	$(CC_COMPILE) -c $<
-
-#elmerif.o: elmerif.cc elmerif.h spmv.h csr.h SparseInternal.h SparsePartition.h
-#	$(CXX_COMPILE) -DSPM_CRS_BITS=32 -c $<
-runtime.o: csx.h SparsePartition.h jit.h $(spm_dir)/spm_mt.h $(spm_dir)/mt_lib.h
-jit.o: SparsePartition.h csx.h drle.h template_text.h jit_util.h jit_config.h
-compiler.o: jit_util.h
-spmv.o: MatrixLoading.h SparsePartition.h runtime.h csx.h drle.h jit.h timer.h ctl_ll.h $(spm_dir)/spm_mt.h $(spm_dir)/mt_lib.h $(spm_dir)/spmv_method.h $(spm_dir)/spm_crs.h
-#elmerif.o: csr.h spmv.h
-main.o: spmv.h MatrixLoading.h runtime.h SparseInternal.h SparsePartition.h mmf.h csx.h
-#libcsx_test.o: elmerif.h $(spm_dir)/spm_crs.h
-rcm_test.o: rcm.h runtime.h spmv.h SparseInternal.h SparsePartition.h mmf.h csr.h
-sparsematrix_test.o: spmv.h rcm.h runtime.h SparseInternal.h SparsePartition.h SparseMatrix.h mmf.h csr.h csx.h
-# SaveRestore.h
-dynamic_array.o: allocators.h $(dynarray_dir)/dynarray.h
 # elmerif.o
 libcsx.so: $(CSX_OBJECTS)
-	$(LINK) -shared -o $@ $^ $(dynarray_dep) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS)
+	$(LINK) -shared -o $@ $^ $(libadd) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS)
 
 libcsx.a: $(CSX_OBJECTS)
 	$(ARCHIVE) $@ $^
 
 spmv: main.o libcsx.so
-	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(dynarray_dep) $(LIBS)
+	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(libadd) $(LIBS)
 
 #libcsx_test: libcsx_test.o libcsx.so $(spm_dir)/libspmv.o
 #	$(LINK) -o $@ $^ $(LIBS)
@@ -102,10 +82,10 @@ rcm_test: rcm_test.o libcsx.so
 	$(LINK) -o $@ $^ $(LIBS)
 
 sparsematrix_test: sparsematrix_test.o libcsx.so
-	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(dynarray_dep) $(LIBS)
+	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(libadd) $(LIBS)
 
 dynamic_array_test: dynamic_array.o timer.o
-	$(LINK) -o $@ $^ $(dynarray_dep) -lnuma
+	$(LINK) -o $@ $^ $(libadd) -lnuma
 
 clean:
-	rm -f *.o spmv libcsx.a libcsx.so libcsx_test dynamic_array_test rcm_test sparsematrix_test
+	rm -f *.o *.d spmv libcsx.a libcsx.so libcsx_test dynamic_array_test rcm_test sparsematrix_test

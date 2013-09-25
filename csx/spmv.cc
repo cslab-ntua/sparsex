@@ -239,21 +239,23 @@ uint64_t MapSize(void *spm)
 }
 #endif  // SYM    
 
-spm_mt_t *PrepareSpmMt(const RuntimeContext &rt_config,
-                       const CsxContext &csx_config)
+spm_mt_t *PrepareSpmMt()
 {
+    RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
+    RuntimeContext &rt_context = RuntimeContext::GetInstance();
     spm_mt_t *spm_mt;
     spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
 
-    spm_mt->nr_threads = rt_config.GetNrThreads();
-    spm_mt->symmetric = csx_config.IsSymmetric();
+    spm_mt->nr_threads = rt_context.GetNrThreads();
+    spm_mt->symmetric = rt_config.GetProperty<bool>(
+        RuntimeConfiguration::MatrixSymmetric);
     spm_mt->spm_threads = (spm_mt_thread_t *) xmalloc
-        (sizeof(spm_mt_thread_t) * rt_config.GetNrThreads());
+        (sizeof(spm_mt_thread_t) * rt_context.GetNrThreads());
 
-    for (size_t i = 0; i < rt_config.GetNrThreads(); i++) {
-        spm_mt->spm_threads[i].cpu = rt_config.GetAffinity(i);
+    for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
+        spm_mt->spm_threads[i].cpu = rt_context.GetAffinity(i);
         spm_mt->spm_threads[i].node =
-            numa_node_of_cpu(rt_config.GetAffinity(i));
+            numa_node_of_cpu(rt_context.GetAffinity(i));
         spm_mt->spm_threads[i].id = i;
     }
 

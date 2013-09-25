@@ -2,16 +2,20 @@
  *
  * drle.h -- Delta Run-Length Encoding Manager
  *
- * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2009-2012, Vasileios Karakasis
+ * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2013, Vasileios Karakasis
  * Copyright (C) 2010-2012, Theodoros Gkountouvas
+ * Copyright (C) 2009-2011, Kornilios Kourtis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 #ifndef CSX_DRLE_H__
 #define CSX_DRLE_H__
+
+#include "encodings.h"
+#include "runtime.h"
+#include "timer.h"
 
 #include <map>
 #include <set>
@@ -20,9 +24,10 @@
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
-#include "timer.h"
 
 #define FOREACH BOOST_FOREACH
+
+using namespace std;
 
 namespace csx {
 
@@ -49,7 +54,7 @@ const char *pre_timers_desc_[] =
  *  encoding the matrix.
  */
 template<typename IndexType, typename ValueType>
-class DRLE_Manager
+class EncodingManager
 {
 public:    
     /**
@@ -63,20 +68,11 @@ public:
     } split_alg_t;
     
     typedef typename std::vector<IndexType>::iterator sort_split_iterator;
-    typedef std::map<IterOrder, DeltaRLE::Stats> StatsMap;
+    typedef std::map<Encoding::Type, DeltaRLE::Stats> StatsMap;
     
-    DRLE_Manager(SparsePartition<IndexType, ValueType> *sp,
-                 long min_limit = 4, 
-                 long max_limit = std::numeric_limits<long>::max(),
-                 double min_perc = .1,
-                 uint64_t sort_window_size = 0,
-                 split_alg_t split_type = SPLIT_BY_ROWS,
-                 double sampling_probability = 1.0,
-                 uint64_t samples_max = std::numeric_limits<uint64_t>::max(),
-                 bool split_blocks = false,
-                 bool onedim_blocks = false);
-
-    ~DRLE_Manager() {
+    EncodingManager(SparsePartition<IndexType, ValueType> *spm,
+                    RuntimeConfiguration &config);
+    ~EncodingManager() {
         if (selected_splits_)
             delete selected_splits_;
     }
@@ -96,7 +92,7 @@ public:
 
     /**
      *  Generate statistics for all available patterns for the matrix owned by
-     *  this DRLE_Manager.
+     *  this EncodingManager.
      */
     void GenAllStats();
 
@@ -108,34 +104,69 @@ public:
     void OutStats(std::ostream &os=std::cout);
 
     /**
-     *  Instruct DRLE_Manager to ignore a specific type of pattern. Patterns of
-     *  this type will not be considered during generation of statistics.
+     *  Instruct EncodingManager to ignore a specific type of pattern. Patterns
+     *  of this type will not be considered during generation of statistics.
      *
      *  @param type the pattern type to be ignored.
      *  @see GenAllStats()
      */
-    void AddIgnore(IterOrder type);
+    void AddIgnore(Encoding::Type type)
+    {
+        xforms_ignore_.set(type);
+    }
+
+    void AddIgnore(const Encoding &enc)
+    {
+        vector<Encoding::Type> types;
+        enc.GetTypes(types);
+        for (size_t i = 0; i < types.size(); i++)
+            AddIgnore(types[i]);
+    }
 
     /**
-     *  Instruct DRLE_Manager to ignore all types of patterns.
+     *  Instruct EncodingManager to ignore all types of patterns.
      */
-    void IgnoreAll();
+    void IgnoreAll()
+    {
+        xforms_ignore_.set();
+    }
+
+    void RemoveIgnore(const Encoding::Type type)
+    {
+        if (!onedim_blocks_ && (type == Encoding::BlockRow1 ||
+                                type == Encoding::BlockCol1))
+            return;
+        
+        assert(!Encoding(type).IsGroup());
+        xforms_ignore_.reset(type);
+    }
+
+    void RemoveIgnore(const Encoding &enc)
+    {
+        vector<Encoding::Type> types;
+        enc.GetTypes(types);
+        for (size_t i = 0; i < types.size(); i++)
+            RemoveIgnore(types[i]);
+    }
+
+    void RemoveIgnore(const EncodingSequence &encseq)
+    {
+        for (EncodingSequence::const_iterator iter = encseq.Cbegin();
+             iter != encseq.Cend(); ++iter) {
+            const Encoding &e = iter->first;
+            RemoveIgnore(e);
+        }
+    }
 
     /**
-     *  Instruct DRLE_Manager not to ignore the patterns of type <tt>type</tt>
-     *  anymore.
-     *
-     *  @param type type which is no longer ignored.
-     *  @see AddIgnore()
-     */
-    void RemoveIgnore(IterOrder type);
-
-    /**
-     *  Instruct DRLE_Manager not to ignore any type of available patterns.
+     *  Instruct EncodingManager not to ignore any type of available patterns.
      *
      *  @see IgnoreAll()
      */
-    void RemoveAll();
+    void RemoveAll()
+    {
+        xforms_ignore_.reset();
+    }
 
     /**
      *  Choose a pattern type for encoding the matrix. This function chooses the
@@ -144,7 +175,7 @@ public:
      *  @return the type chosen.
      *  @see GetTypeScore()
      */
-    IterOrder ChooseType();
+    Encoding::Type ChooseType();
 
     /**
      *  Get the score of the specified type of patterns. This function
@@ -164,14 +195,14 @@ public:
      *  @return     score of the type.
      *  @see GenAllStats()
      */
-    long GetTypeScore(IterOrder type);
+    long GetTypeScore(Encoding::Type type);
 
     /**
      *  Encode all the patterns of the specified type.
      *
      *  @param type         type of patterns to be encoded.
      */
-    void Encode(IterOrder type = NONE);
+    void Encode(Encoding::Type type = Encoding::None);
 
     /**
      *  Decode, i.e., restore to their original form, all the matrix elements of
@@ -179,12 +210,12 @@ public:
      *
      *  @param type type of patterns to be decoded.
      */
-    void Decode(IterOrder type = NONE);
+    void Decode(Encoding::Type type = Encoding::None);
 
     /**
-     *  Encode all available patterns in the matrix owned by this DRLE_Manager
-     *  and send the output (statistics, choice, etc.) to the specified output
-     *  stream.
+     *  Encode all available patterns in the matrix owned by this
+     *  EncodingManager and send the output (statistics, choice, etc.) to the
+     *  specified output stream.
      *
      *  @param os           the output stream, where to send the output.
      *  @see Encode()
@@ -193,17 +224,14 @@ public:
 
     /**
      *  Search for and output all the encoding sequences of the matrix owned
-     *  by this DRLE_Manager.
+     *  by this EncodingManager.
      */
     void MakeEncodeTree();
 
     /**
      *  Encode patterns of a series of types explicitly specified by the user.
-     *
-     *  @param xform        array of types_id.
-     *  @param deltas       deltas that match to the corresponding types.
      */
-    void EncodeSerial(int *xform, int **deltas);
+    void EncodeSerial(const EncodingSequence &encseq);
 
     /**
      *  Output the split points of the sorting windows, if windows are used for
@@ -221,8 +249,8 @@ public:
 private:
     /**
      *  Encode a sequence of elements. This function calls DoEncodeBlock() or
-     *  DoEncodeBlockAlt() if the type of the matrix owned by this DRLE_Manager
-     *  is a block type.
+     *  DoEncodeBlockAlt() if the type of the matrix owned by this
+     *  EncodingManager is a block type.
      *
      *  @param xs           the sequence of the column indices of the elements
      *                      to encode. This vector will be cleared at exit.
@@ -252,7 +280,8 @@ private:
      *  @param vs      values of elements that are going to be encoded.
      *  @param encoded vector to append the encoded elements.
      */
-    void DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
+    void DoEncodeBlockAlt(std::vector<IndexType> &xs,
+                          std::vector<ValueType> &vs,
                           std::vector<Elem<IndexType, ValueType> > &encoded);
 
     /**
@@ -323,7 +352,7 @@ private:
      *  @param stats stats added.
      *  @param type  type which stats are being updated.
      */
-    void UpdateStats(IterOrder type, DeltaRLE::Stats stats);
+    void UpdateStats(Encoding::Type type, DeltaRLE::Stats stats);
 
     /**
      *  Updates the stats for a block pattern.
@@ -342,11 +371,11 @@ private:
      *  @param type   type which stats are being updated.
      *  @param factor weight of the specific type.
      */
-    void CorrectStats(IterOrder type, double factor);
+    void CorrectStats(Encoding::Type type, double factor);
 
     /**
      *  Computes the actual splits points (i.e., the starting rows) of the
-     *  sorting windows according to the policy of this DRLE_Manager.
+     *  sorting windows according to the policy of this EncodingManager.
      *
      *  If the split policy is SPLIT_BY_ROWS, the window size specifies the
      *  number of rows of the original matrix assigned to each window.
@@ -380,23 +409,25 @@ private:
 
 private:
     SparsePartition<IndexType, ValueType> *spm_;
+    RuntimeConfiguration &config_;
     long min_limit_;
     long max_limit_;
     double min_perc_;
-    bool sort_windows_;
+    bool sampling_enabled_;
     uint64_t sort_window_size_;
-    split_alg_t split_type_;
-    std::vector<IndexType> sort_splits_;
-    std::vector<IndexType> sort_splits_nzeros_;
-    size_t *selected_splits_;
+    PreprocessingMethod preproc_method_;
     double sampling_portion_;
     uint64_t samples_max_;
     bool symmetric_;
     bool split_blocks_;
     bool onedim_blocks_;
+    split_alg_t split_type_;
+    std::vector<IndexType> sort_splits_;
+    std::vector<IndexType> sort_splits_nzeros_;
+    size_t *selected_splits_;
     StatsMap stats_;
-    std::map<IterOrder, std::set<uint64_t> > deltas_to_encode_;
-    std::bitset<XFORM_MAX> xforms_ignore_;
+    std::map<Encoding::Type, std::set<uint64_t> > deltas_to_encode_;
+    std::bitset<Encoding::Max> xforms_ignore_;
     //xtimer_t pre_timers_[PRE_TIMER_END];
     Timer pre_timers_[PRE_TIMER_END];
 };
@@ -429,7 +460,7 @@ public:
      *
      *  @param type type which is ignored.
      */
-    void Ignore(IterOrder type);
+    void Ignore(Encoding::Type type);
 
     /**
      *  Copies a node to a new one and inserts an extra type in the end of the
@@ -438,14 +469,14 @@ public:
      *  @param type   type which is inserted in the end.
      *  @param deltas deltas corresponding to type inserted.
      */
-    Node MakeChild(IterOrder type, std::set<uint64_t> deltas);
+    Node MakeChild(Encoding::Type type, std::set<uint64_t> deltas);
 
 private:
     uint32_t depth_;
-    std::map<IterOrder, std::set<uint64_t> > deltas_path_;
-    IterOrder *type_path_;
-    IterOrder *type_ignore_;
-    friend class DRLE_Manager<uint64_t, double>;
+    std::map<Encoding::Type, std::set<uint64_t> > deltas_path_;
+    Encoding::Type *type_path_;
+    Encoding::Type *type_ignore_;
+    friend class EncodingManager<uint64_t, double>;
 };
 
 }
@@ -539,73 +570,72 @@ RLEncode(T input)
 }	                  
 
 /*
- * Implementation of class DRLE_Manager
+ * Implementation of class EncodingManager
  */
 template<typename IndexType, typename ValueType>
-DRLE_Manager<IndexType, ValueType>::
-DRLE_Manager(SparsePartition<IndexType, ValueType> *spm, long min_limit,
-             long max_limit, double min_perc, uint64_t sort_window_size,
-             split_alg_t split_type, double sampling_portion,
-             uint64_t samples_max, bool split_blocks, bool onedim_blocks)
-    : spm_(spm), min_limit_(min_limit),
-      max_limit_(max_limit), min_perc_(min_perc),
-      sort_window_size_(sort_window_size),
-      split_type_(split_type),
-      sampling_portion_(sampling_portion),
-      samples_max_(samples_max),
-      split_blocks_(split_blocks),
-      onedim_blocks_(onedim_blocks)
+EncodingManager<IndexType, ValueType>::
+EncodingManager(SparsePartition<IndexType, ValueType> *spm,
+                RuntimeConfiguration &config)
+        : spm_(spm),
+          config_(config),
+          min_limit_(config_.GetProperty<size_t>(
+                         RuntimeConfiguration::MatrixMinUnitSize)),
+          max_limit_(config_.GetProperty<size_t>(
+                         RuntimeConfiguration::MatrixMaxUnitSize)),
+          min_perc_(config_.GetProperty<double>(
+                        RuntimeConfiguration::MatrixMinCoverage)),
+          sort_window_size_(config_.GetProperty<size_t>(
+                                RuntimeConfiguration::PreprocWindowSize)),
+          preproc_method_(config_.GetProperty<PreprocessingMethod>(
+                              RuntimeConfiguration::PreprocMethod)),
+          sampling_portion_(config_.GetProperty<double>(
+                                RuntimeConfiguration::PreprocSamplingPortion)),
+          samples_max_(config_.GetProperty<size_t>(
+                           RuntimeConfiguration::PreprocNrSamples)),
+          split_blocks_(config_.GetProperty<bool>(
+                            RuntimeConfiguration::MatrixSplitBlocks)),
+          onedim_blocks_(config_.GetProperty<bool>(
+                             RuntimeConfiguration::MatrixOneDimBlocks)),
+          split_type_(SPLIT_BY_NNZ)
 {
-    // These are delimiters, ignore them by default.
-    AddIgnore(BLOCK_TYPE_START);
-    AddIgnore(BLOCK_COL_START);
-    AddIgnore(BLOCK_TYPE_END);
+    // Ignore all encodings by default
+    IgnoreAll();
+
+    // if (!onedim_blocks_) {
+    //     AddIgnore(Encoding::BlockRow1);
+    //     AddIgnore(Encoding::BlockCol1);
+    // }
     
-    if (!onedim_blocks_) {
-        AddIgnore(BLOCK_ROW_TYPE_NAME(1));
-        AddIgnore(BLOCK_COL_TYPE_NAME(1));
-    }
-    
-    assert(sampling_portion_ >= 0 && sampling_portion_ <= 1 &&
-           "invalid sampling portion");
-    CheckAndSetSorting();
-    if (sort_windows_) {
-        if (sampling_portion > 0) {
+    // Setup preprocessing
+    if (preproc_method_.GetType() == PreprocessingMethod::None) {
+        sampling_enabled_ = false;
+        selected_splits_ = 0;
+    } else {
+        assert(samples_max_ > 0 && "invalid samples number");
+        assert(sampling_portion_ > 0 && sampling_portion_ <= 1 &&
+               "invalid sampling portion");
+        if (preproc_method_.GetType() == PreprocessingMethod::FixedPortion) {
             sort_window_size_ =
                 sampling_portion_*spm_->GetNrNonzeros() / samples_max_;
         }
-        
-        ComputeSortSplits();
-#if 0
-        std::cout << "Window size (computed): "
-                  << sort_window_size_ << std::endl;
-        for (size_t i = 0; i < sort_splits_.size() - 1; ++i) {
-            printf("(%ld, %ld)\n", sort_splits_[i+1] - sort_splits_[i],
-                   sort_splits_nzeros_[i]);
-        }
-#endif
 
+        ComputeSortSplits();
         if (samples_max_ > sort_splits_.size())
             samples_max_ = sort_splits_.size();
 
         SelectSplits();
-    } else {
-        selected_splits_ = 0;
     }
-    
-    //for (int i = 0; i < PRE_TIMER_END; i++)
-        //timer_init(&pre_timers_[i]);
 }
     
 template<typename IndexType, typename ValueType>
-DeltaRLE::Stats DRLE_Manager<IndexType, ValueType>::GenerateStats(IndexType rs,
+DeltaRLE::Stats EncodingManager<IndexType, ValueType>::GenerateStats(IndexType rs,
                                                                   IndexType re)
 {
     return GenerateStats(spm_, rs, re);
 }
 
 template<typename IndexType, typename ValueType>
-DeltaRLE::Stats DRLE_Manager<IndexType, ValueType>::
+DeltaRLE::Stats EncodingManager<IndexType, ValueType>::
 GenerateStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
               IndexType re)
 {
@@ -632,7 +662,7 @@ GenerateStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 GenerateDeltaStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
                    IndexType re, DeltaRLE::Stats &stats)
 {
@@ -675,7 +705,7 @@ GenerateDeltaStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::GenAllStats()
+void EncodingManager<IndexType, ValueType>::GenAllStats()
 {
     DeltaRLE::Stats::iterator iter, tmp;
     DeltaRLE::Stats *sp;
@@ -683,10 +713,10 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
     stats_.clear();
     deltas_to_encode_.clear();
 
-    if (sort_windows_ && spm_->GetNrRows() > samples_max_) {
+    if (sampling_enabled_ && spm_->GetNrRows() > samples_max_) {
         uint64_t samples_nnz = 0;
 
-        spm_->Transform(HORIZONTAL); 
+        spm_->Transform(Encoding::Horizontal);
         for (size_t i = 0; i < samples_max_; ++i) {
             uint64_t window_start = sort_splits_[selected_splits_[i]];
             uint64_t window_size =
@@ -697,31 +727,31 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
             if (window->GetNrNonzeros() != 0) {
                 samples_nnz += sort_splits_nzeros_[selected_splits_[i]];
 
-                for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
+                for (Encoding::Type t = Encoding::Horizontal;
+                     t < Encoding::Max; ++t) {
                     if (xforms_ignore_[t])
                         continue;
 
-                    IterOrder type = SpmTypes[t];
                     DeltaRLE::Stats w_stats;
-
-                    window->Transform(type);
+                    window->Transform(t);
                     w_stats = GenerateStats(window, 0, window->GetNrRows());
-                    UpdateStats(type, w_stats);
+                    UpdateStats(t, w_stats);
                 }
             }
-            window->Transform(HORIZONTAL);
+            window->Transform(Encoding::Horizontal);
             spm_->PutWindow(window);
             delete window;
         }
-        for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
+
+        for (Encoding::Type t = Encoding::Horizontal; t < Encoding::Max; ++t) {
             if (xforms_ignore_[t])
                 continue;
 
-            IterOrder type = SpmTypes[t];
-            uint64_t block_align = IsBlockType(type);
+            Encoding e(t);
+            size_t block_align = e.GetBlockAlignment();
 
-            CorrectStats(type, spm_->GetNrNonzeros() / (double) samples_nnz);
-            sp = &stats_[type];
+            CorrectStats(t, spm_->GetNrNonzeros() / (double) samples_nnz);
+            sp = &stats_[t];
             if (block_align && split_blocks_)
                 CorrectBlockStats(sp, block_align);
 
@@ -735,7 +765,7 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
                 else if (p < min_perc_ || tmp->first >= CSX_PID_OFFSET)
                     sp->erase(tmp);
                 else
-                    deltas_to_encode_[type].insert(tmp->first);
+                    deltas_to_encode_[t].insert(tmp->first);
             }
         }
     } else {
@@ -743,16 +773,16 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
 #ifdef SPM_HEUR_NEW
         GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), stats_[NONE]);
 #endif
-        for (int t = HORIZONTAL; t != XFORM_MAX; ++t) {
+        for (Encoding::Type t = Encoding::Horizontal; t < Encoding::Max; ++t) {
             if (xforms_ignore_[t])
                 continue;
 
-            IterOrder type = SpmTypes[t];
-            uint64_t block_align = IsBlockType(type);
+            Encoding e(t);
+            size_t block_align = e.GetBlockAlignment();
 
-            spm_->Transform(type);
-            stats_[type] = GenerateStats(0, spm_->GetNrRows());
-            sp = &stats_[type];
+            spm_->Transform(t);
+            stats_[t] = GenerateStats(0, spm_->GetNrRows());
+            sp = &stats_[t];
             if (block_align && split_blocks_)
                 CorrectBlockStats(sp, block_align);
 
@@ -766,7 +796,7 @@ void DRLE_Manager<IndexType, ValueType>::GenAllStats()
                 else if (p < min_perc_ || tmp->first >= CSX_PID_OFFSET)
                     sp->erase(tmp);
                 else
-                    deltas_to_encode_[type].insert(tmp->first);
+                    deltas_to_encode_[t].insert(tmp->first);
             }
 #ifdef SPM_HEUR_NEW
             GenerateDeltaStats(spm_, 0, spm_->GetNrRows(), *sp);
@@ -796,46 +826,13 @@ void DRLE_OutStats(DeltaRLE::Stats &stats,
 } // end of csx namespace
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::AddIgnore(IterOrder type)
+Encoding::Type EncodingManager<IndexType, ValueType>::ChooseType()
 {
-    xforms_ignore_.set(type);
-}
-
-template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::IgnoreAll()
-{
-    xforms_ignore_.set();
-}
-
-template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::RemoveIgnore(IterOrder type)
-{
-    // the following types are always ignored
-    if (type <= NONE || type == BLOCK_TYPE_START ||
-        (type == BLOCK_ROW_TYPE_NAME(1) && !onedim_blocks_) ||
-        type == BLOCK_COL_START ||
-        (type == BLOCK_COL_TYPE_NAME(1) && !onedim_blocks_) ||
-        type == BLOCK_TYPE_END ||
-        type >= XFORM_MAX)
-        return;
-    xforms_ignore_.reset(type);
-}
-
-template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::RemoveAll()
-{
-    for (int t = NONE; t < XFORM_MAX; ++t)
-        xforms_ignore_.reset(t);
-}
-
-template<typename IndexType, typename ValueType>
-IterOrder DRLE_Manager<IndexType, ValueType>::ChooseType()
-{
-    IterOrder ret;
+    Encoding::Type ret;
     long max_score;
-    DRLE_Manager::StatsMap::iterator iter;
+    EncodingManager::StatsMap::iterator iter;
 
-    ret = NONE;
+    ret = Encoding::None;
     max_score = 0;
     for (iter = stats_.begin(); iter != stats_.end(); ++iter){
         long score = GetTypeScore(iter->first);
@@ -851,7 +848,7 @@ IterOrder DRLE_Manager<IndexType, ValueType>::ChooseType()
 }
 
 template<typename IndexType, typename ValueType>
-long DRLE_Manager<IndexType, ValueType>::GetTypeScore(IterOrder type)
+long EncodingManager<IndexType, ValueType>::GetTypeScore(Encoding::Type type)
 {
     DeltaRLE::Stats *sp;
     DeltaRLE::Stats::iterator iter;
@@ -866,7 +863,7 @@ long DRLE_Manager<IndexType, ValueType>::GetTypeScore(IterOrder type)
     sp = &stats_[type];
 
     for (iter = sp->begin(); iter != sp->end(); ++iter) {
-        if (iter->first == 0 && type != NONE) {
+        if (iter->first == 0 && type != Encoding::None) {
             nr_deltas += iter->second.npatterns;
         } else {
             nr_nzeros_encoded += iter->second.nnz;
@@ -896,14 +893,14 @@ long DRLE_Manager<IndexType, ValueType>::GetTypeScore(IterOrder type)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::Encode(IterOrder type)
+void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
 {
     typename SparsePartition<IndexType, ValueType>::Builder *SpmBld;
     std::vector<Elem<IndexType, ValueType> > new_row;
     size_t nr_size;
     Elem<IndexType, ValueType> *elems;
 
-    if (type == NONE && ((type = ChooseType()) == NONE))
+    if (type == Encoding::None && ((type = ChooseType()) == Encoding::None))
         return;
 
     // Transform matrix to the desired iteration order
@@ -936,14 +933,14 @@ void DRLE_Manager<IndexType, ValueType>::Encode(IterOrder type)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::Decode(IterOrder type)
+void EncodingManager<IndexType, ValueType>::Decode(Encoding::Type type)
 {
     typename SparsePartition<IndexType, ValueType>::Builder *SpmBld;
     std::vector<Elem<IndexType, ValueType> > new_row;
     size_t nr_size;
     Elem<IndexType, ValueType> *elems;
 
-    if (type == NONE)
+    if (type == Encoding::None)
         return;
 
     // Transform matrix to the desired iteration order
@@ -972,11 +969,11 @@ void DRLE_Manager<IndexType, ValueType>::Decode(IterOrder type)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
+void EncodingManager<IndexType, ValueType>::EncodeAll(std::ostream &os)
 {
-    IterOrder type = NONE;
+    Encoding::Type type = Encoding::None;
+    Encoding::Type enc_seq[Encoding::Max];
     StatsMap::iterator iter; 
-    IterOrder enc_seq[22];
     int counter = 0;
 
     //timer_start(&pre_timers_[PRE_TIMER_TOTAL]);
@@ -989,11 +986,12 @@ void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
         pre_timers_[PRE_TIMER_STATS].Pause();
         OutStats(os);
         type = ChooseType();
-        if (type == NONE)
+        if (type == Encoding::None)
             break;
         //timer_start(&pre_timers_[PRE_TIMER_ENCODE]);
         pre_timers_[PRE_TIMER_ENCODE].Start();
-        os << "Encode to " << SpmTypesNames[type] << std::endl;
+        Encoding e(type);
+        os << "Encode to " << e << "\n";
         
         Encode(type);
 
@@ -1006,23 +1004,26 @@ void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
         pre_timers_[PRE_TIMER_ENCODE].Pause();
     }
 
-    spm_->Transform(HORIZONTAL);
+    spm_->Transform(Encoding::Horizontal);
     //timer_pause(&pre_timers_[PRE_TIMER_TOTAL]);
     pre_timers_[PRE_TIMER_TOTAL].Pause();
 
     os << "Encoding sequence: ";
-    if (counter == 0)
-        os << "NONE";
-    else
-        os << SpmTypesNames[enc_seq[0]];
+    if (counter == 0) {
+        Encoding e(Encoding::None);
+        os << e;
+    } else {
+        Encoding e(enc_seq[0]);
+        os << e;
+    }
 
-    for (int i = 1; i < counter; i++)
-        os << ", " << SpmTypesNames[enc_seq[i]];
-    os << std::endl;
+    for (int i = 1; i < counter; i++) {
+        Encoding e(enc_seq[i]);
+        os << ", " << e;
+    }
+    os << "\n";
 
-    
     double t;
-
     for (int i = 0; i < PRE_TIMER_END; i++) {
         //t = timer_secs(&pre_timers_[i]);
         t = pre_timers_[i].ElapsedTime();
@@ -1031,7 +1032,7 @@ void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::MakeEncodeTree()
+void EncodingManager<IndexType, ValueType>::MakeEncodeTree()
 {
     uint32_t i,j;
     uint32_t count = 0;
@@ -1041,11 +1042,11 @@ void DRLE_Manager<IndexType, ValueType>::MakeEncodeTree()
 
     nodes.push_back(Node(0));
     while (nodes.size() != 0) {
-        for (i = 0; nodes[0].type_ignore_[i] != NONE; ++i)
+        for (i = 0; nodes[0].type_ignore_[i] != Encoding::None; ++i)
             AddIgnore(nodes[0].type_ignore_[i]);
             
         GenAllStats();
-        for (i = 0; nodes[0].type_ignore_[i] != NONE; ++i)
+        for (i = 0; nodes[0].type_ignore_[i] != Encoding::None; ++i)
             RemoveIgnore(nodes[0].type_ignore_[i]);
             
         for (iter = stats_.begin(); iter != stats_.end(); ++iter)
@@ -1088,32 +1089,34 @@ void DRLE_Manager<IndexType, ValueType>::MakeEncodeTree()
         nodes.erase(nodes.begin());
     }
 
-    std::cout << "Tree has " << count << " possible paths" << std::endl;
+    std::cout << "Tree has " << count << " possible paths\n";
     exit(0);
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::EncodeSerial(int *xform_buf,
-                                                      int **deltas)
+void EncodingManager<IndexType, ValueType>::EncodeSerial(
+    const EncodingSequence &encseq)
 {
-    for (uint32_t i = 0; i < XFORM_MAX; ++i)
-        AddIgnore((IterOrder) i);
+    IgnoreAll();
+    for (EncodingSequence::const_iterator iter = encseq.Cbegin();
+         iter != encseq.Cend(); ++iter) {
+        const Encoding &e = iter->first;
+        RemoveIgnore(e);
+        for (EncodingSequence::delta_const_iterator
+                 diter = encseq.DeltasCbegin(iter);
+             diter != encseq.DeltasCend(iter); ++diter) {
+            deltas_to_encode_[e.GetType()].insert(*diter);
+        }
 
-    for (int i = 0; xform_buf[i] != -1; ++i) {
-        IterOrder t = static_cast<IterOrder>(xform_buf[i]);
-
-        RemoveIgnore(t);
-        for (int j = 0; deltas[i][j] != -1; ++j)
-            deltas_to_encode_[t].insert(deltas[i][j]);
-            
-        Encode(t);
-        AddIgnore(t);
+        Encode(e.GetType());
+        AddIgnore(e.GetType());
     }
-    spm_->Transform(HORIZONTAL);
+
+    spm_->Transform(Encoding::Horizontal);
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::OutputSortSplits(std::ostream& out)
+void EncodingManager<IndexType, ValueType>::OutputSortSplits(std::ostream& out)
 {
     sort_split_iterator iter;
     for (iter = sort_splits_.begin(); iter != sort_splits_.end() - 1; ++iter) {
@@ -1127,7 +1130,7 @@ void DRLE_Manager<IndexType, ValueType>::OutputSortSplits(std::ostream& out)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 DoEncode(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
          std::vector<Elem<IndexType, ValueType> > &encoded)
 {
@@ -1137,7 +1140,8 @@ DoEncode(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
     typename std::vector<ValueType>::iterator vi = vs.begin();
     Elem<IndexType, ValueType> elem;
 
-    if (IsBlockType(spm_->GetType())) {
+    Encoding e(spm_->GetType());
+    if (e.IsBlock()) {
         if (!split_blocks_)
             DoEncodeBlock(xs, vs, encoded);
         else
@@ -1150,7 +1154,7 @@ DoEncode(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
 
     // Not all delta rles are to be encoded, only those
     // that are in the ->deltas_to_encode set
-    deltas_set = &deltas_to_encode_[spm_->GetType()];
+    deltas_set = &deltas_to_encode_[e.GetType()];
 
     col = 0;
     elem.pattern = NULL;
@@ -1217,7 +1221,7 @@ DoEncode(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
 
 //static uint64_t nr_lines = 0;
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
               std::vector<Elem<IndexType, ValueType> > &encoded)
 {
@@ -1233,9 +1237,10 @@ DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
 
     // Not all delta rles are to be encoded, only those
     // that are in the ->deltas_to_encode set
-    deltas_set = &deltas_to_encode_[spm_->GetType()];
+    Encoding e(spm_->GetType());
+    deltas_set = &deltas_to_encode_[e.GetType()];
 
-    int block_align = IsBlockType(spm_->GetType());
+    int block_align = e.GetBlockAlignment();
     assert(block_align && "not a block type");
 
     col = 0;
@@ -1303,9 +1308,10 @@ DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
                 elem.col = rle_start + skip_front + i * nr_elem_block;
                 encoded.push_back(elem);
                 last_elem = &encoded.back();
+                Encoding e(spm_->GetType());
                 last_elem->pattern = new BlockRLE(nr_elem_block,
                                                   nr_elem_block / block_align,
-                                                  spm_->GetType());
+                                                  e);
                 last_elem->vals = new ValueType[nr_elem_block];
                 std::copy(vi, vi + nr_elem_block, last_elem->vals);
                 vi += nr_elem_block;
@@ -1335,7 +1341,7 @@ DoEncodeBlock(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
                  std::vector<Elem<IndexType, ValueType> > &encoded)
 {
@@ -1351,8 +1357,10 @@ DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
 
     // Not all delta rles are to be encoded, only those
     // that are in the ->deltas_to_encode set
-    deltas_set = &deltas_to_encode_[spm_->GetType()];
-    int block_align = IsBlockType(spm_->GetType());
+    Encoding e(spm_->GetType());
+
+    deltas_set = &deltas_to_encode_[e.GetType()];
+    int block_align = e.GetBlockAlignment();
     assert(block_align && "not a block type");
 
     col = 0;
@@ -1408,8 +1416,9 @@ DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
                     rle_start += nr_elem_block;
                     encoded.push_back(elem);
                     last_elem = &encoded.back();
-                    last_elem->pattern = new BlockRLE(nr_elem_block, *i,
-                                                      spm_->GetType());
+
+                    Encoding be(spm_->GetType());
+                    last_elem->pattern = new BlockRLE(nr_elem_block, *i, be);
                     last_elem->vals = new ValueType[nr_elem_block];
                     std::copy(vi, vi + nr_elem_block, last_elem->vals);
                     vi += nr_elem_block;
@@ -1443,7 +1452,7 @@ DoEncodeBlockAlt(std::vector<IndexType> &xs, std::vector<ValueType> &vs,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 DoDecode(const Elem<IndexType, ValueType> *elem, 
          std::vector<Elem<IndexType, ValueType> > &newrow)
 {
@@ -1465,7 +1474,7 @@ DoDecode(const Elem<IndexType, ValueType> *elem,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 EncodeRow(const Elem<IndexType, ValueType> *rstart,
           const Elem<IndexType, ValueType> *rend,
           std::vector<Elem<IndexType, ValueType> > &newrow)
@@ -1497,7 +1506,7 @@ EncodeRow(const Elem<IndexType, ValueType> *rstart,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 DecodeRow(const Elem<IndexType, ValueType> *rstart,
           const Elem<IndexType, ValueType> *rend,
           std::vector<Elem<IndexType, ValueType> > &newrow)
@@ -1514,7 +1523,7 @@ DecodeRow(const Elem<IndexType, ValueType> *rstart,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
 {
     DeltaRLE::Stats temp, temp2;
@@ -1609,7 +1618,7 @@ CorrectBlockStats(DeltaRLE::Stats *sp, uint64_t block_align)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 HandleStats(DeltaRLE::Stats *sp, uint64_t size, uint64_t block_align)
 {
     DeltaRLE::Stats temp;
@@ -1667,8 +1676,8 @@ HandleStats(DeltaRLE::Stats *sp, uint64_t size, uint64_t block_align)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
-UpdateStats(IterOrder type, DeltaRLE::Stats stats)
+void EncodingManager<IndexType, ValueType>::
+UpdateStats(Encoding::Type type, DeltaRLE::Stats stats)
 {
     if (stats_.find(type) == stats_.end()) {
         stats_[type] = stats;
@@ -1681,17 +1690,18 @@ UpdateStats(IterOrder type, DeltaRLE::Stats stats)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 UpdateStats(SparsePartition<IndexType, ValueType> *spm,
             std::vector<IndexType> &xs,
             DeltaRLE::Stats &stats,
             std::vector<Elem<IndexType, ValueType> *> &elems)
 {
     std::vector< RLE<IndexType> > rles;
-    uint64_t block_align = IsBlockType(spm->GetType());
+    Encoding e(spm->GetType());
+    size_t block_align = e.GetBlockAlignment();
 
     if (block_align) {
-        DRLE_Manager::UpdateStatsBlock(xs, stats, block_align, elems);
+        EncodingManager::UpdateStatsBlock(xs, stats, block_align, elems);
         return;
     }
 
@@ -1755,7 +1765,7 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
+void EncodingManager<IndexType, ValueType>::
 UpdateStatsBlock(std::vector<IndexType> &xs, DeltaRLE::Stats &stats,
                  uint64_t block_align,
                  std::vector<Elem<IndexType, ValueType>*> &elems)
@@ -1771,7 +1781,8 @@ UpdateStatsBlock(std::vector<IndexType> &xs, DeltaRLE::Stats &stats,
     IndexType unit_start = 0;
     typename std::vector<Elem<IndexType, ValueType>*>::iterator ei =
         elems.begin();
-    typename std::vector<Elem<IndexType, ValueType>*>::iterator ee = elems.end();
+    typename std::vector<Elem<IndexType, ValueType>*>::iterator ee =
+        elems.end();
 
     FOREACH (RLE<IndexType> &rle, rles) {
         unit_start += rle.val;
@@ -1828,8 +1839,8 @@ UpdateStatsBlock(std::vector<IndexType> &xs, DeltaRLE::Stats &stats,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::
-CorrectStats(IterOrder type, double factor)
+void EncodingManager<IndexType, ValueType>::
+CorrectStats(Encoding::Type type, double factor)
 {
     if (stats_.find(type) == stats_.end())
         return;
@@ -1846,7 +1857,7 @@ CorrectStats(IterOrder type, double factor)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::SelectSplits()
+void EncodingManager<IndexType, ValueType>::SelectSplits()
 {
     size_t nr_splits = sort_splits_.size();
     size_t nr_samples = samples_max_;
@@ -1874,13 +1885,13 @@ void DRLE_Manager<IndexType, ValueType>::SelectSplits()
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::ComputeSortSplits()
+void EncodingManager<IndexType, ValueType>::ComputeSortSplits()
 {
     switch (split_type_) {
-    case DRLE_Manager::SPLIT_BY_ROWS:
+    case EncodingManager::SPLIT_BY_ROWS:
         DoComputeSortSplitsByRows();
         break;
-    case DRLE_Manager::SPLIT_BY_NNZ:
+    case EncodingManager::SPLIT_BY_NNZ:
         DoComputeSortSplitsByNNZ();
         break;
     default:
@@ -1889,13 +1900,13 @@ void DRLE_Manager<IndexType, ValueType>::ComputeSortSplits()
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::CheckAndSetSorting()
+void EncodingManager<IndexType, ValueType>::CheckAndSetSorting()
 {
     switch (split_type_) {
-    case DRLE_Manager::SPLIT_BY_ROWS:
+    case EncodingManager::SPLIT_BY_ROWS:
         DoCheckSortByRows();
         break;
-    case DRLE_Manager::SPLIT_BY_NNZ:
+    case EncodingManager::SPLIT_BY_NNZ:
         DoCheckSortByNNZ();
         break;
     default:
@@ -1904,7 +1915,7 @@ void DRLE_Manager<IndexType, ValueType>::CheckAndSetSorting()
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::DoComputeSortSplitsByRows()
+void EncodingManager<IndexType, ValueType>::DoComputeSortSplitsByRows()
 {
     size_t nr_rows = spm_->GetNrRows();
     size_t i;
@@ -1921,7 +1932,7 @@ void DRLE_Manager<IndexType, ValueType>::DoComputeSortSplitsByRows()
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::DoComputeSortSplitsByNNZ()
+void EncodingManager<IndexType, ValueType>::DoComputeSortSplitsByNNZ()
 {
     size_t nzeros_cnt;
     size_t nr_rows = spm_->GetNrRows();
@@ -1954,30 +1965,30 @@ void DRLE_Manager<IndexType, ValueType>::DoComputeSortSplitsByNNZ()
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::DoCheckSortByRows()
+void EncodingManager<IndexType, ValueType>::DoCheckSortByRows()
 {
     assert(sort_window_size_ <= spm_->GetNrRows() && "invalid sort window");
     if (sampling_portion_ == 0.0 || sort_window_size_ == spm_->GetNrRows())
-        sort_windows_ = false;
+        sampling_enabled_ = false;
     else
-        sort_windows_ = true;
+        sampling_enabled_ = true;
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::DoCheckSortByNNZ()
+void EncodingManager<IndexType, ValueType>::DoCheckSortByNNZ()
 {
     assert(sort_window_size_ <= spm_->elems_size_ && "invalid sort window");
     if (sampling_portion_ == 0 || sort_window_size_ == spm_->elems_size_)
-        sort_windows_ = false;
+        sampling_enabled_ = false;
     else
-        sort_windows_ = true;
+        sampling_enabled_ = true;
 }
 
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::OutStats(std::ostream &os)
+void EncodingManager<IndexType, ValueType>::OutStats(std::ostream &os)
 {
-    typename DRLE_Manager::StatsMap::iterator iter;
+    typename EncodingManager::StatsMap::iterator iter;
     for (iter = stats_.begin(); iter != stats_.end(); ++iter){
 #if SPM_HEUR_NEW
         bool valid_stat = (iter->first == 0) || (iter->first != 0 && iter->second.size() > 1);
@@ -1985,11 +1996,12 @@ void DRLE_Manager<IndexType, ValueType>::OutStats(std::ostream &os)
         bool valid_stat = !iter->second.empty();
 #endif
         if (valid_stat) {
-             os << SpmTypesNames[iter->first] << "\ts:" 
-                << GetTypeScore(iter->first);
-             DRLE_OutStats(iter->second, *(spm_), os);
-             os << std::endl;
-         }
+            Encoding e(iter->first);
+            os << e << "\ts:" 
+               << GetTypeScore(e.GetType());
+            DRLE_OutStats(iter->second, *(spm_), os);
+            os << "\n";
+        }
     }
 }
 

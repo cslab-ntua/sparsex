@@ -17,23 +17,24 @@
 #include "compiler.h"
 #include "template_text.h"
 
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/Module.h>
-#include <llvm/LLVMContext.h>
-
+#include "encodings.h"
 #include "jit.h"
 #include "csx.h"
 #include "jit_config.h"
 #include "jit_util.h"
 
 #include <llvm/Analysis/Verifier.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>
+#include <llvm/LLVMContext.h>
+#include <llvm/Module.h>
 #include <llvm/PassManager.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetData.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+
 
 #include <iostream>
 #include <sstream>
@@ -119,14 +120,14 @@ private:
     //  Code generation functions for each pattern type
     // 
     std::string DoGenDeltaCase(int delta_bits);
-    std::string DoGenLinearCase(IterOrder type, int delta);
-    std::string DoGenBlockCase(IterOrder type, int r, int c);
-    TemplateText *GetMultTemplate(IterOrder type);
+    std::string DoGenLinearCase(Encoding::Type type, int delta);
+    std::string DoGenBlockCase(Encoding::Type type, int r, int c);
+    TemplateText *GetMultTemplate(Encoding::Type type);
     
     std::string DoGenDeltaSymCase(int delta_bits);
-    std::string DoGenLinearSymCase(IterOrder type, int delta);
-    std::string DoGenBlockSymCase(IterOrder type, int r, int c);
-    TemplateText *GetSymMultTemplate(IterOrder type);
+    std::string DoGenLinearSymCase(Encoding::Type type, int delta);
+    std::string DoGenBlockSymCase(Encoding::Type type, int r, int c);
+    TemplateText *GetSymMultTemplate(Encoding::Type type);
 
     CsxManager<IndexType, ValueType> *csxmg_;
     Module *module_;
@@ -134,7 +135,7 @@ private:
     LLVMContext *context_;
     ClangCompiler *compiler_;
     unsigned int thread_id_;
-    std::map<IterOrder, TemplateText *> mult_templates_;
+    std::map<Encoding::Type, TemplateText *> mult_templates_;
     bool symmetric_;
 };
 
@@ -160,46 +161,48 @@ CsxJit<IndexType, ValueType>::CsxJit(CsxManager<IndexType, ValueType> *csxmg,
 };
 
 template<typename IndexType, typename ValueType>
-TemplateText *CsxJit<IndexType, ValueType>::GetMultTemplate(IterOrder type)
+TemplateText *CsxJit<IndexType, ValueType>::GetMultTemplate(Encoding::Type type)
 {
     if (mult_templates_.count(type))
         goto exit;
 
     switch (type) {
-    case NONE:
+    case Encoding::None:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(DeltaTemplateSource));
         break;
-    case HORIZONTAL:
+    case Encoding::Horizontal:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(HorizTemplateSource));
         break;
-    case VERTICAL:
+    case Encoding::Vertical:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(VertTemplateSource));
         break;
-    case DIAGONAL:
+    case Encoding::Diagonal:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(DiagTemplateSource));
         break;
-    case REV_DIAGONAL:
+    case Encoding::AntiDiagonal:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(RDiagTemplateSource));
         break;
-    case BLOCK_R1 ... BLOCK_COL_START-1:
+    case Encoding::BlockRow1 ... Encoding::BlockRowMax:
         // Set the same template for all block row patterns
-        mult_templates_[BLOCK_R1] =
+        mult_templates_[Encoding::BlockRow1] =
             new TemplateText(SourceFromFile(BlockRowOneTemplateSource));
-        for (int t = BLOCK_R2; t < BLOCK_COL_START; ++t)
-            mult_templates_[static_cast<IterOrder>(t)] =
+        for (Encoding::Type t = Encoding::BlockRow2;
+             t <= Encoding::BlockRowMax; ++t)
+            mult_templates_[t] =
                 new TemplateText(SourceFromFile(BlockRowTemplateSource));
         break;
-    case BLOCK_COL_START ... BLOCK_TYPE_END-1:
+    case Encoding::BlockCol1 ... Encoding::BlockColMax:
         // Set the same template for all block row patterns
-        mult_templates_[BLOCK_C1] =
+        mult_templates_[Encoding::BlockCol1] =
             new TemplateText(SourceFromFile(BlockColOneTemplateSource));
-        for (int t = BLOCK_C2; t < BLOCK_TYPE_END; ++t)
-            mult_templates_[static_cast<IterOrder>(t)] =
+        for (Encoding::Type t = Encoding::BlockCol2;
+             t <= Encoding::BlockColMax; ++t)
+            mult_templates_[t] =
                 new TemplateText(SourceFromFile(BlockColTemplateSource));
         break;
     default:
@@ -211,42 +214,44 @@ exit:
 }
 
 template<typename IndexType, typename ValueType>
-TemplateText *CsxJit<IndexType, ValueType>::GetSymMultTemplate(IterOrder type)
+TemplateText *CsxJit<IndexType, ValueType>::GetSymMultTemplate(Encoding::Type type)
 {
     if (mult_templates_.count(type))
         goto exit;
 
     switch (type) {
-    case NONE:
+    case Encoding::None:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(DeltaSymTemplateSource));
         break;
-    case HORIZONTAL:
+    case Encoding::Horizontal:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(HorizSymTemplateSource));
         break;
-    case VERTICAL:
+    case Encoding::Vertical:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(VertSymTemplateSource));
         break;
-    case DIAGONAL:
+    case Encoding::Diagonal:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(DiagSymTemplateSource));
         break;
-    case REV_DIAGONAL:
+    case Encoding::AntiDiagonal:
         mult_templates_[type] =
             new TemplateText(SourceFromFile(RDiagSymTemplateSource));
         break;
-    case BLOCK_R1 ... BLOCK_COL_START-1:
+    case Encoding::BlockRow1 ... Encoding::BlockRowMax:
         // Set the same template for all block row patterns
-        for (int t = BLOCK_R1; t < BLOCK_COL_START; ++t)
-            mult_templates_[static_cast<IterOrder>(t)] =
+        for (Encoding::Type t = Encoding::BlockRow1;
+             t <= Encoding::BlockRowMax; ++t)
+            mult_templates_[t] =
                 new TemplateText(SourceFromFile(BlockRowSymTemplateSource));
         break;
-    case BLOCK_COL_START ... BLOCK_TYPE_END-1:
+    case Encoding::BlockCol1 ... Encoding::BlockColMax:
         // Set the same template for all block row patterns
-        for (int t = BLOCK_C1; t < BLOCK_TYPE_END; ++t)
-            mult_templates_[static_cast<IterOrder>(t)] =
+        for (Encoding::Type t = Encoding::BlockCol1;
+             t <= Encoding::BlockColMax; ++t)
+            mult_templates_[t] =
                 new TemplateText(SourceFromFile(BlockColSymTemplateSource));
         break;
     default:
@@ -260,7 +265,7 @@ exit:
 template<typename IndexType, typename ValueType>
 std::string CsxJit<IndexType, ValueType>::DoGenDeltaCase(int delta_bits)
 {
-    TemplateText *tmpl = GetMultTemplate(NONE);
+    TemplateText *tmpl = GetMultTemplate(Encoding::None);
     std::map<std::string, std::string> subst_map;
     subst_map["bits"] = Stringify(delta_bits);
     int delta_bytes = delta_bits / 8;
@@ -272,7 +277,7 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaCase(int delta_bits)
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenLinearCase(IterOrder type,
+std::string CsxJit<IndexType, ValueType>::DoGenLinearCase(Encoding::Type type,
                                                           int delta)
 {
     TemplateText *tmpl = GetMultTemplate(type);
@@ -282,7 +287,7 @@ std::string CsxJit<IndexType, ValueType>::DoGenLinearCase(IterOrder type,
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenBlockCase(IterOrder type,
+std::string CsxJit<IndexType, ValueType>::DoGenBlockCase(Encoding::Type type,
                                                          int r, int c)
 {
     TemplateText *tmpl = GetMultTemplate(type);
@@ -295,7 +300,7 @@ std::string CsxJit<IndexType, ValueType>::DoGenBlockCase(IterOrder type,
 template<typename IndexType, typename ValueType>
 std::string CsxJit<IndexType, ValueType>::DoGenDeltaSymCase(int delta_bits)
 {
-    TemplateText *tmpl = GetSymMultTemplate(NONE);
+    TemplateText *tmpl = GetSymMultTemplate(Encoding::None);
     std::map<std::string, std::string> subst_map;
     subst_map["bits"] = Stringify(delta_bits);
     int delta_bytes = delta_bits / 8;
@@ -307,7 +312,7 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaSymCase(int delta_bits)
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenLinearSymCase(IterOrder type,
+std::string CsxJit<IndexType, ValueType>::DoGenLinearSymCase(Encoding::Type type,
                                                              int delta)
 {
     TemplateText *tmpl = GetSymMultTemplate(type);
@@ -317,7 +322,7 @@ std::string CsxJit<IndexType, ValueType>::DoGenLinearSymCase(IterOrder type,
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenBlockSymCase(IterOrder type,
+std::string CsxJit<IndexType, ValueType>::DoGenBlockSymCase(Encoding::Type type,
                                                             int r, int c)
 {
     TemplateText *tmpl = GetSymMultTemplate(type);
@@ -394,26 +399,27 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
     for (; i_patt != i_patt_end; ++i_patt) {
         std::string patt_code, patt_func_entry;
         long patt_id = i_patt->second.flag;
-        IterOrder type =
-            static_cast<IterOrder>(i_patt->first / CSX_PID_OFFSET);
+        Encoding::Type type =
+            static_cast<Encoding::Type>(i_patt->first / CSX_PID_OFFSET);
         delta = i_patt->first % CSX_PID_OFFSET;
-	switch (type) {
-        case NONE:
+        Encoding e(type);
+        switch (e.GetType()) {
+        case Encoding::None:
             assert(delta ==  8 ||
                    delta == 16 ||
                    delta == 32 ||
                    delta == 64);
-            log << "type:DELTA size:" << delta << " npatterns:"
-                << i_patt->second.npatterns << " nnz:"
-                << i_patt->second.nr << std::endl;
+            log << "type:" << e.GetFullName() << " size:" << delta
+                << " npatterns:" << i_patt->second.npatterns
+                << " nnz:" << i_patt->second.nr << std::endl;
             if (!symmetric_)
                 patt_code = DoGenDeltaCase(delta);
             else
                 patt_code = DoGenDeltaSymCase(delta);
             patt_func_entry = "delta" + Stringify(delta) + "_case";
             break;
-        case HORIZONTAL:
-            log << "type:HORIZONTAL delta:" << delta
+        case Encoding::Horizontal:
+            log << "type:" << e.GetFullName() << " delta:" << delta
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             if (!symmetric_)
@@ -422,8 +428,8 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 patt_code = DoGenLinearSymCase(type, delta);
             patt_func_entry = "horiz" + Stringify(delta) + "_case";
             break;
-        case VERTICAL:
-            log << "type:VERTICAL delta:" << delta
+        case Encoding::Vertical:
+            log << "type:" << e.GetFullName() << " delta:" << delta
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             if (!symmetric_)
@@ -432,8 +438,8 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 patt_code = DoGenLinearSymCase(type, delta);
             patt_func_entry = "vert" + Stringify(delta) + "_case";
             break;
-        case DIAGONAL:
-            log << "type:DIAGONAL delta:" << delta
+        case Encoding::Diagonal:
+            log << "type:" << e.GetFullName() << " delta:" << delta
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             if (!symmetric_)
@@ -442,8 +448,8 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 patt_code = DoGenLinearSymCase(type, delta);
             patt_func_entry = "diag" + Stringify(delta) + "_case";
             break;
-	case REV_DIAGONAL:
-            log << "type:REV_DIAGONAL delta:" << delta
+        case Encoding::AntiDiagonal:
+            log << "type:" << e.GetFullName() << " delta:" << delta
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
             if (!symmetric_)
@@ -452,10 +458,10 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 patt_code = DoGenLinearSymCase(type, delta);
             patt_func_entry = "rdiag" + Stringify(delta) + "_case";
             break;
-        case BLOCK_R1 ... BLOCK_COL_START - 1:
-            r = type - BLOCK_TYPE_START;
+        case Encoding::BlockRowMin ... Encoding::BlockRowMax:
+            r = e.GetBlockAlignment();
             c = delta;
-            log << "type:" << SpmTypesNames[type]
+            log << "type:" << e.GetFullName()
                 << " dim:" << r << "x" << c
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;
@@ -466,10 +472,10 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
             patt_func_entry = "block_row_" + Stringify(r) + "x" +
                 Stringify(c) + "_case";
             break;
-        case BLOCK_COL_START ... BLOCK_TYPE_END - 1:
+        case Encoding::BlockColMin ... Encoding::BlockColMax:
             r = delta;
-            c = type - BLOCK_COL_START;
-            log << "type:" << SpmTypesNames[type] 
+            c = e.GetBlockAlignment();
+            log << "type:" << e.GetFullName()
                 << " dim:" << r << "x" << c
                 << " npatterns:" << i_patt->second.npatterns
                 << " nnz:" << i_patt->second.nr << std::endl;

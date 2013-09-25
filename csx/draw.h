@@ -10,7 +10,7 @@
 #ifndef CSX_SPM_DRAW__
 #define CSX_SPM_DRAW__
 
-#include "sparsepartition.h"
+#include "SparsePartition.h"
 
 void Draw(csx::SparsePartition &spm, const char *filename, int row_start=0, int row_end=0,
           const int width=600, const int height=600);

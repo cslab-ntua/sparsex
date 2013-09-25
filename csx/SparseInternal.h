@@ -263,7 +263,7 @@ BuildPartition(IterT &iter, const IterT &iter_end, size_t id,
     //std::cout << ret->GetNrRows() << std::endl;
     ret->SetNrCols(nr_cols);
     ret->SetRowStart(row_start);
-    ret->SetType(HORIZONTAL);
+    ret->SetType(Encoding::Horizontal);
     ret->SetElemsMapped(true);
     ret->SetElems(data_pool_.data_ + elem_start);
     return ret;

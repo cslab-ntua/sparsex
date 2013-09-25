@@ -12,18 +12,17 @@
  */
 
 #include "runtime.h"
+#include "SparseUtil.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/regex.hpp>
+#include <boost/assign/list_of.hpp>
 
 using namespace std;
+using namespace boost;
 
-#define BLOCK_ROW 5
-#define BLOCK_COL 6
-#define ALL       7
-namespace csx {
-
-static std::map<string, int> XformOpt = boost::assign::map_list_of
+static std::map<string, int> XformIndex = boost::assign::map_list_of
     ("none", 0)
     ("h", 1)
     ("v", 2)
@@ -32,6 +31,10 @@ static std::map<string, int> XformOpt = boost::assign::map_list_of
     ("br", 5)
     ("bc", 6)
     ("all", 7);
+
+const int XformBlockRow = XformIndex["br"];
+const int XformBlockCol = XformIndex["bc"];
+const int XformBlockAll = XformIndex["all"];
 
 /**
  *  Load default CSX runtime properties
@@ -42,12 +45,13 @@ RuntimeConfiguration::PropertyMap RuntimeConfiguration::DefaultProperties()
         (RtNrThreads, "1")
         (RtCpuAffinity, "0")
         (PreprocXform, "none")
-        (PreprocSampling, "true")
-        (PreprocNrSamples, "48")
+        (PreprocMethod, "none")
+        (PreprocNrSamples, "10")
         (PreprocSamplingPortion, "0.01")
-        (PreprocWindowSize, "auto")
+        (PreprocWindowSize, "0")    // change to sth more meaningful
         (MatrixSymmetric, "false")
         (MatrixSplitBlocks, "true")
+        (MatrixOneDimBlocks, "false")
 #ifdef SPM_NUMA
         (MatrixFullColind, "true")
 #else
@@ -66,7 +70,7 @@ void RuntimeConfiguration::InitPropertyMnemonics()
                                                  "libcsx.rt.cpu_affinity"));
     mnemonic_map_.insert(MnemonicMap::value_type(PreprocXform,
                                                  "libcsx.preproc.xform"));
-    mnemonic_map_.insert(MnemonicMap::value_type(PreprocSampling,
+    mnemonic_map_.insert(MnemonicMap::value_type(PreprocMethod,
                                                  "libcsx.preproc.sampling"));
     mnemonic_map_.insert(MnemonicMap::value_type(
                              PreprocNrSamples,
@@ -91,12 +95,12 @@ void RuntimeConfiguration::InitPropertyMnemonics()
                              "libcsx.matrix.min_coverage"));
 }
 
-
 RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
 {
     const char *mt_conf_str = getenv("MT_CONF");
-    if (mt_conf_str)
+    if (mt_conf_str) {
         SetProperty(RuntimeConfiguration::RtCpuAffinity, string(mt_conf_str));
+    }
 
     const char *xform_conf_str = getenv("XFORM_CONF");
     if (xform_conf_str)
@@ -106,23 +110,27 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
     if (wsize_str) {
         SetProperty(RuntimeConfiguration::PreprocWindowSize, string(wsize_str));
     } else {
-        cout << "Window size: Not set" << endl;
+        cout << "Window size: Not set\n";
     }
 
     const char *samples_str = getenv("SAMPLES");
     if (samples_str) {
+        // Automatically enable sampling
+        SetProperty(RuntimeConfiguration::PreprocMethod, "portion");
         SetProperty(RuntimeConfiguration::PreprocNrSamples,
                     string(samples_str));
     } else {
-        cout << "Number of samples: Not set" << endl;
+        cout << "Number of samples: Not set\n";
     }
 
     const char *sampling_portion_str = getenv("SAMPLING_PORTION");
     if (sampling_portion_str) {
+        // Automatically enable sampling
+        SetProperty(RuntimeConfiguration::PreprocMethod, "portion");
         SetProperty(RuntimeConfiguration::PreprocSamplingPortion,
                     string(sampling_portion_str));
     } else {
-        cout << "Sampling portion: Not set" << endl;
+        cout << "sampling is disabled\n";
     }
     
     return *this;
@@ -149,42 +157,41 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
     ret_;                                  \
 })
 
-static void ParseOptionMT(string str, size_t **affinity, size_t &nr_threads)
+vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
 {
     vector<string> mt_split;
 
     boost::split(mt_split, str, boost::algorithm::is_any_of(","),
                  boost::algorithm::token_compress_on);
     
-    nr_threads = mt_split.size();
-    *affinity = (size_t *) xmalloc(nr_threads * sizeof(size_t));
-    
-    for (size_t i = 0; i < nr_threads; i++) {
-        (*affinity)[i] = boost::lexical_cast<size_t,string>(mt_split[i]);
+    for (size_t i = 0; i < mt_split.size(); ++i) {
+        affinity.push_back(boost::lexical_cast<size_t,string>(mt_split[i]));
     }
     
     // Printing
     cout << "MT_CONF=";
-    for (size_t i = 0; i < nr_threads; i++) {
+    for (size_t i = 0; i < affinity.size(); ++i) {
         if (i != 0)
             cout << ",";
-        cout << (*affinity)[i];
+        cout << affinity[i];
     }
-    cout << endl;
+    cout << "\n";
+    return affinity;
 }
 
 static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
 {
+    EncodingSequence encseq(str);
+    cout << "Encseq: " << encseq << "\n";
     *xform_buf = (int *) xmalloc(XFORM_MAX * sizeof(int));
     *deltas = (int **) xmalloc(XFORM_MAX * sizeof(int *));
-    for (size_t i = 0; i < XFORM_MAX; i++) 
+    for (size_t i = 0; i < XFORM_MAX; ++i)
         (*deltas)[i] = (int *) xmalloc(DELTAS_MAX * sizeof(int));
 
     vector<string> split_in_pairs;
     boost::algorithm::find_all_regex(split_in_pairs, str, 
                                      boost::regex
                                      ("[a-z]+(\\{[0-9]+(,[0-9]+)*\\})?"));
-
     vector<string> pair;
     vector<string> delta_tokens;
     size_t index = 0;
@@ -195,22 +202,17 @@ static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
                      boost::algorithm::token_compress_on);
 
         // Find xform
-        int option = XformOpt[pair[0]];
-        if (option < BLOCK_ROW)
+        int option = XformIndex[pair[0]];
+        if (option < XformBlockRow) {
             (*xform_buf)[index++] = option;
-        else if (option == BLOCK_ROW) {
-            for (size_t j = 7; j < 14; j++)
+        } else if (option == XformBlockRow) {
+            for (size_t j = BLOCK_TYPE_START; j < BLOCK_COL_START; ++j)
                 (*xform_buf)[index++] = j;
-        }
-        else if (option == BLOCK_COL) {
-            for (size_t j = 16; j < 23; j++)
+        } else if (option == XformBlockCol) {
+            for (size_t j = BLOCK_COL_START; j < BLOCK_TYPE_END; ++j)
                 (*xform_buf)[index++] = j;
         } else {    // All
-            for (size_t j = 1; j <= 4; j++)
-                (*xform_buf)[index++] = j;
-            for (size_t j = 7; j <= 13; j++)
-                (*xform_buf)[index++] = j;
-            for (size_t j = 16; j <= 22; j++)
+            for (size_t j = HORIZONTAL; j < XFORM_MAX; ++j)
                 (*xform_buf)[index++] = j;
         }
         
@@ -218,19 +220,19 @@ static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
         if (pair.size() > 1) {
             boost::algorithm::find_all_regex(delta_tokens, pair[1], 
                                              boost::regex("[0-9]+"));
-            for (size_t j = 0; j < delta_tokens.size(); j++) {
+            for (size_t j = 0; j < delta_tokens.size(); ++j) {
                 (*deltas)[delta_index][j] = boost::lexical_cast<int,string>
                     (delta_tokens[j]);
             }
             (*deltas)[delta_index][delta_tokens.size()] = -1;
             delta_index++;
-            if (option == BLOCK_ROW || option == BLOCK_COL) {
-                for (size_t k = 0; k < 7; k++) {
+            if (option == XformBlockRow || option == XformBlockCol) {
+                for (size_t k = 0; k < 7; ++k) {
                     (*deltas)[delta_index + k] = (*deltas)[delta_index - 1];
                 }
                 delta_index += 7;
-            } else if (option == ALL) {
-                for (size_t k = 0; k < 17; k++) {
+            } else if (option == XformBlockAll) {
+                for (size_t k = 0; k < 17; ++k) {
                     (*deltas)[delta_index + k] = (*deltas)[delta_index - 1];
                 }
             }
@@ -240,93 +242,39 @@ static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
 
     // Printing
     cout << "Encoding type: ";
-    for (size_t i = 0; (*xform_buf)[i] != -1; i++) {
+    for (size_t i = 0; (*xform_buf)[i] != -1; ++i) {
         if (i != 0)
             cout << ", ";
         cout << SpmTypesNames[(*xform_buf)[i]];
     }
-    cout << endl;   
+    cout << "\n";   
 
     // In case there are no deltas free memory
     if (pair.size() == 1) {
-        for (size_t i = 0; i < XFORM_MAX; i++) {
+        for (size_t i = 0; i < XFORM_MAX; ++i) {
             free((*deltas)[i]);
         }
         free(*deltas);
         (*deltas) = NULL;
     } else {
         cout << "Deltas to Encode: ";
-        for (size_t i = 0; (*xform_buf)[i] != -1; i++) {
+        for (size_t i = 0; (*xform_buf)[i] != -1; ++i) {
             if (i != 0)
                 cout << "}, ";
             cout << "{";
             assert((*deltas)[i][0] != -1);
             cout << (*deltas)[i][0];
-            for (size_t j = 1; (*deltas)[i][j] != -1; j++)
+            for (size_t j = 1; (*deltas)[i][j] != -1; ++j)
                 cout << "," << (*deltas)[i][j];
         }
-        cout << "}" << endl;
+        cout << "}\n";
     }
-}
-
-static void ParseOptionWindowSize(string str, size_t &wsize)
-{
-    wsize = boost::lexical_cast<size_t, string>(str);
-    cout << "Window size: " << wsize << endl;
-}
-
-static void ParseOptionSamples(string str, size_t &samples_max)
-{
-    if (str == "__MAX__")
-        samples_max = std::numeric_limits<uint64_t>::max();
-    else
-        samples_max = boost::lexical_cast<size_t, string>(str);
-    cout << "Number of samples: " << samples_max << endl;
-}
-
-static void ParseOptionPortion(string str, double &sampling_portion)
-{
-    sampling_portion = boost::lexical_cast<double, string>(str);
-    cout << "Sampling portion: " << sampling_portion << endl;
-}
-
-static void ParseOptionSymmetric(string str, bool &symmetric)
-{
-    (str == "true") ? symmetric = true : symmetric = false;
-}
-
-static void ParseOptionSplitBlocks(string str, bool &split_blocks)
-{
-    (str == "true") ? split_blocks = true : split_blocks = false;   
-} 
-
 }
 
 void RuntimeContext::SetRuntimeContext(const RuntimeConfiguration &conf)
 {
-    ParseOptionMT(conf.GetProperty(RuntimeConfiguration::RtCpuAffinity),
-                  &affinity_, nr_threads_);
-
-    // Initialize the CSX JIT execution engine
-    engine_ = &CsxJitInit();
-}
-
-void CsxContext::SetCsxContext(const RuntimeConfiguration &conf)
-{
-    ParseOptionSymmetric(conf.GetProperty(
-                             RuntimeConfiguration::MatrixSymmetric),
-                         symmetric_);
-    ParseOptionSplitBlocks(conf.GetProperty(
-                               RuntimeConfiguration::MatrixSplitBlocks),
-                           split_blocks_);
-    ParseOptionXform(conf.GetProperty(RuntimeConfiguration::PreprocXform),
-                     &xform_buf_, &deltas_);
-    ParseOptionWindowSize(conf.GetProperty(
-                              RuntimeConfiguration::PreprocWindowSize),
-                          wsize_); 
-    ParseOptionSamples(conf.GetProperty(RuntimeConfiguration::PreprocNrSamples),
-                       samples_max_);
-    ParseOptionPortion(conf.GetProperty(
-                           RuntimeConfiguration::PreprocSamplingPortion),
-                       sampling_portion_);
+    cpu_affinity_ =
+        ParseOptionMT(conf.GetProperty<string>(
+                          RuntimeConfiguration::RtCpuAffinity),
+                      cpu_affinity_);
 }

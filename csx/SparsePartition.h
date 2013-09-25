@@ -52,7 +52,7 @@ public:
     IndexType row_start_;    /* Row of the original matrix, where this
                                sub-matrix starts. */
 private:
-    IterOrder type_;
+    Encoding::Type type_;
     Elem<IndexType, ValueType> *elems_;
     IndexType *rowptr_;
     bool elems_mapped_;
@@ -65,7 +65,7 @@ public:
     typedef IndexType index_t;
     typedef ValueType value_t;
 
-    SparsePartition() : type_(NONE), elems_(NULL), rowptr_(NULL),
+    SparsePartition() : type_(Encoding::None), elems_(NULL), rowptr_(NULL),
                         elems_mapped_(false) {}
 
     ~SparsePartition()
@@ -94,7 +94,7 @@ public:
         return nr_deltas_;
     }
 
-    IterOrder GetType() const
+    Encoding::Type GetType() const
     {
         return type_;
     }
@@ -134,7 +134,7 @@ public:
         nr_nzeros_ = nr_nzeros;
     }
 
-    void SetType(IterOrder type)
+    void SetType(Encoding::Type type)
     {
         type_ = type;
     }
@@ -227,7 +227,7 @@ public:
     PntIter PointsBegin(IndexType ridx = 0);
     PntIter PointsEnd(IndexType ridx = 0);
 
-    IndexType FindNewRowptrSize(IterOrder t);
+    IndexType FindNewRowptrSize(Encoding::Type t);
 
     /**
      *  Transforms matrix to specific type.
@@ -238,7 +238,7 @@ public:
      *  @param re   line to end the transformation. If it is zero, it is the
      *              the end of matrix.
      */
-    void Transform(IterOrder type, IndexType rs = 0, IndexType re = 0);
+    void Transform(Encoding::Type type, IndexType rs = 0, IndexType re = 0);
 
     /**
      *  Finds the reverse transform function. Transforms from <tt>type</tt> to
@@ -248,7 +248,7 @@ public:
      *  @return     reverse transform function.
      */
     typename TransformFnType<IndexType, ValueType>::TransformFn
-    GetRevXformFn(IterOrder type);
+    GetRevXformFn(Encoding::Type type);
 
     /**
      *  Finds the transform function. Transforms from HORIZONTAL to
@@ -258,7 +258,7 @@ public:
      *  @return     transform function.
      */
     typename TransformFnType<IndexType, ValueType>::TransformFn
-    GetXformFn(IterOrder type);
+    GetXformFn(Encoding::Type type);
 
     /**
      *  Finds the complete transform function. Tranforms from <tt>from</tt> to
@@ -269,7 +269,7 @@ public:
      *  @return     complete transform function.
      */
     typename TransformFnType<IndexType, ValueType>::TransformFn
-    GetTransformFn(IterOrder from, IterOrder to);
+    GetTransformFn(Encoding::Type from, Encoding::Type to);
 
     /**
      *  Extracts a window (sub-matrix) from this matrix. This methods copies the
@@ -1003,7 +1003,6 @@ void SparsePartition<IndexType, ValueType>::PrintElems(std::ostream &out)
         pat = (*p).pattern;
         start = static_cast<CooElem<IndexType, ValueType> >(*p);
         vals = start.vals;
-        //out << SpmTypesNames[pat->GetType()] << std::endl;
         xform_fn = GetTransformFn(type_, pat->GetType());
         rxform_fn = GetTransformFn(pat->GetType(), type_);
         if (xform_fn)
@@ -1040,18 +1039,17 @@ void SparsePartition<IndexType, ValueType>::PrintStats(std::ostream& out)
     memset(nr_xform_patterns, 0, sizeof(nr_xform_patterns));
     for (size_t i = 0; i < GetNrRows(); i++) {
         IndexType pt_size, pt_size_before;
-        IterOrder pt_type, pt_type_before;
+        Encoding::Type pt_type, pt_type_before;
 
         nr_patterns_before = nr_patterns;
 
         const Elem<IndexType, ValueType> *elem = RowBegin(i);
-
         if (elem->pattern) {
             pt_size_before = pt_size = elem->pattern->GetSize();
             pt_type_before = pt_type = elem->pattern->GetType();
         } else {
             pt_size_before = pt_size = 0;
-            pt_type_before = pt_type = NONE;
+            pt_type_before = pt_type = Encoding::None;
         }
 
         for (; elem != RowEnd(i); elem++) {
@@ -1081,12 +1079,10 @@ void SparsePartition<IndexType, ValueType>::PrintStats(std::ostream& out)
     }
 
     int nr_encoded_types = 0;
-
-    for (int i = 1; i < XFORM_MAX; i++)
-        if (nr_xform_patterns[i]) {
+    for (Encoding::Type t = Encoding::Horizontal; t < Encoding::Max; ++t)
+        if (nr_xform_patterns[t]) {
             ++nr_encoded_types;
-            out << SpmTypesNames[i] << ": "
-            << nr_xform_patterns[i] << std::endl;
+            out << Encoding(t) << ": " << nr_xform_patterns[t] << "\n";
         }
 
     out << "Encoded types = " << nr_encoded_types << ", "
@@ -1096,7 +1092,7 @@ void SparsePartition<IndexType, ValueType>::PrintStats(std::ostream& out)
         << nr_nzeros_block / (double) nr_patterns << ", "
         << " Avg pattern transitions/row = "
         << nr_transitions / (double) nr_rows_with_patterns
-        << endl;
+        << "\n";
 }
 
 template<typename IndexType, typename ValueType>
@@ -1118,18 +1114,19 @@ SparsePartition<IndexType, ValueType>::PointsEnd(IndexType ridx)
 
 template<typename IndexType, typename ValueType>
 IndexType SparsePartition<IndexType, ValueType>::
-FindNewRowptrSize(IterOrder t)
+FindNewRowptrSize(Encoding::Type t)
 {
-    if (t == HORIZONTAL)
+    Encoding e(t);
+    if (t == Encoding::Horizontal)
         return nr_rows_ + 1;
-    else if (t == VERTICAL)
+    else if (t == Encoding::Vertical)
         return nr_cols_ + 1;
-    else if (t == DIAGONAL || REV_DIAGONAL)
+    else if (t == Encoding::Diagonal || t == Encoding::AntiDiagonal)
         return nr_rows_ + nr_cols_ + 1;
-    else if (is_row_block(t))
-        return nr_rows_ / IsBlockType(t) + 2;
-    else if (is_col_block(t))
-        return nr_cols_ / IsBlockType(t) + 2;
+    else if (e.IsBlockRow())
+        return nr_rows_ / e.GetBlockAlignment() + 2;
+    else if (e.IsBlockCol())
+        return nr_cols_ / e.GetBlockAlignment() + 2;
     else
         return 0;
 }
@@ -1137,85 +1134,85 @@ FindNewRowptrSize(IterOrder t)
 template<typename IndexType, typename ValueType>
 inline typename TransformFnType<IndexType, ValueType>::TransformFn
 SparsePartition<IndexType, ValueType>::
-GetRevXformFn(IterOrder type)
+GetRevXformFn(Encoding::Type type)
 {
     boost::function<void (CooElem<IndexType, ValueType> &p)> ret;
 
     switch(type) {
-    case HORIZONTAL:
+    case Encoding::Horizontal:
         break;
-    case VERTICAL:
+    case Encoding::Vertical:
         ret = bll::bind(pnt_rmap_V<IndexType, ValueType>, bll::_1, bll::_1);
         break;
-    case DIAGONAL:
+    case Encoding::Diagonal:
         ret = bll::bind(pnt_rmap_D<IndexType, ValueType>, bll::_1, bll::_1,
                         nr_rows_);
         break;
-    case REV_DIAGONAL:
+    case Encoding::AntiDiagonal:
         ret = bll::bind(pnt_rmap_rD<IndexType, ValueType>, bll::_1, bll::_1,
                         nr_cols_);
         break;
-    case BLOCK_ROW_TYPE_NAME(1):
+    case Encoding::BlockRow1:
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(1)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(2):
+    case Encoding::BlockRow2:
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(2)<IndexType, ValueType>,   
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(3):
+    case Encoding::BlockRow3:
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(3)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(4):
+    case Encoding::BlockRow4:
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(4)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(5):
+    case Encoding::BlockRow5:
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(5)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(6):
+    case Encoding::BlockRow6:
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(6)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(7):
+    case Encoding::BlockRow7:
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(7)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(8):
+    case Encoding::BlockRow8:
         ret = bll::bind(BLOCK_ROW_RMAP_NAME(8)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(1):
+    case Encoding::BlockCol1:
         ret = bll::bind(BLOCK_COL_RMAP_NAME(1)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(2):
+    case Encoding::BlockCol2:
         ret = bll::bind(BLOCK_COL_RMAP_NAME(2)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(3):
+    case Encoding::BlockCol3:
         ret = bll::bind(BLOCK_COL_RMAP_NAME(3)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(4):
+    case Encoding::BlockCol4:
         ret = bll::bind(BLOCK_COL_RMAP_NAME(4)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(5):
+    case Encoding::BlockCol5:
         ret = bll::bind(BLOCK_COL_RMAP_NAME(5)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(6):
+    case Encoding::BlockCol6:
         ret = bll::bind(BLOCK_COL_RMAP_NAME(6)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(7):
+    case Encoding::BlockCol7:
         ret = bll::bind(BLOCK_COL_RMAP_NAME(7)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(8):
+    case Encoding::BlockCol8:
         ret = bll::bind(BLOCK_COL_RMAP_NAME(8)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
@@ -1230,86 +1227,86 @@ GetRevXformFn(IterOrder type)
 template<typename IndexType, typename ValueType>
 inline typename TransformFnType<IndexType, ValueType>::TransformFn
 SparsePartition<IndexType, ValueType>::
-GetXformFn(IterOrder type)
+GetXformFn(Encoding::Type type)
 {
     boost::function<void (CooElem<IndexType, ValueType> &p)> ret;
 
     switch(type) {
-    case HORIZONTAL:
+    case Encoding::Horizontal:
         ret = NULL;
         break;
-    case VERTICAL:
+    case Encoding::Vertical:
         ret = bll::bind(pnt_map_V<IndexType, ValueType>, bll::_1, bll::_1);
         break;
-    case DIAGONAL:
+    case Encoding::Diagonal:
         ret = bll::bind(pnt_map_D<IndexType, ValueType>, bll::_1, bll::_1,
                         nr_rows_);
         break;
-    case REV_DIAGONAL:
+    case Encoding::AntiDiagonal:
         ret = bll::bind(pnt_map_rD<IndexType, ValueType>, bll::_1, bll::_1,
                         nr_cols_);
         break;
-    case BLOCK_ROW_TYPE_NAME(1):
+    case Encoding::BlockRow1:
         ret = bll::bind(BLOCK_ROW_MAP_NAME(1)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(2):
+    case Encoding::BlockRow2:
         ret = bll::bind(BLOCK_ROW_MAP_NAME(2)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(3):
+    case Encoding::BlockRow3:
         ret = bll::bind(BLOCK_ROW_MAP_NAME(3)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(4):
+    case Encoding::BlockRow4:
         ret = bll::bind(BLOCK_ROW_MAP_NAME(4)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(5):
+    case Encoding::BlockRow5:
         ret = bll::bind(BLOCK_ROW_MAP_NAME(5)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(6):
+    case Encoding::BlockRow6:
         ret = bll::bind(BLOCK_ROW_MAP_NAME(6)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(7):
+    case Encoding::BlockRow7:
         ret = bll::bind(BLOCK_ROW_MAP_NAME(7)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_ROW_TYPE_NAME(8):
+    case Encoding::BlockRow8:
         ret = bll::bind(BLOCK_ROW_MAP_NAME(8)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(1):
+    case Encoding::BlockCol1:
         ret = bll::bind(BLOCK_COL_MAP_NAME(1)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(2):
+    case Encoding::BlockCol2:
         ret = bll::bind(BLOCK_COL_MAP_NAME(2)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(3):
+    case Encoding::BlockCol3:
         ret = bll::bind(BLOCK_COL_MAP_NAME(3)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(4):
+    case Encoding::BlockCol4:
         ret = bll::bind(BLOCK_COL_MAP_NAME(4)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(5):
+    case Encoding::BlockCol5:
         ret = bll::bind(BLOCK_COL_MAP_NAME(5)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(6):
+    case Encoding::BlockCol6:
         ret = bll::bind(BLOCK_COL_MAP_NAME(6)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(7):
+    case Encoding::BlockCol7:
         ret = bll::bind(BLOCK_COL_MAP_NAME(7)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
-    case BLOCK_COL_TYPE_NAME(8):
+    case Encoding::BlockCol8:
         ret = bll::bind(BLOCK_COL_MAP_NAME(8)<IndexType, ValueType>,
                         bll::_1, bll::_1);
         break;
@@ -1324,9 +1321,9 @@ GetXformFn(IterOrder type)
 template<typename IndexType, typename ValueType>
 inline typename TransformFnType<IndexType, ValueType>::TransformFn
 SparsePartition<IndexType, ValueType>::
-GetTransformFn(IterOrder from_type, IterOrder to_type)
+GetTransformFn(Encoding::Type from_type, Encoding::Type to_type)
 {
-    boost::function<void (CooElem<IndexType, ValueType> &p)> xform_fn, rxform_fn;
+    boost::function<void(CooElem<IndexType, ValueType> &p)> xform_fn, rxform_fn;
 
     rxform_fn = GetRevXformFn(from_type);
     xform_fn = GetXformFn(to_type);
@@ -1341,7 +1338,7 @@ GetTransformFn(IterOrder from_type, IterOrder to_type)
 
 template<typename IndexType, typename ValueType>
 void SparsePartition<IndexType, ValueType>::
-Transform(IterOrder t, IndexType rs, IndexType re)
+Transform(Encoding::Type t, IndexType rs, IndexType re)
 {
     PntIter p0, pe, p;
     vector<Elem<IndexType, ValueType> > elems;
@@ -1362,21 +1359,23 @@ Transform(IterOrder t, IndexType rs, IndexType re)
         elems.push_back(p_new);
     }
  
-    if (((type_ == HORIZONTAL || is_row_block(type_)) &&
-         (t == HORIZONTAL || is_row_block(t))) ||
-        ((type_ == VERTICAL || is_col_block(type_)) &&
-         (t == VERTICAL || is_col_block(t)))) {
+    Encoding e(t);
+    Encoding e_(type_);
+    if (((type_ == Encoding::Horizontal || e_.IsBlockRow()) &&
+         (t == Encoding::Horizontal || e.IsBlockRow())) ||
+        ((type_ == Encoding::Vertical || e_.IsBlockCol()) &&
+         (t == Encoding::Vertical || e.IsBlockCol()))) {
         int old_block_align, new_block_align, k;
 
-        if (type_ == HORIZONTAL || type_ == VERTICAL)
+        if (type_ == Encoding::Horizontal || type_ == Encoding::Vertical)
             old_block_align = 1;
         else
-            old_block_align = IsBlockType(type_);
+            old_block_align = e_.GetBlockAlignment();
 
-        if (t == HORIZONTAL || t == VERTICAL)
+        if (t == Encoding::Horizontal || t == Encoding::Vertical)
             new_block_align = 1;
         else
-            new_block_align = IsBlockType(t);
+            new_block_align = e.GetBlockAlignment();
 
         k = lcm(old_block_align, new_block_align);
         k /= old_block_align;
@@ -1693,13 +1692,13 @@ void SparsePartitionSym<IndexType, ValueType>::DivideMatrix()
     
     //Elem<IndexType, ValueType> *elem;
     Elem<IndexType, ValueType> elem;
-    
-    m1_->SetType(HORIZONTAL);
+
+    m1_->SetType(Encoding::Horizontal);
     m1_->SetRowStart(row_start);
     m1_->SetNrCols(nr_cols);
     m1_->SetNrNonzeros(0);
 
-    m2_->SetType(HORIZONTAL);
+    m2_->SetType(Encoding::Horizontal);
     m2_->SetRowStart(row_start);
     m2_->SetNrCols(nr_cols);
     m2_->SetNrNonzeros(0);
@@ -1760,8 +1759,7 @@ void SparsePartitionSym<IndexType, ValueType>::MergeMatrix()
 
     //Elem<IndexType, ValueType> *elem;
     Elem<IndexType, ValueType> elem;
-    
-    temp->SetType(HORIZONTAL);
+    temp->SetType(Encoding::Horizontal);
     temp->SetRowStart(row_start);
     temp->SetNrCols(nr_cols);
     temp->SetNrNonzeros(matrix->GetNrNonzeros());
@@ -1785,11 +1783,9 @@ void SparsePartitionSym<IndexType, ValueType>::MergeMatrix()
     }
     
     spmbld->Finalize();
-    
     temp->SetNrRows(temp->GetNrRows());
     
     delete spmbld;
-    
     delete lower_matrix_;
     lower_matrix_ = temp;
     
@@ -1932,7 +1928,7 @@ LoadMMF_mt(MMF<IndexType, ValueType>& mmf, const long nr)
         spm_sym->lower_matrix_->SetNrCols(n);
         spm_sym->lower_matrix_->SetRowStart(row_start);
         row_start += spm_sym->GetDiagonalSize();
-        spm_sym->lower_matrix_->SetType(HORIZONTAL);
+        spm_sym->lower_matrix_->SetType(Encoding::Horizontal);
         cnt += nnz;
     }
 

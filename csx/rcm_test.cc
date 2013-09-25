@@ -38,18 +38,16 @@ int main(int argc, char **argv)
 
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
-    CsxContext &csx_context = CsxContext::GetInstance();
 
     config.LoadFromEnv();
     rt_context.SetRuntimeContext(config);
-    csx_context.SetCsxContext(config);
 
     //spi = LoadCSR_RCM_mt<uint64_t, double>(rowptr, colind, values, nr_rows,
     //                                      nr_cols, zero_based, rt_context.GetNrThreads());
     spi = LoadMMF_RCM_mt<uint64_t, double>(argv[1], rt_context.GetNrThreads());
 
     std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-    spm_mt = BuildCsx(spi, rt_context, csx_context);
+    spm_mt = BuildCsx(spi);
     std::cerr.flush();
     BenchLoop(spm_mt, argv[1]);
     //double imbalance = CalcImbalance(spm_mt);

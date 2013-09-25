@@ -92,11 +92,9 @@ int main(int argc, char **argv)
 
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
-    CsxContext &csx_context = CsxContext::GetInstance();
 
     config.LoadFromEnv();
     rt_context.SetRuntimeContext(config);
-    csx_context.SetCsxContext(config);
 
     // SparseMatrix<CSR<uint64_t, double> > matrix(rowptr, colind, values, nr_rows,
     //                                             nr_cols, zero_based,
@@ -106,7 +104,7 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < remargc; i++) {    
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        spm_mt = matrix.CreateCsx(rt_context, csx_context);
+        spm_mt = matrix.CreateCsx(rt_context);
         //matrix.PrintEncoded(std::cout);
         //PrintCsx(spm_mt);
         CheckLoop(spm_mt, argv[i]);
