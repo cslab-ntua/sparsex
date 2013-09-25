@@ -35,8 +35,8 @@ typedef struct input input_t;
  *  @param[in] zero_based   indexing.
  *  @return                 a handle to the input matrix.
  */
-input_t *mat_create_csr(index_t *rowptr, index_t *colind, value_t *values,
-                        index_t nr_rows, index_t nr_cols, int zero_based);
+input_t *libcsx_mat_create_csr(index_t *rowptr, index_t *colind, value_t *values,
+                               index_t nr_rows, index_t nr_cols, int zero_based);
 
 /**
  *  Creates and returns a valid tunable matrix object from a file in the
@@ -45,7 +45,7 @@ input_t *mat_create_csr(index_t *rowptr, index_t *colind, value_t *values,
  *  @param[in] filename     name of the file where the matrix is kept.
  *  @return                 a handle to the input matrix.
  */
-input_t *mat_create_mmf(const char *filename);
+input_t *libcsx_mat_create_mmf(const char *filename);
 
 /**
  *  Converts the input matrix in the CSX format according to the options set.
@@ -53,11 +53,21 @@ input_t *mat_create_mmf(const char *filename);
  *  @param[in] input        the input matrix.
  *  @return                 a handle to the tuned matrix.
  */
-matrix_t *mat_tune(input_t *input);
+matrix_t *libcsx_mat_tune(input_t *input);
 
-/* Implements y <-- alpha*A*x + beta*y */
-vector_t *matvec_mult(const matrix_t *A, value_t alpha, const vector_t *x,
-                      value_t beta, vector_t *y);
+/**
+ *  This routines performs a matrix-vector multiplication defined as:
+ *                  y <-- alpha*A*x + beta*y
+ *
+ *  @param[in] A            the tuned matrix.
+ *  @param[in] alpha        a scalar.
+ *  @param[in] x            a dense vector.
+ *  @param[in] beta         a scalar.
+ *  @param[in] y            a dense vector.
+ *  @return                 an error code.
+ */
+libcsx_error_t libcsx_matvec_mult(const matrix_t *A, value_t alpha, vector_t *x,
+                                  value_t beta, vector_t *y);
 
 /**
  *  Returns the value of the corresponding element in (row, column), where
@@ -67,9 +77,11 @@ vector_t *matvec_mult(const matrix_t *A, value_t alpha, const vector_t *x,
  *  @param[in] A            the tuned matrix.
  *  @param[in] row          the row of the element to be retrieved.
  *  @param[in] column       the column of the element to be retrieved.
- *  @return                 the value of the element (row, column).
+ *  @param[out] value       the value of the element (row, column).
+ *  @return                 an error code.
  */
-value_t mat_get_entry(const matrix_t *A, index_t row, index_t column);
+libcsx_error_t libcsx_mat_get_entry(const matrix_t *A, index_t row,
+                                    index_t column, value_t *value);
 
 /**
  *  Sets the value of the corresponding element in (row, column), where
@@ -82,8 +94,8 @@ value_t mat_get_entry(const matrix_t *A, index_t row, index_t column);
  *  @param[out] value       the new value of the element in (row, column).
  *  @return                 an error code.
  */
-libcsx_error_t mat_set_entry(matrix_t *A, index_t row, index_t column,
-                             value_t value);
+libcsx_error_t libcsx_mat_set_entry(matrix_t *A, index_t row, index_t column,
+                                    value_t value);
 
 /**
  *  Dumps the matrix in the CSX format in a binary file.
@@ -92,7 +104,7 @@ libcsx_error_t mat_set_entry(matrix_t *A, index_t row, index_t column,
  *  @param[in] filename     name of the file where the matrix will be dumped.
  *  @return                 an error code.
  */
-libcsx_error_t mat_save(const matrix_t *A, const char *filename);
+libcsx_error_t libcsx_mat_save(const matrix_t *A, const char *filename);
 
 /**
  *  Reconstructs the matrix in the CSX format from a binary file.
@@ -100,26 +112,17 @@ libcsx_error_t mat_save(const matrix_t *A, const char *filename);
  *  @param[in] filename     name of the file where the matrix is dumped.
  *  @return                 a handle to the tuned matrix.
  */
-matrix_t *mat_restore(const char *filename);
-
-/**
- *  This routine #FIXME Utility for drawing sparse matrices.
- *  
- *
- *  @param[in] A            the tuned matrix.
- *  @return                 an error code.
- */
-libcsx_error_t mat_draw(const matrix_t *A);
+matrix_t *libcsx_mat_restore(const char *filename);
 
 /**
  *  \brief Returns the number of rows of the matrix.
  */
-index_t mat_get_nrows(const matrix_t *A);
+index_t libcsx_mat_get_nrows(const matrix_t *A);
 
 /**
  *  \brief Returns the number of columns of the matrix.
  */
-index_t mat_get_ncols(const matrix_t *A);
+index_t libcsx_mat_get_ncols(const matrix_t *A);
 
 /**
  *  This routine releases any memory internally used by the sparse matrix
@@ -128,7 +131,7 @@ index_t mat_get_ncols(const matrix_t *A);
  *  @param[in] A            the tuned matrix.
  *  @return                 an error code.
  */
-libcsx_error_t mat_destroy_tuned(matrix_t *A);
+libcsx_error_t libcsx_mat_destroy_tuned(matrix_t *A);
 
 /**
  *  This routine releases any memory internally used by the sparse input
@@ -137,7 +140,7 @@ libcsx_error_t mat_destroy_tuned(matrix_t *A);
  *  @param[in] A            the input matrix.
  *  @return                 an error code.
  */
-libcsx_error_t mat_destroy_input(input_t *A);
+libcsx_error_t libcsx_mat_destroy_input(input_t *A);
 
 /**
  *  Sets the option #option according to the string #string for the tuning
@@ -146,8 +149,10 @@ libcsx_error_t mat_destroy_input(input_t *A);
  *  @param[in] A            the input matrix to be tuned.
  *  @param[in] option       the option to be set.
  *  @param[in] string       a description of how to set the option.
+ *  @return                 an error code.
  */
-void set_tuning_option(input_t *A, option_t option , const char *string);
+libcsx_error_t libcsx_set_tuning_option(input_t *A, option_t option,
+                                        const char *string);
 
 /**
  *  Sets the option #option according to the string #string.
@@ -155,8 +160,9 @@ void set_tuning_option(input_t *A, option_t option , const char *string);
  *
  *  @param[in] option       the option to be set.
  *  @param[in] string       a description of how to set the option.
+ *  @return                 an error code.
  */
-void set_runtime_option(option_t option , const char *string);
+libcsx_error_t libcsx_set_runtime_option(option_t option , const char *string);
 
 #endif // LIBCSX_MAT_H__
 

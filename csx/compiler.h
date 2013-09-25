@@ -18,6 +18,7 @@
 #include <llvm/Module.h>
 #include <iostream>
 #include <cassert>
+#include <llvm/Support/ManagedStatic.h>
 
 using namespace clang;
 using namespace llvm;
@@ -39,6 +40,8 @@ public:
         // Take back the ownership of the invocation so as to avoid double
         // delete() corruption; the invocation will be released from our dtor
         //compiler_->takeInvocation();
+
+        /* Just let CompilerInvocation object be released through CompilerInstance */
     };
 
     Module *Compile(const std::string &source, LLVMContext *context) const;
@@ -81,7 +84,8 @@ private:
     // Set up the code generation options depending on debug mode
     void SetCodeGenOptions();
     void SetHeaderSearchOptions();
-    OwningPtr<CompilerInvocation> invocation_;
+//    OwningPtr<CompilerInvocation> invocation_;
+    CompilerInvocation *invocation_;
     OwningPtr<CompilerInstance> compiler_;
     bool keep_temporaries_;
     bool debug_mode_;

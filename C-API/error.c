@@ -22,7 +22,7 @@
  *  overridden with #err_set_logfile().
  */
 static libcsx_errhandler_t err_handlerptr = err_handle;
-static libcsx_logfile_t err_logfile;  //Initialize in main to stderr
+static libcsx_logfile_t err_logfile;
 
 #define MAXLINE 1024
 
@@ -63,11 +63,8 @@ static void err_print(int errnoflag, int error, const char* sourcefile,
     /* Add postfix */
     snprintf(buf+strlen(buf), MAXLINE-strlen(buf), postfix, sourcefile, lineno,
              function);
-    fflush(stdout); /* in case stdout and stderr are the same */
-    fputs(buf, stderr);
-    fflush(stderr);
-    /* fputs(buf, error_logfile); */
-    /* fflush(error_logfile); */
+    fputs(buf, err_logfile);
+    fflush(err_logfile);
 }
 
 void err_handle(libcsx_error_t code, const char *sourcefile,
@@ -76,8 +73,8 @@ void err_handle(libcsx_error_t code, const char *sourcefile,
 {
     va_list ap;
     int errno_saved = errno;
-    char *err_prefix = "[ERROR] libcsx: ";
-    char *warn_prefix = "[WARNING] libcsx: ";
+    char *err_prefix = "[ERROR]: ";
+    char *warn_prefix = "[WARNING]: ";
 
     /* In case a valid error code is given find the corresponding default
        error/warning message */
@@ -113,20 +110,24 @@ void err_set_handler(libcsx_errhandler_t new_handler)
     }
 }
 
-libcsx_logfile_t err_get_logfile()
+void err_set_logfile(const char *filename)
 {
-    return err_logfile;
+    if (!filename) {
+        err_logfile = stderr;
+    } else {
+        err_logfile = fopen(filename, "a+");
+        if (err_logfile == NULL) {
+            fprintf(stderr, "[ERROR]: failed to open logfile\n");
+            exit(1);
+        }
+    }
 }
 
-libcsx_error_t err_set_logfile(libcsx_logfile_t new_file)
+void err_close_logfile()
 {
-    if (!new_file) {
-        SETERROR_0(LIBCSX_ERR_FILE);
-        return LIBCSX_ERR_FILE;
-    } else {
-        err_logfile = new_file;
-    }
-    return LIBCSX_SUCCESS;
+    int error = fclose(err_logfile);
+    if (error != 0) printf("ok\n");
+    err_logfile = NULL;
 }
 
 /**
@@ -143,9 +144,9 @@ static const char *libcsx_errors[] = {
     "unexpected data in file",
     "index out of bounds",
     "dummy",
-    "unable to open file",
-    "unable to read from file",
-    "unable to write to file",
+    "failed to open file",
+    "failed to read from file",
+    "failed to write to file",
     "memory allocation failed",
     "memory deallocation failed"
 };

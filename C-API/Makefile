@@ -1,32 +1,36 @@
 .PHONY: all clean
 
-all: libtest
+all: libcsx.so libcsx.a libtest
 
 ## Configuration
 csx_dir     = ../csx
-spm_dir     = ../lib/spm
-prfcnt_dir   = ../lib/prfcnt
 
 CC          = gcc
 LD          = gcc
-CFLAGS      = -g -Wall -O3 -Wdisabled-optimization -Winline -fPIC
+CFLAGS      = -g -Wall -O3 -Wdisabled-optimization -Winline -fPIC -DLIBCSX_LOG_FILE
 # -Wpadded
 LDFLAGS     = -L$(csx_dir) -Wl,--rpath=$(csx_dir)
 COMPILE     = $(CC) $(CFLAGS)
 LINK        = $(LD) $(LDFLAGS)
-LIBS        = -lcsx
+LIBS        = -lcsx_in
 
-override CFLAGS += -I$(csx_dir) -I$(spm_dir)
+override CFLAGS += -I$(csx_dir)
 
-LIB_OBJECTS = error.o common.o mat.o vec.o
+LIB_OBJECTS = error.o common.o mat.o
 
 %.o: %.c %.h
 	$(COMPILE) -c $< -o $@
 
-mat.o: $(spm_dir)/vector.h $(spm_dir)/spmv_method.h $(spm_dir)/spm_mt.h $(spm_dir)/spmv_loops_mt.h $(prfcnt_dir)/tsc.h $(csx_dir)/SparseMatrixWrapper.h
+mat.o: $(csx_dir)/SparseMatrixWrapper.h
 
-libtest: main.o $(LIB_OBJECTS)
+libcsx.so: $(LIB_OBJECTS)
+	$(LINK) -shared -o $@ $^ $(LIBS)
+
+libcsx.a: $(LIB_OBJECTS)
+	ar cru $@ $^
+
+libtest: main.o libcsx.a
 	$(LINK) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f *.o libtest
+	rm -f *.o libcsx.so libcsx.a libtest

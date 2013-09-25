@@ -11,18 +11,21 @@
 #ifndef CSX_RCM_H__
 #define CSX_RCM_H__
 
+#include "logger.hpp"
+#include "mmf.h"
+#include "csr.h"
+#include "csr_iterator.h"
+#include "sparse_internal.h"
+
 #include <boost/config.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/cuthill_mckee_ordering.hpp>
 #include <boost/graph/properties.hpp>
 #include <boost/graph/bandwidth.hpp>
 
-#include "mmf.h"
-#include "csr.h"
-#include "csr_iterator.h"
-#include "SparseInternal.h"
-
 using namespace boost;
+
+#define bad_reorder 0
 
 typedef pair<size_t, size_t> Pair;
 typedef adjacency_list<vecS, vecS, undirectedS, 
@@ -113,7 +116,7 @@ void FindPerm(vector<size_t>& perm, vector<size_t>& invperm, Graph& graph)
         index_map = get(vertex_index, graph);
 
     size_t ob = bandwidth(graph);
-    cout << "Original Bandwidth: " << ob << endl;
+    LOG_INFO << "Original Bandwidth: " << ob << "\n";
 
     vector<Vertex> inv_perm(num_vertices(graph));
     perm.resize(num_vertices(graph));
@@ -136,7 +139,7 @@ void FindPerm(vector<size_t>& perm, vector<size_t>& invperm, Graph& graph)
 
     size_t nb = bandwidth(graph, make_iterator_property_map
                           (&perm[0], index_map, perm[0]));
-                          cout << "Final Bandwidth: " << nb << endl;
+    LOG_INFO << "Final Bandwidth: " << nb << "\n"; 
 }
 
 template<typename IndexType, typename ValueType>
@@ -172,9 +175,10 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
     assert(index <= nr_edges);
 
     if (index == 0) {
-        cerr << "No reordering available for this matrix: "
-             << "all non-zero elements on main diagonal" << endl;
-        exit(1);
+        LOG_WARNING << "no reordering available for this matrix, "
+                    << "all non-zero elements on main diagonal\n";
+        free(edges);
+        throw bad_reorder;
     }
 
     if (!mat.IsSymmetric() && !mat.IsColWise()) 
@@ -198,7 +202,6 @@ void ReorderMat_MMF(MMF<IndexType, ValueType>& mat, const vector<size_t>& perm)
         mat.SetCoordinates(i, perm[row-1] + 1, perm[col-1] + 1);
     }
     mat.Sort();
-    //mat.Print();
 }
 
 template<typename IndexType, typename ValueType>
@@ -206,16 +209,21 @@ void DoReorder_RCM(MMF<IndexType, ValueType>& mat, vector<size_t> &perm)
 {    
     vector<size_t> inv_perm;
 
-    cout << "=== START REORDERING ===\n";
+    LOG_INFO << "Reodering input matrix...\n"; 
     // Construct graph
     Graph graph(mat.GetNrRows());
-    graph = ConstructGraph_MMF(graph, mat);
+    try {
+        graph = ConstructGraph_MMF(graph, mat);
+    } catch (int e) {
+        mat.InitStream();
+        LOG_INFO << "Reodering complete\n";
+        return;
+    }
     // Find permutation
     FindPerm(perm, inv_perm, graph);  
     // Reorder original matrix
     ReorderMat_MMF(mat, perm);
-
-    cout << "=== END REORDERING ===\n";
+    LOG_INFO << "Reodering complete\n";
 }
 
 template<typename IndexType, typename ValueType>
@@ -226,13 +234,10 @@ SparseInternal<IndexType, ValueType> *LoadMMF_RCM_mt(const char *mmf_file,
     MMF<IndexType, ValueType> mat(mmf_file);
     vector<size_t> inv_perm;
 
-    // cout << "=== START REORDERING ===\n";
     // Reorder matrix
     DoReorder_RCM(mat, inv_perm);
     // Create internal representation
     ret = SparseInternal<IndexType, ValueType>::DoLoadMatrix(mat, nr_threads);
-    // ret->Print(std::cout);
-    // cout << "=== END REORDERING ===\n";
     return ret;
 }
 
@@ -276,9 +281,10 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
     assert(index <= nr_edges);
 
     if (index == 0) {
-        cerr << "No reordering available for this matrix: "
-             << "all non-zero elements on main diagonal" << endl;
-        exit(1);
+        LOG_WARNING << "no reordering available for this matrix, "
+                    << "all non-zero elements on main diagonal\n";
+        free(edges);
+        throw bad_reorder;
     }
 
     for (size_t i = 0; i < index; i++) {
@@ -322,16 +328,21 @@ void DoReorder_RCM(CSR<IndexType, ValueType>& mat, vector<size_t>& perm)
     typename CSR<IndexType, ValueType>::iterator iter_end = mat.end();
     vector<size_t> inv_perm;
 
-    cout << "=== START REORDERING ===\n";
+    LOG_INFO << "Reodering input matrix...\n"; 
     // Construct graph
     Graph graph(mat.GetNrRows());
-    graph = ConstructGraph_CSR(graph, iter, iter_end, mat.GetNrNonzeros(),
-                               mat.IsSymmetric());
+    try {
+        graph = ConstructGraph_CSR(graph, iter, iter_end, mat.GetNrNonzeros(),
+                                   mat.IsSymmetric());
+    } catch (int e) {
+        LOG_INFO << "Reodering complete\n";
+        return;
+    }
     // Find permutation
     FindPerm(perm, inv_perm, graph);
     // Reorder original matrix
     ReorderMat_CSR<IndexType, ValueType>(mat, perm, inv_perm);
-    cout << "=== END REORDERING ===\n";
+    LOG_INFO << "Reodering complete\n";
 }
 
 template<typename IndexType, typename ValueType>
@@ -348,15 +359,10 @@ SparseInternal<IndexType, ValueType> *LoadCSR_RCM_mt(IndexType *rowptr,
                                   nr_rows, nr_cols, zero_based);
     vector<size_t> inv_perm;
 
-    // cout << "=== START REORDERING ===\n";
-
     // Reorder original matrix
     DoReorder_RCM(mat, inv_perm);
     // Create internal representation
     spi = SparseInternal<IndexType, ValueType>::DoLoadMatrix(mat, nr_threads);
-    //spms->Print();
-
-    // cout << "=== END REORDERING ===\n";
 
     return spi;
 }

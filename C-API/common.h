@@ -14,9 +14,10 @@
 #include "error.h"
 #include "mattype.h"
 
-#define INVALID_MAT NULL;
-#define INVALID_VEC NULL;
-#define INVALID_PERM NULL;
+#define INVALID_INPUT ((input_t *) NULL)
+#define INVALID_MAT ((matrix_t *) NULL)
+#define INVALID_VEC ((vector_t *) NULL)
+#define INVALID_PERM ((perm_t *) NULL)
 
 enum TuningOptions {
     OPT_SYMMETRIC               = 0x01,
@@ -48,6 +49,16 @@ check_dim(index_t dim)
 {
     return (dim >= 0);
 }
+
+/**
+ *  \brief Library initialization routine.
+ */
+void libcsx_init();
+
+/**
+ *  \brief Library shutdown routine.
+ */
+void libcsx_close();
 
 /**
  *  \brief malloc() wrapper.

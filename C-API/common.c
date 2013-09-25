@@ -1,5 +1,21 @@
 #include "common.h"
 
+void libcsx_init()
+{
+#ifdef LIBCSX_LOG_FILE
+    err_set_logfile("libcsx_logfile");
+#else
+    err_set_logfile(NULL);    
+#endif
+}
+
+void libcsx_close()
+{
+#ifdef LIBCSX_LOG_FILE
+    err_close_logfile();
+#endif
+}
+
 void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
                       const char *function)
 {

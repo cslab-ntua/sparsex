@@ -107,19 +107,16 @@ libcsx_errhandler_t err_get_handler();
 void err_set_handler(libcsx_errhandler_t new_handler);
 
 /**
- *  \brief Returns a pointer to the current error log file, which is stderr
- *         by default.
- *
- *  @return     current error log file.
- */
-libcsx_logfile_t err_get_logfile();
-
-/**
  *  \brief Sets the current error log file.
  *
- *  @param new_logfile   new error log file.
+ *  @param filename   new error log file.
  */
-libcsx_error_t err_set_logfile(libcsx_logfile_t new_file);
+void err_set_logfile(const char *filename);
+
+/**
+ *  \brief Closes the current error log file.
+ */
+void err_close_logfile();
 
 /**
  *  Returns the default error message corresponding to supplied error code

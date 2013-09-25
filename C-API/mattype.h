@@ -12,21 +12,25 @@
 
 #include <inttypes.h>
 
+#ifndef SCALAR
+#define SCALAR double
+#endif
+
 /* Default index and value types of a sparse matrix */
-#define index_t int
+#define index_t uint64_t
 #define value_t double
 
-#if defined(USE_UNSIGNED_INDICES)
+#ifdef USE_UNSIGNED_INDICES
 #define index_t uint32_t
 #endif
 
-#if defined(USE_64BIT_INDICES)
+#ifdef USE_64BIT_INDICES
 #define index_t uint64_t
 #endif
 
-#if defined(USE_SINGLE_PRECISION)
+#ifdef USE_SINGLE_PRECISION
 #define value_t float
-#elif defined(USE_DOUBLE_PRECISION)
+#else
 #define value_t double
 #endif
 

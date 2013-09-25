@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 #include "ctl_ll.h"
-#include "spm_mt.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 }
@@ -50,7 +50,7 @@ typedef struct {
 
 #ifdef __cplusplus
 
-template<typename IndexType, typename ValueType>
+template<typename ValueType>
 struct csx_t {
     size_t nnz, ncols, nrows, ctl_size, row_start;
     uint8_t row_jumps;
@@ -60,9 +60,9 @@ struct csx_t {
     row_info_t *rows_info;
 };
 
-template<typename IndexType, typename ValueType>
+template<typename ValueType>
 struct csx_sym_t {
-    csx_t<IndexType, ValueType> *lower_matrix;
+    csx_t<ValueType> *lower_matrix;
     ValueType *dvalues;
 };
 
@@ -74,9 +74,10 @@ struct csx_sym_t {
 
 #ifdef __cplusplus  // This file is also included from csx_llvm_tmpl.c.
 
-#include "SparsePartition.h"
+#include "sparse_partition.h"
 #include "delta.h"
-#include <iostream>
+#include "spm_mt.h"
+#include "logger.hpp"
 
 #ifdef SPM_NUMA
 #   include <numa.h>
@@ -85,8 +86,6 @@ struct csx_sym_t {
 #else
 #   define DYNARRAY_CREATE  dynarray_create
 #endif
-
-static bool debug = false;
 
 namespace csx {
 
@@ -118,6 +117,7 @@ public:
 
     CsxManager(SparsePartition<IndexType, ValueType> *spm)
         : spm_(spm),
+          spm_sym_(0),
           flag_avail_(0),
           row_jmps_(false),
           full_column_indices_(false),
@@ -125,7 +125,8 @@ public:
           last_col_(0), empty_rows_(0) {}
 
     CsxManager(SparsePartitionSym<IndexType, ValueType> *spm_sym)
-        : spm_sym_(spm_sym),
+        : spm_(0),
+          spm_sym_(spm_sym),
           flag_avail_(0),
           row_jmps_(false),
           full_column_indices_(false),
@@ -151,14 +152,14 @@ public:
      *  @return          a handle to the newly created CSX matrix or to CSX-Sym
      *                   lower triangle half part of the matrix.
      */
-    csx_t<IndexType, ValueType> *MakeCsx(bool symmetric);
+    csx_t<ValueType> *MakeCsx(bool symmetric);
     
     /**
      *  Transform the matrix owned by this manager into CSX form.
      *
      *  @return a handle to the newly created CSX-Sym matrix.
      */
-    csx_sym_t<IndexType, ValueType> *MakeCsxSym();
+    csx_sym_t<ValueType> *MakeCsxSym();
 
     /**
      *  Checks whether row jumps exist in the matrix to be encoded in CSX
@@ -301,9 +302,9 @@ uint8_t CsxManager<IndexType, ValueType>::GetFlag(long pattern_id,
 }
 
 template<typename IndexType, typename ValueType>
-csx_sym_t<IndexType, ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
+csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
 {
-    csx_sym_t<IndexType, ValueType> *csx;
+    csx_sym_t<ValueType> *csx;
     double *diagonal = spm_sym_->GetDiagonal();
     uint64_t diagonal_size = spm_sym_->GetDiagonalSize();
     
@@ -312,23 +313,22 @@ csx_sym_t<IndexType, ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
 #ifdef SPM_NUMA
     int cpu = sched_getcpu();
     if (cpu < 0) {
-        perror("sched_getcpu() failed");
+        LOG_ERROR << "sched_getcpu() failed " << strerror(errno);
         exit(1);
     }
 
     int node = numa_node_of_cpu(cpu);
     if (node < 0) {
-        perror("numa_node_of_cpu() failed");
+        LOG_ERROR << "numa_node_of_cpu() failed " << strerror(errno);
         exit(1);
     }
 
-    csx = (csx_sym_t<IndexType, ValueType> *) numa_alloc_onnode
-        (sizeof(csx_sym_t<IndexType, ValueType>), node);
+    csx = (csx_sym_t<ValueType> *) numa_alloc_onnode
+        (sizeof(csx_sym_t<ValueType>), node);
     csx->dvalues = (ValueType *) numa_alloc_onnode(diagonal_size *
                                                    sizeof(ValueType), node);
 #else  
-    csx = (csx_sym_t<IndexType, ValueType> *) malloc
-        (sizeof(csx_sym_t<IndexType, ValueType>));
+    csx = (csx_sym_t<ValueType> *) malloc(sizeof(csx_sym_t<ValueType>));
     csx->dvalues = (ValueType *) malloc(diagonal_size * sizeof(ValueType));
 #endif
 
@@ -340,38 +340,36 @@ csx_sym_t<IndexType, ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
 }
 
 template<typename IndexType, typename ValueType>
-csx_t<IndexType, ValueType> *CsxManager<IndexType, ValueType>::
-MakeCsx(bool symmetric)
+csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
 {
-    csx_t<IndexType, ValueType> *csx;
+    csx_t<ValueType> *csx;
 
 #ifdef SPM_NUMA
     int cpu = sched_getcpu();
     if (cpu < 0) {
-        perror("sched_getcpu() failed");
+        LOG_ERROR << "sched_getcpu() failed " << strerror(errno);
         exit(1);
     }
 
     int node = numa_node_of_cpu(cpu);
     if (node < 0) {
-        perror("numa_node_of_cpu() failed");
+        LOG_ERROR << "numa_node_of_cpu() failed " << strerror(errno);
         exit(1);
     }
 
-    csx = (csx_t<IndexType, ValueType> *) alloc_onnode
-        (sizeof(csx_t<IndexType, ValueType>), node);
+    csx = (csx_t<ValueType> *) alloc_onnode
+        (sizeof(csx_t<ValueType>), node);
     values_ = (ValueType *) alloc_onnode
         (sizeof(ValueType)*spm_->GetNrNonzeros(), node);
     rows_info_ = (row_info_t *) alloc_onnode
         (sizeof(row_info_t)*spm_->GetNrRows(), node);
 #else    
-    csx = (csx_t<IndexType, ValueType> *) malloc
-        (sizeof(csx_t<IndexType, ValueType>));
+    csx = (csx_t<ValueType> *) malloc(sizeof(csx_t<ValueType>));
     values_ = (ValueType *) malloc(sizeof(ValueType)*spm_->GetNrNonzeros());
     rows_info_ = (row_info_t *) malloc(sizeof(row_info_t)*spm_->GetNrRows());
 #endif  // SPM_NUMA
     if (!csx || !values_ || !rows_info_) {
-        std::cerr << __FUNCTION__ << ": malloc failed\n";
+        LOG_ERROR << "malloc failed\n";
         exit(1);
     }
 
@@ -392,20 +390,19 @@ MakeCsx(bool symmetric)
             rbegin = spm_->RowBegin(i);
             rend = spm_->RowEnd(i);
 
-            if (debug)
-                std::cerr << "MakeCsx(): row: " << i << "\n";
+            LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
     
             if (rbegin == rend) {		// Check if row is empty.
-                if (debug)
-                    std::cerr << "MakeCsx(): row is empty" << std::endl;
-    
-                if (new_row_ == false)
-                    new_row_ = true;	// In case the first row is empty.
-                else
-                    empty_rows_++;
+                LOG_DEBUG << "MakeCsx(): row is empty\n";
 
+                if (new_row_ == false) {
+                    rows_info_[i].rowptr = 0;
+                    new_row_ = true;	// In case the first row is empty.
+                } else {
+                    empty_rows_++;
+                    rows_info_[i].rowptr = rows_info_[i-1].rowptr;
+                }
                 rows_info_[i].valptr = 0;
-                rows_info_[i].rowptr = rows_info_[i-1].rowptr;
                 rows_info_[i].span = 0;
                 continue;
             }
@@ -419,7 +416,8 @@ MakeCsx(bool symmetric)
             rows_info_[i].span = span_;
             new_row_ = true;
         }
-        for (size_t i = spm_->GetRowptrSize() - 1; i < (size_t) spm_->GetNrRows(); i++) {
+        for (size_t i = spm_->GetRowptrSize() - 1;
+             i < (size_t) spm_->GetNrRows(); i++) {
                 rows_info_[i].valptr = 0;
                 rows_info_[i].rowptr = rows_info_[i-1].rowptr;
                 rows_info_[i].span = 0;
@@ -431,23 +429,37 @@ MakeCsx(bool symmetric)
     
             rbegin = spm_->RowBegin(i);
             rend = spm_->RowEnd(i);
-            if (debug)
-                std::cerr << "MakeCsx(): row: " << i << "\n";
+            LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
     
             if (rbegin == rend){		// Check if row is empty.
-                if (debug)
-                    std::cerr << "MakeCsx(): row is empty" << std::endl;
+                LOG_DEBUG << "MakeCsx(): row is empty\n";
     
-                if (new_row_ == false)
+                if (new_row_ == false) {
+                    rows_info_[i].rowptr = 0;
                     new_row_ = true;	// In case the first row is empty.
-                else
+                } else {
+                    rows_info_[i].rowptr = rows_info_[i-1].rowptr;
                     empty_rows_++;
-    
+                }
+                rows_info_[i].valptr = 0;
+                rows_info_[i].span = 0;
                 continue;
             }
     
+            if (i > 0)
+                rows_info_[i].rowptr = (IndexType) dynarray_get_nextidx(ctl_da_);
+            else 
+                rows_info_[i].rowptr = 0;
+            rows_info_[i].valptr = values_idx_;
             DoSymRow(rbegin, rend);
+            rows_info_[i].span = span_;
             new_row_ = true;
+        }
+        for (size_t i = spm_->GetRowptrSize() - 1;
+             i < (size_t) spm_->GetNrRows(); i++) {
+                rows_info_[i].valptr = 0;
+                rows_info_[i].rowptr = rows_info_[i-1].rowptr;
+                rows_info_[i].span = 0;
         }
     }
 
@@ -463,9 +475,6 @@ MakeCsx(bool symmetric)
     rows_info_ = NULL;
 
     AddMappings(csx->id_map);
-    // for (int i=0; csx->id_map[i] != -1; i++)
-    //     std::cout << csx->id_map[i] << " ";
-    // std:: cout << std::endl;
     return csx;
 }
 
@@ -523,8 +532,7 @@ DoRow(const Elem<IndexType, ValueType> *rbegin,
     last_col_ = 1;
     for (const Elem<IndexType, ValueType> *spm_elem = rbegin;
          spm_elem < rend; spm_elem++) {
-        if (debug)
-            std::cerr << "\t" << *spm_elem << "\n";
+        LOG_DEBUG << "\t" << *spm_elem << "\n";
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
@@ -564,15 +572,16 @@ DoSymRow(const Elem<IndexType, ValueType> *rbegin,
 {
     std::vector<IndexType> xs;
     const Elem<IndexType, ValueType> *spm_elem = rbegin;
+    span_ = 0;
 
     last_col_ = 1;
     for ( ; spm_elem < rend && spm_elem->col < spm_->GetRowStart() + 1; 
          spm_elem++) {
-        if (debug)
-            std::cerr << "\t" << *spm_elem << "\n";
+        LOG_DEBUG << "\t" << *spm_elem << "\n";
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
+            UpdateRowSpan(spm_elem->pattern);
             PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
             AddPattern(*spm_elem);
@@ -595,11 +604,11 @@ DoSymRow(const Elem<IndexType, ValueType> *rbegin,
         AddXs(xs);
 
     for ( ; spm_elem < rend; spm_elem++) {
-        if (debug)
-            std::cerr << "\t" << *spm_elem << "\n";
+        LOG_DEBUG << "\t" << *spm_elem << "\n";
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
+            UpdateRowSpan(spm_elem->pattern);
             PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
             AddPattern(*spm_elem);
@@ -730,8 +739,7 @@ AddPattern(const Elem<IndexType, ValueType> &elem)
     else
         ucol = elem.col - last_col_;
         
-    if (debug)
-        std::cerr << "AddPattern ujmp " << ucol << "\n";
+    LOG_DEBUG << "AddPattern ujmp " << ucol << "\n";
 
     if (full_column_indices_)
         da_put_u32(ctl_da_, ucol-1);
@@ -739,8 +747,7 @@ AddPattern(const Elem<IndexType, ValueType> &elem)
         da_put_ul(ctl_da_, ucol);
 
     last_col_ = elem.pattern->ColIncreaseJmp(spm_->GetType(), elem.col);
-    if (debug)
-        std::cerr << "last_col:" << last_col_ << "\n";
+    LOG_DEBUG << "last_col: " << last_col_ << "\n";
 }
 
 // return ujmp
@@ -752,7 +759,7 @@ PreparePat(std::vector<IndexType> &xs, const Elem<IndexType, ValueType> &elem)
         AddXs(xs);
 }
 
-}   // end of csx namespace
+} // end of csx namespace
 
 #endif  // __cplusplus
 

@@ -13,14 +13,18 @@
 #ifndef CSX_DRLE_H__
 #define CSX_DRLE_H__
 
+#include "sparse_util.h"
+#include "sparse_partition.h"
+#include "TimingFramework.h"
+#include "node.h"
+#include "logger.hpp"
+
 #include <map>
-#include <set>
 #include <bitset>
 #include <limits>
 #include <cassert>
-#include <cstdlib>
 #include <iostream>
-#include "TimingFramework.h"
+#include <sstream>
 
 #define FOREACH BOOST_FOREACH
 
@@ -61,6 +65,7 @@ public:
                  bool onedim_blocks = false);
 
     ~DRLE_Manager() {
+        spm_ = 0;
         if (selected_splits_)
             delete selected_splits_;
     }
@@ -89,7 +94,7 @@ public:
      *
      *  @param os the output stream where the statistics will be outputed.
      */
-    void OutStats(std::ostream &os=std::cout);
+    void OutStats(ostringstream &os);
 
     /**
      *  Instruct DRLE_Manager to ignore a specific type of pattern. Patterns of
@@ -173,7 +178,7 @@ public:
      *  @param os           the output stream, where to send the output.
      *  @see Encode()
      */
-    void EncodeAll(std::ostream &os);
+    void EncodeAll(ostringstream &os);
 
     /**
      *  Search for and output all the encoding sequences of the matrix owned
@@ -195,7 +200,7 @@ public:
      *
      *  @param out the output stream, where output is to be sent.
      */
-    void OutputSortSplits(std::ostream& out);
+    void OutputSortSplits(ostringstream& out);
 
     void EnableOneDimBlocks(bool enable)
     {
@@ -395,43 +400,8 @@ private:
  */
 template<typename IndexType, typename ValueType>
 void DRLE_OutStats(DeltaRLE::Stats &stats,
-                   SparsePartition<IndexType, ValueType> &sp,
-                   std::ostream &os);
-
-/**
- *  Keeps data of an encoding sequence.
- */
-class Node {
-public:
-    Node(uint32_t depth);
-    ~Node() {}
-    
-    void PrintNode();
-
-    /**
-     *  Ignore the type for the encoding sequence examined.
-     *
-     *  @param type type which is ignored.
-     */
-    void Ignore(IterOrder type);
-
-    /**
-     *  Copies a node to a new one and inserts an extra type in the end of the
-     *  encoding sequence.
-     *  
-     *  @param type   type which is inserted in the end.
-     *  @param deltas deltas corresponding to type inserted.
-     */
-    Node MakeChild(IterOrder type, std::set<uint64_t> deltas);
-
-public:
-//private:
-    uint32_t depth_;
-    std::map<IterOrder, std::set<uint64_t> > deltas_path_;
-    IterOrder *type_path_;
-    IterOrder *type_ignore_;
-//    friend class DRLE_Manager<uint64_t, double>;
-};
+                   SparsePartition<IndexType, ValueType> &sp, 
+                   ostringstream &os);
 
 }
 
@@ -569,7 +539,7 @@ DRLE_Manager(SparsePartition<IndexType, ValueType> *spm, long min_limit,
         ComputeSortSplits();
 #if 0
         std::cout << "Window size (computed): "
-                  << sort_window_size_ << std::endl;
+                  << sort_window_size_ << "\n";
         for (size_t i = 0; i < sort_splits_.size() - 1; ++i) {
             printf("(%ld, %ld)\n", sort_splits_[i+1] - sort_splits_[i],
                    sort_splits_nzeros_[i]);
@@ -771,7 +741,7 @@ namespace csx {
 
 template<typename IndexType, typename ValueType>
 void DRLE_OutStats(DeltaRLE::Stats &stats,
-                   SparsePartition<IndexType, ValueType> &sp, std::ostream &os)
+                   SparsePartition<IndexType, ValueType> &sp, ostringstream &os)
 {
     DeltaRLE::Stats::iterator iter;
 
@@ -965,7 +935,7 @@ void DRLE_Manager<IndexType, ValueType>::Decode(IterOrder type)
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
+void DRLE_Manager<IndexType, ValueType>::EncodeAll(ostringstream &os)
 {
     IterOrder type = NONE;
     StatsMap::iterator iter; 
@@ -990,7 +960,7 @@ void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
         //pre_timers_[PRE_TIMER_ENCODE].Start();
         if (pre_timers_.Enabled(PRE_TIMER_ENCODE))
             pre_timers_.timers_[PRE_TIMER_ENCODE].Start();
-        os << "Encode to " << SpmTypesNames[type] << std::endl;
+        os << "Encode to " << SpmTypesNames[type] << "\n";
         
         Encode(type);
 
@@ -1017,7 +987,7 @@ void DRLE_Manager<IndexType, ValueType>::EncodeAll(std::ostream &os)
 
     for (int i = 1; i < counter; i++)
         os << ", " << SpmTypesNames[enc_seq[i]];
-    os << std::endl;
+    os << "\n";
 
     pre_timers_.PrintAllStats(os);
 }
@@ -1080,7 +1050,7 @@ void DRLE_Manager<IndexType, ValueType>::MakeEncodeTree()
         nodes.erase(nodes.begin());
     }
 
-    std::cout << "Tree has " << count << " possible paths" << std::endl;
+    LOG_DEBUG << "Tree has " << count << " possible paths.\n";
     exit(0);
 }
 
@@ -1105,7 +1075,7 @@ void DRLE_Manager<IndexType, ValueType>::EncodeSerial(int *xform_buf,
 }
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::OutputSortSplits(std::ostream& out)
+void DRLE_Manager<IndexType, ValueType>::OutputSortSplits(ostringstream& out)
 {
     sort_split_iterator iter;
     for (iter = sort_splits_.begin(); iter != sort_splits_.end() - 1; ++iter) {
@@ -1113,8 +1083,7 @@ void DRLE_Manager<IndexType, ValueType>::OutputSortSplits(std::ostream& out)
         IndexType re = *(iter + 1);
         IndexType nnz = spm_->GetRow(re) - spm_->GetRow(rs);
 
-        out << "(rs, re, nnz) = (" << rs << ", " << re << ", " << nnz << ")"
-            << std::endl;
+        out << "(rs, re, nnz) = (" << rs << ", " << re << ", " << nnz << ")\n";
     }
 }
 
@@ -1453,7 +1422,7 @@ DoDecode(const Elem<IndexType, ValueType> *elem,
     }
 
     delete elem->pattern;
-    delete elem->vals;
+    delete elem->vals;  // I beleieve this should be delete[]
 }
 
 template<typename IndexType, typename ValueType>
@@ -1970,24 +1939,25 @@ void DRLE_Manager<IndexType, ValueType>::DoCheckSortByNNZ()
 
 
 template<typename IndexType, typename ValueType>
-void DRLE_Manager<IndexType, ValueType>::OutStats(std::ostream &os)
+void DRLE_Manager<IndexType, ValueType>::OutStats(ostringstream &os)
 {
     typename DRLE_Manager::StatsMap::iterator iter;
-    for (iter = stats_.begin(); iter != stats_.end(); ++iter){
+    for (iter = stats_.begin(); iter != stats_.end(); ++iter) {
 #if SPM_HEUR_NEW
-        bool valid_stat = (iter->first == 0) || (iter->first != 0 && iter->second.size() > 1);
+        bool valid_stat = (iter->first == 0) || (iter->first != 0 
+                                                 && iter->second.size() > 1);
 #else
         bool valid_stat = !iter->second.empty();
 #endif
         if (valid_stat) {
-             os << SpmTypesNames[iter->first] << "\ts:" 
-                << GetTypeScore(iter->first);
-             DRLE_OutStats(iter->second, *(spm_), os);
-             os << std::endl;
-         }
+            os << SpmTypesNames[iter->first] << "\ts:" 
+               << GetTypeScore(iter->first);
+            DRLE_OutStats(iter->second, *(spm_), os);
+            os << "\n";
+        }
     }
 }
 
-#endif
+#endif  // CSX_DRLE_H__
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

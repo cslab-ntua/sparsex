@@ -13,19 +13,16 @@
 #ifndef CSX_JIT_H__
 #define CSX_JIT_H__
 
-#include "SparseUtil.h"
+#include "sparse_util.h"
 #include "compiler.h"
 #include "template_text.h"
-
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/Module.h>
-#include <llvm/LLVMContext.h>
-
-#include "jit.h"
 #include "csx.h"
 #include "jit_config.h"
 #include "jit_util.h"
 
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/Module.h>
+#include <llvm/LLVMContext.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/PassManager.h>
@@ -71,7 +68,8 @@ public:
 
     ~CsxExecutionEngine()
     {
-        delete llvm_engine_;
+        if (llvm_engine_)
+            delete llvm_engine_;
     };
 
 private:
@@ -96,10 +94,19 @@ public:
     CsxJit(CsxManager<IndexType, ValueType> *csxmg, CsxExecutionEngine *engine,
            unsigned int tid = 0, bool symmetric = false);
 
-    CsxJit(csx_t<IndexType, ValueType> *csx, CsxExecutionEngine *engine,
+    CsxJit(csx_t<ValueType> *csx, CsxExecutionEngine *engine,
            unsigned int tid, bool symmetric, bool row_jumps, bool full_column_indices);
 
-    ~CsxJit() {}
+    ~CsxJit()
+    {
+        std::map<IterOrder, TemplateText *>::iterator it;
+        for (it = mult_templates_.begin(); it != mult_templates_.end(); ++it)
+            delete it->second;
+        if (compiler_)
+            delete compiler_;
+        // if (context_)
+        //     delete context_;
+    }
 
     void GenCode(std::ostream &log);
     void *GetSpmvFn() const;
@@ -140,7 +147,7 @@ private:
     std::map<IterOrder, TemplateText *> mult_templates_;
     bool symmetric_;
     bool row_jumps_, full_column_indices_;
-    csx_t<IndexType, ValueType> *csx_;
+    csx_t<ValueType> *csx_;
 };
 
 
@@ -170,7 +177,7 @@ CsxJit<IndexType, ValueType>::CsxJit(CsxManager<IndexType, ValueType> *csxmg,
 };
 
 template<typename IndexType, typename ValueType>
-CsxJit<IndexType, ValueType>::CsxJit(csx_t<IndexType, ValueType> *csx,
+CsxJit<IndexType, ValueType>::CsxJit(csx_t<ValueType> *csx,
                                      CsxExecutionEngine *engine,
                                      unsigned int tid, bool symmetric,
                                      bool row_jumps, bool full_column_indices)
@@ -334,7 +341,8 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaSymCase(int delta_bits)
     if (delta_bytes > 1)
         subst_map["align_ctl"] =
             "align_ptr(ctl," + Stringify(delta_bytes) + ");";
-
+    else
+        subst_map["align_ctl"] = "";
     return tmpl->Substitute(subst_map);
 }
 
