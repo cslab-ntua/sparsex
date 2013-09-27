@@ -8,14 +8,20 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-
-#include "MatrixLoading.h"
-#include "SparseInternal.h"
-#include "spmv.h"
+#include "../C-API/mattype.h"
+#include "matrix_loading.h"
+#include "sparse_internal.h"
+#include "csx_get_set.h"
+#include "csx_util.h"
 #include "runtime.h"
+#include "csx_build.h"
 
 #include <cstdio>
 #include <cfloat>
+
+extern template bool GetValueCsx<index_t, value_t>(void *, index_t, index_t, value_t *);
+extern template bool SetValueCsx<index_t, value_t>(void *, index_t, index_t, value_t);
+extern template void PutSpmMt<value_t>(spm_mt_t *);
 
 static const char *program_name;
 
@@ -100,6 +106,7 @@ int main(int argc, char **argv)
     rt_config.LoadFromEnv();
     rt_context.SetRuntimeContext(rt_config);
 
+<<<<<<< HEAD
     // Load matrix
     SparseInternal<uint64_t, double> *spms = NULL;
     //SparsePartitionSym<uint64_t, double> *spms_sym = NULL;
@@ -115,12 +122,58 @@ int main(int argc, char **argv)
         // else
         // spm_mt = BuildCsxSym(spms_sym, rt_context, csx_context);
         CheckLoop(spm_mt, argv[i]);
+=======
+    // Load matrix    
+    SparseInternal<index_t, value_t> *spms = NULL;
+    SparsePartitionSym<index_t, value_t> *spms_sym = NULL;
+
+    csx::Timer timer1;
+    timer1.Start();
+    if (!csx_context.IsSymmetric()) {
+        spms = LoadMMF_mt<index_t, value_t>(argv[0], rt_context.GetNrThreads());
+    } else {
+        spms_sym = LoadMMF_Sym_mt<index_t, value_t>(argv[0], rt_context.GetNrThreads());
+    }
+
+    for (int i = 0; i < remargc; i++) {    
+        std::cout << "=== BEGIN BENCHMARK ===" << std::endl; 
+        double pre_time;
+        if (!symmetric)
+            spm_mt = BuildCsx(spms, csx_context, pre_time);
+        else 
+            spm_mt = BuildCsxSym(spms_sym, csx_context, pre_time);
+        timer1.Pause();
+        pre_time = timer1.ElapsedTime();
+        std::cout << pre_time << std::endl;
+        //CheckLoop(spm_mt, argv[i]);
+>>>>>>> b66e7fb93f8284b703d2cd46a40c6347a387bd06
         std::cerr.flush();
-        BenchLoop(spm_mt, argv[i]);
-        double imbalance = CalcImbalance(spm_mt);
-        std::cout << "Load imbalance: " << 100*imbalance << "%\n";
+        //BenchLoop(spm_mt, argv[i]);
+        //double imbalance = CalcImbalance(spm_mt);
+        //std::cout << "Load imbalance: " << 100*imbalance << "%\n";
         std::cout << "=== END BENCHMARK ===" << std::endl;
-        PutSpmMt(spm_mt);
+
+        /* Get/Set testing */
+        csx::Timer timer;
+        timer.Start();
+        MMF<index_t, value_t> mmf(argv[i]);
+        MMF<index_t, value_t>::iterator iter = mmf.begin();
+        MMF<index_t, value_t>::iterator iter_end = mmf.end();
+        value_t value;
+        for (;iter != iter_end; ++iter) {
+            index_t row = (*iter).row;
+            index_t col = (*iter).col;
+            if (!symmetric)
+                GetValueCsx<index_t, value_t>(spm_mt, row, col, &value);
+            else
+                GetValueCsxSym<index_t, value_t>(spm_mt, row, col, &value);
+            assert((*iter).val == value);
+        }
+        timer.Pause();
+        pre_time = timer.ElapsedTime();
+        std::cout << pre_time << std::endl;
+        /* Cleanup */
+        PutSpmMt<value_t>(spm_mt);
     }
     
     return 0;

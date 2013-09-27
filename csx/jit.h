@@ -13,16 +13,18 @@
 #ifndef CSX_JIT_H__
 #define CSX_JIT_H__
 
-#include "SparseUtil.h"
 #include "compiler.h"
-#include "template_text.h"
-
+#include "csx.h"
 #include "encodings.h"
 #include "jit.h"
-#include "csx.h"
 #include "jit_config.h"
 #include "jit_util.h"
+#include "sparse_util.h"
+#include "template_text.h"
 
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/Module.h>
+#include <llvm/LLVMContext.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>
@@ -72,7 +74,8 @@ public:
 
     ~CsxExecutionEngine()
     {
-        delete llvm_engine_;
+        if (llvm_engine_)
+            delete llvm_engine_;
     };
 
 private:
@@ -97,7 +100,19 @@ public:
     CsxJit(CsxManager<IndexType, ValueType> *csxmg, CsxExecutionEngine *engine,
            unsigned int tid = 0, bool symmetric = false);
 
-    ~CsxJit() {}
+    CsxJit(csx_t<ValueType> *csx, CsxExecutionEngine *engine,
+           unsigned int tid, bool symmetric, bool row_jumps, bool full_column_indices);
+
+    ~CsxJit()
+    {
+        std::map<Encoding::Type, TemplateText *>::iterator it;
+        for (it = mult_templates_.begin(); it != mult_templates_.end(); ++it)
+            delete it->second;
+        if (compiler_)
+            delete compiler_;
+        // if (context_)
+        //     delete context_;
+    }
 
     void GenCode(std::ostream &log);
     void *GetSpmvFn() const;
@@ -137,6 +152,8 @@ private:
     unsigned int thread_id_;
     std::map<Encoding::Type, TemplateText *> mult_templates_;
     bool symmetric_;
+    bool row_jumps_, full_column_indices_;
+    csx_t<ValueType> *csx_;
 };
 
 
@@ -151,7 +168,33 @@ CsxJit<IndexType, ValueType>::CsxJit(CsxManager<IndexType, ValueType> *csxmg,
       module_(0),
       engine_(engine),
       thread_id_(tid),
-      symmetric_(symmetric)
+      symmetric_(symmetric),
+      row_jumps_(false),
+      full_column_indices_(false),
+      csx_(NULL)
+{
+    context_ = new LLVMContext();
+    compiler_ = new ClangCompiler();
+    compiler_->AddHeaderSearchPath(CSX_PREFIX "/csx");
+    compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/spm");
+    compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/dynarray");
+    row_jumps_ = csxmg_->HasRowJmps();
+    full_column_indices_ = csxmg_->HasFullColumnIndices();
+};
+
+template<typename IndexType, typename ValueType>
+CsxJit<IndexType, ValueType>::CsxJit(csx_t<ValueType> *csx,
+                                     CsxExecutionEngine *engine,
+                                     unsigned int tid, bool symmetric,
+                                     bool row_jumps, bool full_column_indices)
+    : csxmg_(NULL),
+      module_(0),
+      engine_(engine),
+      thread_id_(tid),
+      symmetric_(symmetric),
+      row_jumps_(row_jumps),
+      full_column_indices_(full_column_indices),
+      csx_(csx)
 {
     context_ = new LLVMContext();
     compiler_ = new ClangCompiler();
@@ -272,7 +315,8 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaCase(int delta_bits)
     if (delta_bytes > 1)
         subst_map["align_ctl"] =
             "align_ptr(ctl," + Stringify(delta_bytes) + ");";
-
+    else
+        subst_map["align_ctl"] = "";
     return tmpl->Substitute(subst_map);
 }
 
@@ -307,7 +351,8 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaSymCase(int delta_bits)
     if (delta_bytes > 1)
         subst_map["align_ctl"] =
             "align_ptr(ctl," + Stringify(delta_bytes) + ");";
-
+    else
+        subst_map["align_ctl"] = "";
     return tmpl->Substitute(subst_map);
 }
 
@@ -337,7 +382,8 @@ void CsxJit<IndexType, ValueType>::
 DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
 {
     if (!symmetric_) {
-        if (csxmg_->HasRowJmps()) {
+//        if (csxmg_->HasRowJmps()) {
+        if (row_jumps_) {
             hooks["new_row_hook"] =
                 "if (test_bit(&flags, CTL_RJMP_BIT))\n"
                 "\t\t\t\ty_curr += ul_get(&ctl);\n"
@@ -347,7 +393,8 @@ DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
             hooks["new_row_hook"] = "y_curr++;";
         }
     } else {
-        if (csxmg_->HasRowJmps()) {
+//        if (csxmg_->HasRowJmps()) {
+        if (row_jumps_) {
             hooks["new_row_hook"] =
                 "if (test_bit(&flags, CTL_RJMP_BIT)) {\n"
                 "\t\t\t\tint jmp = ul_get(&ctl);\n"
@@ -370,13 +417,15 @@ DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
     }
     
     if (!symmetric_) {
-        if (csxmg_->HasFullColumnIndices()) {
+//        if (csxmg_->HasFullColumnIndices()) {
+        if (full_column_indices_) {
             hooks["next_x"] = "x_curr = x + u32_get(&ctl);";
         } else {
             hooks["next_x"] = "x_curr += ul_get(&ctl);";
         }
     } else {
-        if (csxmg_->HasFullColumnIndices()) {
+//        if (csxmg_->HasFullColumnIndices()) {
+        if (full_column_indices_) {
             hooks["next_x"] = "x_indx = u32_get(&ctl);";
         } else {
             hooks["next_x"] = "x_indx += ul_get(&ctl);";
@@ -388,111 +437,191 @@ template<typename IndexType, typename ValueType>
 void CsxJit<IndexType, ValueType>::
 DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
 {
-    typename CsxManager<IndexType, ValueType>::PatMap::iterator i_patt =
-        csxmg_->patterns.begin();
-    typename CsxManager<IndexType, ValueType>::PatMap::iterator i_patt_end =
-        csxmg_->patterns.end();
     std::map<long, std::string> func_entries;
 
-    IndexType delta, r, c;
+    if (csxmg_) {
+        typename CsxManager<IndexType, ValueType>::PatMap::iterator i_patt;
+        typename CsxManager<IndexType, ValueType>::PatMap::iterator i_patt_end;
+        i_patt = csxmg_->patterns.begin();
+        i_patt_end = csxmg_->patterns.end();
+        IndexType delta, r, c;
     
-    for (; i_patt != i_patt_end; ++i_patt) {
-        std::string patt_code, patt_func_entry;
-        long patt_id = i_patt->second.flag;
-        Encoding::Type type =
-            static_cast<Encoding::Type>(i_patt->first / CSX_PID_OFFSET);
-        delta = i_patt->first % CSX_PID_OFFSET;
-        Encoding e(type);
-        switch (e.GetType()) {
-        case Encoding::None:
-            assert(delta ==  8 ||
-                   delta == 16 ||
-                   delta == 32 ||
-                   delta == 64);
-            log << "type:" << e.GetFullName() << " size:" << delta
-                << " npatterns:" << i_patt->second.npatterns
-                << " nnz:" << i_patt->second.nr << std::endl;
-            if (!symmetric_)
-                patt_code = DoGenDeltaCase(delta);
-            else
-                patt_code = DoGenDeltaSymCase(delta);
-            patt_func_entry = "delta" + Stringify(delta) + "_case";
-            break;
-        case Encoding::Horizontal:
-            log << "type:" << e.GetFullName() << " delta:" << delta
-                << " npatterns:" << i_patt->second.npatterns
-                << " nnz:" << i_patt->second.nr << std::endl;
-            if (!symmetric_)
-                patt_code = DoGenLinearCase(type, delta);
-            else
-                patt_code = DoGenLinearSymCase(type, delta);
-            patt_func_entry = "horiz" + Stringify(delta) + "_case";
-            break;
-        case Encoding::Vertical:
-            log << "type:" << e.GetFullName() << " delta:" << delta
-                << " npatterns:" << i_patt->second.npatterns
-                << " nnz:" << i_patt->second.nr << std::endl;
-            if (!symmetric_)
-                patt_code = DoGenLinearCase(type, delta);
-            else
-                patt_code = DoGenLinearSymCase(type, delta);
-            patt_func_entry = "vert" + Stringify(delta) + "_case";
-            break;
-        case Encoding::Diagonal:
-            log << "type:" << e.GetFullName() << " delta:" << delta
-                << " npatterns:" << i_patt->second.npatterns
-                << " nnz:" << i_patt->second.nr << std::endl;
-            if (!symmetric_)
-                patt_code = DoGenLinearCase(type, delta);
-            else
-                patt_code = DoGenLinearSymCase(type, delta);
-            patt_func_entry = "diag" + Stringify(delta) + "_case";
-            break;
-        case Encoding::AntiDiagonal:
-            log << "type:" << e.GetFullName() << " delta:" << delta
-                << " npatterns:" << i_patt->second.npatterns
-                << " nnz:" << i_patt->second.nr << std::endl;
-            if (!symmetric_)
-                patt_code = DoGenLinearCase(type, delta);
-            else
-                patt_code = DoGenLinearSymCase(type, delta);
-            patt_func_entry = "rdiag" + Stringify(delta) + "_case";
-            break;
-        case Encoding::BlockRowMin ... Encoding::BlockRowMax:
-            r = e.GetBlockAlignment();
-            c = delta;
-            log << "type:" << e.GetFullName()
-                << " dim:" << r << "x" << c
-                << " npatterns:" << i_patt->second.npatterns
-                << " nnz:" << i_patt->second.nr << std::endl;
-            if (!symmetric_)
-                patt_code = DoGenBlockCase(type, r, c);
-            else
-                patt_code = DoGenBlockSymCase(type, r, c);
-            patt_func_entry = "block_row_" + Stringify(r) + "x" +
-                Stringify(c) + "_case";
-            break;
-        case Encoding::BlockColMin ... Encoding::BlockColMax:
-            r = delta;
-            c = e.GetBlockAlignment();
-            log << "type:" << e.GetFullName()
-                << " dim:" << r << "x" << c
-                << " npatterns:" << i_patt->second.npatterns
-                << " nnz:" << i_patt->second.nr << std::endl;
-            if (!symmetric_)
-                patt_code = DoGenBlockCase(type, r, c);
-            else
-                patt_code = DoGenBlockSymCase(type, r, c);
-            patt_func_entry = "block_col_" + Stringify(r) + "x" +
-                Stringify(c) + "_case";
-            break;
-        default:
-            assert(0 && "unknown type");
-        }
+        for (; i_patt != i_patt_end; ++i_patt) {
+            std::string patt_code, patt_func_entry;
+            long patt_id = i_patt->second.flag;
+            Encoding::Type type =
+                static_cast<Encoding::Type>(i_patt->first / CSX_PID_OFFSET);
+            delta = i_patt->first % CSX_PID_OFFSET;
+            Encoding e(type);
+            switch (e.GetType()) {
+            case Encoding::None:
+                assert(delta ==  8 ||
+                       delta == 16 ||
+                       delta == 32 ||
+                       delta == 64);
+                log << "type:" << e.GetFullName() << " size:" << delta
+                    << " npatterns:" << i_patt->second.npatterns
+                    << " nnz:" << i_patt->second.nr << std::endl;
+                if (!symmetric_)
+                    patt_code = DoGenDeltaCase(delta);
+                else
+                    patt_code = DoGenDeltaSymCase(delta);
+                patt_func_entry = "delta" + Stringify(delta) + "_case";
+                break;
+            case Encoding::Horizontal:
+                log << "type:" << e.GetFullName() << " delta:" << delta
+                    << " npatterns:" << i_patt->second.npatterns
+                    << " nnz:" << i_patt->second.nr << std::endl;
+                if (!symmetric_)
+                    patt_code = DoGenLinearCase(type, delta);
+                else
+                    patt_code = DoGenLinearSymCase(type, delta);
+                patt_func_entry = "horiz" + Stringify(delta) + "_case";
+                break;
+            case Encoding::Vertical:
+                log << "type:" << e.GetFullName() << " delta:" << delta
+                    << " npatterns:" << i_patt->second.npatterns
+                    << " nnz:" << i_patt->second.nr << std::endl;
+                if (!symmetric_)
+                    patt_code = DoGenLinearCase(type, delta);
+                else
+                    patt_code = DoGenLinearSymCase(type, delta);
+                patt_func_entry = "vert" + Stringify(delta) + "_case";
+                break;
+            case Encoding::Diagonal:
+                log << "type:" << e.GetFullName() << " delta:" << delta
+                    << " npatterns:" << i_patt->second.npatterns
+                    << " nnz:" << i_patt->second.nr << std::endl;
+                if (!symmetric_)
+                    patt_code = DoGenLinearCase(type, delta);
+                else
+                    patt_code = DoGenLinearSymCase(type, delta);
+                patt_func_entry = "diag" + Stringify(delta) + "_case";
+                break;
+            case Encoding::AntiDiagonal:
+                log << "type:" << e.GetFullName() << " delta:" << delta
+                    << " npatterns:" << i_patt->second.npatterns
+                    << " nnz:" << i_patt->second.nr << std::endl;
+                if (!symmetric_)
+                    patt_code = DoGenLinearCase(type, delta);
+                else
+                    patt_code = DoGenLinearSymCase(type, delta);
+                patt_func_entry = "rdiag" + Stringify(delta) + "_case";
+                break;
+            case Encoding::BlockRowMin ... Encoding::BlockRowMax:
+                r = e.GetBlockAlignment();
+                c = delta;
+                log << "type:" << e.GetFullName()
+                    << " dim:" << r << "x" << c
+                    << " npatterns:" << i_patt->second.npatterns
+                    << " nnz:" << i_patt->second.nr << std::endl;
+                if (!symmetric_)
+                    patt_code = DoGenBlockCase(type, r, c);
+                else
+                    patt_code = DoGenBlockSymCase(type, r, c);
+                patt_func_entry = "block_row_" + Stringify(r) + "x" +
+                    Stringify(c) + "_case";
+                break;
+            case Encoding::BlockColMin ... Encoding::BlockColMax:
+                r = delta;
+                c = e.GetBlockAlignment();
+                log << "type:" << e.GetFullName()
+                    << " dim:" << r << "x" << c
+                    << " npatterns:" << i_patt->second.npatterns
+                    << " nnz:" << i_patt->second.nr << std::endl;
+                if (!symmetric_)
+                    patt_code = DoGenBlockCase(type, r, c);
+                else
+                    patt_code = DoGenBlockSymCase(type, r, c);
+                patt_func_entry = "block_col_" + Stringify(r) + "x" +
+                    Stringify(c) + "_case";
+                break;
+            default:
+                assert(0 && "unknown type");
+            }
 
-        hooks["spmv_func_definitions"] += patt_code + "\n";
-        func_entries[patt_id] = patt_func_entry;
-    }
+            hooks["spmv_func_definitions"] += patt_code + "\n";
+            func_entries[patt_id] = patt_func_entry;
+        }
+    } else if (csx_) {  //FIXME code duplication
+#if 0
+        uint8_t t;
+        IndexType r, c, delta;
+
+        for (int i = 0; csx_->id_map[i] != -1; i++) {
+            t = csx_->id_map[i] / CSX_PID_OFFSET;
+            delta = csx_->id_map[i] % CSX_PID_OFFSET;
+            std::string patt_code, patt_func_entry;
+            Encoding e(type);
+            switch (e.GetType()) {
+            case Encoding::None:
+                assert(delta ==  8 ||
+                       delta == 16 ||
+                       delta == 32 ||
+                       delta == 64);
+                if (!symmetric_)
+                    patt_code = DoGenDeltaCase(delta);
+                else
+                    patt_code = DoGenDeltaSymCase(delta);
+                patt_func_entry = "delta" + Stringify(delta) + "_case";
+                break;
+            case Encoding::Horizontal:
+                if (!symmetric_)
+                    patt_code = DoGenLinearCase(type, delta);
+                else
+                    patt_code = DoGenLinearSymCase(type, delta);
+                patt_func_entry = "horiz" + Stringify(delta) + "_case";
+                break;
+            case Encoding::Vertical:
+                if (!symmetric_)
+                    patt_code = DoGenLinearCase(type, delta);
+                else
+                    patt_code = DoGenLinearSymCase(type, delta);
+                patt_func_entry = "vert" + Stringify(delta) + "_case";
+                break;
+            case Encoding::Diagonal:
+                if (!symmetric_)
+                    patt_code = DoGenLinearCase(type, delta);
+                else
+                    patt_code = DoGenLinearSymCase(type, delta);
+                patt_func_entry = "diag" + Stringify(delta) + "_case";
+                break;
+            case Encoding::AntiDiagonal:
+                if (!symmetric_)
+                    patt_code = DoGenLinearCase(type, delta);
+                else
+                    patt_code = DoGenLinearSymCase(type, delta);
+                patt_func_entry = "rdiag" + Stringify(delta) + "_case";
+                break;
+            case Encoding::BlockRowMin ... Encoding::BlockRowMax:
+                r = e.GetBlockAlignment();
+                c = delta;
+                if (!symmetric_)
+                    patt_code = DoGenBlockCase(type, r, c);
+                else
+                    patt_code = DoGenBlockSymCase(type, r, c);
+                patt_func_entry = "block_row_" + Stringify(r) + "x" +
+                    Stringify(c) + "_case";
+                break;
+            case Encoding::BlockColMin ... Encoding::BlockColMax:
+                r = delta;
+                c = e.GetBlockAlignment();
+                if (!symmetric_)
+                    patt_code = DoGenBlockCase(type, r, c);
+                else
+                    patt_code = DoGenBlockSymCase(type, r, c);
+                patt_func_entry = "block_col_" + Stringify(r) + "x" +
+                    Stringify(c) + "_case";
+                break;
+            default:
+                assert(0 && "unknown type");
+            }
+
+            hooks["spmv_func_definitions"] += patt_code + "\n";
+            func_entries[i] = patt_func_entry;
+        }
+#endif        
+	}
 
     // Add function table entries in the correct order
     std::map<long, std::string>::const_iterator i_fentry =
@@ -543,7 +672,7 @@ void CsxJit<IndexType, ValueType>::GenCode(std::ostream &log)
 {
     std::map<std::string, std::string> hooks;
     
-    // compiler_->SetDebugMode(true);
+    //compiler_->SetDebugMode(true);
     if (!symmetric_) {
         // Load the template source
         TemplateText source_tmpl(SourceFromFile(CsxTemplateSource));
@@ -605,9 +734,9 @@ void *CsxJit<IndexType, ValueType>::GetSpmvFn() const
     
     engine_->AddModule(module_);
     if (!symmetric_)
-         llvm_fn = module_->getFunction("spm_csx32_double_multiply");
+        llvm_fn = module_->getFunction("spm_csx32_double_multiply");
     else
-         llvm_fn = module_->getFunction("spm_csx32_double_sym_multiply");
+        llvm_fn = module_->getFunction("spm_csx32_double_sym_multiply");
     assert(llvm_fn);
     return engine_->GetPointerToFunction(llvm_fn);
 }

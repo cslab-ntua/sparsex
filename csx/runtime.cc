@@ -12,7 +12,7 @@
  */
 
 #include "runtime.h"
-#include "SparseUtil.h"
+#include "sparse_util.h"
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
@@ -136,27 +136,6 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
     return *this;
 }
 
-///> Max deltas that an encoding type may have. This is restricted by the
-///  number of bits used for encoding the different patterns in CSX.
-///
-///  @see ctl_ll.h
-#define DELTAS_MAX  CTL_PATTERNS_MAX
-
-// malloc wrapper
-#define xmalloc(x)                         \
-({                                         \
-    void *ret_;                            \
-    ret_ = malloc(x);                      \
-    if (ret_ == NULL){                     \
-        cerr << __FUNCTION__          \
-                  << " " << __FILE__       \
-                  << ":" << __LINE__       \
-                  << ": malloc failed\n";  \
-        exit(1);                           \
-    }                                      \
-    ret_;                                  \
-})
-
 vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
 {
     vector<string> mt_split;
@@ -177,98 +156,6 @@ vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
     }
     cout << "\n";
     return affinity;
-}
-
-static void ParseOptionXform(string str, int **xform_buf, int ***deltas)
-{
-    EncodingSequence encseq(str);
-    cout << "Encseq: " << encseq << "\n";
-    *xform_buf = (int *) xmalloc(XFORM_MAX * sizeof(int));
-    *deltas = (int **) xmalloc(XFORM_MAX * sizeof(int *));
-    for (size_t i = 0; i < XFORM_MAX; ++i)
-        (*deltas)[i] = (int *) xmalloc(DELTAS_MAX * sizeof(int));
-
-    vector<string> split_in_pairs;
-    boost::algorithm::find_all_regex(split_in_pairs, str, 
-                                     boost::regex
-                                     ("[a-z]+(\\{[0-9]+(,[0-9]+)*\\})?"));
-    vector<string> pair;
-    vector<string> delta_tokens;
-    size_t index = 0;
-    size_t delta_index = 0;
-
-    BOOST_FOREACH(string &token, split_in_pairs) {
-        boost::split(pair, token, boost::algorithm::is_any_of("{"),
-                     boost::algorithm::token_compress_on);
-
-        // Find xform
-        int option = XformIndex[pair[0]];
-        if (option < XformBlockRow) {
-            (*xform_buf)[index++] = option;
-        } else if (option == XformBlockRow) {
-            for (size_t j = BLOCK_TYPE_START; j < BLOCK_COL_START; ++j)
-                (*xform_buf)[index++] = j;
-        } else if (option == XformBlockCol) {
-            for (size_t j = BLOCK_COL_START; j < BLOCK_TYPE_END; ++j)
-                (*xform_buf)[index++] = j;
-        } else {    // All
-            for (size_t j = HORIZONTAL; j < XFORM_MAX; ++j)
-                (*xform_buf)[index++] = j;
-        }
-        
-        // Find deltas
-        if (pair.size() > 1) {
-            boost::algorithm::find_all_regex(delta_tokens, pair[1], 
-                                             boost::regex("[0-9]+"));
-            for (size_t j = 0; j < delta_tokens.size(); ++j) {
-                (*deltas)[delta_index][j] = boost::lexical_cast<int,string>
-                    (delta_tokens[j]);
-            }
-            (*deltas)[delta_index][delta_tokens.size()] = -1;
-            delta_index++;
-            if (option == XformBlockRow || option == XformBlockCol) {
-                for (size_t k = 0; k < 7; ++k) {
-                    (*deltas)[delta_index + k] = (*deltas)[delta_index - 1];
-                }
-                delta_index += 7;
-            } else if (option == XformBlockAll) {
-                for (size_t k = 0; k < 17; ++k) {
-                    (*deltas)[delta_index + k] = (*deltas)[delta_index - 1];
-                }
-            }
-        }
-    }
-    (*xform_buf)[index] = -1;
-
-    // Printing
-    cout << "Encoding type: ";
-    for (size_t i = 0; (*xform_buf)[i] != -1; ++i) {
-        if (i != 0)
-            cout << ", ";
-        cout << SpmTypesNames[(*xform_buf)[i]];
-    }
-    cout << "\n";   
-
-    // In case there are no deltas free memory
-    if (pair.size() == 1) {
-        for (size_t i = 0; i < XFORM_MAX; ++i) {
-            free((*deltas)[i]);
-        }
-        free(*deltas);
-        (*deltas) = NULL;
-    } else {
-        cout << "Deltas to Encode: ";
-        for (size_t i = 0; (*xform_buf)[i] != -1; ++i) {
-            if (i != 0)
-                cout << "}, ";
-            cout << "{";
-            assert((*deltas)[i][0] != -1);
-            cout << (*deltas)[i][0];
-            for (size_t j = 1; (*deltas)[i][j] != -1; ++j)
-                cout << "," << (*deltas)[i][j];
-        }
-        cout << "}\n";
-    }
 }
 
 void RuntimeContext::SetRuntimeContext(const RuntimeConfiguration &conf)

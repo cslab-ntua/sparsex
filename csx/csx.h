@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 #include "ctl_ll.h"
-#include "spm_mt.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 }
@@ -26,10 +26,21 @@ extern "C" {
 
 ///< CSX matrix format
 typedef struct {
-    uint64_t nnz, ncols, nrows, ctl_size, row_start;
+    size_t rowptr;    /* rowptr is the index in csx->ctl of
+                         the first element of row i */
+    size_t valptr;    /* valptr is the index in csx->values of
+                         the first element of row i */
+    size_t span;
+} row_info_t;
+
+//padding issue with size_t???
+typedef struct {
+    size_t nnz, ncols, nrows, ctl_size, row_start;
+    uint8_t row_jumps;
     double *values;
     uint8_t *ctl;
     long id_map[CTL_PATTERNS_MAX];
+    row_info_t *rows_info; 
 } csx_double_t;
 
 typedef struct {
@@ -37,25 +48,25 @@ typedef struct {
     double *dvalues;
 } csx_double_sym_t;
 
-///> Deletes all the fields of CSX format.
-void DestroyCsx(csx_double_t *csx);
-    
-///> Deletes all the fields of CSX-Sym format.
-void DestroyCsxSym(csx_double_sym_t *csx_sym);
+#ifdef __cplusplus
 
-// void DoPrint(void *csx);
-// void PrintCsx(void *csx);
+template<typename ValueType>
+struct csx_t {
+    size_t nnz, ncols, nrows, ctl_size, row_start;
+    uint8_t row_jumps;
+    ValueType *values;
+    uint8_t *ctl;
+    long id_map[CTL_PATTERNS_MAX];
+    row_info_t *rows_info;
+};
 
-// #ifdef __cplusplus
+template<typename ValueType>
+struct csx_sym_t {
+    csx_t<ValueType> *lower_matrix;
+    ValueType *dvalues;
+};
 
-// template<typename IndexType, typename ValueType>
-// ValueType GetValueCsx(void *csx, IndexType row, IndexType col);
-// template<typename IndexType, typename ValueType>
-// bool SetValueCsx(void *csx, IndexType row, IndexType col, ValueType value);
-// template<typename IndexType, typename ValueType>
-// bool SearchValue(void *csx, IndexType row, IndexType col, ValueType& value, bool mode);
-
-// #endif
+#endif
 
 #include "dynarray.h"
 
@@ -63,8 +74,10 @@ void DestroyCsxSym(csx_double_sym_t *csx_sym);
 
 #ifdef __cplusplus  // This file is also included from csx_llvm_tmpl.c.
 
-#include "SparsePartition.h"
+#include "sparse_partition.h"
 #include "delta.h"
+#include "spm_mt.h"
+#include "logger.hpp"
 
 #ifdef SPM_NUMA
 #   include <numa.h>
@@ -74,19 +87,7 @@ void DestroyCsxSym(csx_double_sym_t *csx_sym);
 #   define DYNARRAY_CREATE  dynarray_create
 #endif
 
-static bool debug = false;
-
 namespace csx {
-
-// template<typename IndexType, typename ValueType>
-// struct csx_t {
-//     IndexType nnz, ncols, nrows, ctl_size, row_start;
-//     ValueType *values;
-//     uint8_t *ctl;
-//     long id_map[CTL_PATTERNS_MAX];
-// };
-
-// typedef csx_t<uint64_t, double> csx_double_t;
 
 /**
  *  This class is responsible for transforming the matrix from our internal
@@ -116,21 +117,21 @@ public:
 
     CsxManager(SparsePartition<IndexType, ValueType> *spm)
         : spm_(spm),
+          spm_sym_(0),
           flag_avail_(0),
           row_jmps_(false),
           full_column_indices_(false),
           ctl_da_(NULL),
           last_col_(0), empty_rows_(0) {}
 
-#if 0   // SYM    
     CsxManager(SparsePartitionSym<IndexType, ValueType> *spm_sym)
-        : spm_sym_(spm_sym),
+        : spm_(0),
+          spm_sym_(spm_sym),
           flag_avail_(0),
           row_jmps_(false),
           full_column_indices_(false),
           ctl_da_(NULL),
           last_col_(0), empty_rows_(0) {}
-#endif  // SYM    
 
     /**
      *  Get a unique CSX ID for the pattern with SPM ID <tt>pattern_id</tt> and
@@ -151,16 +152,14 @@ public:
      *  @return          a handle to the newly created CSX matrix or to CSX-Sym
      *                   lower triangle half part of the matrix.
      */
-    csx_double_t *MakeCsx(bool symmetric);
+    csx_t<ValueType> *MakeCsx(bool symmetric);
     
     /**
      *  Transform the matrix owned by this manager into CSX form.
      *
      *  @return a handle to the newly created CSX-Sym matrix.
      */
-#if 0   // SYM    
-    csx_double_sym_t *MakeCsxSym();
-#endif  // SYM    
+    csx_sym_t<ValueType> *MakeCsxSym();
 
     /**
      *  Checks whether row jumps exist in the matrix to be encoded in CSX
@@ -192,11 +191,9 @@ private:
      *  @rend   last element of the row.
      */
     void DoRow(const Elem<IndexType, ValueType> *rstart,
-               const Elem<IndexType, ValueType> *rend);
-#if 0   // SYM    
+               const Elem<IndexType, ValueType> *rend, IndexType row);
     void DoSymRow(const Elem<IndexType, ValueType> *rstart,
                   const Elem<IndexType, ValueType> *rend);
-#endif  // SYM    
 
     /**
      *  Set flags that concern change of row.
@@ -227,13 +224,22 @@ private:
     void PreparePat(std::vector<IndexType> &xs,
                     const Elem<IndexType, ValueType> &elem);
 
+    /**
+     *  Updates the span of a row.
+     *
+     *  @param pat  the pattern of an element in the row.
+     */
+    void UpdateRowSpan(const DeltaRLE *pat);
+
     SparsePartition<IndexType, ValueType> *spm_;
-    //SparsePartitionSym<IndexType, ValueType> *spm_sym_;
+    SparsePartitionSym<IndexType, ValueType> *spm_sym_;
     uint8_t flag_avail_;     // Current available flags for pattern id mapping.
     bool row_jmps_;          // Whether or not row jumps included.
     bool full_column_indices_;  // use full 32-bit indices instead of deltas.
                                 
     ValueType *values_;
+    row_info_t *rows_info_; 
+    size_t span_;
     IndexType values_idx_;
 
     dynarray_t *ctl_da_;
@@ -259,11 +265,11 @@ void DeltaEncode(IterT start, IterT end, ValT &x0)
     }
 }
 
-template<typename T>
-void Copy(T *dst, uint64_t *src, long nr_items)
+template<typename S, typename D>
+void Copy(D *dst, S *src, long nr_items)
 {
     for (long i = 0; i < nr_items; i++){
-        dst[i] = static_cast<T>(src[i]);
+        dst[i] = static_cast<D>(src[i]);
     }
 }
 
@@ -283,7 +289,8 @@ uint8_t CsxManager<IndexType, ValueType>::GetFlag(long pattern_id,
     if (pi == this->patterns.end()) {
         ret = flag_avail_++;
         assert(ret <= CTL_PATTERNS_MAX && "too many patterns");
-        typename CsxManager<IndexType, ValueType>::PatInfo pat_info(ret, 1, nnz);
+        typename CsxManager<IndexType, ValueType>::PatInfo pat_info(ret, 
+                                                                    1, nnz);
         this->patterns[pattern_id] = pat_info;
     } else {
         ret = pi->second.flag;
@@ -294,10 +301,10 @@ uint8_t CsxManager<IndexType, ValueType>::GetFlag(long pattern_id,
     return ret;
 }
 
-#if 0   // SYM
-csx_double_sym_t *CsxManager::MakeCsxSym()
+template<typename IndexType, typename ValueType>
+csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
 {
-    csx_double_sym_t *csx;
+    csx_sym_t<ValueType> *csx;
     double *diagonal = spm_sym_->GetDiagonal();
     uint64_t diagonal_size = spm_sym_->GetDiagonalSize();
     
@@ -306,23 +313,23 @@ csx_double_sym_t *CsxManager::MakeCsxSym()
 #ifdef SPM_NUMA
     int cpu = sched_getcpu();
     if (cpu < 0) {
-        perror("sched_getcpu() failed");
+        LOG_ERROR << "sched_getcpu() failed " << strerror(errno);
         exit(1);
     }
 
     int node = numa_node_of_cpu(cpu);
     if (node < 0) {
-        perror("numa_node_of_cpu() failed");
+        LOG_ERROR << "numa_node_of_cpu() failed " << strerror(errno);
         exit(1);
     }
 
-    csx = (csx_double_sym_t *) numa_alloc_onnode(sizeof(csx_double_sym_t),
-                                                 node);
-    csx->dvalues = (double *) numa_alloc_onnode(diagonal_size * sizeof(double),
-                                                node);
+    csx = (csx_sym_t<ValueType> *) numa_alloc_onnode
+        (sizeof(csx_sym_t<ValueType>), node);
+    csx->dvalues = (ValueType *) numa_alloc_onnode(diagonal_size *
+                                                   sizeof(ValueType), node);
 #else  
-    csx = (csx_double_sym_t *) malloc(sizeof(csx_double_sym_t));
-    csx->dvalues = (double *) malloc(diagonal_size * sizeof(double));
+    csx = (csx_sym_t<ValueType> *) malloc(sizeof(csx_sym_t<ValueType>));
+    csx->dvalues = (ValueType *) malloc(diagonal_size * sizeof(ValueType));
 #endif
 
     for (uint64_t i = 0; i < diagonal_size; i++)
@@ -331,113 +338,143 @@ csx_double_sym_t *CsxManager::MakeCsxSym()
     
     return csx;
 }
-#endif  // SYM    
 
 template<typename IndexType, typename ValueType>
-csx_double_t *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
+csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
 {
-    csx_double_t *csx;
+    csx_t<ValueType> *csx;
 
 #ifdef SPM_NUMA
     int cpu = sched_getcpu();
     if (cpu < 0) {
-        perror("sched_getcpu() failed");
+        LOG_ERROR << "sched_getcpu() failed " << strerror(errno);
         exit(1);
     }
 
     int node = numa_node_of_cpu(cpu);
     if (node < 0) {
-        perror("numa_node_of_cpu() failed");
+        LOG_ERROR << "numa_node_of_cpu() failed " << strerror(errno);
         exit(1);
     }
 
-    csx = (csx_double_t *) alloc_onnode(sizeof(csx_double_t), node);
-    values_ = (ValueType *) alloc_onnode(sizeof(ValueType)*spm_->nr_nzeros_,
-                                      node);
+    csx = (csx_t<ValueType> *) alloc_onnode
+        (sizeof(csx_t<ValueType>), node);
+    values_ = (ValueType *) alloc_onnode
+        (sizeof(ValueType)*spm_->GetNrNonzeros(), node);
+    rows_info_ = (row_info_t *) alloc_onnode
+        (sizeof(row_info_t)*spm_->GetNrRows(), node);
 #else    
-    csx = (csx_double_t *) malloc(sizeof(csx_double_t));
-    values_ = (ValueType *) malloc(sizeof(ValueType)*spm_->nr_nzeros_);
+    csx = (csx_t<ValueType> *) malloc(sizeof(csx_t<ValueType>));
+    values_ = (ValueType *) malloc(sizeof(ValueType)*spm_->GetNrNonzeros());
+    rows_info_ = (row_info_t *) malloc(sizeof(row_info_t)*spm_->GetNrRows());
 #endif  // SPM_NUMA
-    if (!csx || !values_) {
-        std::cerr << __FUNCTION__ << ": malloc failed\n";
+    if (!csx || !values_ || !rows_info_) {
+        LOG_ERROR << "malloc failed\n";
         exit(1);
     }
 
     // Be greedy with the initial capacity (equal to CSR col_ind size) 
     // to avoid realloc()'s.
-    ctl_da_ = DYNARRAY_CREATE(sizeof(uint8_t), 512, 6*spm_->nr_nzeros_);
-    csx->nnz = spm_->nr_nzeros_;
-    csx->nrows = spm_->nr_rows_;
-    csx->ncols = spm_->nr_cols_;
-    csx->row_start = spm_->row_start_;
+    ctl_da_ = DYNARRAY_CREATE(sizeof(uint8_t), 512, 6*spm_->GetNrNonzeros());
+    csx->nnz = spm_->GetNrNonzeros();
+    csx->nrows = spm_->GetNrRows();
+    csx->ncols = spm_->GetNrCols();
+    csx->row_start = spm_->GetRowStart();
     values_idx_ = 0;
     new_row_ = false;		        // Do not mark first row.
 
     if (!symmetric) {
-        for (IndexType i = 0; i < spm_->GetNrRows(); i++) {
+        for (size_t i = 0; i < spm_->GetRowptrSize() - 1; i++) {
             const Elem<IndexType, ValueType> *rbegin, *rend;
-    
+
             rbegin = spm_->RowBegin(i);
             rend = spm_->RowEnd(i);
-            if (debug)
-                std::cerr << "MakeCsx(): row: " << i << "\n";
+
+            LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
     
-            if (rbegin == rend){		// Check if row is empty.
-                if (debug)
-                    std::cerr << "MakeCsx(): row is empty" << std::endl;
-    
-                if (new_row_ == false)
+            if (rbegin == rend) {		// Check if row is empty.
+                LOG_DEBUG << "MakeCsx(): row is empty\n";
+
+                if (new_row_ == false) {
+                    rows_info_[i].rowptr = 0;
                     new_row_ = true;	// In case the first row is empty.
-                else
+                } else {
                     empty_rows_++;
-    
+                    rows_info_[i].rowptr = rows_info_[i-1].rowptr;
+                }
+                rows_info_[i].valptr = 0;
+                rows_info_[i].span = 0;
                 continue;
             }
-    
-            DoRow(rbegin, rend);
+
+            if (i > 0)
+                rows_info_[i].rowptr = (IndexType) dynarray_get_nextidx(ctl_da_);
+            else 
+                rows_info_[i].rowptr = 0;
+            rows_info_[i].valptr = values_idx_;
+            DoRow(rbegin, rend, i);
+            rows_info_[i].span = span_;
             new_row_ = true;
+        }
+        for (size_t i = spm_->GetRowptrSize() - 1;
+             i < (size_t) spm_->GetNrRows(); i++) {
+                rows_info_[i].valptr = 0;
+                rows_info_[i].rowptr = rows_info_[i-1].rowptr;
+                rows_info_[i].span = 0;
         }
     } 
-#if 0   // SYM    
     else {
-        for (IndexType i = 0; i < spm_->GetNrRows(); i++) {
+        for (size_t i = 0; i < spm_->GetRowptrSize() - 1; i++) {
             const Elem<IndexType, ValueType> *rbegin, *rend;
     
             rbegin = spm_->RowBegin(i);
             rend = spm_->RowEnd(i);
-            if (debug)
-                std::cerr << "MakeCsx(): row: " << i << "\n";
+            LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
     
             if (rbegin == rend){		// Check if row is empty.
-                if (debug)
-                    std::cerr << "MakeCsx(): row is empty" << std::endl;
+                LOG_DEBUG << "MakeCsx(): row is empty\n";
     
-                if (new_row_ == false)
+                if (new_row_ == false) {
+                    rows_info_[i].rowptr = 0;
                     new_row_ = true;	// In case the first row is empty.
-                else
+                } else {
+                    rows_info_[i].rowptr = rows_info_[i-1].rowptr;
                     empty_rows_++;
-    
+                }
+                rows_info_[i].valptr = 0;
+                rows_info_[i].span = 0;
                 continue;
             }
     
+            if (i > 0)
+                rows_info_[i].rowptr = (IndexType) dynarray_get_nextidx(ctl_da_);
+            else 
+                rows_info_[i].rowptr = 0;
+            rows_info_[i].valptr = values_idx_;
             DoSymRow(rbegin, rend);
+            rows_info_[i].span = span_;
             new_row_ = true;
         }
+        for (size_t i = spm_->GetRowptrSize() - 1;
+             i < (size_t) spm_->GetNrRows(); i++) {
+                rows_info_[i].valptr = 0;
+                rows_info_[i].rowptr = rows_info_[i-1].rowptr;
+                rows_info_[i].span = 0;
+        }
     }
-#endif  // SYM    
 
+    csx->row_jumps = row_jmps_;
     csx->ctl_size = dynarray_size(ctl_da_);
     csx->ctl = (uint8_t *) dynarray_destroy(ctl_da_);
     ctl_da_ = NULL;
-    assert(values_idx_ == spm_->nr_nzeros_);
+    assert(values_idx_ == spm_->GetNrNonzeros());
     csx->values = values_;
     values_ = NULL;
     values_idx_ = 0;
+    csx->rows_info = rows_info_;
+    rows_info_ = NULL;
 
     AddMappings(csx->id_map);
-    // for (int i=0; csx->id_map[i] != -1; i++)
-    //     std::cout << csx->id_map[i] << " ";
-    // std:: cout << std::endl;
     return csx;
 }
 
@@ -453,6 +490,33 @@ void CsxManager<IndexType, ValueType>::AddMappings(long *map)
     map[patterns.size()] = -1;
 }
 
+template<typename IndexType, typename ValueType>
+void CsxManager<IndexType, ValueType>::UpdateRowSpan(const DeltaRLE *pat)
+{
+    Encoding::Type type = pat->GetType();
+    long size = pat->GetSize();
+    uint32_t delta = pat->GetDelta();
+    size_t span;
+
+    switch (type) {
+    case Encoding::Vertical:
+    case Encoding::Diagonal:
+    case Encoding::AntiDiagonal:
+        span = (size - 1) * delta;
+        break;
+    case Encoding::BlockRowMin ... Encoding::BlockRowMax:
+        span = type - BLOCK_TYPE_START - 1;
+        break;
+    case Encoding::BlockColMin ... Encoding::BlockColMax:
+        span = pat->GetOtherDim() - 1;
+        break;
+    default:
+        span = 0;
+    }
+    if (span > span_)
+        span_ = span;
+}
+
 /*
  *  Ctl Rules
  *  1. Each unit leaves the x index at the last element it calculated on the
@@ -462,18 +526,19 @@ void CsxManager<IndexType, ValueType>::AddMappings(long *map)
 template<typename IndexType, typename ValueType>
 void CsxManager<IndexType, ValueType>::
 DoRow(const Elem<IndexType, ValueType> *rbegin,
-      const Elem<IndexType, ValueType> *rend)
+      const Elem<IndexType, ValueType> *rend, IndexType row)
 {
     std::vector<IndexType> xs;
+    span_ = 0;
 
     last_col_ = 1;
     for (const Elem<IndexType, ValueType> *spm_elem = rbegin;
          spm_elem < rend; spm_elem++) {
-        if (debug)
-            std::cerr << "\t" << *spm_elem << "\n";
+        LOG_DEBUG << "\t" << *spm_elem << "\n";
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
+            UpdateRowSpan(spm_elem->pattern);
             PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
             AddPattern(*spm_elem);
@@ -496,7 +561,6 @@ DoRow(const Elem<IndexType, ValueType> *rbegin,
         AddXs(xs);
 }
 
-#if 0   // SYM
 /*
  *  Ctl Rules
  *  1. Each unit leaves the x index at the last element it calculated on the
@@ -510,15 +574,16 @@ DoSymRow(const Elem<IndexType, ValueType> *rbegin,
 {
     std::vector<IndexType> xs;
     const Elem<IndexType, ValueType> *spm_elem = rbegin;
+    span_ = 0;
 
     last_col_ = 1;
     for ( ; spm_elem < rend && spm_elem->col < spm_->GetRowStart() + 1; 
          spm_elem++) {
-        if (debug)
-            std::cerr << "\t" << *spm_elem << "\n";
+        LOG_DEBUG << "\t" << *spm_elem << "\n";
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
+            UpdateRowSpan(spm_elem->pattern);
             PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
             AddPattern(*spm_elem);
@@ -541,11 +606,11 @@ DoSymRow(const Elem<IndexType, ValueType> *rbegin,
         AddXs(xs);
 
     for ( ; spm_elem < rend; spm_elem++) {
-        if (debug)
-            std::cerr << "\t" << *spm_elem << "\n";
+        LOG_DEBUG << "\t" << *spm_elem << "\n";
 
         // Check if this element contains a pattern.
         if (spm_elem->pattern != NULL) {
+            UpdateRowSpan(spm_elem->pattern);
             PreparePat(xs, *spm_elem);
             assert(xs.size() == 0);
             AddPattern(*spm_elem);
@@ -567,7 +632,6 @@ DoSymRow(const Elem<IndexType, ValueType> *rbegin,
     if (xs.size() > 0)
         AddXs(xs);
 }
-#endif  // SYM    
 
 // Note that this function may allocate space in ctl_da.
 template<typename IndexType, typename ValueType>
@@ -677,8 +741,7 @@ AddPattern(const Elem<IndexType, ValueType> &elem)
     else
         ucol = elem.col - last_col_;
         
-    if (debug)
-        std::cerr << "AddPattern ujmp " << ucol << "\n";
+    LOG_DEBUG << "AddPattern ujmp " << ucol << "\n";
 
     if (full_column_indices_)
         da_put_u32(ctl_da_, ucol-1);
@@ -686,8 +749,7 @@ AddPattern(const Elem<IndexType, ValueType> &elem)
         da_put_ul(ctl_da_, ucol);
 
     last_col_ = elem.pattern->ColIncreaseJmp(spm_->GetType(), elem.col);
-    if (debug)
-        std::cerr << "last_col:" << last_col_ << "\n";
+    LOG_DEBUG << "last_col: " << last_col_ << "\n";
 }
 
 // return ujmp
@@ -699,550 +761,10 @@ PreparePat(std::vector<IndexType> &xs, const Elem<IndexType, ValueType> &elem)
         AddXs(xs);
 }
 
-}   // end of csx namespace
-
-/* Get/Set utilities of CSX */
-
-/*
- * Returns the value of the corresponding element (0 if element doesn't exist)
- * Indexes row/col are assumed to be 1-based.
- */
-template<typename IndexType, typename ValueType>
-ValueType GetValueCsx(void *spm, IndexType row, IndexType col)
-{
-	spm_mt_t *spm_mt = (spm_mt_t *) spm;
-    ValueType value = 0;
-
-    for (size_t i = 0; i < spm_mt->nr_threads; i++) {
-        SearchValue(spm_mt->spm_threads[i].spm, row, col, value, false);
-    }
-    return value;
-}
-
-/*
- * Sets the value of the corresponding element.
- * Returns false if the element doesn't exist.
- * Indexes row/col are assumed to be 1-based.
- */
-template<typename IndexType, typename ValueType>
-bool SetValueCsx(void *spm, IndexType row, IndexType col, ValueType value)
-{
-	spm_mt_t *spm_mt = (spm_mt_t *) spm;
-    bool found = false;
-
-    for (size_t i = 0; i < spm_mt->nr_threads; i++) {
-        found = SearchValue(spm_mt->spm_threads[i].spm, row, col, value, true);
-    }
-    return found;
-}
-
-#define ALIGN(buf,a) (uint8_t *) (((unsigned long) (buf) + (a-1)) & ~(a-1))
-void align_ptr(uint8_t **ctl, int align)
-{
-    *ctl = ALIGN(*ctl, align);
-}
-
-/*
- * Searches for the corresponding element.
- * Returns false if the element doesn't exist.
- * Indexes row/col are assumed to be 1-based.
- */
-template<typename IndexType, typename ValueType>
-bool SearchValue(void *spm, IndexType row, IndexType col, ValueType &value,
-                 bool mode)
-{
-    csx_double_t *csx = (csx_double_t *) spm;
-	ValueType *v = csx->values;
-	uint8_t *ctl = csx->ctl;
-	uint8_t *ctl_end = ctl + csx->ctl_size;
-	uint8_t size, flags;
-	uint8_t patt_id, type, delta;
-    IndexType cur_row = csx->row_start;
-    IndexType ucol = 0;
-    uint8_t row_dim, col_dim;
-    uint64_t i_end;
-
-	do {
-        flags = *ctl++;
-		size = *ctl++;
-		if (test_bit(&flags, CTL_NR_BIT)) {
-            if (test_bit(&flags, CTL_RJMP_BIT)) {
-                cur_row += ul_get(&ctl);
-            } else {
-                cur_row++;
-            }
-            ucol = 0;
-		}
-        if (false)  //(full_column_indices)
-            ucol = u32_get(&ctl);// + last_col;
-        else
-            ucol += ul_get(&ctl);
-
-		patt_id = flags & CTL_PATTERN_MASK;
-        type = csx->id_map[patt_id] / CSX_PID_OFFSET;
-        delta = csx->id_map[patt_id] % CSX_PID_OFFSET;  //other_dim in case it is a block
-
-//        if (type > BLOCK_TYPE_START && type < BLOCK_COL_START) {
-        if (type >= 6 && type <= 13) {
-            row_dim = type - BLOCK_TYPE_START;
-            col_dim = delta;
-//        } else if (type > BLOCK_COL_START && type <= BLOCK_TYPE_END) {
-        } else if (type >= 15 && type <= 22) {
-            col_dim = type - BLOCK_COL_START;
-            row_dim = delta;
-        }
-
-        // std::cout << "row:" << cur_row << " "; 
-        // std::cout << "col:" << ucol << " ";
-        // printf("type:%"PRIu8 " ", type);
-        // printf("delta:%"PRIu8 " ", delta);
-        // printf("size:%"PRIu8 " ", size);
-        // std::cout << std::endl;
-
-        if ((row - 1) == cur_row) {
-            if ((col - 1) == ucol) {
-                if (mode)
-                    *v = value;
-                else
-                    value = *v;
-                return true;
-            } else if ((col - 1) < ucol) {
-                return false;
-            } else {
-                switch (type) {
-                case 0:  // DELTAS
-                    if (delta == 8) {
-                        for (uint8_t i = 1; i < size; i++) {
-                            v++;
-                            ucol += u8_get(&ctl);
-                            if ((col - 1) == ucol) {
-                                if (mode)
-                                    *v = value;
-                                else
-                                    value = *v;
-                                return true;
-                            }
-                        }
-                    } else if (delta == 16) {
-                        align_ptr(&ctl, 2);
-                        for (uint8_t i = 1; i < size; i++) {
-                            v++;
-                            ucol += u16_get(&ctl);
-                            if ((col - 1) == ucol) {
-                                if (mode)
-                                    *v = value;
-                                else
-                                    value = *v;
-                                return true;
-                            }
-                        }
-                    } else if (delta == 32){
-                        align_ptr(&ctl, 4);
-                        for (uint8_t i = 1; i < size; i++) {
-                            v++;
-                            ucol += u32_get(&ctl);
-                            if ((col - 1) == ucol) {
-                                if (mode)
-                                    *v = value;
-                                else
-                                    value = *v;
-                                return true;
-                            }
-                        }
-                    } else {
-                        align_ptr(&ctl, 8);
-                        for (uint8_t i = 1; i < size; i++) {
-                            v++;
-                            ucol += u64_get(&ctl);
-                            if ((col - 1) == ucol) {
-                                if (mode)
-                                    *v = value;
-                                else
-                                    value = *v;
-                                return true;
-                            }
-                        }
-                    }
-                    v++;
-                    break;
-                case 1: //  HORIZONTAL
-                    i_end = size * delta;
-                    if ((col - 1) < (ucol + size * delta)) {
-                        for (uint64_t i = delta; i < i_end; i += delta) {
-                            v++;
-                            if ((col - 1) == (ucol + i)) {
-                                if (mode)
-                                    *v = value;
-                                else
-                                    value = *v;
-                                return true;
-                            }
-                        }
-                        v++;
-                    } else {
-                        v += size;
-                    }
-                    ucol += i_end - delta;
-                    break;
-                case 2 ... 4:   //VERTICAL, DIAGONAL, REV_DIAGONAL: can't possibly be in here
-                    v += size;
-                    break;
-                case 6 ... 13:  //BLOCK_R1 ... BLOCK_COL_START - 1  
-                    if ((col - 1) < (ucol + col_dim)) {
-                        v += row_dim * (col - 1 - ucol);
-                        if (mode)
-                            *v = value;
-                        else
-                            value = *v;
-                        return true;
-                    } else {
-                        v += size;
-                    }
-                    break;
-                case 15 ... 22:  //BLOCK_COL_START ... BLOCK_TYPE_END - 1
-                    if ((col - 1) < (ucol + col_dim)) {
-                        v += (col-1) - ucol;
-                        if (mode)
-                            *v = value;
-                        else
-                            value = *v;
-                        return true;
-                    } else {
-                        v += size;
-                    }
-                    break;
-                default:
-                    assert(0 && "unknown pattern type");
-                }
-            }
-        } else if ((row - 1) < cur_row) {
-            return false;
-        } else {
-            switch (type) {
-            case 0: //NONE
-                if (delta == 8) {
-                    for (uint8_t i = 1; i < size; i++) {
-                        ucol += u8_get(&ctl);
-                        v++;
-                    }
-                } else if (delta == 16) {
-                    align_ptr(&ctl, 2);
-                    for (uint8_t i = 1; i < size; i++) {
-                        ucol += u16_get(&ctl);
-                        v++;
-                    }
-                } else if (delta == 32){
-                    align_ptr(&ctl, 4);
-                    for (uint8_t i = 1; i < size; i++) {
-                        ucol += u32_get(&ctl);
-                        v++;
-                    }
-                } else {
-                    align_ptr(&ctl, 8);
-                    for (uint8_t i = 1; i < size; i++) {
-                        ucol += u64_get(&ctl);
-                        v++;
-                    }
-                }
-                v++;
-                break;
-            case 1: //HORIZONTAL: can't possibly be in here
-                v += size;
-                ucol += (size - 1) * delta;
-                break;
-            case 2: //VERTICAL
-                if (((col - 1) == ucol) &&
-                    ((row - 1) < (cur_row + size * delta))) {
-                    i_end = size * delta;
-                    for (uint64_t i = delta; i < i_end; i += delta) {
-                        v++;
-                        if ((row - 1) == (cur_row + i)) {
-                            if (mode)
-                                *v = value;
-                            else
-                                value = *v;
-                            return true;
-                        }
-                    }
-                    v++;
-                } else {                    
-                    v += size;
-                }
-                break;
-            case 3: //DIAGONAL
-                if ((col - 1) <= ucol) {  // can't possibly be in here
-                    v += size;
-                } else if ((col - 1) <= (ucol + (size - 1) * delta)) {
-                    i_end = size * delta;
-                    for (uint64_t i = delta; i < i_end; i += delta) {
-                        v++;
-                        if (((row - 1) == (cur_row + i)) && ((col - 1) == (ucol + i))) {
-                            if (mode)
-                                *v = value;
-                            else
-                                value = *v;
-                            return true;
-                        }                        
-                    }
-                    v++;
-                } else {
-                    v += size;
-                } 
-                break;
-            case 4: //REV_DIAGONAL
-                if ((col - 1) >= ucol) {  // can't possibly be in here
-                    v += size;
-                } else if ((col - 1) >= (ucol - (size - 1) * delta)) {
-                    i_end = size * delta;
-                    for (uint64_t i = delta; i < i_end; i += delta) {
-                        v++;
-                        if (((row - 1) == (cur_row + i)) && ((col - 1) == (ucol - i))) {
-                            if (mode)
-                                *v = value;
-                            else
-                                value = *v;
-                            return true;
-                        }                        
-                    }
-                    v++;
-                } else {
-                    v += size;
-                } 
-                break;
-            case 6 ... 13:  //BLOCK_R1 ... BLOCK_COL_START - 1
-                if (((col - 1) < (ucol + col_dim))
-                    && ((row -1) < (cur_row + row_dim))) {
-                    for (uint64_t i = 0; i < col_dim; i++) {
-                        for (uint64_t j = 0; j < row_dim; j++) {
-                            if (((row - 1) == (cur_row + j)) && ((col - 1) == (ucol + i))) {
-                                if (mode)
-                                    *v = value;
-                                else
-                                    value = *v;
-                                return true;
-                            }                        
-                            v++;
-                        }
-                    } 
-                } else {                    
-                    v += size;
-                }
-                break;
-            case 15 ... 22: //BLOCK_COL_START ... BLOCK_TYPE_END - 1
-                if (((col - 1) < (ucol + col_dim))
-                    && ((row -1) < (cur_row + row_dim))) {
-                    for (uint64_t i = 1; i < row_dim; i++) {
-                        v += col_dim;
-                        for (uint64_t j = 0; j < col_dim; j++) {
-                            if (((row - 1) == (cur_row + i)) && ((col - 1) == (ucol + j))) {
-                                if (mode)
-                                    *(v + j) = value;
-                                else
-                                    value = *(v + j);
-                                return true;
-                            }                        
-                        }
-                    } 
-                    v += col_dim;
-                } else {                    
-                    v += size;
-                }
-                break;
-            default:
-                assert(0 && "unknown pattern type");
-            }
-        }
-	} while (ctl < ctl_end);
-
-    return false;
-}
+} // end of csx namespace
 
 #endif  // __cplusplus
 
 #endif  // CSX_H__
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4
-                    // if (size > 1) {
-                    //     size_t count = 1;
-                    //     if (delta == 16) {
-                    //         align_ptr(&ctl, 2);
-                    //     } else if (delta == 32) {
-                    //         align_ptr(&ctl, 4);
-                    //     } else if (delta == 64){
-                    //         align_ptr(&ctl, 8);
-                    //     }
-                    //     do {
-                    //         v++;
-                    //         count++;
-                    //         if (delta == 8) {
-                    //             ucol += u8_get(&ctl);
-                    //         } else if (delta == 16) {
-                    //             ucol += u16_get(&ctl);
-                    //         } else if (delta == 32) {
-                    //             ucol += u32_get(&ctl);
-                    //         } else {
-                    //             ucol += u64_get(&ctl);
-                    //         }
-                    //         if ((col - 1) == tmp_col) {
-                    //             if (mode)
-                    //                 *v = value;
-                    //             else
-                    //                 value = *v;
-                    //             return true;
-                    //         }
-                    //         if ((col - 1) == tmp_col) {
-                    //             if (mode)
-                    //                 *v = value;
-                    //             else
-                    //                 value = *v;
-                    //             return true;
-                    //         }
-                    //     } while (count < size);
-                    //     v++;
-                    // } else {
-                    //     last_col = ucol;
-                    //     v++;
-                    // }
-
-                // if (size > 1) {
-                //     IndexType tmp_col = ucol;
-                //     size_t count = 1;
-                //     do {
-                //         v++;
-                //         count++;
-                //         if (delta8) {
-                //             delta = u8_get(&ctl);
-                //             tmp_col += delta;
-                //         }
-                //         else if (delta16) {
-                //             delta = u8_get(&ctl);
-                //             tmp_col += delta;
-                //         }
-                //         else {
-                //             delta = u32_get(&ctl);
-                //             tmp_col += delta;
-                //         }
-                //     } while (count < size);
-                //     last_col = tmp_col;
-                //     v++;
-                // } else {
-                //     last_col = ucol;
-                //     v++;
-                // }
-                    // if ((col - 1) < (ucol + size * delta)) {
-                    //     IndexType tmp_col = ucol;
-                    //     size_t count = 1;
-                    //     do {
-                    //         tmp_col += delta;
-                    //         v++;
-                    //         if ((col - 1) == tmp_col) {
-                    //             if (mode)
-                    //                 *v = value;
-                    //             else
-                    //                 value = *v;
-                    //             return true;
-                    //         }
-                    //         count++;
-                    //     } while (count < size);
-                    // } else {
-                    //     v += size;
-                    // }
-
-                    // IndexType tmp_row = cur_row;
-                    // size_t count = 1;
-                    // do {
-                    //     tmp_row += delta;
-                    //     v++;
-                    //     if ((row - 1) == tmp_row) {
-                    //         if (mode)
-                    //             *v = value;
-                    //         else
-                    //             value = *v;
-                    //         return true;
-                    //     }   
-                    //     count++;
-                    // } while (count < size);
-                    // v++;
-
-
-                    // IndexType tmp_row = cur_row;
-                    // IndexType tmp_col = ucol;
-                    // size_t count = 1;
-                    // do {
-                    //     tmp_row += delta;
-                    //     tmp_col += delta;
-                    //     v++;
-                    //     if (((col-1) == tmp_col) && ((row - 1) == tmp_row)) {
-                    //         if (mode)
-                    //             *v = value;
-                    //         else
-                    //             value = *v;
-                    //         return true;
-                    //     }
-                    //     count++;
-                    // } while (count < size);
-                    // v++;
-
-
-                    // IndexType tmp_row = cur_row;
-                    // IndexType tmp_col = ucol;
-                    // size_t count = 1;
-                    // do {
-                    //     tmp_col -= delta;
-                    //     tmp_row += delta;
-                    //     v++;
-                    //     if (((col-1) == tmp_col) && ((row - 1) == tmp_row)) {
-                    //         if (mode)
-                    //             *v = value;
-                    //         else
-                    //             value = *v;
-                    //         return true;
-                    //     }
-                    //     count++;
-                    // } while (count < size);
-                    // v++;
-
-
-
-                    // v += delta;
-                    // IndexType tmp_row = cur_row + 1;
-                    // IndexType tmp_col = ucol;
-                    // size_t count = delta;
-                    // do {
-                    //     if (((col-1) == tmp_col) && ((row - 1) == tmp_row)) {
-                    //         if (mode)
-                    //             *v = value;
-                    //         else
-                    //             value = *v;
-                    //         return true;
-                    //     }
-                    //     tmp_col++;
-                    //     if (tmp_col == (ucol + delta)) {
-                    //         tmp_col = ucol;
-                    //         tmp_row++;
-                    //     }
-                    //     v++;
-                    //     count++;
-                    // } while (count < size);
-
-
-                    // v += first_dim;
-                    // IndexType tmp_row = cur_row + 1;
-                    // IndexType tmp_col = ucol;
-                    // size_t count = first_dim;
-                    // do {
-                    //     if (((col-1) == tmp_col) && ((row - 1) == tmp_row)) {
-                    //         if (mode)
-                    //             *v = value;
-                    //         else
-                    //             value = *v;
-                    //         return true;
-                    //     }
-                    //     tmp_col++;
-                    //     if (tmp_col == (ucol + first_dim)) {
-                    //         tmp_col = ucol;
-                    //         tmp_row++;
-                    //     }
-                    //     v++;
-                    //     count++;
-                    // } while (count < size);

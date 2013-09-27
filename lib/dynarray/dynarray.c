@@ -132,7 +132,7 @@ dynarray_t *dynarray_init_frombuff(unsigned long elem_size,
 			fprintf(stderr, "dynarray_init_from_buff: realloc failed\n");
 			exit(1);
 		}
-
+        printf("reallocation\n");
 		// In case da->elems is relocated.
 		elems = da->elems;
 	}
@@ -170,11 +170,16 @@ void *dynarray_get_last(struct dynarray *da)
 	return dynarray_get(da, da->next_idx-1);
 }
 
+unsigned long dynarray_get_nextidx(struct dynarray *da)
+{
+	return da->next_idx;
+}
+
 static inline void dynarray_expand(struct dynarray *da)
 {
 	da->elems_nr += da->alloc_grain;
     /* printf("old addr: %p\n", da->elems); */
-	/* printf("expand realloc: %lu %lu %lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size); */
+	printf("expand realloc: %lu %lu %lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size);
 	if (da->numa) {
 		da->elems =
 		    numa_realloc(da->elems,

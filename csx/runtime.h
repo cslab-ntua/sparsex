@@ -14,7 +14,6 @@
 
 #include "csx.h"
 #include "jit.h"
-#include "SparseInternal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,13 +27,15 @@
 #include <boost/lexical_cast.hpp>
 
 extern "C" {
-#include "mt_lib.h" //To be removed
 #include "spm_mt.h"
 }
 
 using namespace std;
 
 namespace csx {
+
+template<typename IndexType, typename ValueType>
+class SparseInternal;
 
 /* Runtime configuration class */
 class RuntimeConfiguration
@@ -170,108 +171,13 @@ private:
     CsxExecutionEngine *engine_;
 };
 
-/* Class holding CSX-related configuration
- * 
- * OBSOLETE
- */
-class CsxContext
-{
-public:
-    static CsxContext &GetInstance()
-    {
-        static CsxContext instance;
-        return instance;
-    }
-
-    void SetCsxContext(const RuntimeConfiguration &conf);
-
-    bool IsSymmetric() const
-    {
-        return symmetric_;
-    }
-
-    bool IsSplitBlocks() const
-    {
-        return split_blocks_;
-    }
-
-    int *GetXform() const   // FIXME: const is bogus here; caller can alter
-                            // xform_buf_ ...
-    {
-        return xform_buf_;
-    }
-    
-    int **GetDeltas() const
-    {
-        return deltas_;
-    }
-    
-    void AddEncoding(pair<Encoding::Type, vector<int> > &encoding)
-    {
-        encoding_seq_.push_back(encoding);
-    }
-
-    const vector<pair<Encoding::Type, vector<int> > >
-    &GetEncodingSequence() const
-    {
-        return encoding_seq_;
-    }
-
-    size_t GetWindowSize() const
-    {
-        return wsize_;
-    }
-
-    size_t GetMaxSamples() const
-    {
-        return samples_max_;
-    }
-
-    double GetSamplingPortion() const
-    {
-        return sampling_portion_;
-    }
-
-private:
-    CsxContext()
-        : symmetric_(false),
-          split_blocks_(true),
-          xform_buf_(NULL), 
-          deltas_(NULL),
-          wsize_(0),
-          sampling_(false),
-          samples_max_(0), 
-          sampling_portion_(0)
-    { }
-
-    ~CsxContext()
-    {
-        if (xform_buf_)
-            free(xform_buf_);
-        if (deltas_) {
-            for (size_t i = 0; i < XFORM_MAX; i++)
-                free(deltas_[i]);
-            free(deltas_);
-        }
-    }
-
-    bool symmetric_, split_blocks_;
-    int *xform_buf_;
-    int **deltas_;
-    size_t wsize_;
-    bool sampling_;
-    size_t samples_max_;
-    double sampling_portion_;
-    vector<pair<Encoding::Type, vector<int> > > encoding_seq_;
-};
-
 /* Class responsible for holding per thread information */
 template<class InternalType>
 class ThreadContext
 {
 public:
-    typedef typename InternalType::index_t index_t;
-    typedef typename InternalType::value_t value_t;
+    typedef typename InternalType::idx_t idx_t;
+    typedef typename InternalType::val_t val_t;
 
     ThreadContext() : 
         id_(0), 
@@ -300,12 +206,9 @@ public:
         node_ = node;
     }
 
-    void SetData(csx::SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt);
-
-#if 0   // SYM
-    void SetDataSym(SparsePartitionSym<index_t, value_t> *spms,
+    void SetData(SparseInternal<idx_t, val_t> *spms, spm_mt_t *spm_mt);
+    void SetDataSym(SparsePartitionSym<idx_t, val_t> *spms,
                     spm_mt_t *spm_mt);
-#endif  // SYM    
  
     size_t GetId() const
     {
@@ -332,7 +235,7 @@ public:
         return spm_encoded_;
     }
 
-    CsxManager<index_t, value_t> *GetCsxManager()
+    CsxManager<idx_t, val_t> *GetCsxManager()
     {
         return csxmg_;
     }
@@ -346,17 +249,17 @@ private:
     size_t id_, cpu_, node_;
     InternalType *spm_;
     spm_mt_thread_t *spm_encoded_;
-    CsxManager<index_t, value_t> *csxmg_;
+    CsxManager<idx_t, val_t> *csxmg_;
     ostringstream *buffer_;
     double sampling_prob_;
 };
 
 template<class InternalType>
 void ThreadContext<InternalType>::
-SetData(SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt)
+SetData(SparseInternal<idx_t, val_t> *spms, spm_mt_t *spm_mt)
 {
     spm_ = spms->GetPartition(id_);
-    csxmg_ = new CsxManager<index_t, value_t>(spm_);
+    csxmg_ = new CsxManager<idx_t, val_t>(spm_);
     spm_encoded_ = &spm_mt->spm_threads[id_]; 
     buffer_ = new ostringstream("");
 #ifdef SPM_NUMA
@@ -364,15 +267,13 @@ SetData(SparseInternal<index_t, value_t> *spms, spm_mt_t *spm_mt)
     csxmg_->SetFullColumnIndices(true);
 #endif
 }
-
-#if 0   // SYM
 
 template<class InternalType>
 void ThreadContext<InternalType>::
-SetDataSym(SparsePartitionSym<index_t, value_t> *spms, spm_mt_t *spm_mt)
+SetDataSym(SparsePartitionSym<idx_t, val_t> *spms, spm_mt_t *spm_mt)
 {
     spm_ = spms + id_;
-    csxmg_ = new CsxManager<index_t, value_t>(spms + id_);
+    csxmg_ = new CsxManager<idx_t, val_t>(spms + id_);
     spm_encoded_ = &spm_mt->spm_threads[id_]; 
     buffer_ = new ostringstream("");
 #ifdef SPM_NUMA
@@ -380,8 +281,6 @@ SetDataSym(SparsePartitionSym<index_t, value_t> *spms, spm_mt_t *spm_mt)
     csxmg_->SetFullColumnIndices(true);
 #endif
 }
-
-#endif  // SYM
 
 }   // end of namespace csx
 

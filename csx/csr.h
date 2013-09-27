@@ -13,10 +13,11 @@
 #ifndef CSR_H__
 #define CSR_H__
 
+#include "sparse_util.h"
+
 #include <inttypes.h>
 #include <iterator>
 #include <vector>
-#include "SparseUtil.h"
 
 using namespace std;
 
@@ -29,8 +30,20 @@ template<typename IndexType = int, typename ValueType = double>
 class CSR
 {
 public:
-    typedef IndexType index_t;
-    typedef ValueType value_t;
+    typedef IndexType idx_t;
+    typedef ValueType val_t;
+
+    CSR(const char *filename) {}  //Dummy
+    CSR()
+        : rowptr_(0),
+          colind_(0),
+          values_(0),
+          nr_rows_(0),
+          nr_cols_(0),
+          zero_based_(false),
+          symmetric_(false),
+          reordered_(false)
+    {}
 
     CSR(IndexType *rowptr, IndexType *colind, ValueType *values,
         IndexType nr_rows, IndexType nr_cols, bool zero_based)
@@ -166,9 +179,6 @@ public:
     IndexType nr_nzeros_;
     bool zero_based_, symmetric_, reordered_;
     vector<size_t> permutation_;
-
-//protected:
-    ~CSR() {}
 };
 
 /*
@@ -350,8 +360,7 @@ public:
         else ret.row = static_cast<IndexType>(curr_row_ + 1);
         ret.col = static_cast<IndexType>(csr_->colind_[curr_elem_] + csr_->zero_based_);
         ret.val = static_cast<ValueType>(csr_->values_[curr_elem_]);
-//         std::cout << "(" << ret.row << ", " << ret.col << ", " << ret.val
-//                   << ")" << std::endl;
+
         return ret;
     }
 

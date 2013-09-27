@@ -76,7 +76,8 @@ Module *ClangCompiler::Compile(const std::string &source,
     opts.Inputs.clear();    // clear any old inputs
     opts.Inputs.push_back(std::make_pair(IK_C, tmpfile));
 
-    compiler_->setInvocation(invocation_.get());
+//    compiler_->setInvocation(invocation_.get());
+    compiler_->setInvocation(invocation_);
 
     // Setup diagnostics for the compilation process itself
     const char *const dummy_argv[] = { "" };

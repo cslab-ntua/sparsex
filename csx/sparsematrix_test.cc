@@ -1,14 +1,28 @@
-#include "SparseMatrix.h"
-//#include "SaveRestore.h"
+#include "../C-API/mattype.h"
+#include "sparse_matrix.h"
+#include "sparse_matrix_impl.h"
+#include "csx_matvec.h"
+#include "csx_bench.h"
+#include "logger.hpp"
+
 #include <cfloat>
+
+/*
+ * Explicit instantiation declarations: prevent implicit instantiations.
+ * Code that would otherwise cause an implicit instantiation has to
+ * use the explicit instatiation definition provided somewhere else in the
+ * program.
+ */
+// extern template class SparseMatrix<MMF<index_t, value_t> >;
+// extern template class SparseMatrix<CSR<index_t, value_t> >;
+// extern template spm_mt_t *RestoreCsx<index_t, value_t>(const char *, index_t **);
 
 static const char *program_name;
 
-static double CalcImbalance(void *m)
+static double CalcImbalance(void *arg)
 {
-    spm_mt_t *spm_mt = (spm_mt_t *) m;
+    spm_mt_t *spm_mt = (spm_mt_t *) arg;
     size_t i;
-    
     double min_time = DBL_MAX;
     double max_time = 0.0;
     double total_time = 0.0;
@@ -49,6 +63,9 @@ int main(int argc, char **argv)
     // bool split_blocks = true;
     // bool symmetric = false;
     spm_mt_t *spm_mt;
+    long loops = 128;
+
+    // logging::AlwaysUseFile();
 
     program_name = argv[0];
     while ((c = getopt(argc, argv, "bsh")) != -1) {
@@ -75,65 +92,62 @@ int main(int argc, char **argv)
     }
     argv = &argv[optind];
 
-    // // demopatt.mtx.sorted
-    // bool zero_based(true);
-    // size_t nr_rows = 10;
-    // size_t nr_cols = 10;
-    // uint64_t rowptr[] = {1,6,7,11,16,19,23,25,30,34,39};
-    // uint64_t colind[] = {1,2,3,4,9,8,1,2,7,10,1,2,4,6,10,1,2,10,1,2,6,10,3,4,3,4,5,6,8,3,4,5,6,3,4,5,6,10};
-    // uint64_t rowptr[] = {0,5,6,10,15,18,22,24,29,33,38};
-    // uint64_t colind[] = {0,1,2,3,8,7,0,1,6,9,0,1,3,5,9,0,1,9,0,1,5,9,2,3,2,3,4,5,7,2,3,4,5,2,3,4,5,9};
-    // double values[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,26.1,26.2,27,28,29,29.1,29.2,30,31,31.1,31.2,32};
-
-    // // sym2.mm
-    // uint64_t rowptr[] = {0,3,8,12,17,21,25,30,32,34,36};
-    // uint64_t colind[] = {0,3,5,1,2,4,6,9,1,2,3,4,0,2,3,5,8,1,2,4,6,0,3,5,6,1,4,5,6,7,6,7,3,8,1,9};
-    // double values[] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,3,3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1};
-
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
 
     config.LoadFromEnv();
     rt_context.SetRuntimeContext(config);
+    csx::Timer timer;
+    double pt, t;
 
-    // SparseMatrix<CSR<uint64_t, double> > matrix(rowptr, colind, values, nr_rows,
-    //                                             nr_cols, zero_based,
-    //                                             rt_context.GetNrThreads());
-    SparseMatrix<MMF<uint64_t, double> > matrix(argv[0]);
+    SparseMatrix<MMF<index_t, value_t> > matrix(argv[0]);
     // matrix.Reorder();
 
     for (int i = 0; i < remargc; i++) {    
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        spm_mt = matrix.CreateCsx(rt_context);
-        //matrix.PrintEncoded(std::cout);
-        //PrintCsx(spm_mt);
-        CheckLoop(spm_mt, argv[i]);
-        std::cerr.flush();
-        BenchLoop(spm_mt, argv[i]);
+        if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
+            std::cout << "Creating CSX-Sym...\n";
+            spm_mt = matrix.CreateCsx<true>(pt);
+        } else {
+            std::cout << "Creating CSX...\n";
+            spm_mt = matrix.CreateCsx<false>(pt);
+        }
+        CheckLoop(spm_mt, argv[0]);
+        std::cout << "Running 128 SpMV loops..." << std::endl;
+        BenchLoop(spm_mt, argv[0]);
+        // vector_t *x = vec_create_random(matrix.GetNrCols());
+        // vector_t *y = vec_create_random(matrix.GetNrRows());
+        // if (symmetric) {
+        //     timer.Start();
+        //     for (int i = 0; i < loops; i++)
+        //         spmv_sym_mt(spm_mt, x, 2, y, 1);
+        //     timer.Pause();
+        // } else {
+        //     timer.Start();
+        //     for (int i = 0; i < loops; i++)
+        //         spmv_mt(spm_mt, x, 2, y, 1);
+        //     timer.Pause();
+        // }
+        // t = timer.ElapsedTime();
+        // std::cout << "DONE" << std::endl;
+        // vec_print(y);
+        // vec_destroy(x);
+        // vec_destroy(y);
+        // std::cout << "Dumping Csx to binary file...";
+        // matrix.Save("csx_file");
+        // double flops = (double)(loops*matrix.GetNrNonzeros()*2)/
+        //     ((double)1000*1000*t);
+        // if (symmetric)
+        //     printf("m:%s ms:%lu s:%lu pt:%lf t:%lf r:%lf\n", "csx-sym",
+        //            MapSize(spm_mt), CsxSymSize<double>(spm_mt), pt, t, flops);
+        // else
+        //     printf("m:%s s:%lu pt:%lf t:%lf r:%lf\n", "csx",
+        //            CsxSize<double>(spm_mt), pt, t, flops);
         double imbalance = CalcImbalance(spm_mt);
         std::cout << "Load imbalance: " << 100*imbalance << "%\n";
-        std::cout << "=== END BENCHMARK ===" << std::endl;
-        PutSpmMt(spm_mt);
+        matrix.Destroy();
+        std::cout << "==== END BENCHMARK ====" << std::endl;
     }
 
-    // // Get/Set testing
-    // std::cout << matrix.GetValue(6,6) << std::endl; 
-    // matrix.SetValue(6,6,24);
-    // std::cout << matrix.GetValue(6,6) << std::endl;
-
-    // // Binary testing
-    // SaveCsx(spm_mt, "/home/athena/Desktop/libcsx/csx/dump");
-    // csx_double_t *spm = NULL;
-    // spm = RestoreCsx("/home/athena/Desktop/libcsx/csx/dump");
-    // for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
-    //     std::cout << "Partition " << i << std::endl;
-    //     std::cout << "nnz: " << spm[i].nnz << " " << "cols:" << spm[i].ncols<< " "
-    //               << "rows: " << spm[i].nrows << std::endl;
-    //     std::cout << "Dump of values: ["; 
-    //     for (size_t j = 0; j < spm[i].nnz; j++)
-    //         std::cout << spm[i].values[j] << " ";
-    //     std::cout << "]\n";
-    // }
-    
     return 0;
 }

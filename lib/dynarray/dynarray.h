@@ -39,6 +39,7 @@ void dynarray_dealloc_nr(struct dynarray *da, unsigned long nr);
 void dynarray_dealloc_all(struct dynarray *da);
 void *dynarray_get(struct dynarray *da, unsigned long idx);
 void *dynarray_get_last(struct dynarray *da);
+unsigned long dynarray_get_nextidx(struct dynarray *da);
 void dynarray_seek(struct dynarray *da, unsigned long idx);
 unsigned long dynarray_size(struct dynarray *da);
 unsigned long dynarray_capacity(struct dynarray *da);
