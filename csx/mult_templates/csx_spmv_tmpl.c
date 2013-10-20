@@ -21,7 +21,7 @@
 
 #define CSX_SPMV_FN_MAX CTL_PATTERNS_MAX
 
-#define ALIGN(buf,a) (void *) (((unsigned long) (buf) + (a-1)) & ~(a-1))
+#define ALIGN(buf, a) (void *) (((unsigned long) (buf) + (a-1)) & ~(a-1))
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -37,8 +37,10 @@ static void align_ptr(uint8_t **ctl, int align)
 static void ctl_print(uint8_t *ctl, uint64_t start, uint64_t end,
                       const char *descr)
 {
-	for (uint64_t i = start; i < end; i++)
-		printf("%s: ctl[%ld] = %d\n", descr, i, ctl[i]);
+	for (uint64_t i = start; i < end; i++) {
+		printf("%s[%ld]: %p = %d\n", descr, i, &ctl[i], ctl[i]);
+        fflush(stdout);
+    }
 }
 
 static void deref(void *ptr)
@@ -68,9 +70,11 @@ void spm_csx32_double_multiply(void *spm, vector_double_t *in,
 	uint8_t size, flags;
 	uint8_t patt_id;
 
-	for (uint64_t i = 0; i < csx->nrows; i++)
+	for (size_t i = 0; i < csx->nrows; i++)
 		y_curr[i] = 0;
 
+    /* uint8_t *ctl_start = ctl; */
+    /* ctl_print(ctl, 0, csx->ctl_size, "ctl"); */
 	do {
 		flags = *ctl++;
 		size = *ctl++;
@@ -84,6 +88,8 @@ void spm_csx32_double_multiply(void *spm, vector_double_t *in,
 		${next_x}
 		patt_id = flags & CTL_PATTERN_MASK;
 		${body_hook}
+        /* printf("ctl moved at %zd bytes\n", ctl - ctl_start); */
+        /* fflush(stdout); */
 	} while (ctl < ctl_end);
 
 	*y_curr += yr;

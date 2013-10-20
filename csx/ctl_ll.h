@@ -14,8 +14,6 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <dynarray.h>
-
 
 /*
  * bit functions
@@ -63,32 +61,6 @@ static inline int test_bit(uint8_t *byte, int bit)
 #else
 #define CTL_LL_STATIC static inline
 #endif
-
-/*
- *  put a 32-bit integer unencoded
- */
-static inline void da_put_u32(dynarray_t *da, uint32_t val)
-{
-    uint32_t *uc = (uint32_t *) dynarray_alloc_nr(da, sizeof(val));
-    *uc = val;
-}
-
-/* put an encoded unsigned long in a dynarray */
-static inline void da_put_ul(dynarray_t *da, unsigned long val)
-{
-    uint8_t *uc;
-    const unsigned shift = 7;
-
-    for (;;) {
-        uc = (uint8_t *) dynarray_alloc(da);
-        *uc = (val & ((1 << shift) - 1));
-        if (val < (1 << shift))
-            break;
-
-        *uc |= (1 << shift);
-        val >>= shift;
-    }
-}
 
 CTL_LL_STATIC uint64_t u8_get(uint8_t **ctl)
 {

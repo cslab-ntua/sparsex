@@ -13,25 +13,25 @@
 #include <inttypes.h>
 
 #ifndef SCALAR
-#define SCALAR double
+#   define SCALAR double
 #endif
 
 /* Default index and value types of a sparse matrix */
-#define index_t uint64_t
+#define index_t uint32_t
 #define value_t double
 
 #ifdef USE_UNSIGNED_INDICES
-#define index_t uint32_t
+#   define index_t uint32_t
 #endif
 
 #ifdef USE_64BIT_INDICES
-#define index_t uint64_t
+#   define index_t uint64_t
 #endif
 
 #ifdef USE_SINGLE_PRECISION
-#define value_t float
+#   define value_t float
 #else
-#define value_t double
+#   define value_t double
 #endif
 
 #endif // LIBCSX_MATTYPE_H__

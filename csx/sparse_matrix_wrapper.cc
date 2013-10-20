@@ -16,7 +16,7 @@
 #include "csx_save_restore.h"
 #include "csx_get_set.h"
 #include "csx_util.h"
-#include "csx.h"
+#include "CsxManager.h"
 #include "timer.h"
 
 /**
@@ -65,7 +65,7 @@ void *ReorderCSR(void *matrix, index_t **permutation)
 
     mat->Reorder(perm);
     if (!perm.empty()) {
-        *permutation = (index_t *) xmalloc(mat->GetNrRows()*sizeof(index_t));
+        *permutation = new index_t[mat->GetNrRows()];
         std::copy(perm.begin(), perm.end(), *permutation);  // FIXME avoid copy
     }
 
@@ -80,7 +80,7 @@ void *ReorderMMF(void *matrix, index_t **permutation)
 
     mat->Reorder(perm);
     if (!perm.empty()) {
-        *permutation = (index_t *) xmalloc(mat->GetNrRows()*sizeof(index_t));
+        *permutation = new index_t[mat->GetNrRows()];
         std::copy(perm.begin(), perm.end(), *permutation);  // FIXME avoid copy
     }
 

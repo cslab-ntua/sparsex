@@ -179,7 +179,7 @@ static inline void dynarray_expand(struct dynarray *da)
 {
 	da->elems_nr += da->alloc_grain;
     /* printf("old addr: %p\n", da->elems); */
-	printf("expand realloc: %lu %lu %lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size);
+	/* printf("expand realloc: %lu %lu %lu\n", da->next_idx, da->elems_nr, (da->next_idx+1)*da->elem_size); */
 	if (da->numa) {
 		da->elems =
 		    numa_realloc(da->elems,

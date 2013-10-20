@@ -75,7 +75,7 @@ static void *do_spmv_thread(void *arg)
 
 #define SWAP(x,y) \
 	do { \
-		typeof(x) _tmp;	\
+		__typeof__(x) _tmp;	\
 		_tmp = x; \
 		x = y; \
 		y = _tmp; \

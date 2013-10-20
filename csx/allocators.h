@@ -11,30 +11,37 @@
 #ifndef ALLOC_H
 #define ALLOC_H
 
+#include "numa_util.h"
+#include <numa.h>
+
+#include <cassert>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <limits>
 #include <new>
+#include <vector>
+
+using namespace std;
 
 // not thread safe
 class MemoryAllocator
 {
 public:
-    void *Allocate(std::size_t size, const std::nothrow_t &)
+    void *Allocate(size_t size, const nothrow_t &)
     {
         return DoAllocate(size);
     }
 
-    void *Allocate(std::size_t size)
+    void *Allocate(size_t size)
     {
-        void *ret = Allocate(size, std::nothrow);
+        void *ret = Allocate(size, nothrow);
         if (!ret)
-            throw std::bad_alloc();
+            throw bad_alloc();
         return ret;
     }
 
-    void Deallocate(void *p, std::size_t size)
+    void Deallocate(void *p, size_t size)
     {
         DoDeallocate(p, size);
     }
@@ -44,16 +51,17 @@ public:
         Deallocate(p, 0);
     }
 
-    void *Reallocate(void *p, std::size_t size, const std::nothrow_t &)
+    void *Reallocate(void *p, size_t old_size, size_t new_size,
+                     const nothrow_t &)
     {
-        return DoReallocate(p, size);
+        return DoReallocate(p, old_size, new_size);
     }
 
-    void *Reallocate(void *p, std::size_t size)
+    void *Reallocate(void *p, size_t old_size, size_t new_size)
     {
-        void *ret = Reallocate(p, size, std::nothrow);
+        void *ret = Reallocate(p, old_size, new_size, nothrow);
         if (!ret)
-            throw std::bad_alloc();
+            throw bad_alloc();
         return ret;
     }
 
@@ -62,16 +70,16 @@ public:
     {
         if (p) {
             p->~T();
-            std::cout << "Size: " << sizeof(T) << "\n";
+            cout << "Size: " << sizeof(T) << "\n";
             Deallocate(p, sizeof(T));
         }
     }
 
     template <typename T>
-    void Destroy(T *p, std::size_t nr_elems)
+    void Destroy(T *p, size_t nr_elems)
     {
         if (p) {
-            for (std::size_t i = 0; i < nr_elems; ++i) {
+            for (size_t i = 0; i < nr_elems; ++i) {
                 p->~T();
             }
 
@@ -88,9 +96,10 @@ protected:
     void operator=(const MemoryAllocator &);
 
 private:
-    virtual void *DoAllocate(std::size_t size) throw() = 0;
-    virtual void *DoReallocate(void *p, std::size_t size) throw() = 0;
-    virtual void  DoDeallocate(void *p, std::size_t size) throw() = 0;
+    virtual void *DoAllocate(size_t size) throw() = 0;
+    virtual void *DoReallocate(void *p, size_t old_size,
+                               size_t new_size) throw() = 0;
+    virtual void  DoDeallocate(void *p, size_t size) throw() = 0;
 };
 
 
@@ -105,17 +114,17 @@ public:
     }
 
 private:
-    void *DoAllocate(std::size_t size) throw()
+    void *DoAllocate(size_t size) throw()
     {
         return malloc(size);
     }
 
-    void *DoReallocate(void *p, std::size_t size) throw()
+    void *DoReallocate(void *p, size_t old_size, size_t new_size) throw()
     {
-        return realloc(p, size);
+        return realloc(p, new_size);
     }
 
-    void DoDeallocate(void *p, std::size_t size) throw()
+    void DoDeallocate(void *p, size_t size) throw()
     {
         if (p)
             free(p);
@@ -129,35 +138,151 @@ private:
     void operator=(const StdAllocator &);
 };
 
-// override new/delete operators using our allocators
-void *operator new(size_t size, StdAllocator &alloc)
+class NumaAllocator
+    : public MemoryAllocator
+{
+public:
+    static NumaAllocator &GetInstance()
+    {
+        static NumaAllocator instance;
+        return instance;
+    }
+
+    // NUMA-specific allocation methods
+    void *AllocateOnNode(size_t size, int node, const nothrow_t &)
+    {
+        return alloc_onnode(size, node);
+    }
+
+    void *AllocateOnNode(size_t size, int node)
+    {
+        void *ret = AllocateOnNode(size, node, nothrow);
+        if (!ret)
+            throw bad_alloc();
+        return ret;
+    }
+
+    void *AllocateInterleaved(size_t size,
+                              vector<size_t> parts, vector<int> nodes,
+                              const nothrow_t &)
+    {
+        assert(parts.size() == nodes.size());
+        return alloc_interleaved(size, parts.data(), parts.size(),
+                                 nodes.data());
+    }
+
+    void *AllocateInterleaved(size_t size,
+                              vector<size_t> parts, vector<int> nodes)
+    {
+        void *ret = AllocateInterleaved(size, parts, nodes, nothrow);
+        if (!ret)
+            throw bad_alloc();
+        return ret;
+    }
+    
+
+private:
+    void *DoAllocate(size_t size) throw()
+    {
+        return numa_alloc_local(size);
+    }
+
+    void *DoReallocate(void *p, size_t old_size, size_t new_size) throw()
+    {
+        return numa_realloc(p, old_size, new_size);
+    }
+
+    void DoDeallocate(void *p, size_t size) throw()
+    {
+        if (p && size)
+            free_interleaved(p, size);
+    }
+
+    NumaAllocator() {};
+    ~NumaAllocator() {};
+
+    // Disable copy/assignment
+    NumaAllocator(const NumaAllocator &);
+    void operator=(const NumaAllocator &);
+};
+
+
+// Override new/delete operators using our allocators
+void *operator new(size_t size, MemoryAllocator &alloc)
 {
     return alloc.Allocate(size);
 }
 
-void *operator new[](size_t size, StdAllocator &alloc)
+void *operator new[](size_t size, MemoryAllocator &alloc)
 {
     return alloc.Allocate(size);
 }
 
-void *operator new(size_t size, StdAllocator &alloc,
-                   const std::nothrow_t &)
+void *operator new(size_t size, MemoryAllocator &alloc,
+                   const nothrow_t &)
 {
-    return alloc.Allocate(size, std::nothrow);
+    return alloc.Allocate(size, nothrow);
 }
 
-void *operator new[](size_t size, StdAllocator &alloc,
-                     const std::nothrow_t &)
+void *operator new[](size_t size, MemoryAllocator &alloc,
+                     const nothrow_t &)
 {
-    return alloc.Allocate(size, std::nothrow);
+    return alloc.Allocate(size, nothrow);
 }
 
-void operator delete(void *p, StdAllocator &alloc)
+// Provide new operators for NUMA-specific allocations
+void *operator new(size_t size, NumaAllocator &alloc, int node)
+{
+    return alloc.AllocateOnNode(size, node);
+}
+
+void *operator new(size_t size, NumaAllocator &alloc, int node,
+                   const nothrow_t &)
+{
+    return alloc.AllocateOnNode(size, node, nothrow);
+}
+
+void *operator new[](size_t size, NumaAllocator &alloc, int node)
+{
+    return alloc.AllocateOnNode(size, node);
+}
+
+void *operator new[](size_t size, NumaAllocator &alloc, int node,
+                     const nothrow_t &)
+{
+    return alloc.AllocateOnNode(size, node, nothrow);
+}
+
+void *operator new(size_t size, NumaAllocator &alloc,
+                   vector<size_t> parts, vector<int> nodes)
+{
+    return alloc.AllocateInterleaved(size, parts, nodes);
+}
+
+void *operator new(size_t size, NumaAllocator &alloc,
+                   vector<size_t> parts, vector<int> nodes, const nothrow_t &)
+{
+    return alloc.AllocateInterleaved(size, parts, nodes, nothrow);
+}
+
+void *operator new[](size_t size, NumaAllocator &alloc,
+                     vector<size_t> parts, vector<int> nodes)
+{
+    return alloc.AllocateInterleaved(size, parts, nodes);
+}
+
+void *operator new[](size_t size, NumaAllocator &alloc,
+                     vector<size_t> parts, vector<int> nodes, const nothrow_t &)
+{
+    return alloc.AllocateInterleaved(size, parts, nodes, nothrow);
+}
+
+void operator delete(void *p, MemoryAllocator &alloc)
 {
     return alloc.Deallocate(p);
 }
 
-void operator delete[](void *p, StdAllocator &alloc)
+void operator delete[](void *p, MemoryAllocator &alloc)
 {
     return alloc.Deallocate(p);
 }
@@ -171,8 +296,8 @@ public:
     typedef const T* const_pointer;
     typedef T& reference;
     typedef const T& const_reference;
-    typedef std::size_t size_type;
-    typedef std::ptrdiff_t difference_type;
+    typedef size_t size_type;
+    typedef ptrdiff_t difference_type;
 
     template<typename U>
     struct rebind {
@@ -205,10 +330,11 @@ public:
         return static_cast<pointer>(Alloc::GetInstance().Allocate(n*sizeof(T)));
     }
     
-    pointer reallocate(size_type n, void *addr = 0)
+    pointer reallocate(size_type old_n, size_t new_n, void *addr = 0)
     {
         return static_cast<pointer>(
-            Alloc::GetInstance().Reallocate(addr, n*sizeof(T)));
+            Alloc::GetInstance().Reallocate(addr, old_n*sizeof(T),
+                                            new_n*sizeof(T)));
     }
 
     void deallocate(pointer p, size_type n)
@@ -218,7 +344,7 @@ public:
 
     size_type max_size() const throw()
     {
-        return std::numeric_limits<std::size_t>::max() / sizeof(T);
+        return numeric_limits<size_t>::max() / sizeof(T);
     }
 
     void construct(pointer p, const_reference val)

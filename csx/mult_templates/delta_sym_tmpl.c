@@ -12,7 +12,7 @@ static inline double delta${bits}_case(uint8_t **ctl, uint8_t size,
 	register double rx_ = x[y_indx_];
     register uint64_t jmp;
 
-	${align_ctl}
+    ${align_ctl}
 	yr += (*x_) * values_;
 	(*ry_) += rx_ * values_;
 	(*values)++;

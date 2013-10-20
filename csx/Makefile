@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: libcsximpl.a libcsximpl.so sparsematrix_test
+all: libcsximpl.a libcsximpl.so sparsematrix_test dynamic_array_test
 # libcsx_test set_test spmv
 
 # Configuration
@@ -26,7 +26,7 @@ CC          ?= gcc
 CXX         ?= g++
 LD           = $(CXX)
 CFLAGS      ?= -Wall -O3 -fPIC
-CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC
+CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC -std=c++0x
 LIBS         = -lnuma -lboost_regex -lpthread -lboost_thread -lboost_serialization
 AR           = ar
 AR_FLAGS     = cru
@@ -47,7 +47,7 @@ LLVM_CPPFLAGS	=
 LLVM_LDFLAGS    = $(shell $(llvmconf) --ldflags --libs $(llvm_deps))
 CLANG_LDFLAGS   = -Wl,--start-group -lclangAnalysis -lclangAST -lclangBasic -lclangCodeGen -lclangDriver -lclangFrontend -lclangFrontendTool -lclangIndex -lclangLex -lclangParse -lclangRewrite -lclangSema -lclangSerialization -lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangStaticAnalyzerFrontend -Wl,--end-group
 dynarray_dep    = $(dynarray_dir)/dynarray.o
-libadd = $(dynarray_dir)/dynarray.o
+libadd = $(dynarray_dir)/dynarray.o numa_util.o
 
 DEPDIR = .deps
 df = $(DEPDIR)/$(*F)
@@ -60,6 +60,7 @@ CSX_SRC = \
 	csx_spmv_mt.cc \
 	csx_util.cc \
 	csxsym_spmv_mt.cc \
+	CtlBuilder.cc \
 	dynamic_array.cc \
 	encodings.cc \
 	jit.cc \
@@ -72,9 +73,6 @@ CSX_SRC = \
 	vector.cc \
 	$(log_dir)/logger.cc \
 	$(log_dir)/output_policy.cc \
-
-#	sparse_matrix_wrapper.cc main.cc
-
 
 CSX_OBJECTS = $(CSX_SRC:%.cc=%.o) numa_util.o
 
@@ -103,10 +101,10 @@ ARCHIVE     = $(AR) $(AR_FLAGS)
 
 -include $(CSX_SRC:%.cc=$(DEPDIR)/%.P)
 
-libcsximpl.so: $(CSX_OBJECTS)
+libcsximpl.so: $(CSX_OBJECTS) $(libadd)
 	$(LINK) -shared -o $@ $^ $(libadd) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS)
 
-libcsximpl.a: $(CSX_OBJECTS)
+libcsximpl.a: $(CSX_OBJECTS) $(libadd)
 	$(ARCHIVE) $@ $^
 
 spmv: main.o libcsximpl.so
@@ -121,7 +119,7 @@ sparsematrix_test: sparsematrix_test.o libcsximpl.so
 set_test: set_test.o libcsximpl.so
 	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(libadd) $(LIBS)
 
-dynamic_array_test: dynamic_array.o timer.o
+dynamic_array_test: dynamic_array.o timer.o $(libadd)
 	$(LINK) -o $@ $^ $(libadd) -lnuma
 
 clean:

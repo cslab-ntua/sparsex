@@ -14,7 +14,7 @@
 #ifndef CSXUTIL_H__
 #define CSXUTIL_H__
 
-#include "csx.h"
+#include "CsxManager.h"
 
 /**
  *  Compute the size (in bytes) of the compressed matrix in CSX form.

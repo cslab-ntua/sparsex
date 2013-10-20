@@ -1912,7 +1912,7 @@ void EncodingManager<IndexType, ValueType>::DoComputeSortSplitsByNNZ()
     }
 
     if (nzeros_cnt) {
-        size_t &last_split_nz = sort_splits_nzeros_.back();
+        IndexType &last_split_nz = sort_splits_nzeros_.back();
         last_split_nz += nzeros_cnt;
         if (nzeros_cnt > sort_window_size_ / 2) {
             sort_splits_.push_back(nr_rows);

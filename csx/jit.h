@@ -14,7 +14,7 @@
 #define CSX_JIT_H__
 
 #include "compiler.h"
-#include "csx.h"
+#include "CsxManager.h"
 #include "encodings.h"
 #include "jit.h"
 #include "jit_config.h"
@@ -100,9 +100,6 @@ public:
     CsxJit(CsxManager<IndexType, ValueType> *csxmg, CsxExecutionEngine *engine,
            unsigned int tid = 0, bool symmetric = false);
 
-    CsxJit(csx_t<ValueType> *csx, CsxExecutionEngine *engine,
-           unsigned int tid, bool symmetric, bool row_jumps, bool full_column_indices);
-
     ~CsxJit()
     {
         std::map<Encoding::Type, TemplateText *>::iterator it;
@@ -152,7 +149,6 @@ private:
     unsigned int thread_id_;
     std::map<Encoding::Type, TemplateText *> mult_templates_;
     bool symmetric_;
-    bool row_jumps_, full_column_indices_;
     csx_t<ValueType> *csx_;
 };
 
@@ -169,38 +165,13 @@ CsxJit<IndexType, ValueType>::CsxJit(CsxManager<IndexType, ValueType> *csxmg,
       engine_(engine),
       thread_id_(tid),
       symmetric_(symmetric),
-      row_jumps_(false),
-      full_column_indices_(false),
       csx_(NULL)
 {
     context_ = new LLVMContext();
     compiler_ = new ClangCompiler();
     compiler_->AddHeaderSearchPath(CSX_PREFIX "/csx");
     compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/spm");
-    compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/dynarray");
-    row_jumps_ = csxmg_->HasRowJmps();
-    full_column_indices_ = csxmg_->HasFullColumnIndices();
-};
-
-template<typename IndexType, typename ValueType>
-CsxJit<IndexType, ValueType>::CsxJit(csx_t<ValueType> *csx,
-                                     CsxExecutionEngine *engine,
-                                     unsigned int tid, bool symmetric,
-                                     bool row_jumps, bool full_column_indices)
-    : csxmg_(NULL),
-      module_(0),
-      engine_(engine),
-      thread_id_(tid),
-      symmetric_(symmetric),
-      row_jumps_(row_jumps),
-      full_column_indices_(full_column_indices),
-      csx_(csx)
-{
-    context_ = new LLVMContext();
-    compiler_ = new ClangCompiler();
-    compiler_->AddHeaderSearchPath(CSX_PREFIX "/csx");
-    compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/spm");
-    compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/dynarray");
+    // compiler_->SetDebugMode(true);
 };
 
 template<typename IndexType, typename ValueType>
@@ -311,12 +282,14 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaCase(int delta_bits)
     TemplateText *tmpl = GetMultTemplate(Encoding::None);
     std::map<std::string, std::string> subst_map;
     subst_map["bits"] = Stringify(delta_bits);
+#ifdef PTR_ALIGN
     int delta_bytes = delta_bits / 8;
     if (delta_bytes > 1)
-        subst_map["align_ctl"] =
+        subst_map["align_ctl"] = 
             "align_ptr(ctl," + Stringify(delta_bytes) + ");";
     else
         subst_map["align_ctl"] = "";
+#endif
     return tmpl->Substitute(subst_map);
 }
 
@@ -347,12 +320,14 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaSymCase(int delta_bits)
     TemplateText *tmpl = GetSymMultTemplate(Encoding::None);
     std::map<std::string, std::string> subst_map;
     subst_map["bits"] = Stringify(delta_bits);
+#ifdef PTR_ALIGN
     int delta_bytes = delta_bits / 8;
     if (delta_bytes > 1)
         subst_map["align_ctl"] =
             "align_ptr(ctl," + Stringify(delta_bytes) + ");";
     else
         subst_map["align_ctl"] = "";
+#endif
     return tmpl->Substitute(subst_map);
 }
 
@@ -382,8 +357,7 @@ void CsxJit<IndexType, ValueType>::
 DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
 {
     if (!symmetric_) {
-//        if (csxmg_->HasRowJmps()) {
-        if (row_jumps_) {
+        if (csxmg_->HasRowJmps()) {
             hooks["new_row_hook"] =
                 "if (test_bit(&flags, CTL_RJMP_BIT))\n"
                 "\t\t\t\ty_curr += ul_get(&ctl);\n"
@@ -393,8 +367,7 @@ DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
             hooks["new_row_hook"] = "y_curr++;";
         }
     } else {
-//        if (csxmg_->HasRowJmps()) {
-        if (row_jumps_) {
+        if (csxmg_->HasRowJmps()) {
             hooks["new_row_hook"] =
                 "if (test_bit(&flags, CTL_RJMP_BIT)) {\n"
                 "\t\t\t\tint jmp = ul_get(&ctl);\n"
@@ -417,16 +390,20 @@ DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
     }
     
     if (!symmetric_) {
-//        if (csxmg_->HasFullColumnIndices()) {
-        if (full_column_indices_) {
+        if (csxmg_->HasFullColumnIndices()) {
             hooks["next_x"] = "x_curr = x + u32_get(&ctl);";
+#ifdef PTR_ALIGN
+            hooks["next_x"] = "align_ptr(&ctl, 4); x_curr = x + u32_get(&ctl);";
+#endif
         } else {
             hooks["next_x"] = "x_curr += ul_get(&ctl);";
         }
     } else {
-//        if (csxmg_->HasFullColumnIndices()) {
-        if (full_column_indices_) {
+        if (csxmg_->HasFullColumnIndices()) {
             hooks["next_x"] = "x_indx = u32_get(&ctl);";
+#if PTR_ALIGN
+            hooks["next_x"] = "align_ptr(&ctl, 4); x_curr = x + u32_get(&ctl);";
+#endif
         } else {
             hooks["next_x"] = "x_indx += ul_get(&ctl);";
         }
@@ -672,7 +649,6 @@ void CsxJit<IndexType, ValueType>::GenCode(std::ostream &log)
 {
     std::map<std::string, std::string> hooks;
     
-    //compiler_->SetDebugMode(true);
     if (!symmetric_) {
         // Load the template source
         TemplateText source_tmpl(SourceFromFile(CsxTemplateSource));

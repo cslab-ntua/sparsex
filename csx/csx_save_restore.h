@@ -11,7 +11,8 @@
 #ifndef CSXSAVERESTORE_H__
 #define CSXSAVERESTORE_H__
 
-#include "csx.h"
+#include "allocators.h"
+#include "CsxManager.h"
 #include "jit.h"
 #include "logger.hpp"
 
@@ -29,21 +30,6 @@
 #include <fstream>
 
 using namespace std;
-
-// malloc wrapper
-#define xmalloc(x)                         \
-({                                         \
-    void *ret_;                            \
-    ret_ = malloc(x);                      \
-    if (ret_ == NULL){                     \
-        std::cerr << __FUNCTION__          \
-                  << " " << __FILE__       \
-                  << ":" << __LINE__       \
-                  << ": malloc failed\n";  \
-        exit(1);                           \
-    }                                      \
-    ret_;                                  \
-})
 
 // Non-intrusive version
 namespace boost { 
@@ -144,26 +130,30 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
     csx_sym_t<ValueType> *csx_sym = 0;
     csx_t<ValueType> *csx = 0;
 
+#ifdef SPM_NUMA
+    NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
+#endif
+
     if (!filename) {
         string default_filename(boost::archive::tmpdir());
         default_filename += "/csx_file";
         filename = default_filename.c_str();
     }
+
     try {
         file.open(filename, ios::binary | ios::in);
         if (!file.good()) {
             throw ios_base::failure("");
         }
-        boost::archive::binary_iarchive ia(file);
 
+        boost::archive::binary_iarchive ia(file);
         ia >> nr_threads;
         ia >> symmetric;
         // Construct spm_mt
-        spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
+        spm_mt = new spm_mt_t;
         spm_mt->nr_threads = nr_threads;
         spm_mt->symmetric = symmetric;
-        spm_mt->spm_threads = (spm_mt_thread_t *) xmalloc
-            (sizeof(spm_mt_thread_t) * nr_threads);
+        spm_mt->spm_threads = new spm_mt_thread_t[nr_threads];
 
 #ifdef SPM_NUMA
         full_column_indices = true;
@@ -179,58 +169,53 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
                 current_node = node;
                 setaffinity_oncpu(spm_mt->spm_threads[i].cpu);
             }
-            if (symmetric) {
-                csx_sym = (csx_sym_t<ValueType> *) numa_alloc_onnode
-                    (sizeof(csx_sym_t<ValueType>), node);
-            }
-            csx = (csx_t<ValueType> *) alloc_onnode
-                (sizeof(csx_t<ValueType>), node);
+
+            if (symmetric)
+                csx_sym = new (numa_alloc, node) csx_sym_t<ValueType>;
+
+            csx = new (numa_alloc, node) csx_t<ValueType>;
 #else
-            if (symmetric) {
-                csx_sym = (csx_sym_t<ValueType> *) malloc
-                    (sizeof(csx_sym_t<ValueType>));
-            }
-            csx = (csx_t<ValueType> *) malloc
-                (sizeof(csx_t<ValueType>));
+            if (symmetric)
+                csx_sym = new csx_sym_t<ValueType>;
+
+            csx = new csx_t<ValueType>;
 #endif
             if (!csx) {
-                LOG_ERROR << "CSX malloc failed\n";
+                LOG_ERROR << "CSX allocation failed\n";
                 exit(1);
             }
+
             ia >> csx->nnz & csx->ncols & csx->nrows & csx->ctl_size
                 & csx->row_start;
 #ifdef SPM_NUMA
-            if (symmetric) {
-                csx_sym->dvalues = (ValueType *) numa_alloc_onnode
-                    (csx->nrows*sizeof(ValueType), node);
-            }
-            csx->values = (ValueType *) alloc_onnode(sizeof(ValueType)
-                                                     *csx->nnz, node);
+            if (symmetric)
+                csx_sym->dvalues = new (numa_alloc, node) ValueType[csx->nrows];
+
+            csx->values = new (numa_alloc, node) ValueType[csx->nnz];
+
             int alloc_err = 0;
             alloc_err = check_region(csx->values, csx->nnz*sizeof(*csx->values),
                                      node);
             print_alloc_status("values", alloc_err);
-            csx->ctl = (uint8_t *) alloc_onnode(sizeof(uint8_t)*csx->ctl_size,
-                                                node);
+
+            csx->ctl = new (numa_alloc, node) uint8_t[csx->ctl_size];
             alloc_err = check_region(csx->ctl, csx->ctl_size*sizeof(uint8_t),
                                      node);
             print_alloc_status("ctl", alloc_err);
-            csx->rows_info = (row_info_t *) 
-                alloc_onnode(sizeof(row_info_t)*csx->nrows, node);
+            csx->rows_info = new (numa_alloc, node) row_info_t[csx->nrows];
 #else
-            if (symmetric) {
-                csx_sym->dvalues = (ValueType *) malloc(csx->nrows*
-                                                        sizeof(ValueType));
-            }
-            csx->values = (ValueType *) malloc(sizeof(ValueType)*csx->nnz);
-            csx->ctl = (uint8_t *) malloc(sizeof(uint8_t)*csx->ctl_size);
-            csx->rows_info = (row_info_t *) 
-                malloc(sizeof(row_info_t)*csx->nrows);
+            if (symmetric)
+                csx_sym->dvalues = new ValueType[csx->nrows];
+
+            csx->values = new ValueType[csx->nnz];
+            csx->ctl = new uint8_t[csx->ctl_size];
+            csx->rows_info = new row_info_t[csx->nrows];
 #endif    
             if (!csx->values || !csx->ctl) {
-                LOG_ERROR << "CSX malloc failed\n";
+                LOG_ERROR << "CSX allocation failed\n";
                 exit(1);
             }
+
             ia >> boost::serialization::make_array(csx->values, csx->nnz);
             ia >> boost::serialization::make_array(csx->ctl, csx->ctl_size);
             ia >> csx->id_map;
@@ -242,16 +227,13 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
                 unsigned int length;
                 ia >> length;
 #ifdef SPM_NUMA
-                map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
-                map->cpus = (unsigned int *) 
-                    numa_alloc_onnode(length * sizeof(unsigned int), node);
-                map->elems_pos = (unsigned int *)
-                    numa_alloc_onnode(length * sizeof(unsigned int), node);
+                map = new (numa_alloc, node) map_t;
+                map->cpus = new (numa_alloc, node) unsigned int[length];
+                map->elems_pos = new (numa_alloc, node) unsigned int[length];
 #else
-                map = (map_t *) xmalloc(sizeof(map_t));
-                map->cpus = (unsigned int *) xmalloc(length * sizeof(unsigned int));
-                map->elems_pos = 
-                    (unsigned int *) xmalloc(length * sizeof(unsigned int));
+                map = new map_t;
+                map->cpus = new unsigned int[length];
+                map->elems_pos = new unsigned int[length];
 #endif
                 map->length = length;
                 ia >> boost::serialization::make_array(map->cpus, length);
@@ -262,12 +244,14 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
             } else {
                 spm_mt->spm_threads[i].spm = csx;
             }
+
             spm_mt->spm_threads[i].row_start = csx->row_start;
             spm_mt->spm_threads[i].nr_rows = csx->nrows;
         }
+
         ia >> reordered;
         if (reordered) {
-            *permutation = (IndexType *) malloc(sizeof(IndexType)*csx->ncols);
+            *permutation = new IndexType[csx->ncols];
             ia >> boost::serialization::make_array(*permutation, csx->ncols);
         }
 

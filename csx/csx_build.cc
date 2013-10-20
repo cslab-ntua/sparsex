@@ -12,34 +12,17 @@
 
 #include "csx_build.h"
 
-// malloc wrapper
-#define xmalloc(x)                         \
-({                                         \
-    void *ret_;                            \
-    ret_ = malloc(x);                      \
-    if (ret_ == NULL){                     \
-        std::cerr << __FUNCTION__          \
-                  << " " << __FILE__       \
-                  << ":" << __LINE__       \
-                  << ": malloc failed\n";  \
-        exit(1);                           \
-    }                                      \
-    ret_;                                  \
-})
-
 spm_mt_t *PrepareSpmMt()
 {
     spm_mt_t *spm_mt;
     RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
 
-    spm_mt = (spm_mt_t *) xmalloc(sizeof(spm_mt_t));
+    spm_mt = new spm_mt_t;
     spm_mt->nr_threads = rt_context.GetNrThreads();
     spm_mt->symmetric =
         rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric);
-    spm_mt->spm_threads = (spm_mt_thread_t *) xmalloc
-        (sizeof(spm_mt_thread_t) * rt_context.GetNrThreads());
-
+    spm_mt->spm_threads = new spm_mt_thread_t[rt_context.GetNrThreads()];
     for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
         spm_mt->spm_threads[i].cpu = rt_context.GetAffinity(i);
         spm_mt->spm_threads[i].node =

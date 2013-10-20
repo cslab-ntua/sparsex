@@ -1,6 +1,7 @@
 /* -*- C++ -*-
  *
- * dynamicarray.h -- NUMA aware allocator
+ * dynamic_array.h -- Dynamic Array implementation supporting efficient
+ *                    resizing.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
@@ -14,6 +15,7 @@
 #include "allocators.h"
 #include <cassert>
 #include <cstddef>
+#include <iostream>
 #include <memory>
 
 using namespace std;
@@ -59,7 +61,7 @@ public:
             size_ = nr_elems;
         }
 
-        elems_ = alloc_.reallocate(nr_elems, elems_);
+        elems_ = alloc_.reallocate(capacity_, nr_elems, elems_);
         capacity_ = nr_elems;
     }
 
@@ -117,5 +119,15 @@ private:
     size_t capacity_;
     bool own_elems_;
 };
+
+template<typename T>
+ostream &operator<<(ostream& os, const DynamicArray<T> &da)
+{
+    for (size_t i = 0; i < da.GetSize(); ++i)
+        os << static_cast<int>(da[i]) << "|";
+
+    os << "\n";
+    return os;
+}
 
 #endif  // DYNAMIC_ARRAY_H

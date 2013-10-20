@@ -13,14 +13,15 @@
 #ifndef CSX_BUILD_H__
 #define CSX_BUILD_H__
 
+#include "affinity.h"
+#include "allocators.h"
+#include "CsxManager.h"
+#include "drle.h"
+#include "jit.h"
+#include "runtime.h"
 #include "sparse_internal.h"
 #include "sparse_util.h"
 #include "sparse_partition.h"
-#include "runtime.h"
-#include "affinity.h"
-#include "csx.h"
-#include "drle.h"
-#include "jit.h"
 #include "spm_mt.h"
 #include "timer.h"
 
@@ -380,14 +381,15 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
     uint32_t ncpus = spm_mt->nr_threads;
     uint32_t n = spm_sym->GetLowerMatrix()->GetNrCols();
 #ifdef SPM_NUMA
+    NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
     int node;
 #endif
     
     ///> Init initial_map.
-    count = (unsigned int *) xmalloc(n * sizeof(unsigned int));
-    initial_map = (bool **) xmalloc(ncpus * sizeof(bool *));
+    count = new unsigned int[n];
+    initial_map = new bool*[ncpus];
     for (unsigned int i = 0; i < ncpus; i++)
-        initial_map[i] = (bool *) xmalloc(n * sizeof(bool));
+        initial_map[i] = new bool[n];
     
     for (unsigned int i = 0; i < n; i++)
         count[i] = 0;
@@ -437,9 +439,9 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
         spm_thread = spm_mt->spm_threads + i;
 #ifdef SPM_NUMA
         node = spm_thread->node;
-        map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
+        map = new (numa_alloc, node) map_t;
 #else
-        map = (map_t *) xmalloc(sizeof(map_t));
+        map = new map_t;
 #endif
 
         start = end;
@@ -450,16 +452,11 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
         total_count -= temp_count;
         map->length = temp_count;
 #ifdef SPM_NUMA
-        map->cpus = (unsigned int *) 
-                        numa_alloc_onnode(temp_count * sizeof(unsigned int),
-                                          node);
-        map->elems_pos = (unsigned int *)
-                             numa_alloc_onnode(temp_count *
-                                               sizeof(unsigned int), node);
+        map->cpus = new (numa_alloc, node) unsigned int[temp_count];
+        map->elems_pos = new (numa_alloc, node) unsigned int[temp_count];
 #else
-        map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
-        map->elems_pos = 
-            (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
+        map->cpus = new unsigned int[temp_count];
+        map->elems_pos = new unsigned int[temp_count];
 #endif        
         temp_count = 0;
         for (unsigned int j = start; j < end; j++) {
@@ -470,10 +467,11 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
                 }
             }
         }
+
         assert(temp_count == map->length);
-        
         spm_thread->map = map;
     }
+
     start = end;
     end = n;
     temp_count = total_count;
@@ -483,17 +481,13 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
 #ifdef SPM_NUMA
     node = spm_thread->node;
 
-    map = (map_t *) numa_alloc_onnode(sizeof(map_t), node);
-    map->cpus = (unsigned int *)
-                    numa_alloc_onnode(temp_count * sizeof(unsigned int), node);
-    map->elems_pos = (unsigned int *)
-                         numa_alloc_onnode(temp_count * sizeof(unsigned int),
-                                           node);
+    map = new (numa_alloc, node) map_t;
+    map->cpus = new (numa_alloc, node) unsigned int[temp_count];
+    map->elems_pos = new (numa_alloc, node) unsigned int[temp_count];
 #else
-    map = (map_t *) xmalloc(sizeof(map_t));
-    map->cpus = (unsigned int *) xmalloc(temp_count * sizeof(unsigned int));
-    map->elems_pos = (unsigned int *)
-                         xmalloc(temp_count * sizeof(unsigned int));
+    map = new map_t;
+    map->cpus = new unsigned int[temp_count];
+    map->elems_pos = new unsigned int[temp_count];
 #endif
 
     map->length = temp_count;
@@ -506,7 +500,8 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
             }
         }
     }
-    assert(temp_count == map->length); 
+
+    assert(temp_count == map->length);
     spm_thread->map = map;
 #ifdef SPM_NUMA
     int alloc_err = 0;
@@ -524,8 +519,6 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
     LOG_INFO << "allocation check for map... "
              << ((alloc_err) ? "FAILED (see above for more info)" : "DONE")
              << "\n";
->>>>>>> b66e7fb93f8284b703d2cd46a40c6347a387bd06:csx/csx_build.h
-
 #endif
     ///> Print final map.  
     // for (unsigned int i = 0; i < ncpus; i++) {
@@ -542,9 +535,10 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
     
     ///> Release initial map.
     for (unsigned int i = 0; i < ncpus; i++)
-        free(initial_map[i]);
-    free(initial_map);
-    free(count);
+        delete[] initial_map[i];
+
+    delete[] initial_map;
+    delete[] count;
 }
 
 #endif // CSX_BUILD_H__

@@ -84,7 +84,6 @@ private:
     // Set up the code generation options depending on debug mode
     void SetCodeGenOptions();
     void SetHeaderSearchOptions();
-//    OwningPtr<CompilerInvocation> invocation_;
     CompilerInvocation *invocation_;
     OwningPtr<CompilerInstance> compiler_;
     bool keep_temporaries_;

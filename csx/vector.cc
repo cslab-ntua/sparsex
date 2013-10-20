@@ -31,6 +31,7 @@ vector_t *vec_create(unsigned long size)
 		LOG_ERROR << "malloc\n";
 		exit(1);
 	}
+
 	v->size = size;
 	v->alloc_type = internal::ALLOC_STD;
 	v->elements = (double *) malloc(sizeof(double)*(size + 12));

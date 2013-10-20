@@ -11,7 +11,7 @@
 #ifndef CSX_GET_SET_H__
 #define CSX_GET_SET_H__
 
-#include "csx.h"
+#include "CsxManager.h"
 
 /**
  *  Returns the value of the corresponding element (0 if element doesn't exist)

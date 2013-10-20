@@ -160,9 +160,7 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts, int *nodes)
 
 	struct bitmask *nodemask = numa_allocate_nodemask();
 
-	/*
-	 * Fix the interleaving and bind parts to specific nodes
-	 */
+	// Fix the interleaving and bind parts to specific nodes
 	fix_interleaving(nr_parts, parts, nodes);
 
 	void *curr_part = ret;
@@ -178,8 +176,8 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts, int *nodes)
 			perror("mbind");
 			exit(1);
 		}
-		curr_part += parts[i];
 
+		curr_part += parts[i];
 		/* Clear the mask for the next round */
 		numa_bitmask_clearbit(nodemask, nodes[i]);
 	}

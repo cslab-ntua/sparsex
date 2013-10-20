@@ -63,7 +63,6 @@ int main(int argc, char **argv)
     // bool split_blocks = true;
     // bool symmetric = false;
     spm_mt_t *spm_mt;
-    long loops = 128;
 
     // logging::AlwaysUseFile();
 
@@ -98,7 +97,7 @@ int main(int argc, char **argv)
     config.LoadFromEnv();
     rt_context.SetRuntimeContext(config);
     csx::Timer timer;
-    double pt, t;
+    double pt;
 
     SparseMatrix<MMF<index_t, value_t> > matrix(argv[0]);
     // matrix.Reorder();

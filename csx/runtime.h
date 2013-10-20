@@ -12,7 +12,7 @@
 #ifndef RUNTIME_H__
 #define RUNTIME_H__
 
-#include "csx.h"
+#include "CsxManager.h"
 #include "jit.h"
 
 #include <stdio.h>
@@ -258,28 +258,28 @@ template<class InternalType>
 void ThreadContext<InternalType>::
 SetData(SparseInternal<idx_t, val_t> *spms, spm_mt_t *spm_mt)
 {
+    RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
+
     spm_ = spms->GetPartition(id_);
     csxmg_ = new CsxManager<idx_t, val_t>(spm_);
     spm_encoded_ = &spm_mt->spm_threads[id_]; 
     buffer_ = new ostringstream("");
-#ifdef SPM_NUMA
-    // Enable the full-column-index optimization for NUMA architectures
-    csxmg_->SetFullColumnIndices(true);
-#endif
+    csxmg_->SetFullColumnIndices(
+        rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixFullColind));
 }
 
 template<class InternalType>
 void ThreadContext<InternalType>::
 SetDataSym(SparsePartitionSym<idx_t, val_t> *spms, spm_mt_t *spm_mt)
 {
+    RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
+
     spm_ = spms + id_;
     csxmg_ = new CsxManager<idx_t, val_t>(spms + id_);
     spm_encoded_ = &spm_mt->spm_threads[id_]; 
     buffer_ = new ostringstream("");
-#ifdef SPM_NUMA
-    // Enable the full-column-index optimization for NUMA architectures
-    csxmg_->SetFullColumnIndices(true);
-#endif
+    csxmg_->SetFullColumnIndices(
+        rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixFullColind));
 }
 
 }   // end of namespace csx

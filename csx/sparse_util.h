@@ -23,20 +23,6 @@ using namespace std;
 
 namespace csx {
 
-#define xmalloc(x)                         \
-({                                         \
-    void *ret_;                            \
-    ret_ = malloc(x);                      \
-    if (ret_ == NULL){                     \
-        std::cerr << __FUNCTION__          \
-                  << " " << __FILE__       \
-                  << ":" << __LINE__       \
-                  << ": malloc failed\n";  \
-        exit(1);                           \
-    }                                      \
-    ret_;                                  \
-})
-
 #define STRINGIFY__(s) #s
 #define STRINGIFY(s)  STRINGIFY__(s)
 #define BLOCK_ROW_TYPE_NAME(r)  BLOCK_R ## r
@@ -350,7 +336,7 @@ inline int CooCmp(const CooElem<IndexType, ValueType> &p0,
 class DeltaRLE
 {
 public:
-    DeltaRLE(uint32_t size, uint32_t delta, Encoding::Type type)
+    DeltaRLE(size_t size, size_t delta, Encoding::Type type)
         : size_(size), delta_(delta)
     {
         type_ = type;
@@ -368,7 +354,7 @@ public:
      *
      *  @return size of the selected object of class DeltaRLE.
      */
-    virtual long GetSize() const
+    virtual size_t GetSize() const
     {
         return size_;
     }
@@ -383,12 +369,12 @@ public:
         return type_;
     }
 
-    virtual uint32_t GetDelta() const
+    virtual size_t GetDelta() const
     {
         return delta_;
     }
 
-    virtual uint32_t GetOtherDim() const
+    virtual size_t GetOtherDim() const
     {
         return 0;
     }
@@ -397,7 +383,7 @@ public:
      *
      *  @return the id of this pattern.
      */
-    virtual long GetPatternId() const
+    virtual size_t GetPatternId() const
     {
         assert(type_ > Encoding::None && type_ < Encoding::BlockRowMin &&
                "not a drle type");
@@ -411,9 +397,9 @@ public:
      *  @return       number of columns to procceed in order to go to the next
      *                CSX element.
      */
-    virtual long ColIncrease(Encoding::Type order) const
+    virtual size_t ColIncrease(Encoding::Type order) const
     {
-        long ret = (order == type_) ? (size_ * delta_) : 1;
+        size_t ret = (order == type_) ? (size_ * delta_) : 1;
         return ret;
     }
 
@@ -425,9 +411,9 @@ public:
      *  @return      number of columns to procceed in order to go to the next
      *               CSX element.
      */
-    virtual uint64_t ColIncreaseJmp(Encoding::Type order, uint64_t jmp) const
+    virtual size_t ColIncreaseJmp(Encoding::Type order, size_t jmp) const
     {
-        long ret = jmp;
+        size_t ret = jmp;
         if (order == type_)
             ret += ((size_ - 1) * delta_);
 
@@ -452,7 +438,7 @@ public:
     class Generator
     {
     public:
-        Generator(CooElem<uint64_t, double> start, DeltaRLE *rle)
+        Generator(CooElem<size_t, double> start, DeltaRLE *rle)
             : start_(start), rle_(rle), nr_(0) { }
 
         /**
@@ -470,8 +456,8 @@ public:
          *
          *  @return next element
          */
-        virtual CooElem<uint64_t, double> Next() {
-            CooElem<uint64_t, double> ret(start_);
+        virtual CooElem<size_t, double> Next() {
+            CooElem<size_t, double> ret(start_);
             assert(nr_ <= rle_->size_ && "out of pattern");
             ret.col += nr_ * rle_->delta_;
             nr_ += 1;
@@ -479,9 +465,9 @@ public:
         }
 
     private:
-        CooElem<uint64_t, double> start_;
+        CooElem<size_t, double> start_;
         DeltaRLE *rle_;
-        uint64_t nr_;
+        size_t nr_;
     };
 
     /**
@@ -490,7 +476,7 @@ public:
      *  @param  start starting element
      *  @return an object of Generator class.
      */
-    virtual Generator *generator(CooElem<uint64_t, double> start)
+    virtual Generator *generator(CooElem<size_t, double> start)
     {
         Generator *g = new DeltaRLE::Generator(start, this);
         return g;
@@ -501,7 +487,7 @@ public:
      *
      *  @return column of the next element of pattern.
      */
-    virtual uint64_t GetNextCol(uint64_t x0) const
+    virtual size_t GetNextCol(size_t x0) const
     {
         return x0 + delta_;
     }
@@ -513,8 +499,8 @@ public:
      */
     struct StatsVal
     {
-        uint64_t nnz;
-        long npatterns;
+        size_t nnz;
+        size_t npatterns;
 
         /**
          *  Update the stats for every new instance of this type of pattern.
@@ -529,10 +515,10 @@ public:
     };
 
     // Stats[0] -> delta values (encoded with this DRLE)
-    typedef std::map<uint64_t, DeltaRLE::StatsVal> Stats;
+    typedef std::map<size_t, DeltaRLE::StatsVal> Stats;
 
 protected:
-    uint32_t size_, delta_;
+    size_t size_, delta_;
 
 private:
     Encoding::Type type_;
@@ -545,7 +531,7 @@ private:
  */
 class BlockRLE : public DeltaRLE {
 public:
-    BlockRLE(uint32_t size, uint32_t other_dim, Encoding &enc)
+    BlockRLE(size_t size, size_t other_dim, Encoding &enc)
         : DeltaRLE(size, 1, (assert(enc.GetBlockAlignment()), enc.GetType()))
     {
         other_dim_ = other_dim;
@@ -556,12 +542,12 @@ public:
      *
      *  @return the size of second dimension.
      */
-    virtual uint32_t GetOtherDim() const
+    virtual size_t GetOtherDim() const
     {
         return other_dim_;
     }
 
-    virtual long GetPatternId() const
+    virtual unsigned long GetPatternId() const
     {
         return CSX_PID_OFFSET * GetType() + other_dim_;
     }
@@ -572,7 +558,7 @@ public:
     }
 
 private:
-    uint32_t other_dim_;
+    size_t other_dim_;
 };
 
 /**
@@ -695,7 +681,7 @@ std::ostream &operator<<(std::ostream &out, const Elem<IndexType, ValueType> e)
     if (e.pattern != NULL) {
         out << "->[" << *(e.pattern) << "]";
         out << " vals:{ ";
-        for (int i = 0; i < e.pattern->GetSize(); i++)
+        for (size_t i = 0; i < e.pattern->GetSize(); i++)
             out << e.vals[i] << " ";
             
         out << "}";
