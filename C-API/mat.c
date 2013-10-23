@@ -9,28 +9,25 @@
  */
 
 #include "mat.h"
-#include "csx_matvec.h"
-#include "SparseMatrixWrapper.h"
+#include "CsxMatvec.hpp"
+#include "SparseMatrixWrapper.hpp"
+
 #include <unistd.h>
 #include <float.h>
 
 #define SPMV_FN matvec_mt
 #define SPMV_SYM_FN matvec_sym_mt
 
-static double calc_imbalance(void *m);
-static matrix_t *tune(input_t *input);
-
 /**
  *  \brief The sparse matrix internal representation.
  */
 struct matrix {
     index_t nrows, ncols, nnz;
-    int symmetric;
     perm_t *permutation;    /**< The permutation, in case the matrix has been
                                reordered */
-    void *tuned;            /**< The tuned matrix representation, i.e. the input
-                               matrix tuned in the CSX format */
-    double pre_time;
+    void *csx;              /**< The tuned matrix representation, i.e. the input
+                               matrix transformed to the CSX format */
+    int symmetric;
 };
 
 /**
@@ -38,10 +35,9 @@ struct matrix {
  */
 struct input {
     index_t nrows, ncols, nnz;
-    unsigned int tuning_options;
-    void *mat;   /**< The input matrix representation */
     char type;   /**< A character that stores the format of the input matrix
                     ('C' for CSR or 'M' for MMF) */
+    void *mat;   /**< The input matrix representation */
 };
 
 /**
@@ -53,10 +49,9 @@ static void mat_alloc_struct(matrix_t **A)
     (*A)->nrows = 0;
     (*A)->ncols = 0;
     (*A)->nnz = 0;
-    (*A)->tuned = INVALID_MAT;
     (*A)->permutation = INVALID_PERM;
+    (*A)->csx = INVALID_MAT;
     (*A)->symmetric = 0;
-    (*A)->pre_time = 0;
 }
 
 /**
@@ -64,8 +59,8 @@ static void mat_alloc_struct(matrix_t **A)
  */
 static void mat_free_struct(matrix_t *A)
 {
-    if (A->tuned) {
-        DestroyCsx(A->tuned);
+    if (A->csx) {
+        DestroyCsx(A->csx);
     }
     if (A->permutation) {
         libcsx_free(A->permutation);
@@ -79,12 +74,11 @@ static void mat_free_struct(matrix_t *A)
 static void input_alloc_struct(input_t **A)
 {
     *A = libcsx_malloc(input_t, sizeof(input_t));
-    (*A)->type = 'U';
     (*A)->nrows = 0;
     (*A)->ncols = 0;
     (*A)->nnz = 0;
+    (*A)->type = 'U';
     (*A)->mat = INVALID_INPUT;
-    (*A)->tuning_options = 0;
 }
 
 /**
@@ -168,7 +162,7 @@ input_t *libcsx_mat_create_mmf(const char *filename)
     return A;
 }
 
-matrix_t *libcsx_mat_tune(input_t *input)
+matrix_t *libcsx_mat_tune(input_t *input, int reorder)
 {
     /* Check validity of input argument */
     if (!input) {
@@ -179,20 +173,23 @@ matrix_t *libcsx_mat_tune(input_t *input)
     /* Convert to CSX */
     matrix_t *tuned = INVALID_MAT;
     perm_t *permutation = INVALID_PERM;
-    if (input->tuning_options & OPT_REORDER) {
-        if (input->type == 'C') {
+    mat_alloc_struct(&tuned);
+    tuned->nrows = input->nrows;
+    tuned->ncols = input->ncols;
+    tuned->nnz = input->nnz;
+    if (input->type == 'C') {
+        if (reorder) {
             input->mat = ReorderCSR(input->mat, &permutation);
-        } else if (input->type == 'M') {
+        }
+        tuned->csx = TuneCSR(input->mat, &(tuned->symmetric));
+    } else if (input->type == 'M') {
+        if (reorder) {
             input->mat = ReorderMMF(input->mat, &permutation);
         }
+        tuned->csx = TuneMMF(input->mat, &(tuned->symmetric));
     }
-    tuned = tune(input);
     tuned->permutation = permutation;
     permutation = INVALID_PERM;
-    if (!tuned) {
-        SETERROR_0(LIBCSX_ERR_TUNED_MAT);
-        return INVALID_MAT;
-    }
 
     return tuned;
 }
@@ -230,9 +227,9 @@ libcsx_error_t libcsx_matvec_mult(const matrix_t *A, value_t alpha, vector_t *x,
     }
     /* Compute kernel */
     if (!A->symmetric) {
-        SPMV_FN(A->tuned, permuted_x, alpha, permuted_y, beta);
+        SPMV_FN(A->csx, permuted_x, alpha, permuted_y, beta);
     } else {
-        /* SPMV_SYM_FN(A->tuned, permuted_x, alpha, permuted_y, beta); */
+        SPMV_SYM_FN(A->csx, permuted_x, alpha, permuted_y, beta);
     }
     /* Restore resulting vector to original order */
     if (p != INVALID_PERM) {
@@ -267,7 +264,7 @@ libcsx_error_t libcsx_mat_get_entry(const matrix_t *A, index_t row,
         row = A->permutation[row - 1] + 1;
         column = A->permutation[column - 1] + 1;
     }
-    int err = GetValue(A->tuned, row, column, value);
+    int err = GetValue(A->csx, row, column, value);
     if (err != 0) {
         SETERROR_0(LIBCSX_ERR_ENTRY_NOT_FOUND);
         return LIBCSX_ERR_ENTRY_NOT_FOUND;
@@ -290,7 +287,7 @@ libcsx_error_t libcsx_mat_set_entry(matrix_t *A, index_t row, index_t column,
         row = A->permutation[row - 1] + 1;
         column = A->permutation[column - 1] + 1;
     }
-    int err = SetValue(A->tuned, row, column, value);
+    int err = SetValue(A->csx, row, column, value);
     if (err != 0) {
         SETERROR_0(LIBCSX_ERR_ENTRY_NOT_FOUND);
         return LIBCSX_ERR_ENTRY_NOT_FOUND;
@@ -311,7 +308,7 @@ libcsx_error_t libcsx_mat_save(const matrix_t *A, const char *filename)
     }
 
     /* Save the tuned matrix */
-    SaveTuned(A->tuned, filename, A->permutation);
+    SaveTuned(A->csx, filename, A->permutation);
 
     return LIBCSX_SUCCESS;
 }
@@ -331,8 +328,8 @@ matrix_t *libcsx_mat_restore(const char *filename)
     /* Load tuned matrix from file */
     matrix_t *A = INVALID_MAT;
     mat_alloc_struct(&A);
-    A->tuned = LoadTuned(filename, &(A->nrows), &(A->ncols), &(A->nnz),
-                         &(A->symmetric), &(A->permutation), &(A->pre_time));
+    A->csx = LoadTuned(filename, &(A->nrows), &(A->ncols), &(A->nnz),
+                       &(A->permutation));
 
     return A;
 }
@@ -375,93 +372,7 @@ libcsx_error_t libcsx_mat_destroy_input(input_t *A)
     return LIBCSX_SUCCESS;
 }
 
-libcsx_error_t libcsx_set_tuning_option(input_t *input, option_t option,
-                                        const char *string)
+void libcsx_set_option(const char *option, const char *value)
 {
-    switch(option) {
-    case OPT_SYMMETRIC:
-        input->tuning_options |= OPT_SYMMETRIC;        
-        break;
-    case OPT_REORDER:
-        input->tuning_options |= OPT_REORDER;        
-        break;
-    case OPT_SPLIT_BLOCKS:
-        break;
-    case OPT_ONE_DIM_BLOCKS:
-        break;
-    case OPT_XFORMS:
-        break;
-    case OPT_WINDOW_SIZE:
-        break;
-    case OPT_NR_SAMPLES:
-        break;
-    case OPT_SAMPLING_PORTION:
-        break;
-    default:
-        SETERROR_0(LIBCSX_WARN_TUNING_OPT);
-    }
-
-    return LIBCSX_SUCCESS;
-}
-
-libcsx_error_t libcsx_set_runtime_option(option_t option, const char *string)
-{
-    switch(option) {
-    case OPT_NR_THREADS:
-    case OPT_AFFINITY:
-    default:
-        SETERROR_0(LIBCSX_WARN_RUNTIME_OPT);
-    }
-
-    return LIBCSX_SUCCESS;
-}
-
-static matrix_t *tune(input_t *input)
-{
-    matrix_t *A = NULL;
-
-    mat_alloc_struct(&A);
-    A->nrows = input->nrows;
-    A->ncols = input->ncols;
-    A->nnz = input->nnz;
-    if (input->tuning_options & OPT_SYMMETRIC) {
-        A->symmetric = 1;
-    }
-    if (input->type == 'C') {
-        A->tuned = TuneCSR(input->mat, &(A->pre_time));
-    } else if (input->type == 'M') {
-        A->tuned = TuneMMF(input->mat, &(A->pre_time));
-    }
-
-    return A;
-}
-
-static double calc_imbalance(void *A)
-{
-	spm_mt_t *spm_mt = (spm_mt_t *) A;
-	size_t i;
-
-	double min_time = DBL_MAX;
-	double max_time = 0.0;
-	double total_time = 0.0;
-	size_t worst = -1;
-	for (i = 0; i < spm_mt->nr_threads; ++i) {
-		spm_mt_thread_t *spm = &(spm_mt->spm_threads[i]);
-		double thread_time = spm->secs;
-		printf("Thread %zd time: %lf\n", i, thread_time);
-		total_time += thread_time;
-		if (thread_time > max_time) {
-			max_time = thread_time;
-			worst = i;
-		}
-
-		if (thread_time < min_time)
-			min_time = thread_time;
-	}
-
-	double ideal_time = total_time / spm_mt->nr_threads;
-	printf("Worst thread: %zd\n", worst);
-	printf("Expected perf. improvement: %.2f %%\n",
-	       100*(max_time / ideal_time - 1));
-	return (max_time - min_time) / min_time;
+    SetPropertyByMnemonic(option, value);
 }

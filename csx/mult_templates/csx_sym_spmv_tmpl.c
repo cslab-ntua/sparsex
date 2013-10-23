@@ -12,11 +12,11 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#include "ctl_ll.h"
+#include "Ctl_ll.hpp"
 
 #define ELEM_TYPE double
-#include "vector.h"
-#include "csx.h"
+#include "Vector.hpp"
+#include "Csx.hpp"
 
 #define CSX_SPMV_FN_MAX CTL_PATTERNS_MAX
 
@@ -49,9 +49,8 @@ static void deref(void *ptr)
 
 ${spmv_func_definitions}
 
-void spm_csx32_double_sym_multiply(void *spm, vector_double_t *in,
-                                   vector_double_t *out,
-                                   vector_double_t *temp)
+void spm_csx32_double_sym_multiply(void *spm, vector_t *in,
+                                   vector_t *out, vector_t *temp)
 {
 	csx_double_sym_t *csx_sym = (csx_double_sym_t *) spm;
 	csx_double_t *csx = csx_sym->lower_matrix;

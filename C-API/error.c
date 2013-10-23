@@ -1,5 +1,4 @@
 /**
- *
  * libcsx/error.c -- Error handling interface.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
@@ -10,62 +9,51 @@
  */
 
 #include "error.h"
+#include "LoggerUtil.hpp"
 
 /**
  *  The first global variable points to the current error handler. The default
  *  error handler #err_handle() can be overidden with a user defined error
  *  handling routine by setting this variable through #err_set_handler(). The new
  *  handler must conform to the given signature (\see libcsx/error.h).
- *
- *  The second global variable defines the current error log file i.e. where
- *  error messages are dumped to. The default option is stderr. Can be
- *  overridden with #err_set_logfile().
  */
 static libcsx_errhandler_t err_handlerptr = err_handle;
-static libcsx_logfile_t err_logfile;
 
 #define MAXLINE 1024
+
+/**
+ *  Returns the default error message corresponding to supplied error code
+ *  as a string.
+ *
+ *  @param[in]  code         nonzero error code, see the list above.
+ *  @param[out] message      default message as defined in libcsxErrorStrings[].
+ */
+static const char *err_get_message(libcsx_error_t code);
 
 /**
  *  Helper function that prints a message and returns to caller.
  *  Printing modes:
  *      1. errnoflag set to 0: for library related errors/warnings.
  *         The corresponding default or user-defined error message
- *         is simply printed to the logfile.
+ *         is simply printed to the chosen output (logfile/console).
  *      2. errnoflag set to 1: for OS related errors.
  *         The OS internal error message corresponding to the errno
  *         value is added to the default or user-defined error message.
  *         The errno value must be given as the "error" parameter.
  *
+ *  @param[in] levelflag    flag that defines if the message is an error or
+ *                          warning (0 for warning, 1 for error).
  *  @param[in] errnoflag    flag that defines the error handling mode.
  *  @param[in] error        nonzero error code.
  *  @param[in] sourcefile   the name of the file where the error occured.
  *  @param[in] lineno       the line in the file where the error occured.
  *  @param[in] function     the function in which the error occured.
- *  @param[in] prefix       [ERROR] or [WARNING].
  *  @param[in] fmt          default or user-defined error message.
  *  @param[in] ap           list f addintional arguments.          
  */
-static void err_print(int errnoflag, int error, const char* sourcefile,
-                      unsigned long lineno, const char *function,
-                      const char *prefix, const char *fmt, va_list ap)
-{
-    char buf[MAXLINE] = "";
-    char *postfix = " [\"%s\":%ld:%s()]\n";
-
-    /* Add prefix */
-    strcat(buf, prefix);
-    /* Add default or user defined error/warning message */
-    vsnprintf(buf+strlen(buf), MAXLINE-strlen(buf), fmt, ap);
-    /* Add os error message */
-    if (errnoflag)
-        snprintf(buf+strlen(buf), MAXLINE-strlen(buf), ": %s", strerror(error));
-    /* Add postfix */
-    snprintf(buf+strlen(buf), MAXLINE-strlen(buf), postfix, sourcefile, lineno,
-             function);
-    fputs(buf, err_logfile);
-    fflush(err_logfile);
-}
+static void err_print(int levelflag, int errnoflag, int error,
+                      const char *sourcefile, unsigned long lineno,
+                      const char *function, const char *fmt, va_list ap);
 
 void err_handle(libcsx_error_t code, const char *sourcefile,
                 unsigned long lineno, const char *function, const char *fmt,
@@ -73,24 +61,21 @@ void err_handle(libcsx_error_t code, const char *sourcefile,
 {
     va_list ap;
     int errno_saved = errno;
-    char *err_prefix = "[ERROR]: ";
-    char *warn_prefix = "[WARNING]: ";
 
     /* In case a valid error code is given find the corresponding default
        error/warning message */
     if (!fmt) {
-        err_get_message(code, &fmt);
+        fmt = err_get_message(code);
     }
     assert(fmt && "Non-existent error code!");
-    va_start(ap, fmt);                                                      //FIXTHIS ap
+    va_start(ap, fmt);
     if (code > LIBCSX_ERR_MIN_VALUE && code < LIBCSX_ERR_SYSTEM) {
-        err_print(0, 0, sourcefile, lineno, function, err_prefix, fmt, ap);
+        err_print(1, 0, 0, sourcefile, lineno, function, fmt, ap);
     } else if (code > LIBCSX_ERR_SYSTEM && code < LIBCSX_ERR_MAX_VALUE) {
-        err_print(1, errno_saved, sourcefile, lineno, function, err_prefix,
-                  fmt, ap);
+        err_print(1, 1, errno_saved, sourcefile, lineno, function, fmt, ap);
         exit(1);
     } else if (code > LIBCSX_ERR_MAX_VALUE && code < LIBCSX_WARN_MAX_VALUE) {
-        err_print(0, 0, sourcefile, lineno, function, warn_prefix, fmt, ap);
+        err_print(0, 0, 0, sourcefile, lineno, function, fmt, ap);
     }
     va_end(ap);
 }
@@ -108,26 +93,6 @@ void err_set_handler(libcsx_errhandler_t new_handler)
     } else {
         err_handlerptr = err_handle;
     }
-}
-
-void err_set_logfile(const char *filename)
-{
-    if (!filename) {
-        err_logfile = stderr;
-    } else {
-        err_logfile = fopen(filename, "a+");
-        if (err_logfile == NULL) {
-            fprintf(stderr, "[ERROR]: failed to open logfile\n");
-            exit(1);
-        }
-    }
-}
-
-void err_close_logfile()
-{
-    int error = fclose(err_logfile);
-    if (error != 0) printf("ok\n");
-    err_logfile = NULL;
 }
 
 /**
@@ -158,33 +123,39 @@ static const char *libcsx_warnings[] = {
     "no specific file given to save CSX, using default: \"csx_file\"",
     "invalid tuning option",
     "invalid runtime option",
-    "reoredering wasn't feasible on this matrix"
+    "reordering wasn't feasible on this matrix"
 };
 
-libcsx_error_t err_get_message(libcsx_error_t code, const char *message[])
+static const char *err_get_message(libcsx_error_t code)
 {
-    if (message && code > LIBCSX_ERR_MIN_VALUE && code < LIBCSX_ERR_MAX_VALUE) {
-        *message = libcsx_errors[code - LIBCSX_ERR_MIN_VALUE - 1];
-    } else if (message && code > LIBCSX_ERR_MAX_VALUE && code < LIBCSX_WARN_MAX_VALUE) {
-        *message = libcsx_warnings[code - LIBCSX_ERR_MAX_VALUE - 1];
-    } else if (message) {
-        *message = NULL;
+    if (code > LIBCSX_ERR_MIN_VALUE && code < LIBCSX_ERR_MAX_VALUE) {
+        return libcsx_errors[code - LIBCSX_ERR_MIN_VALUE - 1];
+    } else if (code > LIBCSX_ERR_MAX_VALUE && code < LIBCSX_WARN_MAX_VALUE) {
+        return libcsx_warnings[code - LIBCSX_ERR_MAX_VALUE - 1];
+    } else {
+        return NULL;
     }
-    return 0;
+    return NULL;
 }
 
-#if 0
-/* Error testing */
-int main()
+static void err_print(int levelflag, int errnoflag, int error,
+                      const char *sourcefile, unsigned long lineno,
+                      const char *function, const char *fmt, va_list ap)
 {
-    error_logfile= stderr;
-    FILE *p;
-    char text[] = "blabla";
-    p = fopen(text, "r");
+    char buf[MAXLINE] = "";
+    char *postfix = " [\"%s\":%ld:%s()]\n";
 
-    if (p == NULL) {
-        SETERROR_0(LIBCSX_ERR_FILE_OPEN);
+    /* Add default or user defined error/warning message */
+    vsnprintf(buf+strlen(buf), MAXLINE-strlen(buf), fmt, ap);
+    /* Add os error message */
+    if (errnoflag)
+        snprintf(buf+strlen(buf), MAXLINE-strlen(buf), ": %s", strerror(error));
+    /* Add postfix */
+    snprintf(buf+strlen(buf), MAXLINE-strlen(buf), postfix, sourcefile, lineno,
+             function);
+    if (levelflag) {
+        log_error(buf);
+    } else {
+        log_warning(buf);
     }
-    return 0;
 }
-#endif

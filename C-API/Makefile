@@ -4,24 +4,24 @@ all: libcsx.so libcsx.a libtest
 
 ## Configuration
 csx_dir     = ../csx
+logger_dir	= ../csx/logger
 
 CC          = gcc
 LD          = gcc
-CFLAGS      = -g -Wall -O3 -Wdisabled-optimization -Winline -fPIC -DLIBCSX_LOG_FILE
+CFLAGS      = -g -Wall -O3 -Wdisabled-optimization -Winline -fPIC
 # -Wpadded
-LDFLAGS     = -L$(csx_dir) -Wl,--rpath=$(csx_dir)
+LDFLAGS     = -L$(csx_dir) -Wl,--rpath=$(csx_dir) -L$(logger_dir) -Wl,--rpath=$(logger_dir)
 COMPILE     = $(CC) $(CFLAGS)
 LINK        = $(LD) $(LDFLAGS)
-LIBS        = -lcsx_in
+LIBS        = -lcsximpl
 
-override CFLAGS += -I$(csx_dir)
+override CFLAGS += -I$(csx_dir) -I$(logger_dir)
+override LDFLAGS  += -Wl,--allow-multiple-definition -Wl,--rpath=$(shell pwd)
 
 LIB_OBJECTS = error.o common.o mat.o
 
 %.o: %.c %.h
 	$(COMPILE) -c $< -o $@
-
-mat.o: $(csx_dir)/SparseMatrixWrapper.h
 
 libcsx.so: $(LIB_OBJECTS)
 	$(LINK) -shared -o $@ $^ $(LIBS)
@@ -29,7 +29,7 @@ libcsx.so: $(LIB_OBJECTS)
 libcsx.a: $(LIB_OBJECTS)
 	ar cru $@ $^
 
-libtest: main.o libcsx.a
+libtest: main.o libcsx.so
 	$(LINK) -o $@ $^ $(LIBS)
 
 clean:

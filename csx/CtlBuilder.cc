@@ -9,8 +9,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "CtlBuilder.h"
-#include "ctl_ll.h"
+#include "CtlBuilder.hpp"
+#include "Ctl_ll.hpp"
 
 static inline void SetBit(uint8_t *byte, int bit)
 {

@@ -10,6 +10,8 @@
  */
 
 #include "numa_util.h"
+//#include "LoggerUtil.hpp"
+
 #include <numa.h>
 #include <numaif.h>
 #include <stdio.h>
@@ -276,4 +278,8 @@ void print_alloc_status(const char *data_descr, int err)
 {
 	printf("allocation check for %s... %s\n", data_descr,
 	       (err) ? "FAILED (see above for more info)" : "DONE");
+	/* log_warning("allocation check for "); */
+    /* log_warning(data_descr); */
+    /* log_warning("... "); */
+    /* log_warning((err) ? "FAILED (see above for more info)" : "DONE"); */
 }

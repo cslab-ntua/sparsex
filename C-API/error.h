@@ -1,5 +1,4 @@
 /**
- *
  * libcsx/error.h -- Error handling interface.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
@@ -8,8 +7,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LIBCSX_ERROR_H__
-#define LIBCSX_ERROR_H__
+#ifndef LIBCSX_ERROR_H
+#define LIBCSX_ERROR_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +50,6 @@
 #define LIBCSX_WARN_MAX_VALUE       26
 
 typedef int libcsx_error_t;
-typedef FILE *libcsx_logfile_t;
 
 /**
  *  \brief Pointer to an error handling routine. Explain signature here!
@@ -60,7 +58,7 @@ typedef void (*libcsx_errhandler_t) (libcsx_error_t, const char *, unsigned long
                                      const char *, const char *, ...);
 
 /**
- *  Macros that are called when an error has been detected.Both versions call
+ *  Macros that are called when an error has been detected. Both versions call
  *  the current error handling routine (either default or user-defined).
  *
  *  Note: The _0 version uses the default error message, as defined in
@@ -70,11 +68,11 @@ typedef void (*libcsx_errhandler_t) (libcsx_error_t, const char *, unsigned long
  *  @param[in] message  error message, if NULL a default error message is used
  */
 #define SETERROR_0(code) \
-    err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, NULL);
+    err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, NULL)
 #define SETERROR_1(code, message) \
-    err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, message);
+    err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, message)
 #define SETWARNING(code) \
-    err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, NULL);
+    err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, NULL)
 
 /**
  *  Default error handler that is called through the macros #SETERROR_0/1
@@ -106,25 +104,4 @@ libcsx_errhandler_t err_get_handler();
  */
 void err_set_handler(libcsx_errhandler_t new_handler);
 
-/**
- *  \brief Sets the current error log file.
- *
- *  @param filename   new error log file.
- */
-void err_set_logfile(const char *filename);
-
-/**
- *  \brief Closes the current error log file.
- */
-void err_close_logfile();
-
-/**
- *  Returns the default error message corresponding to supplied error code
- *  as a string.
- *
- *  @param[in]  code         nonzero error code, see the list above.
- *  @param[out] message      default message as defined in libcsxErrorStrings[].
- */
-libcsx_error_t err_get_message(libcsx_error_t code, const char *message[]);
-
-#endif
+#endif // LIBCSX_ERROR_H

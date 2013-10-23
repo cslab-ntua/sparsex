@@ -1,10 +1,10 @@
 #include "../C-API/mattype.h"
-#include "csx_save_restore.h"
-#include "csx_get_set.h"
-#include "csx_build.h"
-#include "csx_bench.h"
-#include "csx_util.h"
-#include "mmf.h"
+#include "CsxSaveRestore.hpp"
+#include "CsxGetSet.hpp"
+#include "CsxBuild.hpp"
+#include "CsxBench.hpp"
+#include "CsxUtil.hpp"
+#include "Mmf.hpp"
 #include <cfloat>
 
 static double CalcImbalance(void *arg)
@@ -39,13 +39,13 @@ static double CalcImbalance(void *arg)
 int main(int argc, char **argv)
 {   
     spm_mt_t *spm_mt = 0;
-    csx::Timer timer;
+    timing::Timer timer;
 
     std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
     timer.Start();
-    std::cout << "Reconstructing CSX/CSX-Sym from binary file..." << std::endl;
+    std::cout << "Reconstructing CSX from binary file..." << std::endl;
     spm_mt = RestoreCsx<int, double>("csx_file", NULL);
-    std::cout << "Assigning new values to all matrix entries...";
+    std::cout << "Assigning new values to all matrix entries..." << std::endl;
     MMF<index_t, value_t> mmf(argv[1]);
     MMF<index_t, value_t>::iterator iter = mmf.begin();
     MMF<index_t, value_t>::iterator iter_end = mmf.end();
@@ -59,13 +59,12 @@ int main(int argc, char **argv)
         }
     } 
     timer.Pause();
-    double pre_time = timer.ElapsedTime();
-    std::cout << "DONE" << std::endl;
-    std::cout << "Total benchmark time (rebuild + assign): " << pre_time << std::endl;
-    //CheckLoop(spm_mt, argv[1]);
+    csx_time = timer.ElapsedTime();
+    // std::cout << "Total benchmark time (rebuild + assign): " << pre_time << std::endl;
+    CheckLoop<index_t, value_t>(spm_mt, argv[1]);
     std::cerr.flush();
     std::cout << "Running 128 SpMV loops..." << std::endl;
-    BenchLoop(spm_mt, argv[1]);
+    BenchLoop<value_t>(spm_mt, argv[1]);
     double imbalance = CalcImbalance(spm_mt);
     std::cout << "Load imbalance: " << 100*imbalance << "%\n";
     std::cout << "=== END BENCHMARK ===" << std::endl;

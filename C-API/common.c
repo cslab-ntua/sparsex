@@ -1,19 +1,21 @@
+/**
+ * libcsx/common.c -- Common utilities.
+ *
+ * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013, Athena Elafrou
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
 #include "common.h"
 
 void libcsx_init()
 {
-#ifdef LIBCSX_LOG_FILE
-    err_set_logfile("libcsx_logfile");
-#else
-    err_set_logfile(NULL);    
-#endif
-}
-
-void libcsx_close()
-{
-#ifdef LIBCSX_LOG_FILE
-    err_close_logfile();
-#endif
+    /* log_disable_all(); */
+    log_enable_all_file("logfile");
+//    log_enable_all_console();
+    log_disable_debug();
 }
 
 void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,

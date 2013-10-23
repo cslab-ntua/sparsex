@@ -7,11 +7,11 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LIBCSX_MAT_H__
-#define LIBCSX_MAT_H__
+#ifndef LIBCSX_MAT_H
+#define LIBCSX_MAT_H
 
 #include "common.h"
-#include "vec.h"
+#include "vector.h"
 
 /**
  *  \brief The sparse matrix handle type.
@@ -53,7 +53,7 @@ input_t *libcsx_mat_create_mmf(const char *filename);
  *  @param[in] input        the input matrix.
  *  @return                 a handle to the tuned matrix.
  */
-matrix_t *libcsx_mat_tune(input_t *input);
+matrix_t *libcsx_mat_tune(input_t *input, int reorder);
 
 /**
  *  This routines performs a matrix-vector multiplication defined as:
@@ -151,19 +151,8 @@ libcsx_error_t libcsx_mat_destroy_input(input_t *A);
  *  @param[in] string       a description of how to set the option.
  *  @return                 an error code.
  */
-libcsx_error_t libcsx_set_tuning_option(input_t *A, option_t option,
-                                        const char *string);
+void libcsx_set_option(const char *option, const char *string);
 
-/**
- *  Sets the option #option according to the string #string.
- *  For available runtime options \see #FIXME libcsx/common.h
- *
- *  @param[in] option       the option to be set.
- *  @param[in] string       a description of how to set the option.
- *  @return                 an error code.
- */
-libcsx_error_t libcsx_set_runtime_option(option_t option , const char *string);
-
-#endif // LIBCSX_MAT_H__
+#endif // LIBCSX_MAT_H
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

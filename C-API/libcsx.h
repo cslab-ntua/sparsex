@@ -7,13 +7,13 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LIBCSX_H__
-#define LIBCSX_H__
+#ifndef LIBCSX_H
+#define LIBCSX_H
 
 #include "common.h"
 #include "error.h"
 #include "mat.h"
-#include "vec.h"
+#include "vector.h"
 #include "mattype.h"
 
-#endif  // LIBCSX_H__
+#endif  // LIBCSX_H

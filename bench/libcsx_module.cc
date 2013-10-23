@@ -27,7 +27,13 @@ void libcsx_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
     /* 3. Tuning phase */
     t.Clear();
     t.Start();
-    matrix_t *A = libcsx_mat_tune(input);
+    libcsx_set_option("libcsx.rt.cpu_affinity", "0,1");
+    // libcsx_set_option("libcsx.matrix.symmetric", "true");
+    libcsx_set_option("libcsx.preproc.xform", "all");
+    libcsx_set_option("libcsx.preproc.sampling", "portion");
+    libcsx_set_option("libcsx.preproc.sampling.portion", ".01");
+    libcsx_set_option("libcsx.preproc.sampling.nr_samples", "48");
+    matrix_t *A = libcsx_mat_tune(input, 0);
     t.Pause();
     double pt = t.ElapsedTime();
     cout << "pt: " << pt << endl;
@@ -43,5 +49,4 @@ void libcsx_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
     libcsx_mat_destroy_tuned(A);
     vec_destroy(x_view);
     vec_destroy(y_view);
-    libcsx_close();
 }

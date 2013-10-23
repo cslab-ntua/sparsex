@@ -1,7 +1,6 @@
 .PHONY: all clean
 
-all: libcsximpl.a libcsximpl.so sparsematrix_test dynamic_array_test
-# libcsx_test set_test spmv
+all: libcsximpl.a libcsximpl.so spmv set_test dynamic_array_test
 
 # Configuration
 llvmconf     = llvm-config
@@ -27,7 +26,7 @@ CXX         ?= g++
 LD           = $(CXX)
 CFLAGS      ?= -Wall -O3 -fPIC
 CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimization -fPIC -std=c++0x
-LIBS         = -lnuma -lboost_regex -lpthread -lboost_thread -lboost_serialization
+LIBS         = -lnuma -lboost_regex -lboost_thread -lboost_serialization
 AR           = ar
 AR_FLAGS     = cru
 
@@ -52,27 +51,26 @@ libadd = $(dynarray_dir)/dynarray.o numa_util.o
 DEPDIR = .deps
 df = $(DEPDIR)/$(*F)
 CSX_SRC = \
-	affinity.cc \
-	compiler.cc \
-	csx_bench.cc \
-	csx_build.cc \
-	csx_matvec.cc \
-	csx_spmv_mt.cc \
-	csx_util.cc \
-	csxsym_spmv_mt.cc \
+	Affinity.cc \
+	Compiler.cc \
+	CsxBench.cc \
+	CsxBuild.cc \
+	CsxMatvec.cc \
+	CsxSpmvMt.cc \
+	CsxUtil.cc \
 	CtlBuilder.cc \
-	dynamic_array.cc \
-	encodings.cc \
-	jit.cc \
-	jit_util.cc \
-	node.cc \
-	runtime.cc \
-	sparsematrix_test.cc \
-	template_text.cc \
-	timer.cc \
-	vector.cc \
-	$(log_dir)/logger.cc \
-	$(log_dir)/output_policy.cc \
+	DynamicArray.cc \
+	Encodings.cc \
+	Jit.cc \
+	JitUtil.cc \
+	Node.cc \
+	Runtime.cc \
+	SparseMatrixWrapper.cc \
+	TemplateText.cc \
+	Timer.cc \
+	Vector.cc \
+	$(log_dir)/Logger.cc \
+	$(log_dir)/OutputPolicy.cc \
 
 CSX_OBJECTS = $(CSX_SRC:%.cc=%.o) numa_util.o
 
@@ -113,14 +111,11 @@ spmv: main.o libcsximpl.so
 libcsx_test: libcsx_test.o libcsximpl.so
 	$(LINK) -o $@ $^ $(LIBS)
 
-sparsematrix_test: sparsematrix_test.o libcsximpl.so
-	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(libadd) $(LIBS)
-
 set_test: set_test.o libcsximpl.so
 	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(libadd) $(LIBS)
 
-dynamic_array_test: dynamic_array.o timer.o $(libadd)
+dynamic_array_test: DynamicArray.o Timer.o $(libadd)
 	$(LINK) -o $@ $^ $(libadd) -lnuma
 
 clean:
-	rm -f *.o *.d spmv libcsximpl.a libcsximpl.so libcsx_test dynamic_array_test sparsematrix_test
+	rm -f *.o *.d $(log_dir)/*.o libcsximpl.a libcsximpl.so spmv set_test dynamic_array_test

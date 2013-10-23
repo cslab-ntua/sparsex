@@ -14,24 +14,31 @@ int main(int argc, char **argv)
     /* zero_based = 1; */
     /* input_t *input = libcsx_mat_create_csr(rowptr, colind, values, */
     /*                                        nrows, ncols, zero_based); */
+    printf("Loading matrix from file...\n");
     input_t *input = libcsx_mat_create_mmf(argv[1]);
-//    libcsx_set_tuning_option(input, OPT_REORDER, "ENABLE");
-    matrix_t *A = libcsx_mat_tune(input);
+    libcsx_set_option("libcsx.rt.cpu_affinity", "0,1");
+    libcsx_set_option("libcsx.matrix.symmetric", "true");
+    libcsx_set_option("libcsx.preproc.xform", "all");
+    libcsx_set_option("libcsx.preproc.sampling", "portion");
+    libcsx_set_option("libcsx.preproc.sampling.portion", ".01");
+    libcsx_set_option("libcsx.preproc.sampling.nr_samples", "48");
+    printf("Transforming to CSX...\n");
+    matrix_t *A = libcsx_mat_tune(input, 0);
     libcsx_mat_destroy_input(input);
     /* libcsx_mat_save(A, NULL); */
     /* libcsx_mat_destroy_tuned(A); */
     /* A = libcsx_mat_restore("csx_file"); */
     vector_t *x = vec_create_random(libcsx_mat_get_ncols(A));
     vector_t *y = vec_create_random(libcsx_mat_get_nrows(A));
+    printf("Running SpMV kernel...\n");
     libcsx_matvec_mult(A, 1, x, 1, y);
-    printf("\nSpMV output:\n");
-    vec_print(y);
+    /* printf("\nSpMV output:\n"); */
+    /* vec_print(y); */
 
     /* Cleanup */
     libcsx_mat_destroy_tuned(A);
     vec_destroy(x);
     vec_destroy(y);
-    libcsx_close();
 
     return 0;
 }

@@ -13,11 +13,11 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#include  "${header_prefix}/csx/ctl_ll.h"
+#include  "${header_prefix}/csx/Ctl_ll.hpp"
 
 #define ELEM_TYPE double
-#include "${header_prefix}/lib/spm/vector.h"
-#include "${header_prefix}/csx/csx.h"
+#include "${header_prefix}/csx/Vector.hpp"
+#include "${header_prefix}/csx/Csx.hpp"
 
 #define CSX_SPMV_FN_MAX CTL_PATTERNS_MAX
 
@@ -55,8 +55,7 @@ typedef double (csx_spmv_fn_t)(uint8_t **ctl, uint8_t size, double **values,
 
 ${spmv_func_definitions}
 
-void spm_csx32_double_multiply(void *spm, vector_double_t *in,
-                               vector_double_t *out)
+void spm_csx32_double_multiply(void *spm, vector_t *in, vector_t *out)
 {
 	csx_double_t *csx = (csx_double_t *) spm;
 	double *x = in->elements;
