@@ -26,12 +26,19 @@ class DynamicArray
 {
 public:
     DynamicArray(size_t capacity = 1024)
-        :size_(0),
-         capacity_(capacity),
-         own_elems_(true)
+        : size_(0),
+          capacity_(capacity),
+          own_elems_(true)
     {
         elems_ = alloc_.allocate(capacity_);
     }
+
+    DynamicArray(T *storage, size_t size, size_t capacity)
+        : elems_(storage),
+          size_(size),
+          capacity_(capacity),
+          own_elems_(false)
+    { }
 
     ~DynamicArray()
     {

@@ -863,7 +863,6 @@ void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
     typename SparsePartition<IndexType, ValueType>::Builder *SpmBld = 0;
     std::vector<Elem<IndexType, ValueType> > new_row;
     uint64_t nr_size;
-    Elem<IndexType, ValueType> *elems;
 
     if (type == Encoding::None && ((type = ChooseType()) == Encoding::None))
         return;
@@ -879,10 +878,11 @@ void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
         nr_size = new_row.size();
         if (nr_size > 0) {
             tf_.StartTimer("Alloc");
-            elems = SpmBld->AllocElems(nr_size);
+            //elems = SpmBld->AllocElems(nr_size);
             tf_.PauseTimer("Alloc");
             for (uint64_t i = 0; i < nr_size; ++i)
-                MakeRowElem(new_row[i], elems + i);
+                SpmBld->AppendElem(new_row[i]);
+            // MakeRowElem(new_row[i], elems + i);
         }
 
         new_row.clear();
@@ -916,9 +916,10 @@ void EncodingManager<IndexType, ValueType>::Decode(Encoding::Type type)
         DecodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
         if (nr_size > 0) {
-            elems = SpmBld->AllocElems(nr_size);
+            // elems = SpmBld->AllocElems(nr_size);
             for (uint64_t i = 0; i < nr_size; ++i)
-                MakeRowElem(new_row[i], elems + i);
+                SpmBld->AppendElem(new_row[i]);
+            // MakeRowElem(new_row[i], elems + i);
         }
 
         new_row.clear();

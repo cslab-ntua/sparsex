@@ -167,8 +167,6 @@ spm_mt_t *SparseMatrix<InputPolicy>::CreateCsx(internal::Sym<false>)
 
     // Clenaup
     delete spi;
-    spi = 0;
-
     return csx_;
 }
 
