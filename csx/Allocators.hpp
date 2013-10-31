@@ -70,7 +70,6 @@ public:
     {
         if (p) {
             p->~T();
-            cout << "Size: " << sizeof(T) << "\n";
             Deallocate(p, sizeof(T));
         }
     }
@@ -339,7 +338,7 @@ public:
 
     void deallocate(pointer p, size_type n)
     {
-        Alloc::GetInstance().Deallocate(p);
+        Alloc::GetInstance().Deallocate(p, n*sizeof(T));
     }
 
     size_type max_size() const throw()

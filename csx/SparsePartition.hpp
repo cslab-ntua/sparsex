@@ -56,20 +56,31 @@ private:
     // Maximum possible rowptr_size after transformations.
     size_t max_rowptr_size_;
     size_t nr_deltas_;
+    MemoryAllocator &alloc_;
+
+#ifdef SPM_NUMA
+    typedef NumaAllocator MemoryAllocatorImpl;
+#else
+    typedef StdAllocator MemoryAllocatorImpl;
+#endif
 
 public:
     typedef IndexType idx_t;
     typedef ValueType val_t;
 
-    SparsePartition() : type_(Encoding::None), elems_(NULL), rowptr_(NULL),
-                        elems_mapped_(false) {}
+    SparsePartition() :
+        type_(Encoding::None),
+        elems_(NULL),
+        rowptr_(NULL),
+        elems_mapped_(false),
+        alloc_(MemoryAllocatorImpl::GetInstance())
+    {}
 
     ~SparsePartition()
     {
-        if (rowptr_)
-            free(rowptr_);
-        if (!elems_mapped_ && elems_)
-            free(elems_);
+        alloc_.Deallocate(rowptr_, rowptr_size_*sizeof(*rowptr_));
+        if (!elems_mapped_)
+            alloc_.Deallocate(elems_, elems_size_*sizeof(*elems_));
     };
 
     size_t GetNrRows() const
@@ -293,6 +304,7 @@ private:
         for (IndexType i = rowptr_[row_no]; i < rowptr_[row_no+1]; ++i) {
             std::cout << "i = " << i << ", " << "elem = " << elems_[i] << "|";
         }
+
         std::cout << std::endl;
     }
 };
@@ -304,6 +316,21 @@ template<typename IndexType, typename ValueType>
 class SparsePartition<IndexType, ValueType>::Builder
 {
 public:
+#ifdef SPM_NUMA
+    typedef DynamicArray<Elem<IndexType, ValueType>,
+                         reallocator<Elem<IndexType, ValueType>,
+                                     NumaAllocator> > DynamicElemArray;
+    typedef DynamicArray<IndexType,
+                         reallocator<IndexType,
+                                     NumaAllocator> > DynamicIndexArray;
+    typedef DynamicArray<ValueType,
+                     reallocator<ValueType, NumaAllocator> > DynamicValueArray;
+#else
+    typedef DynamicArray<Elem<IndexType, ValueType> > DynamicElemArray;
+    typedef DynamicArray<IndexType> DynamicIndexArray;
+    typedef DynamicArray<ValueType> DynamicValueArray;
+#endif
+
     /**
      *  Constructs a Builder object.
      *
@@ -346,14 +373,8 @@ public:
 
 public:
     SparsePartition *sp_;
-#ifdef SPM_NUMA
-    DynamicArray<ValueType, reallocator<Elem<IndexType, ValueType>,
-                                        NumaAllocator> > da_elems_;
-    DynamicArray<IndexType, reallocator<IndexType, NumaAllocator> > da_rowptr_;
-#else
-    DynamicArray<Elem<IndexType, ValueType> > da_elems_;
-    DynamicArray<IndexType> da_rowptr_;
-#endif
+    DynamicElemArray da_elems_;
+    DynamicIndexArray da_rowptr_;
 };
 
 /**
@@ -541,6 +562,13 @@ template<typename IndexType, typename ValueType>
 class SparsePartitionSym<IndexType, ValueType>::Builder
 {
 public:
+#ifdef SPM_NUMA
+    typedef DynamicArray<ValueType,
+                     reallocator<ValueType, NumaAllocator> > DynamicValueArray;
+#else
+    typedef DynamicArray<ValueType> DynamicValueArray;
+#endif
+
     /**
      *  Constructs a Builder object.
      *
@@ -565,11 +593,7 @@ public:
 private:
     SparsePartitionSym<IndexType, ValueType> *spm_sym_;
     typename SparsePartition<IndexType, ValueType>::Builder *spm_bld_;
-#ifdef SPM_NUMA
-    DynamicArray<ValueType, reallocator<ValueType, NumaAllocator> > da_dvalues_;
-#else
-    DynamicArray<ValueType> da_dvalues_;
-#endif    
+    DynamicValueArray da_dvalues_;
 };
 
 
@@ -1332,10 +1356,10 @@ Builder::Builder(SparsePartition<IndexType, ValueType> *sp, size_t nr_rows,
                  size_t nr_elems)
     : sp_(sp),
       da_elems_(((sp_->elems_mapped_) ?
-                 DynamicArray<Elem<IndexType, ValueType> >(
-                     sp_->elems_, sp_->elems_size_, sp_->elems_size_) :
-                 DynamicArray<Elem<IndexType, ValueType> >(nr_elems))),
-      da_rowptr_(DynamicArray<IndexType>(nr_rows+1))
+                 DynamicElemArray(sp_->elems_, sp_->elems_size_,
+                                  sp_->elems_size_) :
+                 DynamicElemArray(nr_elems))),
+      da_rowptr_(DynamicIndexArray(nr_rows+1))
 {
     da_rowptr_.Append(0);
 }
@@ -1374,15 +1398,15 @@ Builder::Finalize()
         NewRow();
     }
 
+    // free old data structures
     if (!sp_->elems_mapped_ && sp_->elems_)
-        free(sp_->elems_);
+        da_elems_.GetAllocator().deallocate(sp_->elems_, sp_->elems_size_);
 
     if (sp_->rowptr_)
-        free(sp_->rowptr_);
+        da_rowptr_.GetAllocator().deallocate(sp_->rowptr_, sp_->rowptr_size_);
 
-    if (sp_->elems_mapped_) {
+    if (sp_->elems_mapped_)
         assert(sp_->elems_size_ == da_elems_.GetSize());
-    }
 
     sp_->elems_size_ = da_elems_.GetSize();
     
@@ -1604,7 +1628,7 @@ template<typename IndexType, typename ValueType>
 SparsePartitionSym<IndexType, ValueType>::Builder::
 Builder(SparsePartitionSym *spm_sym, size_t nr_elems, size_t nr_rows)
     : spm_sym_(spm_sym),
-      da_dvalues_(DynamicArray<ValueType>(nr_rows))
+      da_dvalues_(DynamicValueArray(nr_rows))
 {
     SparsePartition<IndexType, ValueType> *spm = spm_sym_->GetLowerMatrix();
     

@@ -33,7 +33,7 @@ public:
     typedef IndexType idx_t;
     typedef ValueType val_t;
 
-    CSR(const char *filename) {}  //Dummy
+    CSR(const char *filename) {}  // Dummy
     CSR()
         : rowptr_(0),
           colind_(0),

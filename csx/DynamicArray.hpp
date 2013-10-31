@@ -104,18 +104,18 @@ public:
         assert((size_ == capacity_) && "[BUG] shrink failed");
     }
 
-    const Allocator &GetAllocator() const
+    Allocator &GetAllocator()
     {
         return alloc_;
     }
 
 
-    T& operator[](size_t pos)
+    T &operator[](size_t pos)
     {
         return elems_[pos];
     }
 
-    const T& operator[](size_t pos) const
+    const T &operator[](size_t pos) const
     {
         return elems_[pos];
     }

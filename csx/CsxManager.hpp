@@ -297,7 +297,6 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
 #ifdef SPM_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
     int cpu = sched_getcpu();
-
     if (cpu < 0) {
         LOG_ERROR << "sched_getcpu() failed " << strerror(errno);
         exit(1);
