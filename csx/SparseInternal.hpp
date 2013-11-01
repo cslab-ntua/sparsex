@@ -11,7 +11,6 @@
 #ifndef SPARSE_INTERNAL_HPP
 #define SPARSE_INTERNAL_HPP
 
-#include "dynarray.h"
 #include "Encodings.hpp"
 #include "Runtime.hpp"
 #include "SparseUtil.hpp"

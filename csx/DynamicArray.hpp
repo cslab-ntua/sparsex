@@ -26,12 +26,19 @@ class DynamicArray
 {
 public:
     DynamicArray(size_t capacity = 1024)
-        :size_(0),
-         capacity_(capacity),
-         own_elems_(true)
+        : size_(0),
+          capacity_(capacity),
+          own_elems_(true)
     {
         elems_ = alloc_.allocate(capacity_);
     }
+
+    DynamicArray(T *storage, size_t size, size_t capacity)
+        : elems_(storage),
+          size_(size),
+          capacity_(capacity),
+          own_elems_(false)
+    { }
 
     ~DynamicArray()
     {
@@ -97,18 +104,18 @@ public:
         assert((size_ == capacity_) && "[BUG] shrink failed");
     }
 
-    const Allocator &GetAllocator() const
+    Allocator &GetAllocator()
     {
         return alloc_;
     }
 
 
-    T& operator[](size_t pos)
+    T &operator[](size_t pos)
     {
         return elems_[pos];
     }
 
-    const T& operator[](size_t pos) const
+    const T &operator[](size_t pos) const
     {
         return elems_[pos];
     }

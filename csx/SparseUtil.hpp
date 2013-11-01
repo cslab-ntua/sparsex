@@ -24,20 +24,6 @@ using namespace std;
 
 namespace csx {
 
-#define xmalloc(x)                         \
-({                                         \
-    void *ret_;                            \
-    ret_ = malloc(x);                      \
-    if (ret_ == NULL){                     \
-        std::cerr << __FUNCTION__          \
-                  << " " << __FILE__       \
-                  << ":" << __LINE__       \
-                  << ": malloc failed\n";  \
-        exit(1);                           \
-    }                                      \
-    ret_;                                  \
-})
-
 inline int gcd(int i, int j)
 {
     if (j == 0)
@@ -65,7 +51,24 @@ struct CooElem {
         ValueType *vals; ///< the value of the elements, if Elem refers to
                          ///  an encoded pattern
     };
-public:
+
+    CooElem(IndexType r, IndexType c, ValueType v)
+        : row(r), col(c), val(v)
+    { }
+
+    CooElem(const CooElem &other)
+    {
+        row = other.row;
+        col = other.col;
+        val = other.val;
+    }
+
+    CooElem()
+    {
+        row = col = 0;
+        val = 0;
+    }
+
 //     ~CooElem()
 //     {
 // //        delete[] vals;
@@ -77,18 +80,23 @@ public:
  */ 
 template<typename IndexType, typename ValueType>
 struct CooElemSorter {
-    public:
-        bool operator() (const CooElem<IndexType, ValueType> &lhs,
-                         const CooElem<IndexType, ValueType> &rhs) const
-        {
-            if (lhs.row < rhs.row) return true;
-            if (lhs.row > rhs.row) return false;
+    bool operator() (const CooElem<IndexType, ValueType> &lhs,
+                     const CooElem<IndexType, ValueType> &rhs) const
+    {
+        if (lhs.row < rhs.row)
+            return true;
 
-            if (lhs.col < rhs.col) return true;
-            if (lhs.col > rhs.col) return false;
-
+        if (lhs.row > rhs.row)
             return false;
-        }
+
+        if (lhs.col < rhs.col)
+            return true;
+
+        if (lhs.col > rhs.col)
+            return false;
+
+        return false;
+    }
 };
 
 template<typename IndexType, typename ValueType>
@@ -97,11 +105,17 @@ struct VerticalSorter {
         bool operator() (const CooElem<IndexType, ValueType> &lhs,
                          const CooElem<IndexType, ValueType> &rhs) const
         {
-            if (lhs.col < rhs.col) return true;
-            if (lhs.col > rhs.col) return false;
+            if (lhs.col < rhs.col)
+                return true;
 
-            if (lhs.row < rhs.row) return true;
-            if (lhs.row > rhs.row) return false;
+            if (lhs.col > rhs.col)
+                return false;
+
+            if (lhs.row < rhs.row)
+                return true;
+
+            if (lhs.row > rhs.row)
+                return false;
 
             return false;
         }
@@ -462,7 +476,7 @@ public:
     bool in_pattern;    // only for statistics
     bool pattern_start; // only for statistics (pattern start)
 
-    SpmPattern(void) : pattern(NULL), in_pattern(false), pattern_start(false) { }
+    SpmPattern() : pattern(NULL), in_pattern(false), pattern_start(false) { }
     SpmPattern(const SpmPattern &spm_p)
     {
         DeltaRLE *p;
@@ -498,7 +512,29 @@ public:
  *  A generic sparse matrix coordinate element that can also be a pattern.
  */
 template<typename IndexType, typename ValueType> 
-struct Elem : public CooElem<IndexType, ValueType>, public SpmPattern {};
+struct Elem : public CooElem<IndexType, ValueType>, public SpmPattern
+{
+    Elem(const CooElem<IndexType, ValueType> &other)
+        : CooElem<IndexType, ValueType>(other)
+    {
+        pattern = 0;
+    }
+
+    Elem(const Elem<IndexType, ValueType> &other)
+        : CooElem<IndexType, ValueType>(other.row, other.col, other.val)
+    {
+        in_pattern = other.in_pattern;
+        pattern_start = other.pattern_start;
+        pattern = (other.pattern) ? (other.pattern)->Clone() : NULL;
+    }
+
+    Elem()
+        : CooElem<IndexType, ValueType>(0, 0, 0)
+    {
+        pattern = 0;
+    }
+
+};
 
 
 template<typename IndexType, typename ValueType>
@@ -506,7 +542,6 @@ inline bool elem_cmp_less(const Elem<IndexType, ValueType> &e0,
                           const Elem<IndexType, ValueType> &e1)
 {
     int ret;
-
     ret = CooCmp(static_cast<CooElem<IndexType, ValueType> >(e0),
                  static_cast<CooElem<IndexType, ValueType> >(e1));
     return (ret < 0);
@@ -561,7 +596,7 @@ std::ostream &operator<<(std::ostream &os, const DeltaRLE &p)
 template<typename IndexType, typename ValueType>
 std::ostream &operator<<(std::ostream &out, CooElem<IndexType, ValueType> p)
 {
-    out << "(" << std::setw(2) << p.row << "," << std::setw(2) << p.col << ")";
+    out << "(" << p.row << "," << p.col << ")";
     return out;
 }
 
@@ -577,7 +612,7 @@ std::ostream &operator<<(std::ostream &out, const Elem<IndexType, ValueType> e)
             
         out << "}";
     } else {
-        out << "v: " << e.val;
+        out << "v:" << e.val;
     }
 
     return out;

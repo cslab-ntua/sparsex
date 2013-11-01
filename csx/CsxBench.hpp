@@ -65,8 +65,8 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     CSR<IndexType, ValueType> *csr = new CSR<IndexType, ValueType>;
     MMFtoCSR<IndexType, ValueType>(mmf_name, &csr->rowptr_, &csr->colind_,
-                                   &csr->values_, &csr->nr_rows_, &csr->nr_cols_,
-                                   &csr->nr_nzeros_);
+                                   &csr->values_, &csr->nr_rows_,
+                                   &csr->nr_cols_, &csr->nr_nzeros_);
 
     std::cout << "Checking... " << std::flush;
     if (!spm_mt->symmetric) {
@@ -74,12 +74,13 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     } else{
         SPMV_CHECK_SYM_FN(csr, spm_mt, 1, csr->GetNrRows(), csr->GetNrCols());
     }
+
     std::cout << "Check Passed" << std::endl;
 
     // Cleanup
-    delete csr->rowptr_;
-    delete csr->colind_;
-    delete csr->values_;
+    delete[] csr->rowptr_;
+    delete[] csr->colind_;
+    delete[] csr->values_;
     delete csr;
 }
 
@@ -115,7 +116,8 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
               ValueType **values, size_t *nrows, size_t *ncols, size_t *nnz)
 {
     MMF<IndexType, ValueType> mmf(filename);
-    *nrows = mmf.GetNrRows(); *ncols = mmf.GetNrCols();
+    *nrows = mmf.GetNrRows();
+    *ncols = mmf.GetNrCols();
     *nnz = mmf.GetNrNonzeros();
 	*values = new ValueType[mmf.GetNrNonzeros()];
 	*colind = new IndexType[mmf.GetNrNonzeros()];
