@@ -17,6 +17,7 @@
 #include "../C-API/mattype.h"
 #include "Csx.hpp"
 #include "SpmMt.hpp"
+#include <cstdlib>
 
 /**
  *  Compute the size (in bytes) of the compressed matrix in CSX form.

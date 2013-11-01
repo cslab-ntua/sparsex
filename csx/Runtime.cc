@@ -106,7 +106,7 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
     if (wsize_str) {
         SetProperty(RuntimeConfiguration::PreprocWindowSize, string(wsize_str));
     } else {
-        cout << "Window size: Not set\n";
+        // cout << "Window size: Not set\n";
     }
 
     const char *samples_str = getenv("SAMPLES");
@@ -116,7 +116,7 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         SetProperty(RuntimeConfiguration::PreprocNrSamples,
                     string(samples_str));
     } else {
-        cout << "Number of samples: Not set\n";
+        // cout << "Number of samples: Not set\n";
     }
 
     const char *sampling_portion_str = getenv("SAMPLING_PORTION");
@@ -126,7 +126,7 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         SetProperty(RuntimeConfiguration::PreprocSamplingPortion,
                     string(sampling_portion_str));
     } else {
-        cout << "sampling is disabled\n";
+        // cout << "sampling is disabled\n";
     }
     
     return *this;

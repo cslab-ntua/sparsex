@@ -636,7 +636,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
         if (!symmetric_) {
             hooks["body_hook"] =
                 "yr += "+ Stringify(i_fentry->second) +
-                "(&ctl, size, &v, &x_curr, &y_curr);";
+                "(&ctl, size, &v, &x_curr, &y_curr, scale_f);";
         } else {
             hooks["body_hook"] =
                 "yr += " + Stringify(i_fentry->second) +
@@ -649,7 +649,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 hooks["body_hook"] +=
                     Tabify(2) + "case " + Stringify(i_fentry->first) + ":\n" +
                     Tabify(3) + "yr += " + Stringify(i_fentry->second) +
-                    "(&ctl, size, &v, &x_curr, &y_curr);\n" +
+                    "(&ctl, size, &v, &x_curr, &y_curr, scale_f);\n" +
                     Tabify(3) + "break;\n";
             } else {
                 hooks["body_hook"] +=

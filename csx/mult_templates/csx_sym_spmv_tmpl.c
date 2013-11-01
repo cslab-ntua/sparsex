@@ -69,8 +69,8 @@ void spm_csx32_double_sym_multiply(void *spm, vector_t *in,
 	uint64_t i;
 	double *cur = tmp;
 
-	for (i = y_indx; i < y_end; i++)
-		y[i] = 0;
+	/* for (i = y_indx; i < y_end; i++) */
+	/* 	y[i] = 0; */
 
 	do {
 		flags = *ctl++;

@@ -10,6 +10,8 @@
  */
 
 #include "mkl_module.h"
+#include <algorithm>
+#include <vector>
 
 /* SpMV kernel implemented with Intel MKL */
 void mkl_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
@@ -35,14 +37,21 @@ void mkl_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
     mkl_set_num_threads(NR_THREADS);
 
     /* 2. SpMV benchmarking phase */
+    std::vector<double> mt(OUTER_LOOPS);
     SPMV_BENCH(mkl_dcsrmv(&transa, &nrows, &ncols, &ALPHA, matdescra, values,
                           colind, pointerB, pointerE, x, &BETA, y));
-    double mt = t.ElapsedTime() / OUTER_LOOPS;
-    cout << "mt: " << mt << endl;
+    sort(mt.begin(), mt.end());
+    double mt_median = 
+        (OUTER_LOOPS % 2) ? mt[((OUTER_LOOPS+1)/2)-1]
+        : ((mt[OUTER_LOOPS/2] + mt[OUTER_LOOPS/2+1])/2);  
+    double flops = (double)(LOOPS*nnz*2)/((double)1000*1000*mt_median);
+    cout << "m: " << MATRIX 
+         << " mt(median): " << mt_median
+         << " flops: " << flops << endl;
     // for (int i = 0; i < nrows; i++) {
     //     std::cout << y[i] << " ";
     // }
-    // cout << endl;
+    std::cout << y[0] << " " << y[nrows-1] << endl;
 
     /* 3. Cleanup */
     free(pointerB);

@@ -29,8 +29,7 @@ using namespace bench;
  *  @param[in] outer_loops  the number of repeats of the benchmark.
  */
 void Bench_Directory(const char *directory, const char *library,
-                     const char *stats_file, unsigned long loops,
-                     unsigned int outer_loops);
+                     const char *stats_file);
 
 /* 
  *  Solve the SpMV kernel with the specified #library or with all available
@@ -45,10 +44,8 @@ void Bench_Directory(const char *directory, const char *library,
  *  @param[in] outer_loops  the number of repeats of the benchmark.
  */
 void Bench_Matrix(const char *mmf_file, const char *library,
-                  const char *stats_file, unsigned long loops,
-                  unsigned int outer_loops);
+                  const char *stats_file);
 
-void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file,
-                  unsigned long loops, unsigned int outer_loops);
+void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file);
 
 #endif  // BENCH_H__

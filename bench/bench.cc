@@ -18,13 +18,14 @@ using namespace std;
 using namespace bench;
 
 /* Global variables */
-unsigned int OUTER_LOOPS;    /**< Number of SpMV iterations */
-unsigned long LOOPS;         /**< Number of repeats */
-unsigned int NR_THREADS = 2; /**< Number of threads for a multithreaded
+std::string MATRIX;
+unsigned int OUTER_LOOPS = 5;   /**< Number of SpMV iterations */
+unsigned long LOOPS = 128;      /**< Number of repeats */
+unsigned int NR_THREADS = 1;    /**< Number of threads for a multithreaded
                                 execution */
-double ALPHA = 2, BETA = 1;  /**< Scalar parameters of the SpMV kernel
-                                (y->APLHA*A*x + BETA*y) */
-Timer t;                     /**< Timer for benchmarking */
+double ALPHA = 1, BETA = 1;     /**< Scalar parameters of the SpMV kernel
+                                   (y->APLHA*A*x + BETA*y) */
+Timer t;                        /**< Timer for benchmarking */
 
 static SpmvFn GetSpmvFn(library type);
 static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
@@ -32,27 +33,23 @@ static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
 
 
 void Bench_Directory(const char *directory, const char *library,
-                     const char *stats_file, unsigned long loops,
-                     unsigned int outer_loops)
+                     const char *stats_file)
 {
     DirectoryIterator it(directory);
  
     for (; it; ++it) {
         const char *filename = it.filename().c_str();
-        Bench_Matrix(filename, library, stats_file, loops, outer_loops);
+        Bench_Matrix(filename, library, stats_file);
     }
 }
 
 void Bench_Matrix(const char *filename, const char *library,
-                  const char *stats_file, unsigned long loops,
-                  unsigned int outer_loops)
+                  const char *stats_file)
 {
+    MATRIX = basename(const_cast<char *>(filename));
     cout << "\n==========================================================\n";
-    cout << " COMPUTING SPMV PRODUCT WITH MATRIX: " 
-         << basename(const_cast<char *>(filename)) << endl;
+    cout << " COMPUTING SPMV PRODUCT WITH MATRIX: " << MATRIX << endl;
 
-    LOOPS = loops;
-    OUTER_LOOPS = outer_loops;
     SpmvFn  fn;
     int     *rowptr, *colind;
     double  *values;
@@ -63,15 +60,21 @@ void Bench_Matrix(const char *filename, const char *library,
 	double *x = (double *) malloc(sizeof(double) * ncols);
 	double *y = (double *) malloc(sizeof(double) * nrows);
     for (int i = 0; i < nrows; i++) {
-        x[i] = 1;
-        y[i] = 2;
+        x[i] = 2;
+        y[i] = 1;
     }
 
     if (!library) {
         cout << "Using library Intel MKL..." << endl;
         mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
-        cout << "Using library pOSKI..." << endl;
-        poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
+        for (int i = 0; i < nrows; i++) {
+            y[i] = 1;
+        }
+        // cout << "Using library pOSKI..." << endl;
+        // poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
+        // for (int i = 0; i < nrows; i++) {
+        //     y[i] = 1;
+        // }
         cout << "Using library LIBCSX..." << endl;
         libcsx_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y); 
     } else {
@@ -96,15 +99,12 @@ void Bench_Matrix(const char *filename, const char *library,
     free(y);
 }
 
-void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file,
-                  unsigned long loops, unsigned int outer_loops)
+void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file)
 {
     cout << "\n==========================================================\n";
     cout << " COMPUTING SPMV PRODUCT WITH MATRIX: " 
          << basename(const_cast<char *>(mmf_file)) << endl;
 
-    LOOPS = loops;
-    OUTER_LOOPS = outer_loops;
     int     *rowptr, *colind;
     double  *values;
     int     nrows, ncols, nnz;
@@ -140,7 +140,7 @@ static SpmvFn GetSpmvFn(library type)
         ret = mkl_spmv;
         break;
     case pOSKI:
-        ret = poski_spmv;
+        // ret = poski_spmv;
         break;
     default:
         cerr << "Unknown library" << endl;

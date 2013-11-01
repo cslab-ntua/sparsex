@@ -10,6 +10,8 @@
  */
 
 #include "poski_module.h"
+#include <algorithm>
+#include <vector>
 
 /* SpMV kernel implemented with pOSKI */
 void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
@@ -19,6 +21,7 @@ void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
 
     /* 1. Matrix loading phase */
     poski_threadarg_t *poski_thread = poski_InitThreads();
+    poski_ThreadHints(poski_thread, NULL, POSKI_THREADPOOL, NR_THREADS);
     poski_mat_t A_tunable = 
         poski_CreateMatCSR(Aptr, Aind, Aval, nrows, ncols, nnz, SHARE_INPUTMAT,
                            poski_thread, NULL, 2, INDEX_ZERO_BASED, MAT_GENERAL);
@@ -36,17 +39,25 @@ void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
     poski_TuneMat(A_tunable);
     t.Pause();
     double pt = t.ElapsedTime();
-    cout << "pt: " << pt << endl;
 
     /* 4. SpMV benchmarking phase */
+    std::vector<double> mt(OUTER_LOOPS);
     SPMV_BENCH(poski_MatMult(A_tunable, OP_NORMAL, ALPHA, x_view, BETA, 
                              y_view));
-    double mt = t.ElapsedTime() / OUTER_LOOPS;
-    cout << "mt: " << mt << endl;
+    sort(mt.begin(), mt.end());
+    double mt_median = 
+        (OUTER_LOOPS % 2) ? mt[((OUTER_LOOPS+1)/2)-1]
+        : ((mt[OUTER_LOOPS/2] + mt[OUTER_LOOPS/2+1])/2);  
+    double flops = (double)(LOOPS*nnz*2)/((double)1000*1000*mt_median);
+    cout << "m: " << MATRIX 
+         << " pt: " << pt 
+         << " mt(median): " << mt_median
+         << " flops: " << flops << endl;
     // for (int i = 0; i < nrows; i++) {
     //     std::cout << y[i] << " ";
     // }
-    // cout << endl;
+    std::cout << y[0] << " " << y[nrows-1];
+    cout << endl;
 
     /* 4. Cleanup */
     poski_DestroyMat(A_tunable);

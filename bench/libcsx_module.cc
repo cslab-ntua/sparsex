@@ -10,6 +10,8 @@
  */
 
 #include "libcsx_module.h"
+#include <algorithm>
+#include <vector>
 
 /* SpMV kernel implemented with LIBCSX */
 void libcsx_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
@@ -20,33 +22,36 @@ void libcsx_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
     input_t *input = libcsx_mat_create_csr(rowptr, colind, values, nrows, ncols,
                                            true);
 
-    /* 2. Vector loading */
-    vector_t *x_view = vec_create_from_buff(x, ncols);
-    vector_t *y_view = vec_create_from_buff(y, nrows);
-
-    /* 3. Tuning phase */
+    /* 2. Tuning phase */
+    libcsx_set_options_from_env();
+    libcsx_set_option("libcsx.matrix.symmetric", "true");
     t.Clear();
     t.Start();
-    libcsx_set_option("libcsx.rt.cpu_affinity", "0,1");
-    // libcsx_set_option("libcsx.matrix.symmetric", "true");
-    libcsx_set_option("libcsx.preproc.xform", "all");
-    libcsx_set_option("libcsx.preproc.sampling", "portion");
-    libcsx_set_option("libcsx.preproc.sampling.portion", ".01");
-    libcsx_set_option("libcsx.preproc.sampling.nr_samples", "48");
     matrix_t *A = libcsx_mat_tune(input, 0);
     t.Pause();
     double pt = t.ElapsedTime();
-    cout << "pt: " << pt << endl;
-    
+
+    /* 3. Vector loading */
+    vector_t *x_view = vec_create_from_buff(x, ncols, A);
+    vector_t *y_view = vec_create_from_buff(y, nrows, A);
+
     /* 4. SpMV benchmarking phase */
+    std::vector<double> mt(OUTER_LOOPS);
     SPMV_BENCH(libcsx_matvec_mult(A, ALPHA, x_view, BETA, y_view));
-    double mt = t.ElapsedTime() / OUTER_LOOPS;
-    cout << "mt: " << mt << endl;
-//    vec_print(y_view);
+    sort(mt.begin(), mt.end());
+    double mt_median = 
+        (OUTER_LOOPS % 2) ? mt[((OUTER_LOOPS+1)/2)-1]
+        : ((mt[OUTER_LOOPS/2] + mt[OUTER_LOOPS/2+1])/2);  
+    double flops = (double)(LOOPS*nnz*2)/((double)1000*1000*mt_median);
+    cout << "m: " << MATRIX 
+         << " pt: " << pt 
+         << " mt(median): " << mt_median
+         << " flops: " << flops << endl;
+    libcsx_vec_print(y_view);
 
     /* 5. Cleanup */
     libcsx_mat_destroy_input(input);
     libcsx_mat_destroy_tuned(A);
-    vec_destroy(x_view);
-    vec_destroy(y_view);
+    libcsx_vec_destroy(x_view);
+    libcsx_vec_destroy(y_view);
 }

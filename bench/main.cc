@@ -4,6 +4,10 @@
 
 static const char *program_name;
 
+extern unsigned int OUTER_LOOPS;
+extern unsigned long LOOPS;
+extern unsigned int NR_THREADS;
+
 static struct option long_options[] = {
     {"directory",   required_argument,  0, 'd'},
     {"file",        required_argument,  0, 'f'},
@@ -21,6 +25,48 @@ void PrintUsage(std::ostream &os)
        << "\t-d    Run SpMV kernel on all files in a directory.\n"
        << "\t-l    Use one of the available libraries (MKL, pOSKI, LIBCSX).\n"
        << "\t-h    Print this help message and exit.\n";
+}
+
+static unsigned int GetOptionOuterLoops()
+{
+    const char *loops_env = getenv("OUTER_LOOPS");
+    unsigned int ret = 5;
+    
+    if (loops_env) {
+        ret = atoi(loops_env);
+        if (ret < 0)
+            ret = 0;
+    }
+    
+    return ret;
+}
+
+static unsigned long GetOptionIterations()
+{
+    const char *loops_env = getenv("LOOPS");
+    unsigned long ret = 128;
+    
+    if (loops_env) {
+        ret = atoi(loops_env);
+        if (ret < 0)
+            ret = 0;
+    }
+    
+    return ret;
+}
+
+static unsigned int GetOptionNrThreads()
+{
+    const char *threads_env = getenv("NR_THREADS");
+    unsigned int ret = 1;
+    
+    if (threads_env) {
+        ret = atoi(threads_env);
+        if (ret < 0)
+            ret = 0;
+    }
+    
+    return ret;
 }
 
 int main(int argc, char **argv)
@@ -58,10 +104,14 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    NR_THREADS = GetOptionNrThreads();
+    OUTER_LOOPS = GetOptionOuterLoops();
+    LOOPS = GetOptionIterations();
+
     if (directory)
-        Bench_Directory(directory, library, NULL, 128, 5);
+        Bench_Directory(directory, library, NULL);
     else if (file)
-        Bench_Matrix(file, library, NULL, 128, 5);
+        Bench_Matrix(file, library, NULL);
 
     return 0;
 }

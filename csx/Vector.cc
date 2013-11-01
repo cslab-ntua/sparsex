@@ -24,7 +24,7 @@ enum alloc_type {
 };
 }
 
-vector_t *vec_create(unsigned long size)
+vector_t *vec_create(unsigned long size, void *arg)
 {
 	vector_t *v = (vector_t *) malloc(sizeof(vector_t));
 	if (!v) {
@@ -43,7 +43,8 @@ vector_t *vec_create(unsigned long size)
 	return v;
 }
 
-vector_t *vec_create_from_buff(double *buff, unsigned long size)
+vector_t *vec_create_from_buff(double *buff, unsigned long size,
+                                      void *arg)
 {
 	vector_t *v = (vector_t *) malloc(sizeof(vector_t));
 	if (!v) {
@@ -84,7 +85,7 @@ vector_t *vec_create_random(unsigned long size)
 {
     vector_t *x = NULL;
 
-    x = vec_create(size);
+    x = vec_create(size, NULL);
     vec_init_rand_range(x, (double) -0.001, (double) 0.001);
 
     return x;
@@ -223,7 +224,7 @@ double vec_mul(const vector_t *v1, const vector_t *v2)
 }
 
 double vec_mul_part(const vector_t *v1, const vector_t *v2,
-                    unsigned long start, unsigned long end)
+                           unsigned long start, unsigned long end)
 {
 	assert(v1->size == v2->size &&  "vectors for mul have incompatible sizes");
 
@@ -243,7 +244,7 @@ void vec_scale(vector_t *v1, vector_t *v2, double num)
 }
 
 void vec_scale_part(vector_t *v1, vector_t *v2, double num,
-                    unsigned long start, unsigned long end)
+                           unsigned long start, unsigned long end)
 {
 	assert(v1->size == v2->size &&  "vectors have incompatible sizes");
 
@@ -260,8 +261,9 @@ void vec_scale_add(vector_t *v1, vector_t *v2, vector_t *v3, double num)
 		v3->elements[i] = v1->elements[i] + num * v2->elements[i];
 }
 
-void vec_scale_add_part(vector_t *v1, vector_t *v2, vector_t *v3, double num,
-                        unsigned long start, unsigned long end)
+void vec_scale_add_part(vector_t *v1, vector_t *v2, vector_t *v3,
+                               double num,  unsigned long start, 
+                               unsigned long end)
 {
 	assert(v1->size == v2->size && v1->size == v3->size &&
 	       "vectors for scale add have incompatible  sizes");
@@ -309,7 +311,7 @@ vector_t *vec_reorder(const vector_t *v, perm_t *p)
     unsigned long i;
     vector_t *permuted_v = NULL;
 
-    permuted_v = vec_create(v->size);
+    permuted_v = vec_create(v->size, NULL);
     for (i = 0; i < v->size; i++) {
         permuted_v->elements[p[i]] = v->elements[i];
     }
@@ -322,7 +324,7 @@ vector_t *vec_inv_reorder(const vector_t *v, perm_t *p)
     unsigned long i;
     vector_t *permuted_v = NULL;
 
-    permuted_v = vec_create(v->size);
+    permuted_v = vec_create(v->size, NULL);
     for (i = 0; i < v->size; i++) {
         permuted_v->elements[i] = v->elements[p[i]];
     }
@@ -332,8 +334,9 @@ vector_t *vec_inv_reorder(const vector_t *v, perm_t *p)
 
 void vec_print(const vector_t *v)
 {
-    std::cout << "[ ";
-	for (unsigned long i = 0; i < v->size; i++)
-        std::cout << v->elements[i] << " ";
-    std::cout << "]" << std::endl;
+    // std::cout << "[ ";
+	// for (unsigned long i = 0; i < v->size; i++)
+    //     std::cout << v->elements[i] << " ";
+    // std::cout << "]" << std::endl;
+    std::cout << v->elements[0] << " " << v->elements[v->size-1] << std::endl;
 }

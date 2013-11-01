@@ -1,7 +1,7 @@
 .PHONY: all clean
 
-all: libcsximpl.a libcsximpl.so spmv set_test dynamic_array_test
-
+all: libcsximpl.a libcsximpl.so spmv dynamic_array_test
+#set_test 
 # Configuration
 llvmconf     = llvm-config
 

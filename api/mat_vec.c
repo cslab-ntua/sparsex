@@ -1,5 +1,5 @@
 /**
- * libcsx/mat.c -- Sparse matrix routines.
+ * libcsx/mat_vec.c -- Sparse matrix routines.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,7 +8,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "mat.h"
+#include "mat_vec.h"
 #include "CsxMatvec.hpp"
 #include "SparseMatrixWrapper.hpp"
 
@@ -375,4 +375,42 @@ libcsx_error_t libcsx_mat_destroy_input(input_t *A)
 void libcsx_set_option(const char *option, const char *value)
 {
     SetPropertyByMnemonic(option, value);
+}
+
+void libcsx_set_options_from_env()
+{
+    SetPropertiesFromEnv();
+}
+
+vector_t *vec_create_numa(unsigned long size, matrix_t *mat)
+{
+    spm_mt_t *spm_mt = (spm_mt_t *) mat->csx;
+	size_t *parts = (size_t *) malloc(sizeof(*parts)*spm_mt->nr_threads);
+	int *nodes = (int *) malloc(sizeof(*nodes)*spm_mt->nr_threads);
+	if (!parts || !nodes) {
+		perror("malloc");
+		exit(1);
+	}
+
+    unsigned int i;
+	for (i = 0; i < spm_mt->nr_threads; i++) {
+		spm_mt_thread_t *spm = spm_mt->spm_threads + i;
+		parts[i] = spm->nr_rows * sizeof(double);
+		nodes[i] = spm->node;
+	}
+
+	vector_t *v = vec_create_interleaved(size, parts, spm_mt->nr_threads, nodes);
+
+	return v;
+}
+
+vector_t *vec_create_from_buff_numa(double *buff, unsigned long size, matrix_t *arg)
+{
+    vector_t *v = vec_create_numa(size, arg);
+    unsigned long i;
+    for (i = 0; i < size; i++)
+        v->elements[i] = buff[i];
+    printf("numa\n");
+
+    return v;
 }

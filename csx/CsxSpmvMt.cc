@@ -36,7 +36,7 @@ static void do_spmv_thread(spm_mt_thread_t *thread, boost::barrier &cur_barrier)
 	for (unsigned int i = 0; i < nr_loops; i++) {
 		cur_barrier.wait();
         tsc_start(&thread_tsc);
-		spmv_mt_fn(thread->spm, x, y);
+		spmv_mt_fn(thread->spm, x, y, 1);
         tsc_pause(&thread_tsc);
 		cur_barrier.wait();
 	}
@@ -84,7 +84,7 @@ static void do_spmv_thread_main_swap(spm_mt_thread_t *thread,
 	for (unsigned int i = 0; i < nr_loops; i++) {
 		cur_barrier.wait();
 		tsc_start(&thread_tsc);
-		spmv_mt_fn(thread->spm, x, y);
+		spmv_mt_fn(thread->spm, x, y, 1);
 		tsc_pause(&thread_tsc);
 		cur_barrier.wait();
 		SWAP(x, y);
@@ -307,8 +307,8 @@ float spmv_bench_mt(spm_mt_t *spm_mt, unsigned long loops,
 	alloc_err = check_interleaved(y->elements, yparts, nr_threads, ynodes);
 	print_alloc_status("output vector", alloc_err);
 #else
-	x = vec_create(cols_nr);
-	y = vec_create(rows_nr);
+	x = vec_create(cols_nr, NULL);
+	y = vec_create(rows_nr, NULL);
 #endif
 
 	/*
@@ -382,11 +382,11 @@ void spmv_check_mt(csx::CSR<index_t, value_t> *spm, spm_mt_t *spm_mt,
 	int node = spm_mt->spm_threads[0].node;
 	x = vec_create_onnode(cols_nr, node);
 	y = vec_create_interleaved(rows_nr, parts, spm_mt->nr_threads, nodes);
-	y2 = vec_create(rows_nr);
+	y2 = vec_create(rows_nr, NULL);
 #else
-	x = vec_create(cols_nr);
-	y = vec_create(rows_nr);
-	y2 = vec_create(rows_nr);
+	x = vec_create(cols_nr, NULL);
+	y = vec_create(rows_nr, NULL);
+	y2 = vec_create(rows_nr, NULL);
 #endif
 	vec_init_rand_range(x, (value_t) -1000, (value_t) 1000);
 	vec_init(y, (value_t) 0);
@@ -488,8 +488,8 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, unsigned long loops,
 	alloc_err = check_interleaved(y->elements, yparts, nr_threads, ynodes);
 	print_alloc_status("output vector", alloc_err);
 #else
-	x = vec_create(n);
-	y = vec_create(n);
+	x = vec_create(n, NULL);
+	y = vec_create(n, NULL);
 #endif
 
 	temp = (vector_t **) malloc(nr_threads * sizeof(vector_t *));
@@ -504,7 +504,7 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, unsigned long loops,
 		int tnode = spm_mt->spm_threads[i].node;
 		temp[i] = vec_create_onnode(n, tnode);
 #else
-		temp[i] = vec_create(n);
+		temp[i] = vec_create(n, NULL);
 #endif
     }
 
@@ -593,11 +593,11 @@ void spmv_check_sym_mt(csx::CSR<index_t, value_t> *spm, spm_mt_t *spm_mt,
 
 	x = vec_create_interleaved(n, parts, nr_threads, nodes);
 	y = vec_create_interleaved(n, parts, nr_threads, nodes);
-	y2 = vec_create(n);
+	y2 = vec_create(n, NULL);
 #else
-	x = vec_create(n);
-	y = vec_create(n);
-	y2 = vec_create(n);
+	x = vec_create(n, NULL);
+	y = vec_create(n, NULL);
+	y2 = vec_create(n, NULL);
 #endif
     vec_init_rand_range(x, (value_t) -1000, (value_t) 1000);
     vec_init(y, (value_t) 0);
@@ -617,7 +617,7 @@ void spmv_check_sym_mt(csx::CSR<index_t, value_t> *spm, spm_mt_t *spm_mt,
 		for (size_t j = 1; j < n; j++)
 			temp[i]->elements[j] = 0;
 #else
-		temp[i] = vec_create(n);
+		temp[i] = vec_create(n, NULL);
 #endif
     }
 

@@ -1,6 +1,6 @@
 static inline double horiz${delta}_case(uint8_t **ctl, uint8_t size,
                                         double **values, double **x_curr,
-                                        double **y_curr)
+                                        double **y_curr, double scale_f)
 {
     register double yr = 0;
     register double *x_curr_ = *x_curr;
@@ -13,5 +13,5 @@ static inline double horiz${delta}_case(uint8_t **ctl, uint8_t size,
 
     // Move x_curr to the last element of the pattern
     (*x_curr) += (i_end - ${delta});
-	return yr;
+	return yr * scale_f;
 }

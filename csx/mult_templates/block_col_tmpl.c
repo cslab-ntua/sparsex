@@ -1,6 +1,6 @@
 static inline double block_col_${r}x${c}_case(uint8_t **ctl, uint8_t size,
                                               double **values, double **x_curr,
-                                              double **y_curr)
+                                              double **y_curr, double scale_f)
 {
 	register double *y_curr_ = *y_curr;
 	register double *x_curr_ = *x_curr;
@@ -13,7 +13,7 @@ static inline double block_col_${r}x${c}_case(uint8_t **ctl, uint8_t size,
 			(*values)++;
 		}
 
-		y_curr_[i] += yr;
+		y_curr_[i] += yr * scale_f;
 	}
 
 	return 0;

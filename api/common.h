@@ -13,8 +13,20 @@
 #include "error.h"
 #include "LoggerUtil.hpp"
 #include "mattype.h"
+#include "Vector.hpp"
 
 #include <stdlib.h>
+
+/**
+ *  \brief Dense array object that represents a permutation.
+ */
+typedef index_t perm_t;
+
+static inline int
+check_vec_dim(const vector_t *x, unsigned long dim)
+{
+    return (x->size == dim);
+}
 
 #define INVALID_INPUT ((input_t *) NULL)
 #define INVALID_MAT ((matrix_t *) NULL)

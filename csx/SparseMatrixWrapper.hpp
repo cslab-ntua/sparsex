@@ -39,6 +39,7 @@ int SetValue(void *matrix, index_t row, index_t col, value_t value);
 /* uint64_t SizeSym(void *matrix); */
 void DestroyCsx(void *matrix);
 void SetPropertyByMnemonic(const char *key, const char *value);
+void SetPropertiesFromEnv();
 
 #ifdef __cplusplus
 }

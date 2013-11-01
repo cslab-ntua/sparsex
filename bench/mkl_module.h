@@ -17,6 +17,7 @@
 
 using namespace std;
 
+extern std::string MATRIX; 
 extern unsigned int OUTER_LOOPS;
 extern unsigned long LOOPS;
 extern unsigned int NR_THREADS;

@@ -88,6 +88,7 @@ void *TuneCSR(void *matrix, int *symmetric)
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
     rt_context.SetRuntimeContext(config);
+
     spm_mt_t *spm_mt = mat->CreateCsx();
     if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
         *symmetric = 1;
@@ -103,6 +104,7 @@ void *TuneMMF(void *matrix, int *symmetric)
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
     rt_context.SetRuntimeContext(config);
+
     spm_mt_t *spm_mt = mat->CreateCsx();
     if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
         *symmetric = 1;
@@ -184,6 +186,12 @@ void SetPropertyByMnemonic(const char *key, const char *value)
 {
     RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
     rt_config.SetProperty(rt_config.GetMnemonic(string(key)), string(value));
+}
+
+void SetPropertiesFromEnv()
+{
+    RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
+    config.LoadFromEnv();
 }
 
 }

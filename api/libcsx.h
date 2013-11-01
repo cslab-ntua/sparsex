@@ -12,8 +12,7 @@
 
 #include "common.h"
 #include "error.h"
-#include "mat.h"
-#include "vector.h"
+#include "mat_vec.h"
 #include "mattype.h"
 
 #endif  // LIBCSX_H

@@ -17,8 +17,11 @@ LIBS        = -lcsximpl
 
 override CFLAGS += -I$(csx_dir) -I$(logger_dir)
 override LDFLAGS  += -Wl,--allow-multiple-definition -Wl,--rpath=$(shell pwd)
+ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
+	override CFLAGS += -DSPM_NUMA
+endif
 
-LIB_OBJECTS = error.o common.o mat.o
+LIB_OBJECTS = error.o common.o mat_vec.o
 
 %.o: %.c %.h
 	$(COMPILE) -c $< -o $@

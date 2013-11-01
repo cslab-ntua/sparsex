@@ -15,14 +15,15 @@
 
 /* Usefull macros */
 #define BENCH(timer, loops, outer_loops, code)          \
-    timer.Clear();                                      \
-    timer.Start();                                      \
     for (unsigned int i = 0; i < outer_loops; i++) {    \
+        timer.Clear();                                  \
+        timer.Start();                                  \
         for (unsigned long int j = 0; j < loops; j++) { \
             code;                                       \
         }                                               \
-    }                                                   \
-    timer.Pause();
+        timer.Pause();                                  \
+        mt[i] = timer.ElapsedTime();                    \
+    }
 
 #define SPMV_BENCH(code) BENCH(t, LOOPS, OUTER_LOOPS, code);
 

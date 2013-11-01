@@ -1,6 +1,21 @@
 .PHONY: all clean
 
 all: bench
+
+# ifndef interface
+# interface=lp64
+# endif
+
+# ifndef MKLROOT
+# MKLROOT = ../..
+# endif
+# MKL_PATH = "$(MKLROOT)/lib/$(_IA)"
+# CMPLR_PATH = "$(MKLROOT)/../compiler/lib/$(_IA)"
+
+# CC=gcc
+# IFACE_COMP_PART=intel
+# IFACE_THREADING_PART=intel
+
 log_dir		 = ../csx/logger
 csx_dir     = ../csx
 libcsx_dir	= ../C-API
@@ -13,13 +28,14 @@ OSKILIB		= /home/athena/Desktop/Products/pOSKI/build-1.0.0/build_oski/lib/oski
 CXX         = g++
 LD          = g++
 CXXFLAGS    = -g -Wall -O3 -Wdisabled-optimization -Winline -fPIC
-CPPFLAGS    = -I$(libcsx_dir) -I$(csx_dir) -I$(log_dir) -I$(mkl_dir) -I$(POSKIINC) -I$(OSKIINC)
+CPPFLAGS    = -I$(libcsx_dir) -I$(csx_dir) -I$(log_dir) -I$(mkl_dir) 
+#-I$(POSKIINC) -I$(OSKIINC)
 MKL_CXXFLAGS	= -fopenmp -m64
 POSKI_CXXFLAGS	= -fopenmp
 LIBCSX_LDFLAGS  = -L$(libcsx_dir) -Wl,--rpath=$(libcsx_dir) -lcsx -L$(csx_dir) -Wl,--rpath=$(csx_dir) -lcsximpl
 POSKI_LDFLAGS   = -Wl,--rpath -Wl,$(POSKILIB) -L$(POSKILIB) -lposki -Wl,--rpath -Wl,$(OSKILIB) -L$(OSKILIB)
 MKL_LDFLAGS     = -Wl,--start-group /opt/intel/composer_xe_2013.5.192/mkl/lib/intel64/libmkl_intel_lp64.a /opt/intel/composer_xe_2013.5.192/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composer_xe_2013.5.192/mkl/lib/intel64/libmkl_core.a -Wl,--end-group
-LIBS        	= -ldl -lpthread -lm
+LIBS        	= -lpthread -ldl -lm
 
 COMPILE = $(CXX) $(CXXFLAGS) $(CPPFLAGS)
 LINK    = $(LD) 
@@ -33,8 +49,10 @@ poski_module.o: poski_module.cc
 mkl_module.o: mkl_module.cc
 	$(COMPILE) $(MKL_CXXFLAGS) -c $< -o $@
 
-bench: main.o bench.o timer.o poski_module.o libcsx_module.o mkl_module.o
-	$(LINK) -o $@ $^ $(LIBCSX_LDFLAGS) $(MKL_LDFLAGS) $(POSKI_LDFLAGS) $(LIBS)
+# bench: main.o bench.o timer.o poski_module.o libcsx_module.o mkl_module.o
+# 	$(LINK) -o $@ $^ $(LIBCSX_LDFLAGS) $(MKL_LDFLAGS) $(POSKI_LDFLAGS) $(LIBS)
+bench: main.o bench.o timer.o libcsx_module.o mkl_module.o
+	$(LINK) -o $@ $^ $(LIBCSX_LDFLAGS) $(MKL_LDFLAGS) $(MKL_CXXFLAGS) $(LIBS)
 
 clean:
 	rm -f *.o bench

@@ -1,6 +1,6 @@
 static inline double delta${bits}_case(uint8_t **ctl, uint8_t size,
                                        double **values, double **x_curr,
-                                       double **y_curr)
+                                       double **y_curr, double scale_f)
 {
 	register double yr;
 
@@ -13,5 +13,5 @@ static inline double delta${bits}_case(uint8_t **ctl, uint8_t size,
 		(*values)++;
 	}
 
-	return yr;
+	return yr * scale_f;
 }
