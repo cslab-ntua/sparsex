@@ -69,10 +69,10 @@ struct CooElem {
         val = 0;
     }
 
-//     ~CooElem()
-//     {
-// //        delete[] vals;
-//     }
+    virtual ~CooElem()
+    {
+//        delete[] vals;
+    }
 };
 
 /**
@@ -485,7 +485,7 @@ public:
         this->pattern_start = spm_p.pattern_start;
     }
 
-    ~SpmPattern()
+    virtual ~SpmPattern()
     {
         if (this->pattern != NULL)
             delete this->pattern;

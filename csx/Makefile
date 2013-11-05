@@ -59,7 +59,7 @@ CSX_SRC = \
 	CsxSpmvMt.cc \
 	CsxUtil.cc \
 	CtlBuilder.cc \
-	DynamicArray.cc \
+	DynamicArrayTest.cc \
 	Encodings.cc \
 	Jit.cc \
 	JitUtil.cc \
@@ -114,7 +114,7 @@ libcsx_test: libcsx_test.o libcsximpl.so
 set_test: set_test.o libcsximpl.so
 	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(libadd) $(LIBS)
 
-dynamic_array_test: DynamicArray.o Timer.o $(libadd)
+dynamic_array_test: DynamicArrayTest.o Timer.o $(libadd)
 	$(LINK) -o $@ $^ $(libadd) -lnuma
 
 clean:
