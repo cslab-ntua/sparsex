@@ -153,7 +153,7 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
         nr_edges = mat.GetNrNonzeros();
     }
         
-    Pair *edges = (Pair *) malloc(nr_edges * sizeof(Pair));
+    Pair *edges = new Pair[nr_edges];
 
     typename MMF<IndexType, ValueType>::iterator iter = mat.begin();
     typename MMF<IndexType, ValueType>::iterator iter_end = mat.end();
@@ -177,7 +177,7 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
     if (index == 0) {
         LOG_WARNING << "no reordering available for this matrix, "
                     << "all non-zero elements on main diagonal\n";
-        free(edges);
+        delete edges;
         throw bad_reorder;
     }
 
@@ -187,8 +187,8 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
     for (size_t i = 0; i < index; ++i) {
         add_edge(edges[i].first, edges[i].second, graph);
     }
-    free(edges);
 
+    delete edges;
     return graph;
 }
 
@@ -261,8 +261,7 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
         nr_edges = nr_nzeros;
     }
         
-    Pair *edges = (Pair *) malloc(nr_edges * sizeof(Pair));
-
+    Pair *edges = new Pair[nr_edges];
     size_t index = 0;
     if (symmetric) {
         for (;iter != iter_end; ++iter) {
@@ -277,21 +276,22 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
             }
         }
     }
+
     // index -> actual nr_edges
     assert(index <= nr_edges);
 
     if (index == 0) {
         LOG_WARNING << "no reordering available for this matrix, "
                     << "all non-zero elements on main diagonal\n";
-        free(edges);
+        delete edges;
         throw bad_reorder;
     }
 
     for (size_t i = 0; i < index; i++) {
         add_edge(edges[i].first, edges[i].second, graph);
     }
-    free(edges);
 
+    delete edges;
     return graph;
 }
 

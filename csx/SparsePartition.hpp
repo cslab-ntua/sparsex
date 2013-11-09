@@ -78,9 +78,9 @@ public:
 
     ~SparsePartition()
     {
-        alloc_.Deallocate(rowptr_, rowptr_size_*sizeof(*rowptr_));
+        alloc_.Destroy(rowptr_, rowptr_size_);
         if (!elems_mapped_)
-            alloc_.Deallocate(elems_, elems_size_*sizeof(*elems_));
+            alloc_.Destroy(elems_, elems_size_);
     };
 
     size_t GetNrRows() const
@@ -409,14 +409,23 @@ template<typename IndexType, typename ValueType>
 class SparsePartitionSym
 {
 private:
-    SparsePartition<IndexType, ValueType>  *lower_matrix_;   // Representation of lower matrix.
-    ValueType                              *diagonal_;       // Values of diagonal elements.
-    IndexType                               diagonal_size_;  // Size of the diagonal.
-    SparsePartition<IndexType, ValueType>  *m1_;             /* Matrix that contains the elems of
-                                                                SpmSym for which column of the element
-                                                                is smaller than the row start. */
-    SparsePartition<IndexType, ValueType>  *m2_;             /* Matrix that contains the rest of the
-                                                                elements. */
+    SparsePartition<IndexType, ValueType> *lower_matrix_; // lower triangular
+    ValueType *diagonal_;   
+    IndexType diagonal_size_;
+    SparsePartition<IndexType, ValueType> *m1_; // Matrix that contains the
+                                                // elems of SpmSym for which
+                                                // column of the element is
+                                                // smaller than the row start.
+
+    SparsePartition<IndexType, ValueType> *m2_; // Matrix that contains the rest
+                                                // of the elements.
+    MemoryAllocator &alloc_;
+#ifdef SPM_NUMA
+    typedef NumaAllocator MemoryAllocatorImpl;
+#else
+    typedef StdAllocator MemoryAllocatorImpl;
+#endif
+
     
 public:
     typedef IndexType idx_t;
@@ -426,7 +435,8 @@ public:
         : lower_matrix_(NULL),
           diagonal_(NULL),
           m1_(NULL),
-          m2_(NULL)
+          m2_(NULL),
+          alloc_(MemoryAllocatorImpl::GetInstance())
     {
         lower_matrix_ = new SparsePartition<IndexType, ValueType>;
         m1_ = new SparsePartition<IndexType, ValueType>;
@@ -436,8 +446,7 @@ public:
     ~SparsePartitionSym()
     {
         delete lower_matrix_;
-        if (diagonal_)
-            free(diagonal_);
+        alloc_.Destroy(diagonal_, diagonal_size_);
     };
     
     SparsePartition<IndexType, ValueType> *GetLowerMatrix()
@@ -1274,7 +1283,7 @@ GetWindow(IndexType rs, IndexType length)
     IndexType es = rowptr_[rs];
     IndexType ee = rowptr_[rs+length];
 
-    ret->rowptr_ = (IndexType *) malloc((length+1) * sizeof(IndexType));
+    ret->rowptr_ = new (alloc_) IndexType[length+1];
     ret->rowptr_size_ = length + 1;
     for (size_t i = 0; i < ret->rowptr_size_; i++)
         ret->rowptr_[i] = rowptr_[rs+i] - es;
