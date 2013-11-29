@@ -70,9 +70,7 @@ struct CooElem {
     }
 
     virtual ~CooElem()
-    {
-//        delete[] vals;
-    }
+    { }
 };
 
 /**
@@ -533,7 +531,6 @@ struct Elem : public CooElem<IndexType, ValueType>, public SpmPattern
     {
         pattern = 0;
     }
-
 };
 
 

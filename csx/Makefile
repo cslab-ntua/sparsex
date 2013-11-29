@@ -29,6 +29,7 @@ CXXFLAGS    ?= -g -rdynamic -O3 -Wall -Woverloaded-virtual -Wdisabled-optimizati
 LIBS         = -lnuma -lboost_regex -lboost_thread -lboost_serialization
 AR           = ar
 AR_FLAGS     = cru
+MKDIR_P	     = mkdir -p
 
 # Always add the following flags
 override CPPFLAGS += -DCPU_MHZ_SH=\"$(MHZ_SH)\" -DCPU_$(CPU_TYPE)
@@ -84,6 +85,7 @@ LINK        = $(LD) $(LDFLAGS)
 ARCHIVE     = $(AR) $(AR_FLAGS)
 
 %.o: %.c
+	$(MKDIR_P) $(DEPDIR)
 	$(CC_COMPILE) -c -MD -o $@ $<
 	@cp $*.d $(df).P; \
     sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
@@ -91,6 +93,7 @@ ARCHIVE     = $(AR) $(AR_FLAGS)
 	rm -f $*.d
 
 %.o: %.cc
+	$(MKDIR_P) $(DEPDIR)
 	$(CXX_COMPILE) -c -MD -o $@ $<
 	@cp $*.d $(df).P; \
     sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
@@ -118,4 +121,5 @@ dynamic_array_test: DynamicArrayTest.o Timer.o $(libadd)
 	$(LINK) -o $@ $^ $(libadd) -lnuma
 
 clean:
+	rm -rf $(DEPDIR)
 	rm -f *.o *.d $(log_dir)/*.o libcsximpl.a libcsximpl.so spmv set_test dynamic_array_test
