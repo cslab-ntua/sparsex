@@ -15,14 +15,9 @@
 #include "macros.h"
 #include "numa_util.h"
 #include "map.h"
-#include "../../C-API/mattype.h"
-
-/* #ifndef ELEM_TYPE */
-/* #define ELEM_TYPE double */
-/* #endif */
 
 #ifndef ELEM_TYPE
-#define ELEM_TYPE value_t
+#define ELEM_TYPE double
 #endif
 
 #define _VNAME(elem_type, name) vector_ ## elem_type ## _ ## name
@@ -65,6 +60,8 @@ ELEM_TYPE _VNAME(vtype,mul_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
                                  unsigned long start, unsigned long end); \
 void _VNAME(vtype,scale)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
                          double num); \
+void _VNAME(vtype,scale_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, double num, \
+                              unsigned long start, unsigned long end);  \
 void _VNAME(vtype,scale_add)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \
                              _VTYPE(vtype) *v3, double num); \
 void _VNAME(vtype,scale_add_part)(_VTYPE(vtype) *v1, _VTYPE(vtype) *v2, \

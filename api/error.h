@@ -47,7 +47,8 @@
 #define LIBCSX_WARN_TUNING_OPT      23  /* invalid tuning option */
 #define LIBCSX_WARN_RUNTIME_OPT     24  /* invalid runtime option */
 #define LIBCSX_WARN_REORDER         25  /* reordering failed */
-#define LIBCSX_WARN_MAX_VALUE       26
+#define LIBCSX_WARN_ENTRY_NOT_SET   26  /* entry not set in matrix or vector */
+#define LIBCSX_WARN_MAX_VALUE       27
 
 typedef int libcsx_error_t;
 

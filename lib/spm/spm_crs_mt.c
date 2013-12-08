@@ -196,6 +196,8 @@ void *SPM_CRS_MT_NAME(_init_mmf)(char *mmf_file, uint64_t *rows_nr,
 		crs_mt[i].crs = crs;
 		int nr_rows_part = crs_mt[i].row_end - crs_mt[i].row_start;
 		int nr_nzeros_part = elems;
+        spm_thread->row_start = crs_mt[i].row_start;
+        spm_thread->nr_rows = nr_rows_part;
 		printf("Partition info (id, nr_rows, nr_nzeros, flop:byte): (%d,%d,%d,%.4f)\n",
 		       i, nr_rows_part, nr_nzeros_part,
 		       arith_intensity(nr_rows_part, nr_nzeros_part));

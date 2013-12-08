@@ -260,6 +260,16 @@ void VECTOR_NAME(_scale)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, double num)
 		v2->elements[i] = num * v1->elements[i];
 }
 
+void VECTOR_NAME(_scale_part)(VECTOR_TYPE *v1, VECTOR_TYPE *v2, double num,
+                              unsigned long start, unsigned long end)
+{
+	unsigned long i;
+	assert(v1->size == v2->size &&  "vectors have incompatible sizes");
+
+	for (i = start; i < end; i++)
+		v2->elements[i] = num * v1->elements[i];
+}
+
 void VECTOR_NAME(_scale_add)(VECTOR_TYPE *v1, VECTOR_TYPE *v2,
                              VECTOR_TYPE *v3, double num)
 {

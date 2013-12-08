@@ -58,7 +58,7 @@ void *ReorderCSR(void *matrix, index_t **permutation)
     mat->Reorder(perm);
     if (!perm.empty()) {
         *permutation = new index_t[mat->GetNrRows()];
-        std::copy(perm.begin(), perm.end(), *permutation);  // FIXME avoid copy
+        std::copy(perm.begin(), perm.end(), *permutation);
     }
 
     return (void *) mat;
@@ -73,7 +73,7 @@ void *ReorderMMF(void *matrix, index_t **permutation)
     mat->Reorder(perm);
     if (!perm.empty()) {
         *permutation = new index_t[mat->GetNrRows()];
-        std::copy(perm.begin(), perm.end(), *permutation);  // FIXME avoid copy
+        std::copy(perm.begin(), perm.end(), *permutation);
     }
 
     return (void *) mat;

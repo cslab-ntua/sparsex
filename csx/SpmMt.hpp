@@ -41,6 +41,9 @@ struct spm_mt {
 	spm_mt_thread_t *spm_threads;
 	unsigned int nr_threads;
 	bool symmetric;
+#ifdef SPM_NUMA
+    bool interleaved;
+#endif
 };
 typedef struct spm_mt spm_mt_t;
 

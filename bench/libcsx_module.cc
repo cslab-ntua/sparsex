@@ -20,20 +20,20 @@ void libcsx_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
     libcsx_init();
     /* 1. Matrix loading phase */
     input_t *input = libcsx_mat_create_csr(rowptr, colind, values, nrows, ncols,
-                                           true);
+                                           INDEXING_ZERO_BASED);
 
     /* 2. Tuning phase */
     libcsx_set_options_from_env();
-    libcsx_set_option("libcsx.matrix.symmetric", "true");
+    // libcsx_set_option("libcsx.matrix.symmetric", "true");
     t.Clear();
     t.Start();
-    matrix_t *A = libcsx_mat_tune(input, 0);
+    matrix_t *A = libcsx_mat_tune(input);
     t.Pause();
     double pt = t.ElapsedTime();
 
     /* 3. Vector loading */
-    vector_t *x_view = vec_create_from_buff(x, ncols, A);
-    vector_t *y_view = vec_create_from_buff(y, nrows, A);
+    vector_t *x_view = libcsx_vec_create_from_buff(x, ncols, A);
+    vector_t *y_view = libcsx_vec_create_from_buff(y, nrows, A);
 
     /* 4. SpMV benchmarking phase */
     std::vector<double> mt(OUTER_LOOPS);
@@ -43,11 +43,16 @@ void libcsx_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
         (OUTER_LOOPS % 2) ? mt[((OUTER_LOOPS+1)/2)-1]
         : ((mt[OUTER_LOOPS/2] + mt[OUTER_LOOPS/2+1])/2);  
     double flops = (double)(LOOPS*nnz*2)/((double)1000*1000*mt_median);
-    cout << "m: " << MATRIX 
-         << " pt: " << pt 
+    cout << "m: " << MATRIX
+         << " pt: " << pt
          << " mt(median): " << mt_median
          << " flops: " << flops << endl;
-    libcsx_vec_print(y_view);
+    // for (size_t i=0;i<OUTER_LOOPS;i++) {
+    //     cout << "m: " << MATRIX
+    //          << " pt: " << pt
+    //          << " mt: " << mt[i]
+    //          << " flops: " << (double)(LOOPS*nnz*2)/((double)1000*1000*mt[i]) << endl;
+    // }
 
     /* 5. Cleanup */
     libcsx_mat_destroy_input(input);

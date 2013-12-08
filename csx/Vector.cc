@@ -81,12 +81,12 @@ vector_t *vec_create_interleaved(unsigned long size, size_t *parts,
 	return v;
 }
 
-vector_t *vec_create_random(unsigned long size)
+vector_t *vec_create_random(unsigned long size, void *A)
 {
     vector_t *x = NULL;
 
     x = vec_create(size, NULL);
-    vec_init_rand_range(x, (double) -0.001, (double) 0.001);
+    vec_init_rand_range(x, (double) -0.01, (double) 0.1);
 
     return x;
 }
@@ -129,7 +129,7 @@ void vec_init_from_map(vector_t **v, double val, map_t *map)
 	unsigned int *pos = map->elems_pos;
 
 	for (unsigned int i = 0; i < map->length; i++)
-		v[cpus[i]]->elements[pos[i]] = 0;
+		v[cpus[i]]->elements[pos[i]] = val;
 }
 
 void vec_init_rand_range(vector_t *v, double max, double min)
@@ -306,37 +306,10 @@ int vec_compare(const vector_t *v1, const vector_t *v2)
 	return 0;
 }
 
-vector_t *vec_reorder(const vector_t *v, perm_t *p)
-{
-    unsigned long i;
-    vector_t *permuted_v = NULL;
-
-    permuted_v = vec_create(v->size, NULL);
-    for (i = 0; i < v->size; i++) {
-        permuted_v->elements[p[i]] = v->elements[i];
-    }
-
-    return permuted_v;
-}
-
-vector_t *vec_inv_reorder(const vector_t *v, perm_t *p)
-{
-    unsigned long i;
-    vector_t *permuted_v = NULL;
-
-    permuted_v = vec_create(v->size, NULL);
-    for (i = 0; i < v->size; i++) {
-        permuted_v->elements[i] = v->elements[p[i]];
-    }
-
-    return permuted_v;
-}
-
 void vec_print(const vector_t *v)
 {
-    // std::cout << "[ ";
-	// for (unsigned long i = 0; i < v->size; i++)
-    //     std::cout << v->elements[i] << " ";
-    // std::cout << "]" << std::endl;
-    std::cout << v->elements[0] << " " << v->elements[v->size-1] << std::endl;
+    std::cout << "[ ";
+	for (unsigned long i = 0; i < v->size; i++)
+        std::cout << v->elements[i] << " ";
+    std::cout << "]" << std::endl;
 }

@@ -12,10 +12,11 @@
 
 void libcsx_init()
 {
-    log_disable_all();
+    /* log_disable_all(); */
 /*     log_enable_all_file("logfile"); */
-/*     log_enable_all_console(); */
-/*     log_disable_debug(); */
+    log_enable_all_console();
+    log_disable_info();
+    log_disable_debug();
 }
 
 void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,

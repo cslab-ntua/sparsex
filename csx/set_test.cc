@@ -1,4 +1,4 @@
-#include "../C-API/mattype.h"
+#include "../api/types.h"
 #include "CsxSaveRestore.hpp"
 #include "CsxGetSet.hpp"
 #include "CsxBuild.hpp"
@@ -42,33 +42,47 @@ int main(int argc, char **argv)
     timing::Timer timer;
 
     std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-    timer.Start();
     std::cout << "Reconstructing CSX from binary file..." << std::endl;
+    timer.Start();
     spm_mt = RestoreCsx<int, double>("csx_file", NULL);
+    timer.Pause();
+    double rebuild_time = timer.ElapsedTime();
+
     std::cout << "Assigning new values to all matrix entries..." << std::endl;
     MMF<index_t, value_t> mmf(argv[1]);
     MMF<index_t, value_t>::iterator iter = mmf.begin();
     MMF<index_t, value_t>::iterator iter_end = mmf.end();
+    double assign_time;
+
     if (spm_mt->symmetric) {
+        timer.Clear();
+        timer.Start();
         for (;iter != iter_end; ++iter) {
             SetValueCsxSym<int, double>(spm_mt, (*iter).row, (*iter).col, (*iter).val);
         }
+        timer.Pause();
+        assign_time = timer.ElapsedTime();
     } else {
+        timer.Clear();
+        timer.Start();
         for (;iter != iter_end; ++iter) {
             SetValueCsx<int, double>(spm_mt, (*iter).row, (*iter).col, (*iter).val);
         }
+        timer.Pause();
+        assign_time = timer.ElapsedTime();
     } 
-    timer.Pause();
-    csx_time = timer.ElapsedTime();
-    // std::cout << "Total benchmark time (rebuild + assign): " << pre_time << std::endl;
+
     CheckLoop<index_t, value_t>(spm_mt, argv[1]);
     std::cerr.flush();
     std::cout << "Running 128 SpMV loops..." << std::endl;
     BenchLoop<value_t>(spm_mt, argv[1]);
     double imbalance = CalcImbalance(spm_mt);
     std::cout << "Load imbalance: " << 100*imbalance << "%\n";
+
     std::cout << "=== END BENCHMARK ===" << std::endl;
     PutSpmMt<value_t>(spm_mt);
+    std::cout << "Load from binary: " << rebuild_time << std::endl;
+    std::cout << "Assign new values: " << assign_time << std::endl;
 
     return 0;
 }

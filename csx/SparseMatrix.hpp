@@ -11,7 +11,6 @@
 #ifndef SPARSE_MATRIX_HPP
 #define SPARSE_MATRIX_HPP
 
-#include "../C-API/mattype.h"
 #include "Csr.hpp"
 #include "CsxBuild.hpp"
 #include "CsxGetSet.hpp"
@@ -21,6 +20,7 @@
 #include "Rcm.hpp"
 #include "SparseInternal.hpp"
 #include "Timer.hpp"
+#include "types.h"
 
 #include <boost/interprocess/detail/move.hpp>
 

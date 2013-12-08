@@ -1,6 +1,6 @@
 /* -*- C++ -*-
  *
- * mkl_module.h --  Implementation of the SpMV kernel with Intel MKL.
+ * mkl_module.h --  The SpMV kernel with Intel MKL.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou

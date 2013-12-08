@@ -255,8 +255,6 @@ csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
     uint64_t diagonal_size = spm_sym_->GetDiagonalSize();
 #ifdef SPM_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
-#else
-    StdAllocator &std_alloc = StdAllocator::GetInstance();
 #endif
     
     spm_ = spm_sym_->GetLowerMatrix();
@@ -278,8 +276,8 @@ csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
     csx = new (numa_alloc, node) csx_sym_t<ValueType>;
     csx->dvalues = new (numa_alloc, node) ValueType[diagonal_size];
 #else  
-    csx = new (std_alloc) csx_sym_t<ValueType>;
-    csx->dvalues = new (std_alloc) ValueType[diagonal_size];
+    csx = new csx_sym_t<ValueType>;
+    csx->dvalues = new ValueType[diagonal_size];
 #endif
 
     for (uint64_t i = 0; i < diagonal_size; i++)

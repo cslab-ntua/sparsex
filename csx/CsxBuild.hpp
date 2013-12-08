@@ -41,7 +41,7 @@ double csx_create_time, encode_time;
  */
 template<typename IndexType, typename ValueType>
 void MakeMap(spm_mt_t *spm_mt,
-             SparsePartitionSym<IndexType, ValueType> *spm_sym);
+             SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms);
 
 /**
  *  Routine responsible for retrieving the CSX or CSX-Sym sparse matrix format
@@ -165,20 +165,22 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
     data.GetSpmEncoded()->row_start = csx->row_start;
 
 #ifdef SPM_NUMA
+#ifdef NUMA_CHECKS
     int alloc_err = 0;
     alloc_err = check_region(csx->ctl, csx->ctl_size * sizeof(uint8_t),
                              data.GetSpmEncoded()->node);
-    data.GetBuffer() << "allocation check for ctl field... "
-                     << ((alloc_err) ?
-                         "FAILED (see above for more info)" : "DONE")
-                     << "\n";
+    cout << "allocation check for ctl field... "
+         << ((alloc_err) ?
+             "FAILED (see above for more info)" : "DONE")
+         << "\n";
 
     alloc_err = check_region(csx->values, csx->nnz * sizeof(*csx->values),
                              data.GetSpmEncoded()->node);
-    data.GetBuffer() << "allocation check for values field... " 
-                     << ((alloc_err) ?
-                         "FAILED (see above for more info)" : "DONE")
-                     << "\n";
+    cout << "allocation check for values field... " 
+         << ((alloc_err) ?
+             "FAILED (see above for more info)" : "DONE")
+         << "\n";
+#endif
 #endif
 
     delete DrleMg;
@@ -331,6 +333,7 @@ void DoBuildSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms_
         mt_context[i].SetNode(numa_node_of_cpu(rt_context.GetAffinity(i)));
         mt_context[i].SetData(spms_sym, spm_mt); 
     }
+
     // Start preprocessing
     std::vector<boost::shared_ptr<boost::thread> > threads(nr_threads - 1);
     for (size_t i = 0; i < nr_threads - 1; ++i) {
@@ -338,9 +341,10 @@ void DoBuildSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms_
             PreprocessThreadSym<IndexType, ValueType>, 
             boost::ref(mt_context[i + 1]));
     }
+
     // Let main thread do some work
     PreprocessThreadSym<IndexType, ValueType>(mt_context[0]);
-    for (size_t i = 0; i < nr_threads-1; ++i) {
+    for (size_t i = 0; i < nr_threads - 1; ++i) {
         threads[i]->join();
     }
 
@@ -361,14 +365,15 @@ spm_mt_t *BuildCsxSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> > 
     // Initialization of the multithreaded sparse matrix representation
     spm_mt = PrepareSpmMt(); 
     // Switch Reduction Phase
-    MakeMap(spm_mt, spms->GetPartition(0));
+    MakeMap(spm_mt, spms);
     DoBuildSym(spms, spm_mt);
 
     return spm_mt;
 }
 
 template<typename IndexType, typename ValueType>
-void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym)
+void MakeMap(spm_mt_t *spm_mt,
+             SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms)
 {
     spm_mt_thread *spm_thread;
     SparsePartition<IndexType, ValueType> *spm;
@@ -377,12 +382,12 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
     map_t *map;
     uint32_t start, end, col, total_count, temp_count, limit;
     uint32_t ncpus = spm_mt->nr_threads;
-    uint32_t n = spm_sym->GetLowerMatrix()->GetNrCols();
+    uint32_t n = spms->GetPartition(0)->GetLowerMatrix()->GetNrCols();
 #ifdef SPM_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
     int node;
 #endif
-    
+
     ///> Init initial_map.
     count = new unsigned int[n];
     initial_map = new bool*[ncpus];
@@ -398,11 +403,10 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
 
     ///> Fill initial map.
     for (unsigned int i = 0; i < ncpus; i++) {
-        spm = spm_sym[i].GetLowerMatrix();
+        spm = spms->GetPartition(i)->GetLowerMatrix();
 
         start = spm->GetRowStart();
         end = spm->GetRowStart() + spm->GetRowptrSize() - 1;
-        
         for (uint32_t j = 0; j < (uint32_t) spm->GetRowptrSize() - 1; j++) {
             for (Elem<IndexType, ValueType> *elem = spm->RowBegin(j); elem != spm->RowEnd(j);
                  elem++) {
@@ -480,12 +484,16 @@ void MakeMap(spm_mt_t *spm_mt, SparsePartitionSym<IndexType, ValueType> *spm_sym
     node = spm_thread->node;
 
     map = new (numa_alloc, node) map_t;
-    map->cpus = new (numa_alloc, node) unsigned int[temp_count];
-    map->elems_pos = new (numa_alloc, node) unsigned int[temp_count];
+    if (temp_count) {
+        map->cpus = new (numa_alloc, node) unsigned int[temp_count];
+        map->elems_pos = new (numa_alloc, node) unsigned int[temp_count];
+    }
 #else
     map = new map_t;
-    map->cpus = new unsigned int[temp_count];
-    map->elems_pos = new unsigned int[temp_count];
+    if (temp_count) {
+        map->cpus = new unsigned int[temp_count];
+        map->elems_pos = new unsigned int[temp_count];
+    }
 #endif
 
     map->length = temp_count;

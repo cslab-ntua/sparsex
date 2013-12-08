@@ -399,18 +399,18 @@ DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
                 "if (test_bit(&flags, CTL_RJMP_BIT)) {\n"
                 "\t\t\t\tint jmp = ul_get(&ctl);\n"
                 "\t\t\t\tfor (i = 0; i < jmp; i++) {\n"
-                "\t\t\t\t\ty[y_indx] += x[y_indx] * (*dv);\n"
+                "\t\t\t\t\ty[y_indx] += x[y_indx] * (*dv) * scale_f;\n"
                 "\t\t\t\t\ty_indx++;\n"
                 "\t\t\t\t\tdv++;\n"
                 "\t\t\t\t}\n"
                 "\t\t\t} else {\n"
-                "\t\t\t\ty[y_indx] += x[y_indx] * (*dv);\n"
+                "\t\t\t\ty[y_indx] += x[y_indx] * (*dv) * scale_f;\n"
                 "\t\t\t\ty_indx++;\n"
                 "\t\t\t\tdv++;\n"
                 "\t\t\t}\n";
         } else {
             hooks["new_row_hook"] =
-                "y[y_indx] += x[y_indx] * (*dv);\n"
+                "y[y_indx] += x[y_indx] * (*dv) * scale_f;\n"
                 "\t\t\ty_indx++;\n"
                 "\t\t\tdv++;\n";
         }
@@ -640,7 +640,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
         } else {
             hooks["body_hook"] =
                 "yr += " + Stringify(i_fentry->second) +
-                "(&ctl, size, &v, x, y, cur, &x_indx, &y_indx);";
+                "(&ctl, size, &v, x, y, cur, &x_indx, &y_indx, scale_f);";
         }
     } else {
         hooks["body_hook"] = "switch (patt_id) {\n";
@@ -655,7 +655,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 hooks["body_hook"] +=
                     Tabify(2) + "case " + Stringify(i_fentry->first) + ":\n" +
                     Tabify(3) + "yr += " + Stringify(i_fentry->second) +
-                    "(&ctl, size, &v, x, y, cur, &x_indx, &y_indx);\n" +
+                    "(&ctl, size, &v, x, y, cur, &x_indx, &y_indx, scale_f);\n" +
                     Tabify(3) + "break;\n";
             }
         }

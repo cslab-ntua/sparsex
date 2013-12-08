@@ -11,7 +11,7 @@
 #ifndef CSX_SPMV_MT_HPP
 #define CSX_SPMV_MT_HPP
 
-#include "../C-API/mattype.h"
+#include "types.h"
 #include "Affinity.hpp"
 #include "Csr.hpp"
 #include "SpmMt.hpp"

@@ -2,7 +2,7 @@ static inline double block_row_${r}x${c}_case(uint8_t **ctl, uint8_t size,
                                               double **values, double *x,
                                               double *y, double *cur,
                                               uint64_t *x_indx,
-                                              uint64_t *y_indx)
+                                              uint64_t *y_indx, double scale_f)
 {
 	register double values_ = **values;
 	register uint64_t x_indx_ = *x_indx;
@@ -17,13 +17,13 @@ static inline double block_row_${r}x${c}_case(uint8_t **ctl, uint8_t size,
 
 	for (i = 0; i < ${c}; i++) {
 		for (j = 0; j < ${r}; j++) {
-			y_[j] += curr_x_ * values_;
+			y_[j] += curr_x_ * values_ * scale_f;
 			curr_ry_ += rx_[j] * values_;
 			(*values)++;
 			values_ = **values;
 		}
 		
-		(*ry_) += curr_ry_;
+		(*ry_) += curr_ry_ * scale_f;
 		x_++;
 		ry_++;
 	    curr_x_ = *x_;

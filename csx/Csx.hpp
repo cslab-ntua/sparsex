@@ -17,7 +17,6 @@ extern "C" {
 #endif
 
 #include "Ctl_ll.hpp"
-#include <stdio.h>
 
 #ifdef __cplusplus
 }
@@ -25,16 +24,15 @@ extern "C" {
 
 ///< CSX matrix format
 typedef struct {
-    size_t rowptr;    /* rowptr is the index in csx->ctl of
+    unsigned long rowptr;    /* rowptr is the index in csx->ctl of
                          the first element of row i */
-    size_t valptr;    /* valptr is the index in csx->values of
+    unsigned long valptr;    /* valptr is the index in csx->values of
                          the first element of row i */
-    size_t span;
+    unsigned long span;
 } row_info_t;
 
-//padding issue with size_t???
 typedef struct {
-    size_t nnz, ncols, nrows, ctl_size, row_start;
+    unsigned long nnz, ncols, nrows, ctl_size, row_start;
     uint8_t row_jumps;
     double *values;
     uint8_t *ctl;
@@ -51,7 +49,7 @@ typedef struct {
 
 template<typename ValueType>
 struct csx_t {
-    size_t nnz, ncols, nrows, ctl_size, row_start;
+    unsigned long nnz, ncols, nrows, ctl_size, row_start;
     uint8_t row_jumps;
     ValueType *values;
     uint8_t *ctl;

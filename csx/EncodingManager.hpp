@@ -1,6 +1,6 @@
 /* -*- C++ -*-
  *
- * Drle.hpp -- Delta Run-Length Encoding Manager
+ * EncodingManager.hpp -- Delta Run-Length Encoding Manager
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2013, Vasileios Karakasis
@@ -10,8 +10,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef DRLE_HPP
-#define DRLE_HPP
+#ifndef ENCODING_MANAGER_HPP
+#define ENCODING_MANAGER_HPP
 
 #include "Encodings.hpp"
 #include "Runtime.hpp"
@@ -409,7 +409,7 @@ private:
     bool split_blocks_;
     bool onedim_blocks_;
     split_alg_t split_type_;
-    std::vector<IndexType> sort_splits_;
+    std::vector<size_t> sort_splits_;
     std::vector<IndexType> sort_splits_nzeros_;
     size_t *selected_splits_;
     StatsMap stats_;
@@ -677,13 +677,12 @@ void EncodingManager<IndexType, ValueType>::GenAllStats()
 
         spm_->Transform(Encoding::Horizontal);
         for (size_t i = 0; i < samples_max_; ++i) {
-            // uint64_t window_start = sort_splits_[selected_splits_[i]];
-            // uint64_t window_size =
-            //              sort_splits_[selected_splits_[i]+1] - window_start;
             size_t window_start = sort_splits_[selected_splits_[i]];
             size_t window_size =
                          sort_splits_[selected_splits_[i]+1] - window_start;
 
+            if (window_start >= sort_splits_[selected_splits_[i]+1]) 
+                break;
             SparsePartition<IndexType, ValueType> *window =
                 spm_->GetWindow(window_start, window_size);
 
@@ -736,7 +735,7 @@ void EncodingManager<IndexType, ValueType>::GenAllStats()
     // first generate stats for the delta type
 #ifdef SPM_HEUR_NEW
         GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1,
-                           stats_[Encoding::None]); //CHECK NONE
+                           stats_[Encoding::None]);
 #endif
         for (Encoding::Type t = Encoding::Horizontal; t < Encoding::Max; ++t) {
             if (xforms_ignore_[t])
@@ -838,7 +837,7 @@ long EncodingManager<IndexType, ValueType>::GetTypeScore(Encoding::Type type)
 
 #ifdef SPM_HEUR_NEW
     long nr_switches;
-    if (type == Encoding::None) //CHECK NONE
+    if (type == Encoding::None)
         nr_switches = nr_deltas;
     else
         nr_switches = nr_deltas + nr_patterns;
@@ -869,19 +868,19 @@ void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
 
     // Transform matrix to the desired iteration order
     spm_->Transform(type);
-    
+
     SpmBld = new typename SparsePartition<IndexType, ValueType>::
-        Builder(spm_,  spm_->GetRowptrSize(), spm_->GetElemsSize());
+        Builder(spm_, spm_->GetRowptrSize(), spm_->GetElemsSize());
 
     for (size_t i = 0; i < spm_->GetRowptrSize() - 1; ++i) {
         EncodeRow(spm_->RowBegin(i), spm_->RowEnd(i), new_row);
         nr_size = new_row.size();
         if (nr_size > 0) {
             tf_.StartTimer("Alloc");
-            //elems = SpmBld->AllocElems(nr_size);
-            tf_.PauseTimer("Alloc");
+            // elems = SpmBld->AllocElems(nr_size);
             for (uint64_t i = 0; i < nr_size; ++i)
                 SpmBld->AppendElem(new_row[i]);
+            tf_.PauseTimer("Alloc");
             // MakeRowElem(new_row[i], elems + i);
         }
 
@@ -1423,7 +1422,7 @@ DoDecode(const Elem<IndexType, ValueType> *elem,
     }
 
     delete elem->pattern;
-    delete elem->vals;  // I beleieve this should be delete[]
+    delete elem->vals;
 }
 
 template<typename IndexType, typename ValueType>
@@ -1961,6 +1960,6 @@ void EncodingManager<IndexType, ValueType>::OutStats(std::ostringstream &os)
     }
 }
 
-#endif  // DRLE_HPPP
+#endif  // ENCODING_MANAGER_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

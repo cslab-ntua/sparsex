@@ -123,7 +123,8 @@ static const char *libcsx_warnings[] = {
     "no specific file given to save CSX, using default: \"csx_file\"",
     "invalid tuning option",
     "invalid runtime option",
-    "reordering wasn't feasible on this matrix"
+    "reordering wasn't feasible on this matrix",
+    "entry not set"
 };
 
 static const char *err_get_message(libcsx_error_t code)

@@ -17,8 +17,14 @@
 #include <boost/function.hpp>
 
 #include "libcsx_module.h"
+
+#ifdef BENCH_MKL
 #include "mkl_module.h"
-// #include "poski_module.h"
+#endif
+
+#ifdef BENCH_POSKI
+#include "poski_module.h"
+#endif
 
 using namespace std;
 

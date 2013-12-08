@@ -131,7 +131,7 @@ static void do_spmv_thread_sym(spm_mt_thread_t *thread, boost::barrier &cur_barr
 		vec_init_from_map(temp, 0, thread->map);
 		cur_barrier.wait();
         tsc_start(&thread_tsc);
-		spmv_mt_sym_fn(thread->spm, x, y, temp[id]);
+		spmv_mt_sym_fn(thread->spm, x, y, temp[id], 1);
         tsc_pause(&thread_tsc);
 		cur_barrier.wait();
 		// Switch Reduction Phase.
@@ -187,7 +187,7 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 		vec_init_from_map(temp, 0, thread->map);
 		cur_barrier.wait();
 		tsc_start(&thread_tsc);
-		spmv_mt_sym_fn(thread->spm, x, y, y);
+		spmv_mt_sym_fn(thread->spm, x, y, y, 1);
 		tsc_pause(&thread_tsc);
 		cur_barrier.wait();
 		// Switch Reduction Phase
@@ -295,17 +295,20 @@ float spmv_bench_mt(spm_mt_t *spm_mt, unsigned long loops,
     }
 
 	// Allocate an interleaved x.
-	int alloc_err = 0;
 	x = vec_create_interleaved(rows_nr, xparts, nr_threads, xnodes);
 	vec_init_rand_range(x, (value_t) -1000, (value_t) 1000);
-	alloc_err = check_interleaved(x->elements, xparts, nr_threads, xnodes);
-	print_alloc_status("input vector", alloc_err);
 
 	// Allocate an interleaved y.
 	y = vec_create_interleaved(rows_nr, yparts, nr_threads, ynodes);
 	vec_init(y, 0);
+
+#ifdef NUMA_CHECKS
+	int alloc_err = 0;
+	alloc_err = check_interleaved(x->elements, xparts, nr_threads, xnodes);
+	print_alloc_status("input vector", alloc_err);
 	alloc_err = check_interleaved(y->elements, yparts, nr_threads, ynodes);
 	print_alloc_status("output vector", alloc_err);
+#endif
 #else
 	x = vec_create(cols_nr, NULL);
 	y = vec_create(rows_nr, NULL);
@@ -476,17 +479,20 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, unsigned long loops,
     }
 
 	// Allocate an interleaved x.
-	int alloc_err = 0;
 	x = vec_create_interleaved(nrows, xparts, nr_threads, xnodes);
 	vec_init_rand_range(x, (value_t) -1000, (value_t) 1000);
-	alloc_err = check_interleaved(x->elements, xparts, nr_threads, xnodes);
-	print_alloc_status("input vector", alloc_err);
 
 	// Allocate an interleaved y.
 	y = vec_create_interleaved(nrows, yparts, nr_threads, ynodes);
 	vec_init(y, 0);
+
+#ifdef NUMA_CHECKS
+	int alloc_err = 0;
+	alloc_err = check_interleaved(x->elements, xparts, nr_threads, xnodes);
+	print_alloc_status("input vector", alloc_err);
 	alloc_err = check_interleaved(y->elements, yparts, nr_threads, ynodes);
 	print_alloc_status("output vector", alloc_err);
+#endif
 #else
 	x = vec_create(n, NULL);
 	y = vec_create(n, NULL);
@@ -514,12 +520,14 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, unsigned long loops,
 	}
 
 #ifdef SPM_NUMA
+#ifdef NUMA_CHECKS
 	alloc_err = 0;
 	for (unsigned int i = 1; i < nr_threads; i++) {
 		int tnode = spm_mt->spm_threads[i].node;
 		alloc_err += check_region(temp[i]->elements, n*sizeof(value_t), tnode);
 	}
 	print_alloc_status("local buffers", alloc_err);
+#endif
 #endif
 
     boost::barrier cur_barrier(nr_threads);

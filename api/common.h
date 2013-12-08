@@ -12,7 +12,7 @@
 
 #include "error.h"
 #include "LoggerUtil.hpp"
-#include "mattype.h"
+#include "types.h"
 #include "Vector.hpp"
 
 #include <stdlib.h>
@@ -22,61 +22,89 @@
  */
 typedef index_t perm_t;
 
-static inline int
-check_vec_dim(const vector_t *x, unsigned long dim)
-{
-    return (x->size == dim);
-}
+/**
+ *  \brief The sparse matrix handle type.
+ */
+typedef struct matrix matrix_t;
+
+/**
+ *  \brief The input matrix handle type.
+ */
+typedef struct input input_t;
+
+/**
+ *  \brief Matrix property type.
+ */
+typedef int property_t;
 
 #define INVALID_INPUT ((input_t *) NULL)
 #define INVALID_MAT ((matrix_t *) NULL)
 #define INVALID_VEC ((vector_t *) NULL)
 #define INVALID_PERM ((perm_t *) NULL)
 
-static inline int
-check_indexing(int base)
+#define OP_REORDER          1
+#define INDEXING_ZERO_BASED 0
+#define INDEXING_ONE_BASED  1
+
+static inline
+int check_indexing(int base)
 {
     return (base == 0 || base == 1);
 }
 
-static inline int
-check_dim(index_t dim)
+static inline
+int check_mat_dim(index_t dim)
 {
     return (dim >= 0);
 }
 
-/* Logging utilities */
-static inline void log_disable_all()
+static inline
+int check_vec_dim(const vector_t *x, unsigned long dim)
+{
+    return (x->size == dim);
+}
+
+/**
+ *  \brief Logging utilities.
+ */
+static inline
+void log_disable_all()
 {
     DisableLogging();
 }
 
-static inline void log_disable_error()
+static inline
+void log_disable_error()
 {
     DisableError();
 }
 
-static inline void log_disable_warning()
+static inline
+void log_disable_warning()
 {
     DisableWarning();
 }
 
-static inline void log_disable_info()
+static inline
+void log_disable_info()
 {
     DisableInfo();
 }
 
-static inline void log_disable_debug()
+static inline 
+void log_disable_debug()
 {
     DisableDebug();
 }
 
-static inline void log_enable_all_console()
+static inline
+void log_enable_all_console()
 {
     AlwaysUseConsole();
 }
 
-static inline void log_enable_all_file(const char *file)
+static inline
+void log_enable_all_file(const char *file)
 {
     AlwaysUseFile(file);
 }

@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <float.h>
 
+#include "tsc.h"
 #include "method.h"
 #include "spmv_method.h"
 #include "spmv_loops.h"
@@ -99,11 +100,12 @@ int main(int argc, char **argv)
 	// parse options
 	int opt_check = 0;
 	int opt_bench = 0;
+	int opt_kernel = 0;
 	int loops_nr = 128;
 	int outer_loops = 4;
 	int c;
 	int br = 0, bc = 0;
-	while ((c = getopt(argc, argv, "hcbl:L:d:")) != -1) {
+	while ((c = getopt(argc, argv, "hckbl:L:d:")) != -1) {
 		switch (c) {
 		case 'c':
 			opt_check = 1;
@@ -111,6 +113,10 @@ int main(int argc, char **argv)
 
 		case 'b':
 			opt_bench = 1;
+			break;
+
+		case 'k':
+			opt_kernel = 1;
 			break;
 
 		case 'h':
@@ -136,8 +142,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (!opt_check && !opt_bench)
-		opt_bench = 1;
+	/* if (!opt_check && !opt_bench) */
+	/* 	opt_bench = 1; */
 
 	int remargs = argc - optind; // remaining arguments
 	if (remargs < 1) {
@@ -348,6 +354,23 @@ int main(int argc, char **argv)
 				       flops);
 		}
 	}
+
+    if (opt_kernel) {
+		int count;
+		for (count = 0; count < outer_loops; count++) {
+            float t = spmv_double_bench_kernel_mt(m, loops_nr, nrows, ncols, 
+                                                  0.58, 0.1, meth->fn);
+			double flops = (double)(loops_nr*nnz*2) / ((double) 1000*1000*t);
+			if (spmv_meth->flag != 3)
+				printf("m:%s f:%s s:%" PRIu64 " t:%lf r:%lf\n", method,
+				       basename(mmf_file), spmv_meth->size_fn(m), t, flops);
+			else
+				// Switch Reduction Phase
+				printf("m:%s f:%s ms:%lu s:%" PRIu64 " t:%lf r:%lf\n", method,
+				       basename(mmf_file), map_size, spmv_meth->size_fn(m), t,
+				       flops);
+		}
+    }
 
 	spmv_meth->destroy_fn(m);
 	return 0;

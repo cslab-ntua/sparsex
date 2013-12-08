@@ -144,13 +144,13 @@ vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
     }
     
     // Printing
-    // cout << "MT_CONF=";
-    // for (size_t i = 0; i < affinity.size(); ++i) {
-    //     if (i != 0)
-    //         cout << ",";
-    //     cout << affinity[i];
-    // }
-    // cout << "\n";
+    cout << "MT_CONF=";
+    for (size_t i = 0; i < affinity.size(); ++i) {
+        if (i != 0)
+            cout << ",";
+        cout << affinity[i];
+    }
+    cout << "\n";
 
     return affinity;
 }

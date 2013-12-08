@@ -149,7 +149,7 @@ void UseFile(Level level, const char *log_file);
         << ":" << __FUNCTION__ << "()) "
 #define LOG_INFO Logger<Info>() << LoggingHandler::Prefix(Info)
 
-#ifdef CSX_DEBUG
+#ifdef DEBUG_MODE
 #   define LOG_DEBUG Logger<Debug>() << LoggingHandler::Prefix(Debug)
 #else
 #   define LOG_DEBUG Logger<None>()

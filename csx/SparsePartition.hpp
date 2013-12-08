@@ -289,7 +289,7 @@ public:
      *  @return       the selected window.
      *  @see ExtractWindow()
      */
-    SparsePartition *GetWindow(IndexType rs, IndexType length);
+    SparsePartition *GetWindow(IndexType rs, size_t length);
 
     /**
      *  Puts a (possibly processed) window of the matrix back to this matrix.
@@ -896,7 +896,7 @@ void SparsePartition<IndexType, ValueType>::PrintStats(std::ostream& out)
     IndexType nr_patterns, nr_patterns_before;
     IndexType nr_nzeros_block;
     IndexType nr_transitions;
-    IndexType nr_xform_patterns[Encoding::Max];//CHECK
+    IndexType nr_xform_patterns[Encoding::Max];
 
     nr_rows_with_patterns = GetRowptrSize() - 1;
     nr_patterns = 0;
@@ -932,7 +932,7 @@ void SparsePartition<IndexType, ValueType>::PrintStats(std::ostream& out)
                 pt_size_before = pt_size;
             } else {
                 pt_type = Encoding::None;
-                ++nr_xform_patterns[Encoding::None];//CHECK
+                ++nr_xform_patterns[Encoding::None];
                 if (pt_type != pt_type_before)
                     ++nr_transitions;
             }
@@ -1252,30 +1252,28 @@ Transform(Encoding::Type t, IndexType rs, IndexType re)
         for (IndexType i = k; i < re; i += k) {
             es = ee;
             ee += rowptr_[i] - rowptr_[i-k];
-//            sort(es, ee, elem_cmp_less<IndexType, ValueType>);
             sort(es, ee, CooElemSorter<IndexType, ValueType>());
         }
         es = ee;
         ee = elems.end();
-//        sort(es, ee, elem_cmp_less<IndexType, ValueType>);
         sort(es, ee, CooElemSorter<IndexType, ValueType>());
     } else {
         e0 = elems.begin();
         ee = elems.end();
-//        sort(e0, ee, elem_cmp_less<IndexType, ValueType>);
         sort(e0, ee, CooElemSorter<IndexType, ValueType>());
     }
 
-    SetElems(e0, ee, rs + 1, 0, elems_size_, FindNewRowptrSize(t));
+    if (elems_size_)
+        SetElems(e0, ee, rs + 1, 0, elems_size_, FindNewRowptrSize(t));
     elems.clear();
     type_ = t;
 }
 
 template<typename IndexType, typename ValueType>
 SparsePartition<IndexType, ValueType> *SparsePartition<IndexType, ValueType>::
-GetWindow(IndexType rs, IndexType length)
+GetWindow(IndexType rs, size_t length)
 {
-    if ((size_t)(rs + length) > rowptr_size_ - 1)
+    if (((size_t)rs + length) > rowptr_size_ - 1)
         length = rowptr_size_ - rs - 1;
 
     SparsePartition<IndexType, ValueType> *ret = new
@@ -1365,8 +1363,10 @@ Builder::Builder(SparsePartition<IndexType, ValueType> *sp, size_t nr_rows,
                  size_t nr_elems)
     : sp_(sp),
       da_elems_(((sp_->elems_mapped_) ?
-                 DynamicElemArray(sp_->elems_, sp_->elems_size_,
+                 DynamicElemArray(sp_->elems_, 0,
                                   sp_->elems_size_) :
+                 // DynamicElemArray(sp_->elems_, sp_->elems_size_,
+                 //                  sp_->elems_size_) :
                  DynamicElemArray(nr_elems))),
       da_rowptr_(DynamicIndexArray(nr_rows+1))
 {
@@ -1382,9 +1382,9 @@ template<typename IndexType, typename ValueType>
 void SparsePartition<IndexType, ValueType>::Builder::AppendElem(
     const Elem<IndexType, ValueType> &e)
 {
-    if (sp_->elems_mapped_)
-        assert(da_elems_.GetSize() + 1 < sp_->elems_size_ &&
-               "out of bounds");
+    if (sp_->elems_mapped_){
+        assert(da_elems_.GetSize() < sp_->elems_size_ &&
+               "out of bounds");}
 
     da_elems_.Append(e);
 }
@@ -1412,7 +1412,8 @@ Builder::Finalize()
         da_elems_.GetAllocator().deallocate(sp_->elems_, sp_->elems_size_);
 
     if (sp_->rowptr_)
-        da_rowptr_.GetAllocator().deallocate(sp_->rowptr_, sp_->rowptr_size_);
+        da_rowptr_.GetAllocator().deallocate(sp_->rowptr_,
+                                             sp_->rowptr_size_);
 
     if (sp_->elems_mapped_)
         assert(sp_->elems_size_ == da_elems_.GetSize());

@@ -12,6 +12,7 @@
 #include <pthread.h>
 
 #include "spmv_method.h"
+#include "spm_crs_mt.h"
 #include "vector.h"
 #include "spm_mt.h"
 #include "mt_lib.h"
@@ -24,9 +25,11 @@
 
 static VECTOR_TYPE *x = NULL;
 static VECTOR_TYPE *y = NULL;
+static VECTOR_TYPE *tmp = NULL;
 static pthread_barrier_t barrier;
 static unsigned long loops_nr = 0;
 static float secs = 0.0;
+static double ALPHA = 0.33, BETA = 1;
 
 static void *do_spmv_thread(void *arg)
 {
@@ -57,6 +60,46 @@ static void *do_spmv_thread(void *arg)
 
     spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
     tsc_shut(&thread_tsc);
+	return NULL;
+}
+
+static void *do_kernel_thread(void *arg)
+{
+	spm_mt_thread_t *spm_mt_thread = (spm_mt_thread_t *) arg;
+	SPMV_NAME(_fn_t) *spmv_mt_fn = spm_mt_thread->spmv_fn;
+	unsigned long start = spm_mt_thread->row_start;
+	unsigned long end = start + spm_mt_thread->nr_rows;
+	setaffinity_oncpu(spm_mt_thread->cpu);
+    tsc_t thread_tsc;
+	unsigned long i;
+
+#ifdef SPMV_PRFCNT
+	prfcnt_t *prfcnt = (prfcnt_t *) spm_mt_thread->data;
+	prfcnt_init(prfcnt, spm_mt_thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
+	prfcnt_start(prfcnt);
+#endif
+
+    tsc_init(&thread_tsc);
+	for (i = 0; i < loops_nr; i++) {
+		pthread_barrier_wait(&barrier);
+        tsc_start(&thread_tsc);	
+        if (BETA != 1)
+            VECTOR_NAME(_scale_part)(y, y, BETA, start, end);
+        spmv_mt_fn(spm_mt_thread->spm, x, tmp);
+		pthread_barrier_wait(&barrier);
+        if (ALPHA != 1)
+            VECTOR_NAME(_scale_add_part)(y, tmp, y, ALPHA, start, end);
+        tsc_pause(&thread_tsc);
+		pthread_barrier_wait(&barrier);
+	}
+
+#ifdef SPMV_PRFCNT
+	prfcnt_pause(prfcnt);
+#endif
+
+    spm_mt_thread->secs = tsc_getsecs(&thread_tsc);
+    tsc_shut(&thread_tsc);
+
 	return NULL;
 }
 
@@ -116,17 +159,66 @@ static void *do_spmv_thread_main_swap(void *arg)
 	return NULL;
 }
 
-float SPMV_NAME(_mt)(void *A, VECTOR_TYPE *X, VECTOR_TYPE *Y,
-                     unsigned long loops)
+float SPMV_NAME(_bench_kernel_mt)(spm_mt_t *spm_mt, unsigned long loops, 
+                                  unsigned long nrows, unsigned long ncols,
+                                  ELEM_TYPE alpha, ELEM_TYPE beta,
+                                  SPMV_NAME(_fn_t) *fn)                                
 {
-    spm_mt_t *spm_mt = (spm_mt_t *) A;
 	int i, err;
 	pthread_t *tids;
 
-	secs = 0.0;
-	x = X;
-	y = Y;
+    ALPHA = alpha;
+    BETA = beta;
 	loops_nr = loops;
+    secs = 0.0;
+
+#ifdef SPM_NUMA
+    size_t *xparts = malloc(sizeof(*xparts)*spm_mt->nr_threads);
+    size_t *yparts = malloc(sizeof(*yparts)*spm_mt->nr_threads);
+    size_t *tparts = malloc(sizeof(*tparts)*spm_mt->nr_threads);
+    int *xnodes = malloc(sizeof(*xnodes)*spm_mt->nr_threads);
+    int *ynodes = malloc(sizeof(*ynodes)*spm_mt->nr_threads);
+    int *tnodes = malloc(sizeof(*tnodes)*spm_mt->nr_threads);
+    if (!xparts || !yparts || !xnodes || !ynodes || !tparts || !tnodes) {
+        perror("malloc");
+        exit(1);
+    }
+
+    for (i = 0; i < spm_mt->nr_threads; i++) {
+        spm_mt_thread_t *spm = spm_mt->spm_threads + i;
+        xparts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
+        yparts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
+        tparts[i] = spm->nr_rows * sizeof(ELEM_TYPE);
+        xnodes[i] = spm->node;
+        ynodes[i] = spm->node;
+        tnodes[i] = spm->node;
+    }
+
+    // Allocate an interleaved x.
+    int alloc_err = 0;
+    x = VECTOR_NAME(_create_interleaved)(ncols, xparts, spm_mt->nr_threads,
+                                         xnodes);
+    alloc_err = check_interleaved(x->elements, xparts, spm_mt->nr_threads,
+                                  xnodes);
+    print_alloc_status("input vector", alloc_err);
+
+    // Allocate an interleaved y.
+    y = VECTOR_NAME(_create_interleaved)(nrows, yparts, spm_mt->nr_threads,
+                                         ynodes);
+    alloc_err = check_interleaved(y->elements, yparts, spm_mt->nr_threads,
+                                  ynodes);
+    print_alloc_status("output vector", alloc_err);
+
+    tmp = VECTOR_NAME(_create_interleaved)(nrows, xparts, spm_mt->nr_threads,
+                                           xnodes);
+#else
+    x = VECTOR_NAME(_create)(ncols);
+    y = VECTOR_NAME(_create)(nrows);
+    tmp = VECTOR_NAME(_create)(nrows);
+#endif
+    VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -0.01, (ELEM_TYPE) 0.1);
+    VECTOR_NAME(_init_rand_range)(y, (ELEM_TYPE) -0.01, (ELEM_TYPE) 0.1);
+    VECTOR_NAME(_init)(tmp, 0);
 
 	err = pthread_barrier_init(&barrier, NULL, spm_mt->nr_threads);
 	if (err) {
@@ -140,27 +232,29 @@ float SPMV_NAME(_mt)(void *A, VECTOR_TYPE *X, VECTOR_TYPE *Y,
 		exit(1);
 	}
 
-#ifdef SPMV_PRFCNT
 	for (i = 0; i < spm_mt->nr_threads; i++) {
+		if (fn != NULL)
+			spm_mt->spm_threads[i].spmv_fn = fn;
+#ifdef SPMV_PRFCNT
 		spm_mt->spm_threads[i].data = malloc(sizeof(prfcnt_t));
 		if (!spm_mt->spm_threads[i].data) {
 			perror("malloc");
 			exit(1);
 		}
-	}
 #endif
+    }
 
-	/*
-	 * spawn two kind of threads:
-	 *	- 1	: do_spmv_thread_main_swap -> computes and does swap.
-	 *	- N-1	: do_spmv_thread -> just computes.
-	 */
-	pthread_create(tids, NULL, do_spmv_thread_main_swap, spm_mt->spm_threads);
-	for (i = 1; i < spm_mt->nr_threads; i++)
-		pthread_create(tids+i, NULL, do_spmv_thread, spm_mt->spm_threads + i);
+	tsc_t total_tsc;
+	tsc_init(&total_tsc);
+	tsc_start(&total_tsc);
+	for (i = 0; i < spm_mt->nr_threads; i++)
+		pthread_create(tids+i, NULL, do_kernel_thread, spm_mt->spm_threads + i);
 
 	for (i = 0; i < spm_mt->nr_threads; i++)
 		pthread_join(tids[i], NULL);
+	tsc_pause(&total_tsc);
+	secs = tsc_getsecs(&total_tsc);
+	tsc_shut(&total_tsc);
 
 #ifdef SPMV_PRFCNT
 	// Report performance counters for every thread.
@@ -175,9 +269,20 @@ float SPMV_NAME(_mt)(void *A, VECTOR_TYPE *X, VECTOR_TYPE *Y,
 	}
 #endif
 
+	VECTOR_NAME(_destroy)(x);
+	VECTOR_NAME(_destroy)(y);
+	VECTOR_NAME(_destroy)(tmp);
+#ifdef SPM_NUMA
+    free(xparts);
+    free(yparts);
+    free(tparts);
+    free(xnodes);
+    free(ynodes);
+    free(tnodes);
+#endif
 	pthread_barrier_destroy(&barrier);
 	free(tids);
-	return secs;
+    return secs;
 }
 
 float SPMV_NAME(_bench_mt_loop)(spm_mt_t *spm_mt, unsigned long loops,

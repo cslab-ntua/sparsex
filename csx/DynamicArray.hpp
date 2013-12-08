@@ -35,7 +35,7 @@ public:
 
     DynamicArray(T *storage, size_t size, size_t capacity)
         : elems_(storage),
-          size_(size),
+          size_(0),
           capacity_(capacity),
           own_elems_(false)
     { }
@@ -80,6 +80,7 @@ public:
 
     T *TakeElems()
     {
+        ShrinkToFit();
         own_elems_ = false;
         return elems_;
     }
@@ -108,7 +109,6 @@ public:
     {
         return alloc_;
     }
-
 
     T &operator[](size_t pos)
     {

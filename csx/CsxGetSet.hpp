@@ -35,11 +35,36 @@ bool SetValueCsx(void *spm, IndexType row, IndexType col, ValueType value);
 template<typename IndexType, typename ValueType>
 bool SetValueCsxSym(void *spm, IndexType row, IndexType col, ValueType value);
 
-/* Function definitions. */
+/* Helper-function declarations. */
 template<typename IndexType, typename ValueType>
-static bool SearchValue(void *spm, IndexType row, IndexType col,
-                        ValueType& value, bool mode);
+bool SearchDelta(uint8_t **ctl_ptr, ValueType **v_ptr, uint8_t delta,
+                 uint8_t size, IndexType col, IndexType& cur_col,
+                 ValueType& value, size_t rows_checked, bool mode);
+template<typename IndexType, typename ValueType>
+bool SearchHorizontal(ValueType **v_ptr, uint8_t delta, uint8_t size,
+                      IndexType col, IndexType& ucol, ValueType& value,
+                      size_t rows_checked, bool mode);
+template<typename IndexType, typename ValueType>
+bool SearchVertical(ValueType **v_ptr, uint8_t delta, uint8_t size,
+                    IndexType col, IndexType row, IndexType ucol,
+                    IndexType current_row, ValueType& value,
+                    size_t rows_checked, bool mode);
+template<typename IndexType, typename ValueType>
+bool SearchDiagonal(ValueType **v_ptr, uint8_t delta, uint8_t size,
+                    IndexType col, IndexType row, IndexType ucol,
+                    IndexType current_row, ValueType& value,
+                    size_t rows_checked, bool mode, bool rev);
+template<typename IndexType, typename ValueType>
+bool SearchBlock(ValueType **v_ptr, uint8_t delta, uint8_t size,
+                 uint8_t type,IndexType col, IndexType row,
+                 IndexType ucol, IndexType current_row, ValueType& value,
+                 size_t rows_checked, bool isrow, bool mode);
+template<typename IndexType, typename ValueType>
+bool SearchValue(void *spm, IndexType row, IndexType col,
+                 ValueType& value, bool mode);
 
+
+/* Function definitions. */
 template<typename IndexType, typename ValueType>
 bool GetValueCsx(void *spm, IndexType row, IndexType col, ValueType *value)
 {
@@ -148,8 +173,8 @@ void align_ptr(uint8_t **ctl, int align)
 #endif
 
 template<typename IndexType, typename ValueType>
-static bool SearchValue(void *spm, IndexType row, IndexType col,
-                        ValueType& value, bool mode)
+bool SearchValue(void *spm, IndexType row, IndexType col,
+                 ValueType& value, bool mode)
 {
     csx_t<ValueType> *csx = (csx_t<ValueType> *) spm;
     IndexType current_row = row - 1;
@@ -264,9 +289,9 @@ static void GetSet(ValueType& val, ValueType *cur_val, bool mode)
 }
 
 template<typename IndexType, typename ValueType>
-static bool SearchDelta(uint8_t **ctl_ptr, ValueType **v_ptr, uint8_t delta,
-                        uint8_t size, IndexType col, IndexType& cur_col,
-                        ValueType& value, size_t rows_checked, bool mode)
+bool SearchDelta(uint8_t **ctl_ptr, ValueType **v_ptr, uint8_t delta,
+                 uint8_t size, IndexType col, IndexType& cur_col,
+                 ValueType& value, size_t rows_checked, bool mode)
 {
     if (delta == 8) {
         if ((rows_checked == 0) && ((col - 1) == cur_col)) {
@@ -339,9 +364,9 @@ static bool SearchDelta(uint8_t **ctl_ptr, ValueType **v_ptr, uint8_t delta,
 }
 
 template<typename IndexType, typename ValueType>
-static bool SearchHorizontal(ValueType **v_ptr, uint8_t delta, uint8_t size,
-                             IndexType col, IndexType& ucol, ValueType& value,
-                             size_t rows_checked, bool mode)
+bool SearchHorizontal(ValueType **v_ptr, uint8_t delta, uint8_t size,
+                      IndexType col, IndexType& ucol, ValueType& value,
+                      size_t rows_checked, bool mode)
 {
     if ((rows_checked == 0) && ((col - 1) >= ucol && 
                                 (col - 1) < (ucol + size * delta))) {
@@ -361,10 +386,10 @@ static bool SearchHorizontal(ValueType **v_ptr, uint8_t delta, uint8_t size,
 }
 
 template<typename IndexType, typename ValueType>
-static bool SearchVertical(ValueType **v_ptr, uint8_t delta, uint8_t size,
-                           IndexType col, IndexType row, IndexType ucol,
-                           IndexType current_row, ValueType& value,
-                           size_t rows_checked, bool mode)
+bool SearchVertical(ValueType **v_ptr, uint8_t delta, uint8_t size,
+                    IndexType col, IndexType row, IndexType ucol,
+                    IndexType current_row, ValueType& value,
+                    size_t rows_checked, bool mode)
 {
     if (rows_checked == 0) {
         if ((col - 1) == ucol) {
@@ -393,10 +418,10 @@ static bool SearchVertical(ValueType **v_ptr, uint8_t delta, uint8_t size,
 }
 
 template<typename IndexType, typename ValueType>
-static bool SearchDiagonal(ValueType **v_ptr, uint8_t delta, uint8_t size,
-                           IndexType col, IndexType row, IndexType ucol,
-                           IndexType current_row, ValueType& value,
-                           size_t rows_checked, bool mode, bool rev)
+bool SearchDiagonal(ValueType **v_ptr, uint8_t delta, uint8_t size,
+                    IndexType col, IndexType row, IndexType ucol,
+                    IndexType current_row, ValueType& value,
+                    size_t rows_checked, bool mode, bool rev)
 {
     if (rows_checked == 0) {
         if ((col - 1) == ucol) {
@@ -432,10 +457,10 @@ static bool SearchDiagonal(ValueType **v_ptr, uint8_t delta, uint8_t size,
 }
 
 template<typename IndexType, typename ValueType>
-static bool SearchBlock(ValueType **v_ptr, uint8_t delta, uint8_t size,
-                        uint8_t type,IndexType col, IndexType row,
-                        IndexType ucol, IndexType current_row, ValueType& value,
-                        size_t rows_checked, bool isrow, bool mode)
+bool SearchBlock(ValueType **v_ptr, uint8_t delta, uint8_t size,
+                 uint8_t type,IndexType col, IndexType row,
+                 IndexType ucol, IndexType current_row, ValueType& value,
+                 size_t rows_checked, bool isrow, bool mode)
 {
     IndexType row_dim = 0, col_dim = 0;
     if (isrow) {

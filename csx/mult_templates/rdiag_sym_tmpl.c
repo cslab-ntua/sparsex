@@ -1,7 +1,7 @@
 static inline double rdiag${delta}_case(uint8_t **ctl, uint8_t size,
                                         double **values, double *x, double *y,
                                         double *cur, uint64_t *x_indx,
-                                        uint64_t *y_indx)
+                                        uint64_t *y_indx, double scale_f)
 {
 	register double values_ = **values;
 	register uint64_t i_end = ${delta} * size;
@@ -14,8 +14,8 @@ static inline double rdiag${delta}_case(uint8_t **ctl, uint8_t size,
 	uint64_t i, j;
 
 	for (i = 0, j = i_end; i < i_end; i += ${delta}, j -= ${delta}) {
-		y_[i] += x_[j] * values_;
-		ry_[j] += rx_[i] * values_;
+		y_[i] += x_[j] * values_ * scale_f;
+		ry_[j] += rx_[i] * values_ * scale_f;
 		(*values)++;
 		values_ = **values;
 	}

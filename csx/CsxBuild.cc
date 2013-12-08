@@ -20,6 +20,9 @@ spm_mt_t *PrepareSpmMt()
 
     spm_mt = new spm_mt_t;
     spm_mt->nr_threads = rt_context.GetNrThreads();
+#ifdef SPM_NUMA
+    spm_mt->interleaved = false;
+#endif
     spm_mt->symmetric =
         rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric);
     spm_mt->spm_threads = new spm_mt_thread_t[rt_context.GetNrThreads()];

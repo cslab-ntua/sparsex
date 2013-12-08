@@ -13,21 +13,6 @@
 #include "common.h"
 
 /**
- *  \brief Dense array object that represents a permutation.
- */
-typedef index_t perm_t;
-
-/**
- *  \brief The sparse matrix handle type.
- */
-typedef struct matrix matrix_t;
-
-/**
- *  \brief The input matrix handle type.
- */
-typedef struct input input_t;
-
-/**
  *  Creates and returns a valid tunable matrix object from a Compressed 
  *  Sparse Row (CSR) representation.
  *
@@ -40,7 +25,8 @@ typedef struct input input_t;
  *  @return                 a handle to the input matrix.
  */
 input_t *libcsx_mat_create_csr(index_t *rowptr, index_t *colind, value_t *values,
-                               index_t nr_rows, index_t nr_cols, int zero_based);
+                               index_t nr_rows, index_t nr_cols, 
+                               property_t indexing);
 
 /**
  *  Creates and returns a valid tunable matrix object from a file in the
@@ -55,9 +41,11 @@ input_t *libcsx_mat_create_mmf(const char *filename);
  *  Converts the input matrix in the CSX format according to the options set.
  *
  *  @param[in] input        the input matrix.
+ *  @param[in] ...          optional flag that indicates whether the input 
+ *                          should be reordered, <OP_REORDER>.
  *  @return                 a handle to the tuned matrix.
  */
-matrix_t *libcsx_mat_tune(input_t *input, int reorder);
+matrix_t *libcsx_mat_tune(input_t *input, ...);
 
 /**
  *  This routines performs a matrix-vector multiplication defined as:
@@ -70,8 +58,8 @@ matrix_t *libcsx_mat_tune(input_t *input, int reorder);
  *  @param[in] y            a dense vector.
  *  @return                 an error code.
  */
-libcsx_error_t libcsx_matvec_mult(const matrix_t *A, value_t alpha, vector_t *x,
-                                  value_t beta, vector_t *y);
+libcsx_error_t libcsx_matvec_mult(const matrix_t *A, scalar_t alpha, vector_t *x,
+                                  scalar_t beta, vector_t *y);
 
 /**
  *  Returns the value of the corresponding element in (row, column), where
@@ -128,14 +116,7 @@ index_t libcsx_mat_get_nrows(const matrix_t *A);
  */
 index_t libcsx_mat_get_ncols(const matrix_t *A);
 
-/**
- *  This routine releases any memory internally used by the sparse matrix
- *  handle A.
- *
- *  @param[in] A            the tuned matrix.
- *  @return                 an error code.
- */
-libcsx_error_t libcsx_mat_destroy_tuned(matrix_t *A);
+perm_t *libcsx_mat_get_perm(const matrix_t *A);
 
 /**
  *  This routine releases any memory internally used by the sparse input
@@ -145,6 +126,15 @@ libcsx_error_t libcsx_mat_destroy_tuned(matrix_t *A);
  *  @return                 an error code.
  */
 libcsx_error_t libcsx_mat_destroy_input(input_t *A);
+
+/**
+ *  This routine releases any memory internally used by the sparse matrix
+ *  handle A.
+ *
+ *  @param[in] A            the tuned matrix.
+ *  @return                 an error code.
+ */
+libcsx_error_t libcsx_mat_destroy_tuned(matrix_t *A);
 
 /**
  *  Sets the option #option according to the string #string for the tuning
@@ -169,8 +159,8 @@ void libcsx_set_options_from_env();
  *  @param[in] size         the size of the vector to be created.
  *  @return                 a valid vector object.
  */
-vector_t *vec_create(unsigned long size, void *mat);
-vector_t *vec_create_numa(unsigned long size, matrix_t *mat);
+vector_t *vec_create(unsigned long size, void *A);
+vector_t *vec_create_numa(unsigned long size, matrix_t *A);
 #ifdef SPM_NUMA
 #   define libcsx_vec_create vec_create_numa
 #else
@@ -185,9 +175,9 @@ vector_t *vec_create_numa(unsigned long size, matrix_t *mat);
  *  @param[in] size         the size of the buffer.
  *  @return                 a valid vector object.
  */
-vector_t *vec_create_from_buff(value_t *buff, unsigned long size, void *mat);
+vector_t *vec_create_from_buff(value_t *buff, unsigned long size, void *A);
 vector_t *vec_create_from_buff_numa(double *buff, unsigned long size, 
-                                    matrix_t *mat);
+                                    matrix_t *A);
 #ifdef SPM_NUMA
 #   define libcsx_vec_create_from_buff vec_create_from_buff_numa
 #else
@@ -200,8 +190,13 @@ vector_t *vec_create_from_buff_numa(double *buff, unsigned long size,
  *  @param[in] size         the size of the vector to be created.
  *  @return                 a valid vector object.
  */
-vector_t *vec_create_random(unsigned long size);
-#define libcsx_vec_create_random vec_create_random
+vector_t *vec_create_random(unsigned long size, void *A);
+vector_t *vec_create_random_numa(unsigned long size, matrix_t *A);
+#ifdef SPM_NUMA
+#   define libcsx_vec_create_random vec_create_random_numa
+#else
+#   define libcsx_vec_create_random vec_create_random
+#endif
 
 /**
  *  Initializes the valid vector object @v with @val.
@@ -244,8 +239,7 @@ void vec_init_rand_range(vector_t *v, double max, double min);
  *  @param[in] idx          an index inside the vector.
  *  @param[in] val          the value to be set.
  */
-void vec_set_entry(vector_t *v, int idx, double val);
-#define libcsx_vec_set_entry vec_set_entry
+libcsx_error_t libcsx_vec_set_entry(vector_t *v, int idx, double val);
 
 /**
  *  \brief v2 -> num * v1
@@ -372,8 +366,7 @@ double vec_mul_part(const vector_t *v1, const vector_t *v2,
  *  @param[in] p            a permutation.
  *  @return                 the permuted input vector.
  */
-vector_t *vec_reorder(const vector_t *v, perm_t *p);
-#define libcsx_vec_reorder vec_reorder
+vector_t *libcsx_vec_reorder(const vector_t *v, perm_t *p);
 
 /**
  *  Restores the permuted input vector @v to its original ordering, according
@@ -383,8 +376,7 @@ vector_t *vec_reorder(const vector_t *v, perm_t *p);
  *  @param[in] p            a permutation.
  *  @return                 the permuted input vector in its original ordering.
  */
-vector_t *vec_inv_reorder(const vector_t *v, perm_t *p);
-#define libcsx_vec_inv_reorder vec_inv_reorder
+vector_t *libcsx_vec_inv_reorder(const vector_t *v, perm_t *p);
 
 /**
  *  Copies the elements of @v1 to @v2.

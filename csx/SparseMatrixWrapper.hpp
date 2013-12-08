@@ -12,7 +12,7 @@
 
 #ifdef __cplusplus
 
-#include "../C-API/mattype.h"
+#include "types.h"
 
 extern "C" {
 #endif

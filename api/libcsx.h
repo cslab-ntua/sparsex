@@ -13,6 +13,6 @@
 #include "common.h"
 #include "error.h"
 #include "mat_vec.h"
-#include "mattype.h"
+#include "types.h"
 
 #endif  // LIBCSX_H

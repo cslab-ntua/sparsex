@@ -14,7 +14,7 @@
 #ifndef CSX_UTIL_HPP
 #define CSX_UTIL_HPP
 
-#include "../C-API/mattype.h"
+#include "Allocators.hpp"
 #include "Csx.hpp"
 #include "SpmMt.hpp"
 #include <cstdlib>
@@ -112,39 +112,87 @@ unsigned long CsxSymSize(spm_mt_t *spm_mt)
 template<typename ValueType>
 void PutSpmMt(spm_mt_t *spm_mt)
 {
+#ifdef SPM_NUMA
+        if (spm_mt->interleaved) {
+            size_t total_ctl_size = 0, total_nnz = 0;
+            csx_t<ValueType> *csx = 0;
+            for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
+                if (spm_mt->symmetric) {
+                    csx_sym_t<ValueType> *csx_sym =
+                        (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;           
+                    csx = csx_sym->lower_matrix;
+                } else {
+                    csx = (csx_t<ValueType> *) spm_mt->spm_threads[i].spm;
+                }
+
+                total_nnz += csx->nnz;
+                total_ctl_size += csx->ctl_size;
+                if (i != 0) {
+                    csx->ctl = 0;
+                    csx->values = 0;
+                }
+            }
+
+            NumaAllocator &alloc = NumaAllocator::GetInstance();
+            if (spm_mt->symmetric) {
+                csx_sym_t<ValueType> *csx_sym =
+                    (csx_sym_t<ValueType> *) spm_mt->spm_threads[0].spm;
+                csx = csx_sym->lower_matrix;
+            } else {
+                csx = (csx_t<ValueType> *) spm_mt->spm_threads[0].spm;
+            }
+
+            alloc.Destroy(csx->ctl, total_ctl_size);
+            alloc.Destroy(csx->values, total_nnz);
+        }
+#endif
+
     if (!spm_mt->symmetric) {
-        for (unsigned i = 0; i < spm_mt->nr_threads; i++) {
+        for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
             csx_t<ValueType> *csx = (csx_t<ValueType> *)
                 spm_mt->spm_threads[i].spm;
             DestroyCsx(csx);
         }
     } else {
-        for (unsigned i = 0; i < spm_mt->nr_threads; i++) {
+        for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
             csx_sym_t<ValueType> *csx_sym =
                 (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;           
             DestroyCsxSym(csx_sym);
-//            free(spm_mt->spm_threads[i].map->cpus);
-//            free(spm_mt->spm_threads[i].map->elems_pos);
-//            free(spm_mt->spm_threads[i].map);
+#ifdef SPM_NUMA
+            NumaAllocator &alloc = NumaAllocator::GetInstance();
+            alloc.Destroy(spm_mt->spm_threads[i].map->cpus, 
+                          spm_mt->spm_threads[i].map->length);
+            alloc.Destroy(spm_mt->spm_threads[i].map->elems_pos,
+                          spm_mt->spm_threads[i].map->length);
+            alloc.Destroy(spm_mt->spm_threads[i].map);
+#else
+            delete[] spm_mt->spm_threads[i].map->cpus;
+            delete[] spm_mt->spm_threads[i].map->elems_pos;
+            delete spm_mt->spm_threads[i].map;
+#endif
         }
     }
-    free(spm_mt->spm_threads);
-    free(spm_mt);
+
+    delete[] spm_mt->spm_threads;
+    delete spm_mt;
 }
 
 template<typename ValueType>
 static void DestroyCsx(csx_t<ValueType> *csx)
 {
 #ifdef SPM_NUMA
-    free_interleaved(csx->ctl, csx->ctl_size*sizeof(*csx->ctl));
-    free_interleaved(csx->values, csx->nnz*sizeof(*csx->values));
-    free_interleaved(csx->rows_info, csx->nrows*sizeof(*csx->rows_info));
-    free_interleaved(csx, sizeof(*csx));
+    NumaAllocator &alloc = NumaAllocator::GetInstance();
+    if (csx->ctl && csx->values) {
+        alloc.Destroy(csx->ctl, csx->ctl_size);
+        alloc.Destroy(csx->values, csx->nnz);
+    }
+    alloc.Destroy(csx->rows_info, csx->nrows);
+    alloc.Destroy(csx);
 #else
-    free(csx->ctl);
-    free(csx->values);
-    free(csx->rows_info);
-    free(csx);
+    delete[] csx->ctl;
+    delete[] csx->values;
+    delete[] csx->rows_info;
+    delete csx;
 #endif
 }
 
@@ -153,22 +201,17 @@ static void DestroyCsxSym(csx_sym_t<ValueType> *csx_sym)
 {
 #ifdef SPM_NUMA
     uint64_t diag_size = csx_sym->lower_matrix->nrows;
-#endif    
+#endif
+
     DestroyCsx(csx_sym->lower_matrix);
 #ifdef SPM_NUMA
-    numa_free(csx_sym->dvalues, diag_size*sizeof(*csx_sym->dvalues));
-    numa_free(csx_sym, sizeof(*csx_sym));
+    NumaAllocator &alloc = NumaAllocator::GetInstance();
+    alloc.Destroy(csx_sym->dvalues, diag_size);
+    alloc.Destroy(csx_sym);
 #else
-    free(csx_sym->dvalues);
-    free(csx_sym);
+    delete[] csx_sym->dvalues;
+    delete csx_sym;
 #endif
 }
-
-/*
- * Explicit instantiation declarations: prevent implicit instantiations.
- * Code that would otherwise cause an implicit instantiation has to
- * use the explicit instatiation definition provided in the .cc
- */
-//extern template void PutSpmMt<value_t>(spm_mt_t *);
 
 #endif  // CSX_UTIL_HPP

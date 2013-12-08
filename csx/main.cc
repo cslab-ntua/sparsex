@@ -1,4 +1,4 @@
-#include "../C-API/mattype.h"
+#include "types.h"
 #include "CsxBench.hpp"
 #include "LoggerUtil.hpp"
 #include "SparseMatrix.hpp"
@@ -91,34 +91,14 @@ int main(int argc, char **argv)
         BenchLoop<value_t>(spm_mt, argv[0]);
         double imbalance = CalcImbalance(spm_mt);
         std::cout << "Load imbalance: " << 100*imbalance << "%\n";
-        // std::cout << "Dumping Csx to binary file...\n";
-        // matrix.Save("csx_file");
+        std::cout << "Dumping Csx to binary file...\n";
+        matrix.Save("csx_file");
         std::cout << "Convert to internal repr.: " << internal_time << std::endl;
         std::cout << "Convert to CSX: " << csx_time << std::endl;
-        // std::cout << "Dump to binary file: " << dump_time << std::endl;
+        std::cout << "Dump to binary file: " << dump_time << std::endl;
         std::cout << "==== END BENCHMARK ====" << std::endl;
         matrix.Destroy();
     }
 
     return 0;
 }
-
-        // std::cout << "Assigning new values to all matrix entries..." << std::endl;
-        // timing::Timer timer;
-        // MMF<index_t, value_t> mmf(argv[0]);
-        // MMF<index_t, value_t>::iterator iter = mmf.begin();
-        // MMF<index_t, value_t>::iterator iter_end = mmf.end();
-        // if (spm_mt->symmetric) {
-        //     timer.Start();
-        //     for (;iter != iter_end; ++iter) {
-        //         SetValueCsxSym<int, double>(spm_mt, (*iter).row, (*iter).col, (*iter).val);
-        //     }
-        // } else {
-        //     timer.Start();
-        //     for (;iter != iter_end; ++iter) {
-        //         SetValueCsx<int, double>(spm_mt, (*iter).row, (*iter).col, (*iter).val);
-        //     }
-        //     timer.Pause();
-        // } 
-        // double assign_time = timer.ElapsedTime();
-        // std::cout << "m: " << basename(argv[0]) << " at: " << assign_time << std::endl;
