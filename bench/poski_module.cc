@@ -49,14 +49,17 @@ void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
 
     /* 4. SpMV benchmarking phase */
     std::vector<double> mt(OUTER_LOOPS);
-    SPMV_BENCH(poski_MatMult(A_tunable, OP_NORMAL, ALPHA, x_view, BETA, 
-                             y_view));
+    for (unsigned int i = 0; i < OUTER_LOOPS; i++) {
+        t.Clear();
+        t.Start();
+        for (unsigned long int j = 0; j < LOOPS; j++) {
+            poski_MatMult(A_tunable, OP_NORMAL, ALPHA, x_view, BETA, y_view);
+        }
+        t.Pause();
+        mt[i] = t.ElapsedTime();
+    }
+
     sort(mt.begin(), mt.end());
-    // for (size_t i=0;i<OUTER_LOOPS;i++) {
-    //     cout << "m: " << MATRIX
-    //          << " mt: " << mt[i]
-    //          << " flops: " << (double)(LOOPS*nnz*2)/((double)1000*1000*mt[i]) << endl;
-    // }
     double mt_median = 
         (OUTER_LOOPS % 2) ? mt[((OUTER_LOOPS+1)/2)-1]
         : ((mt[OUTER_LOOPS/2] + mt[OUTER_LOOPS/2+1])/2);  

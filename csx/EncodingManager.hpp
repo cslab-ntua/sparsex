@@ -681,7 +681,8 @@ void EncodingManager<IndexType, ValueType>::GenAllStats()
             size_t window_size =
                          sort_splits_[selected_splits_[i]+1] - window_start;
 
-            if (window_start >= sort_splits_[selected_splits_[i]+1]) 
+            // Quick fix for windows of size 0
+            if (window_start >= sort_splits_[selected_splits_[i]+1] - 1)
                 break;
             SparsePartition<IndexType, ValueType> *window =
                 spm_->GetWindow(window_start, window_size);

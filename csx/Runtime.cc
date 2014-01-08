@@ -66,29 +66,29 @@ RuntimeConfiguration::PropertyMap RuntimeConfiguration::DefaultProperties()
 void RuntimeConfiguration::InitPropertyMnemonics()
 {
     mnemonic_map_.insert(mnemonic_type(RtNrThreads, 
-                                       "libcsx.rt.nr_threads"));
+                                       "spx.rt.nr_threads"));
     mnemonic_map_.insert(mnemonic_type(RtCpuAffinity, 
-                                       "libcsx.rt.cpu_affinity"));
+                                       "spx.rt.cpu_affinity"));
     mnemonic_map_.insert(mnemonic_type(PreprocXform, 
-                                       "libcsx.preproc.xform"));
+                                       "spx.preproc.xform"));
     mnemonic_map_.insert(mnemonic_type(PreprocMethod, 
-                                       "libcsx.preproc.sampling"));
+                                       "spx.preproc.sampling"));
     mnemonic_map_.insert(mnemonic_type(PreprocNrSamples,
-                                       "libcsx.preproc.sampling.nr_samples"));
+                                       "spx.preproc.sampling.nr_samples"));
     mnemonic_map_.insert(mnemonic_type(PreprocSamplingPortion,
-                                       "libcsx.preproc.sampling.portion"));
+                                       "spx.preproc.sampling.portion"));
     mnemonic_map_.insert(mnemonic_type(MatrixSymmetric,
-                                       "libcsx.matrix.symmetric"));
+                                       "spx.matrix.symmetric"));
     mnemonic_map_.insert(mnemonic_type(MatrixSplitBlocks, 
-                                       "libcsx.matrix.split_blocks"));
+                                       "spx.matrix.split_blocks"));
     mnemonic_map_.insert(mnemonic_type(MatrixFullColind,
-                                       "libcsx.matrix.full_colind"));
+                                       "spx.matrix.full_colind"));
     mnemonic_map_.insert(mnemonic_type(MatrixMinUnitSize,
-                                       "libcsx.matrix.min_unit_size"));
+                                       "spx.matrix.min_unit_size"));
     mnemonic_map_.insert(mnemonic_type(MatrixMaxUnitSize,
-                                       "libcsx.matrix.max_unit_size"));
+                                       "spx.matrix.max_unit_size"));
     mnemonic_map_.insert(mnemonic_type(MatrixMinCoverage,
-                                       "libcsx.matrix.min_coverage"));
+                                       "spx.matrix.min_coverage"));
 }
 
 RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
@@ -138,9 +138,11 @@ vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
 
     boost::split(mt_split, str, boost::algorithm::is_any_of(","),
                  boost::algorithm::token_compress_on);
-    
+
+    // Clear in case it has been already set.
+    affinity.clear();
     for (size_t i = 0; i < mt_split.size(); ++i) {
-        affinity.push_back(boost::lexical_cast<size_t,string>(mt_split[i]));
+        affinity.push_back(boost::lexical_cast<size_t, string>(mt_split[i]));
     }
     
     // Printing

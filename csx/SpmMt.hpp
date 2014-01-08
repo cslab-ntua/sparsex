@@ -44,6 +44,7 @@ struct spm_mt {
 #ifdef SPM_NUMA
     bool interleaved;
 #endif
+    struct vec **local_buffers;
 };
 typedef struct spm_mt spm_mt_t;
 

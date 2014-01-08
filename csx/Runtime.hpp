@@ -74,12 +74,20 @@ public:
 
     void SetProperty(const Property &key, const string &value)
     {
-        property_map_[key] = value;
+        try {
+            property_map_.at(key) = value;
+        } catch (const std::out_of_range& oor) {
+            LOG_WARNING << "key doesn't exist, so option will not be set\n";
+        }
     }
 
     Property GetMnemonic(const string &key) const
     {
         MnemonicMap::right_const_iterator iter = mnemonic_map_.right.find(key);
+        if (iter == mnemonic_map_.right.end()) {
+            LOG_ERROR << "mnemonic not found\n";
+        }
+
         return iter->second;
     }
 
@@ -196,6 +204,7 @@ public:
     ~ThreadContext() 
     {
         delete csxmg_;
+        delete buffer_;
     }
 
     void SetId(size_t id)

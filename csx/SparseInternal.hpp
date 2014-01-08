@@ -123,7 +123,7 @@ void SparseInternal<PartitionType>::BuildPartitions(InputType &input, size_t nr)
         partition = partitions_ + i;
         limit = (nr_nzeros_ - cnt) / (nr - i);
         size_t nnz = partition->SetElems(iter, iter_end, row_start + 1,
-                                         limit, limit + input.GetNrRows() - 1,
+                                         limit, limit + 2 * input.GetNrRows() - 1,
                                          input.GetNrRows() + 1);
         partition->SetNrNonzeros(nnz);
         partition->SetNrRows(partition->GetRowptrSize() - 1);

@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: libcsx.so libcsx.a libtest
+all: libsparsex.so libsparsex.a libtest
 
 ## Configuration
 csx_dir     = ../csx
@@ -8,7 +8,7 @@ logger_dir	= ../csx/logger
 script_dir	= ../scripts
 CC          = gcc
 LD          = gcc
-CFLAGS      = -g -Wall -O3 -Wdisabled-optimization -Winline -fPIC
+CFLAGS      = -g -Wall -O3 -Wno-unused-function -fPIC
 # -Wpadded
 LDFLAGS     = -L$(csx_dir) -Wl,--rpath=$(csx_dir) -L$(logger_dir) -Wl,--rpath=$(logger_dir)
 COMPILE     = $(CC) $(CPPFLAGS) $(CFLAGS)
@@ -27,14 +27,14 @@ LIB_OBJECTS = error.o common.o mat_vec.o
 %.o: %.c %.h
 	$(COMPILE) -c $< -o $@
 
-libcsx.so: $(LIB_OBJECTS)
+libsparsex.so: $(LIB_OBJECTS)
 	$(LINK) -shared -o $@ $^ $(LIBS)
 
-libcsx.a: $(LIB_OBJECTS)
+libsparsex.a: $(LIB_OBJECTS)
 	ar cru $@ $^
 
-libtest: main.o libcsx.so
+libtest: main.o libsparsex.so
 	$(LINK) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f *.o libcsx.so libcsx.a libtest
+	rm -f *.o libsparsex.so libsparsex.a libtest

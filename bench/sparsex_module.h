@@ -1,6 +1,6 @@
 /* -*- C++ -*-
  *
- * libcsx_module.h --  The SpMV kernel with LIBCSX.
+ * sparsex_module.h --  The SpMV kernel implemented with SparseX.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,21 +8,21 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LIBCSX_MODULE_H__
-#define LIBCSX_MODULE_H__
+#ifndef SPARSEX_MODULE_H__
+#define SPARSEX_MODULE_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "libcsx.h"
+#include "sparsex.h"
 
 #ifdef __cplusplus
 }
 #endif
 
 #include <iostream>
-#include "macros.h"
+#include "timer.h"
 
 using namespace std;
 
@@ -33,7 +33,7 @@ extern unsigned int NR_THREADS;
 extern double ALPHA, BETA;
 extern Timer t;
 
-void libcsx_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
-                 int nnz, double *x, double *y);
+void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
+                  int nnz, double *x, double *y);
 
-#endif  // LIBCSX_MODULE_H__
+#endif  // SPARSEX_MODULE_H__

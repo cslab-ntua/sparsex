@@ -1,5 +1,5 @@
 /**
- * libcsx/types.h -- Available indexing and value types.
+ * SparseX/types.h -- Available indexing and value types.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,8 +7,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LIBCSX_TYPES_H
-#define LIBCSX_TYPES_H
+#ifndef SPARSEX_TYPES_H
+#define SPARSEX_TYPES_H
 
 #include <inttypes.h>
 
@@ -36,4 +36,4 @@
 #   define scalar_t double
 #endif
 
-#endif // LIBCSX_MATTYPE_H
+#endif // SPARSEX_MATTYPE_H

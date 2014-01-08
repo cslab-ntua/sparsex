@@ -12,8 +12,8 @@
 #include "CsxMatvec.hpp"
 
 static unsigned int nr_threads = 0;
-static vector_t **temp = NULL;
-static double ALPHA = 0.28, BETA = 1.44;
+static vector_t **temp;
+static double ALPHA = 1, BETA = 1;
 
 static void do_matvec_thread(matvec_params *params)
 {
@@ -87,26 +87,11 @@ void matvec_sym_mt(spm_mt_t *spm_mt, vector_t *x, double alpha, vector_t *y,
 {
     ALPHA = alpha; BETA = beta;
 	nr_threads = spm_mt->nr_threads;
+    temp = spm_mt->local_buffers;
+	temp[0] = y;
     boost::barrier cur_barrier(nr_threads);
     matvec_params *params = (matvec_params *) malloc(sizeof(matvec_params) *
                                                      nr_threads);
-
-	temp = (vector_t **) malloc(nr_threads * sizeof(vector_t *));
-	if (!temp) {
-		perror("malloc");
-		exit(1);
-	}
-	temp[0] = y;
-
-#ifdef SPM_NUMA
-	for (unsigned int i = 1; i < nr_threads; i++) {
-		int node = spm_mt->spm_threads[i].node;
-		temp[i] = vec_create_onnode(y->size, node);
-	}
-#else
-	for (unsigned int i = 1; i < nr_threads; i++)
-		temp[i] = vec_create(y->size, NULL);
-#endif
 
     size_t rows = 0;
 	for (unsigned int i = 0; i < nr_threads; i++) {
@@ -131,8 +116,5 @@ void matvec_sym_mt(spm_mt_t *spm_mt, vector_t *x, double alpha, vector_t *y,
     }
 
     /* Cleanup */
-	for (unsigned int i = 1; i < nr_threads; i++)
-		vec_destroy(temp[i]);
-	free(temp);
     free(params);
 }

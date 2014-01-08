@@ -82,7 +82,7 @@ void *ReorderMMF(void *matrix, index_t **permutation)
 void *TuneCSR(void *matrix, int *symmetric)
 {
     SparseMatrix<CSR<index_t, value_t> > *mat = 
-        (SparseMatrix<CSR<index_t, value_t> > *)matrix;
+        (SparseMatrix<CSR<index_t, value_t> > *) matrix;
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
     rt_context.SetRuntimeContext(config);
@@ -98,7 +98,7 @@ void *TuneCSR(void *matrix, int *symmetric)
 void *TuneMMF(void *matrix, int *symmetric)
 {
     SparseMatrix<MMF<index_t, value_t> > *mat = 
-        (SparseMatrix<MMF<index_t, value_t> > *)matrix;
+        (SparseMatrix<MMF<index_t, value_t> > *) matrix;
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
     rt_context.SetRuntimeContext(config);
@@ -136,7 +136,7 @@ void *LoadTuned(const char *filename, index_t *nr_rows, index_t *nr_cols,
 {
     spm_mt_t *spm_mt = 0;
     csx_t<value_t> *csx = 0;
-    
+
     spm_mt = RestoreCsx<index_t, value_t>(filename, permutation);
 	for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
         csx = (csx_t<value_t> *) spm_mt->spm_threads[i].spm;
@@ -164,16 +164,6 @@ int SetValue(void *matrix, index_t row, index_t col, value_t value)
     return -1;
 }
 
-// uint64_t Size(void *matrix)
-// {
-//     return CsxSize<value_t>(matrix);
-// }
-
-// uint64_t SizeSym(void *matrix)
-// {
-//     return CsxSymSize<value_t>(matrix);
-// }
-
 void DestroyCsx(void *matrix)
 {
     spm_mt_t *spm_mt = (spm_mt_t *) matrix;
@@ -191,5 +181,15 @@ void SetPropertiesFromEnv()
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     config.LoadFromEnv();
 }
+
+// uint64_t Size(void *matrix)
+// {
+//     return CsxSize<value_t>(matrix);
+// }
+
+// uint64_t SizeSym(void *matrix)
+// {
+//     return CsxSymSize<value_t>(matrix);
+// }
 
 }

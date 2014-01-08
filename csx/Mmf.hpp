@@ -144,7 +144,7 @@ public:
         matrix_.reserve(size);
     }
 
-    void InitStream();
+    void ResetStream();
     
     void InsertElement(CooElem<IndexType, ValueType> &elem)
     {
@@ -196,6 +196,11 @@ class MMF<IndexType, ValueType>::iterator
 {
 public:
     iterator() {}
+
+    // In case subsequent calls to DoLoadMatrix() are made
+    ~iterator() {
+        mmf_->ResetStream();
+    }
     
     iterator(MMF *mmf, size_t cnt)
       :
@@ -340,6 +345,7 @@ void MMF<IndexType, ValueType>::ParseMmfHeaderLine(vector<string> &arguments)
         } else {
             // Parse as size line
             file_mode_ = 1;
+            col_wise_ = false;
             return;
         }        
     }
@@ -460,7 +466,7 @@ bool MMF<IndexType, ValueType>::GetNext(IndexType &y, IndexType &x, ValueType &v
 }
 
 template<typename IndexType, typename ValueType>
-void MMF<IndexType, ValueType>::InitStream()
+void MMF<IndexType, ValueType>::ResetStream()
 {
     in.clear();
     in.seekg(0, ios::beg);

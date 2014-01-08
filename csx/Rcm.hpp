@@ -215,7 +215,7 @@ void DoReorder_RCM(MMF<IndexType, ValueType>& mat, vector<size_t> &perm)
     try {
         graph = ConstructGraph_MMF(graph, mat);
     } catch (int e) {
-        mat.InitStream();
+        mat.ResetStream();
         LOG_INFO << "Reordering complete\n";
         return;
     }

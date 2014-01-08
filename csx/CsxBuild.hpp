@@ -157,6 +157,7 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
     timer.Clear();
     timer.Start();
     // DrleMg->MakeEncodeTree();
+    // csx_t<ValueType> *csx = data.GetCsxManager()->MakeCsx(false);
     csx_t<ValueType> *csx = data.GetCsxManager()->MakeCsx(false);
     timer.Pause();
     csx_create_time = timer.ElapsedTime();
@@ -164,8 +165,7 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
     data.GetSpmEncoded()->nr_rows = csx->nrows;
     data.GetSpmEncoded()->row_start = csx->row_start;
 
-#ifdef SPM_NUMA
-#ifdef NUMA_CHECKS
+#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
     int alloc_err = 0;
     alloc_err = check_region(csx->ctl, csx->ctl_size * sizeof(uint8_t),
                              data.GetSpmEncoded()->node);
@@ -180,7 +180,6 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
          << ((alloc_err) ?
              "FAILED (see above for more info)" : "DONE")
          << "\n";
-#endif
 #endif
 
     delete DrleMg;
@@ -232,32 +231,30 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType>
     data.GetSpmEncoded()->row_start = csx->lower_matrix->row_start;
     data.GetSpmEncoded()->nr_rows = csx->lower_matrix->nrows;
    
-#ifdef SPM_NUMA
-    int alloc_err;
-        
-    alloc_err = check_region(csx->lower_matrix->ctl,
-                             csx->lower_matrix->ctl_size * sizeof(uint8_t),
-                             data.GetSpmEncoded()->node);
-    data.GetBuffer() << "allocation check for ctl field... "
-                     << ((alloc_err) ?
-                         "FAILED (see above for more info)" : "DONE")
-                     << "\n";
+#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+    int alloc_err = check_region(csx->lower_matrix->ctl,
+                                 csx->lower_matrix->ctl_size * sizeof(uint8_t),
+                                 data.GetSpmEncoded()->node);
+    cout << "allocation check for ctl field... "
+         << ((alloc_err) ?
+             "FAILED (see above for more info)" : "DONE")
+         << "\n";
 
     alloc_err = check_region(csx->lower_matrix->values,
                              csx->lower_matrix->nnz * sizeof(ValueType),
                              data.GetSpmEncoded()->node);
-    data.GetBuffer() << "allocation check for values field... "
-                     << ((alloc_err) ?
-                         "FAILED (see above for more info)" : "DONE")
-                     << "\n";
+    cout << "allocation check for values field... "
+         << ((alloc_err) ?
+             "FAILED (see above for more info)" : "DONE")
+         << "\n";
                      
     alloc_err = check_region(csx->dvalues,
 	                         csx->lower_matrix->nrows * sizeof(ValueType),
                              data.GetSpmEncoded()->node);
-    data.GetBuffer() << "allocation check for dvalues field... "
-                     << ((alloc_err) ?
-                         "FAILED (see above for more info)" : "DONE")
-                     << "\n";
+    cout << "allocation check for dvalues field... "
+         << ((alloc_err) ?
+             "FAILED (see above for more info)" : "DONE")
+         << "\n";
 #endif
 
     delete DrleMg1;
@@ -509,7 +506,8 @@ void MakeMap(spm_mt_t *spm_mt,
 
     assert(temp_count == map->length);
     spm_thread->map = map;
-#ifdef SPM_NUMA
+
+#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
     int alloc_err = 0;
     for (unsigned int i = 0; i < ncpus; i++) {
         node = spm_mt->spm_threads[i].node;
@@ -521,10 +519,10 @@ void MakeMap(spm_mt_t *spm_mt,
         alloc_err += check_region(map->elems_pos,
                                   map->length * sizeof(unsigned int), node);
     }
-    
-    LOG_INFO << "allocation check for map... "
-             << ((alloc_err) ? "FAILED (see above for more info)" : "DONE")
-             << "\n";
+
+    cout << "allocation check for map... "
+         << ((alloc_err) ? "FAILED (see above for more info)" : "DONE")
+         << "\n";
 #endif
     ///> Print final map.  
     // for (unsigned int i = 0; i < ncpus; i++) {

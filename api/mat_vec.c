@@ -1,5 +1,5 @@
 /**
- * libcsx/mat_vec.c -- Sparse matrix routines.
+ * SparseX/mat_vec.c -- Sparse matrix routines.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -38,41 +38,18 @@ struct input {
     void *mat;      /**< The input matrix representation */
 };
 
-/**
- *  \brief Allocates a matrix structure.
- */
-static void mat_alloc_struct(matrix_t **A)
-{
-    *A = libcsx_malloc(matrix_t, sizeof(matrix_t));
-    (*A)->nrows = 0;
-    (*A)->ncols = 0;
-    (*A)->nnz = 0;
-    (*A)->permutation = INVALID_PERM;
-    (*A)->csx = INVALID_MAT;
-    (*A)->symmetric = 0;
-}
-
-/**
- *  \brief Frees a matrix structure.
- */
-static void mat_free_struct(matrix_t *A)
-{
-    if (A->csx) {
-        DestroyCsx(A->csx);
-    }
-    if (A->permutation) {
-        libcsx_free(A->permutation);
-    }
-
-    libcsx_free(A);
-}
+struct partition {
+    unsigned int nr_partitions;
+    size_t *parts;
+    int *nodes;
+};
 
 /**
  *  \brief Allocates an input structure.
  */
 static void input_alloc_struct(input_t **A)
 {
-    *A = libcsx_malloc(input_t, sizeof(input_t));
+    *A = spx_malloc(input_t, sizeof(input_t));
     (*A)->nrows = 0;
     (*A)->ncols = 0;
     (*A)->nnz = 0;
@@ -93,36 +70,93 @@ static void input_free_struct(input_t *A)
         }
     }
 
-    libcsx_free(A);
+    spx_free(A);
 }
 
-input_t *libcsx_mat_create_csr(index_t *rowptr, index_t *colind, value_t *values,
-                               index_t nr_rows, index_t nr_cols,
-                               property_t indexing)
+/**
+ *  \brief Allocates a matrix structure.
+ */
+static void mat_alloc_struct(matrix_t **A)
+{
+    *A = spx_malloc(matrix_t, sizeof(matrix_t));
+    (*A)->nrows = 0;
+    (*A)->ncols = 0;
+    (*A)->nnz = 0;
+    (*A)->permutation = INVALID_PERM;
+    (*A)->csx = INVALID_MAT;
+    (*A)->symmetric = 0;
+}
+
+/**
+ *  \brief Frees a matrix structure.
+ */
+static void mat_free_struct(matrix_t *A)
+{
+    if (A->csx) {
+        DestroyCsx(A->csx);
+    }
+
+    if (A->permutation) {
+        spx_free(A->permutation);
+    }
+
+    spx_free(A);
+}
+
+/**
+ *  \brief Allocates a partition structure.
+ */
+static void part_alloc_struct(partition_t **p)
+{
+    *p = spx_malloc(partition_t, sizeof(partition_t));
+    (*p)->nr_partitions = 0;
+    (*p)->parts = NULL;
+    (*p)->nodes = NULL;
+}
+
+/**
+ *  \brief Frees a partition structure.
+ */
+static void part_free_struct(partition_t *p)
+{
+    if (p->parts) {
+        spx_free(p->parts);
+    }
+
+    if (p->nodes) {
+        spx_free(p->nodes);
+    }
+
+    spx_free(p);
+}
+
+input_t *spx_input_load_csr(index_t *rowptr, index_t *colind, value_t *values,
+                            index_t nr_rows, index_t nr_cols,
+                            property_t indexing)
 {
     /* Check validity of input arguments */
     if (!check_mat_dim(nr_rows) || !check_mat_dim(nr_cols)) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid matrix dimensions");
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid matrix dimensions");
         return INVALID_INPUT;
     }
 
     if (!check_indexing(indexing)) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid indexing");
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
         return INVALID_INPUT;
     }
 
     if (!rowptr) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid rowptr argument");
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid rowptr argument");
         return INVALID_INPUT;
     }
 
     if (!colind) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid colind argument");
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid colind argument");
         return INVALID_INPUT;
     }
 
     if (!values) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid values argument");
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid values argument");
         return INVALID_INPUT;
     }
 
@@ -135,23 +169,24 @@ input_t *libcsx_mat_create_csr(index_t *rowptr, index_t *colind, value_t *values
     A->nnz = rowptr[nr_rows] - indexing;
     A->mat = CreateCSR(rowptr, colind, values, nr_rows, nr_cols, !indexing);
     if (!A->mat) {
-        SETERROR_1(LIBCSX_ERR_INPUT_MAT, "creating CSR wrapper failed");
+        input_free_struct(A);
+        SETERROR_1(SPX_ERR_INPUT_MAT, "creating CSR wrapper failed");
         return INVALID_INPUT;
     }
 
     return A;
 }
 
-input_t *libcsx_mat_create_mmf(const char *filename)
+input_t *spx_input_load_mmf(const char *filename)
 {
     /* Check validity of input argument */
     if (!filename) {
-        SETERROR_0(LIBCSX_ERR_FILE);
+        SETERROR_0(SPX_ERR_FILE);
         return INVALID_INPUT;
     }
 
     if (access(filename, F_OK | R_OK) == -1) {  //not 100% safe check
-        SETERROR_0(LIBCSX_ERR_FILE);
+        SETERROR_0(SPX_ERR_FILE);
         return INVALID_INPUT;
     }
 
@@ -161,18 +196,33 @@ input_t *libcsx_mat_create_mmf(const char *filename)
     A->type = 'M';
     A->mat = CreateMMF(filename, &(A->nrows), &(A->ncols), &(A->nnz));
     if (!A->mat) {
-        SETERROR_1(LIBCSX_ERR_INPUT_MAT, "loading matrix from MMF file failed");
+        input_free_struct(A);
+        SETERROR_1(SPX_ERR_INPUT_MAT, "loading matrix from MMF file failed");
         return INVALID_INPUT;
     }
 
     return A;
 }
 
-matrix_t *libcsx_mat_tune(input_t *input, ...)
+spx_error_t spx_input_destroy(input_t *A)
+{
+    /* Check validity of input argument */
+    if (!A) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid input handle");
+        return SPX_FAILURE;
+    }
+
+    /* Free allocated memory of matrix handle */
+    input_free_struct(A);
+
+    return SPX_SUCCESS;
+}
+
+matrix_t *spx_mat_tune(input_t *input, ...)
 {
     /* Check validity of input argument */
     if (!input) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid input matrix");
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid input matrix");
         return INVALID_MAT;
     }
 
@@ -201,58 +251,52 @@ matrix_t *libcsx_mat_tune(input_t *input, ...)
         tuned->csx = TuneMMF(input->mat, &(tuned->symmetric));
     }
 
+    if (!tuned->csx) {
+        mat_free_struct(tuned);
+        SETERROR_0(SPX_ERR_TUNED_MAT);
+        return INVALID_MAT;
+    }
+
     tuned->permutation = permutation;
     permutation = INVALID_PERM;
+
+    /* Create local buffers in case of CSX-Sym */
+    if (tuned->symmetric) {
+        spm_mt_t *spm_mt = (spm_mt_t *) tuned->csx;
+        unsigned int nr_threads = spm_mt->nr_threads;
+        /* spm_mt->local_buffers = */
+        /*     spx_malloc(vector_t *, nr_threads*sizeof(vector_t *)); */
+        spm_mt->local_buffers =
+            (vector_t **) malloc(nr_threads*sizeof(vector_t *));
+
+        unsigned int i;
+#ifdef SPM_NUMA
+        for (i = 1; i < nr_threads; i++) {
+            int node = spm_mt->spm_threads[i].node;
+            spm_mt->local_buffers[i] = vec_create_onnode(tuned->nrows, node); // FIXME interleaved ?
+        }
+#else
+        for (i = 1; i < nr_threads; i++)
+            spm_mt->local_buffers[i] = vec_create(tuned->nrows, NULL);
+#endif
+    }
 
     return tuned;
 }
 
-libcsx_error_t libcsx_matvec_mult(const matrix_t *A, scalar_t alpha, vector_t *x,
-                                  scalar_t beta, vector_t *y)
-{
-    /* Check validity of input arguments */
-    if (!A) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid matrix handle");
-        return LIBCSX_ERR_ARG_INVALID;
-    }
-    if (!x) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid vector x");
-        return LIBCSX_ERR_ARG_INVALID;
-    }
-    if (!y) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid vector y");
-        return LIBCSX_ERR_ARG_INVALID;
-    }
-
-    /* Check compatibility between matrix and vector dimensions */
-    if (!check_vec_dim(x, A->ncols) && !check_vec_dim(y, A->nrows)) {
-        SETERROR_0(LIBCSX_ERR_VEC_DIM);
-        return LIBCSX_ERR_VEC_DIM;
-    }
-
-    /* Compute kernel */
-    if (!A->symmetric) {
-        matvec_mt(A->csx, x, alpha, y, beta);
-    } else {
-        matvec_sym_mt(A->csx, x, alpha, y, beta);
-    }
-
-    return LIBCSX_SUCCESS;
-}
-
-libcsx_error_t libcsx_mat_get_entry(const matrix_t *A, index_t row,
-                                    index_t column, value_t *value)
+spx_error_t spx_mat_get_entry(const matrix_t *A, index_t row,
+                              index_t column, value_t *value)
 {
     /* Check validity of input argument */
     if (!A) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid matrix handle");
-        return LIBCSX_ERR_TUNED_MAT;
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid matrix handle");
+        return SPX_FAILURE;
     }
 
     if (row <= 0  || row > A->nrows || 
         column <= 0  || column > A->ncols) {
-        SETERROR_0(LIBCSX_OUT_OF_BOUNDS);
-        return LIBCSX_OUT_OF_BOUNDS;
+        SETERROR_0(SPX_OUT_OF_BOUNDS);
+        return SPX_FAILURE;
     }
 
     /* Search for element */
@@ -263,27 +307,27 @@ libcsx_error_t libcsx_mat_get_entry(const matrix_t *A, index_t row,
 
     int err = GetValue(A->csx, row, column, value);
     if (err != 0) {
-        SETERROR_0(LIBCSX_ERR_ENTRY_NOT_FOUND);
-        return LIBCSX_ERR_ENTRY_NOT_FOUND;
+        SETERROR_0(SPX_ERR_ENTRY_NOT_FOUND);
+        return SPX_FAILURE;
     }
 
-    return LIBCSX_SUCCESS;
+    return SPX_SUCCESS;
 }
 
-libcsx_error_t libcsx_mat_set_entry(matrix_t *A, index_t row, index_t column,
-                                    value_t value)
+spx_error_t spx_mat_set_entry(matrix_t *A, index_t row, index_t column,
+                              value_t value)
 {
     /* Check validity of input arguments */
     if (!A) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid matrix handle");
-        return LIBCSX_ERR_TUNED_MAT;
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid matrix handle");
+        return SPX_FAILURE;
     }
 
     if (row <= 0  || row > A->nrows || 
         column <= 0  || column > A->ncols) {
-        SETERROR_0(LIBCSX_OUT_OF_BOUNDS);
-        SETWARNING(LIBCSX_WARN_ENTRY_NOT_SET);
-        return LIBCSX_OUT_OF_BOUNDS;
+        SETERROR_0(SPX_OUT_OF_BOUNDS);
+        SETWARNING(SPX_WARN_ENTRY_NOT_SET);
+        return SPX_FAILURE;
     }
 
     /* Set new value */
@@ -294,41 +338,41 @@ libcsx_error_t libcsx_mat_set_entry(matrix_t *A, index_t row, index_t column,
 
     int err = SetValue(A->csx, row, column, value);
     if (err != 0) {
-        SETERROR_0(LIBCSX_ERR_ENTRY_NOT_FOUND);
-        return LIBCSX_ERR_ENTRY_NOT_FOUND;
+        SETERROR_0(SPX_ERR_ENTRY_NOT_FOUND);
+        return SPX_FAILURE;
     }
 
-    return LIBCSX_SUCCESS;
+    return SPX_SUCCESS;
 }
 
-libcsx_error_t libcsx_mat_save(const matrix_t *A, const char *filename)
+spx_error_t spx_mat_save(const matrix_t *A, const char *filename)
 {
     /* Check validity of input arguments */
     if (!A) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid matrix handle");
-        return LIBCSX_ERR_TUNED_MAT;
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid matrix handle");
+        return SPX_FAILURE;
     }
 
     if (!filename) {
-        SETWARNING(LIBCSX_WARN_CSXFILE);
+        SETWARNING(SPX_WARN_CSXFILE);
     }
 
     /* Save the tuned matrix */
     SaveTuned(A->csx, filename, A->permutation);
 
-    return LIBCSX_SUCCESS;
+    return SPX_SUCCESS;
 }
 
-matrix_t *libcsx_mat_restore(const char *filename)
+matrix_t *spx_mat_restore(const char *filename)
 {
     /* Check validity of input argument */
     if (!filename) {
-        SETERROR_0(LIBCSX_ERR_FILE);
+        SETERROR_0(SPX_ERR_FILE);
         return INVALID_MAT;
     }
 
     if (access(filename, F_OK | R_OK) == -1) {  //not 100% safe check
-        SETERROR_0(LIBCSX_ERR_FILE);
+        SETERROR_0(SPX_ERR_FILE);
         return INVALID_MAT;
     }
 
@@ -341,175 +385,218 @@ matrix_t *libcsx_mat_restore(const char *filename)
     return A;
 }
 
-index_t libcsx_mat_get_nrows(const matrix_t *A)
+index_t spx_mat_get_nrows(const matrix_t *A)
 {
     return  A->nrows;
 }
 
-index_t libcsx_mat_get_ncols(const matrix_t *A)
+index_t spx_mat_get_ncols(const matrix_t *A)
 {
     return A->ncols;
 }
 
-perm_t *libcsx_mat_get_perm(const matrix_t *A)
+partition_t *spx_mat_get_parts(matrix_t *A)
+{
+#ifdef SPM_NUMA
+    spm_mt_t *spm_mt = (spm_mt_t *) A->csx;
+    partition_t *ret = INVALID_PART;
+    part_alloc_struct(&ret);
+	ret->parts = (size_t *) malloc(sizeof(*ret->parts)*spm_mt->nr_threads);
+	ret->nodes = (int *) malloc(sizeof(*ret->nodes)*spm_mt->nr_threads);
+    ret->nr_partitions = spm_mt->nr_threads;
+
+    unsigned int i;
+	for (i = 0; i < spm_mt->nr_threads; i++) {
+		spm_mt_thread_t *spm = spm_mt->spm_threads + i;
+		ret->parts[i] = spm->nr_rows * sizeof(double);
+		ret->nodes[i] = spm->node;
+	}
+
+    return ret;
+#else
+    return INVALID_PART;
+#endif
+}
+
+perm_t *spx_mat_get_perm(const matrix_t *A)
 {
     return A->permutation;
 }
 
-libcsx_error_t libcsx_mat_destroy_input(input_t *A)
+spx_error_t spx_matvec_mult(scalar_t alpha, const matrix_t *A, vector_t *x,
+                                  scalar_t beta, vector_t *y)
 {
-    /* Check validity of input argument */
+    /* Check validity of input arguments */
     if (!A) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid input handle");
-        return LIBCSX_ERR_INPUT_MAT;
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid matrix handle");
+        return SPX_FAILURE;
     }
 
-    /* Free allocated memory of matrix handle */
-    input_free_struct(A);
+    if (!x) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid vector x");
+        return SPX_FAILURE;
+    }
 
-    return LIBCSX_SUCCESS;
+    if (!y) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid vector y");
+        return SPX_FAILURE;
+    }
+
+    /* Check compatibility between matrix and vector dimensions */
+    if (!check_vec_dim(x, A->ncols) && !check_vec_dim(y, A->nrows)) {
+        SETERROR_0(SPX_ERR_VEC_DIM);
+        return SPX_FAILURE;
+    }
+
+    /* Compute kernel */
+    if (!A->symmetric) {
+        matvec_mt(A->csx, x, alpha, y, beta);
+    } else {
+        matvec_sym_mt(A->csx, x, alpha, y, beta);
+    }
+
+    return SPX_SUCCESS;
 }
 
-libcsx_error_t libcsx_mat_destroy_tuned(matrix_t *A)
+spx_error_t spx_mat_destroy(matrix_t *A)
 {
     /* Check validity of input argument */
     if (!A) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid matrix handle");
-        return LIBCSX_ERR_TUNED_MAT;
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid matrix handle");
+        return SPX_FAILURE;
     }
 
     /* Free allocated memory of matrix handle */
     mat_free_struct(A);
 
-    return LIBCSX_SUCCESS;
+    return SPX_SUCCESS;
 }
 
-void libcsx_set_option(const char *option, const char *value)
+spx_error_t spx_part_destroy(partition_t *p)
+{
+#ifdef SPM_NUMA
+    /* Check validity of input argument */
+    if (!p) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
+        return SPX_FAILURE;
+    }
+
+    /* Free allocated memory of matrix handle */
+    part_free_struct(p);
+#endif
+    return SPX_SUCCESS;
+}
+
+void spx_option_set(const char *option, const char *value)
 {
     SetPropertyByMnemonic(option, value);
 }
 
-void libcsx_set_options_from_env()
+void spx_options_set_from_env()
 {
     SetPropertiesFromEnv();
 }
 
-vector_t *vec_create_numa(unsigned long size, matrix_t *mat)
+vector_t *vec_create_numa(unsigned long size, partition_t *p)
 {
-    spm_mt_t *spm_mt = (spm_mt_t *) mat->csx;
-	size_t *parts = (size_t *) malloc(sizeof(*parts)*spm_mt->nr_threads);
-	int *nodes = (int *) malloc(sizeof(*nodes)*spm_mt->nr_threads);
-	if (!parts || !nodes) {
-		perror("malloc");
-		exit(1);
-	}
-
-    unsigned int i;
-	for (i = 0; i < spm_mt->nr_threads; i++) {
-		spm_mt_thread_t *spm = spm_mt->spm_threads + i;
-		parts[i] = spm->nr_rows * sizeof(double);
-		nodes[i] = spm->node;
-	}
-
-	vector_t *v = vec_create_interleaved(size, parts, spm_mt->nr_threads, nodes);
-#ifdef NUMA_CHECKS
-    /* print_alloc_status("vector", check_interleaved(v->elements, parts, */
-    /*                                                spm_mt->nr_threads, */
-    /*                                                nodes)); */
-#endif
-    free(parts);
-    free(nodes);
-
+	vector_t *v = vec_create_interleaved(size, p->parts, p->nr_partitions,
+                                         p->nodes);
 	return v;
 }
 
 vector_t *vec_create_from_buff_numa(double *buff, unsigned long size,
-                                    matrix_t *mat)
+                                    partition_t *p)
 {
-    vector_t *v = vec_create_numa(size, mat);
+    vector_t *v = vec_create_numa(size, p);
     unsigned int i;
-
-#ifdef NUMA_CHECKS
-    spm_mt_t *spm_mt = (spm_mt_t *) mat->csx;
-	size_t *parts = (size_t *) malloc(sizeof(*parts)*spm_mt->nr_threads);
-	int *nodes = (int *) malloc(sizeof(*nodes)*spm_mt->nr_threads);
-	if (!parts || !nodes) {
-		perror("malloc");
-		exit(1);
-	}
-
-	for (i = 0; i < spm_mt->nr_threads; i++) {
-		spm_mt_thread_t *spm = spm_mt->spm_threads + i;
-		parts[i] = spm->nr_rows * sizeof(double);
-		nodes[i] = spm->node;
-	}
-#endif
     for (i = 0; i < size; i++)
         v->elements[i] = buff[i];
 
-#ifdef NUMA_CHECKS
-    print_alloc_status("vector", check_interleaved(v->elements, parts,
-                                                   spm_mt->nr_threads,
-                                                   nodes));
-    free(parts);
-    free(nodes);
+#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+    print_alloc_status("vector", check_interleaved(v->elements, p->parts,
+                                                   p->nr_partitions,
+                                                   p->nodes));
 #endif
 
     return v;
 }
 
-vector_t *vec_create_random_numa(unsigned long size, matrix_t *A)
+vector_t *vec_create_random_numa(unsigned long size, partition_t *p)
 {
-    vector_t *v = vec_create_numa(size, A);
+    vector_t *v = vec_create_numa(size, p);
     vec_init_rand_range(v, (double) -0.01, (double) 0.1);
+
+#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+    print_alloc_status("vector", check_interleaved(v->elements, p->parts,
+                                                   p->nr_partitions,
+                                                   p->nodes));
+#endif
 
     return v;
 }
 
-libcsx_error_t libcsx_vec_set_entry(vector_t *v, int idx, double val)
+spx_error_t spx_vec_set_entry(vector_t *v, int idx, double val)
 {
     if (idx <= 0  || idx > v->size) {
-        SETERROR_0(LIBCSX_OUT_OF_BOUNDS);
-        SETWARNING(LIBCSX_WARN_ENTRY_NOT_SET);
-        return LIBCSX_OUT_OF_BOUNDS;
+        SETERROR_0(SPX_OUT_OF_BOUNDS);
+        SETWARNING(SPX_WARN_ENTRY_NOT_SET);
+        return SPX_FAILURE;
     }
 
     vec_set_entry(v, idx, val);
-    return LIBCSX_SUCCESS;
+
+    return SPX_SUCCESS;
 }
 
-vector_t *libcsx_vec_reorder(const vector_t *v, perm_t *p)
+spx_error_t spx_vec_reorder(vector_t *v, perm_t *p)
 {
     unsigned long i;
     vector_t *permuted_v = NULL;
 
     if (p == INVALID_PERM) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid permutation");
-        return INVALID_VEC;
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid permutation");
+        return SPX_FAILURE;
     }
 
-    permuted_v = libcsx_vec_create(v->size, NULL);
+    permuted_v = vec_create(v->size, NULL);
     for (i = 0; i < v->size; i++) {
         permuted_v->elements[p[i]] = v->elements[i];
     }
 
-    return permuted_v;
+#ifdef SPM_NUMA
+    vec_copy(permuted_v, v);
+    vec_destroy(permuted_v);
+#else
+    v->elements = permuted_v->elements;
+    permuted_v->elements = NULL;
+    permuted_v = NULL;
+#endif
+    return SPX_SUCCESS;
 }
 
-vector_t *libcsx_vec_inv_reorder(const vector_t *v, perm_t *p)
+spx_error_t spx_vec_inv_reorder(vector_t *v, perm_t *p)
 {
     unsigned long i;
     vector_t *permuted_v = NULL;
 
+    //check v1 v2 dimensions
     if (p == INVALID_PERM) {
-        SETERROR_1(LIBCSX_ERR_ARG_INVALID, "invalid permutation");
-        return INVALID_VEC;
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid permutation");
+        return SPX_FAILURE;
     }
 
-    permuted_v = libcsx_vec_create(v->size, NULL);
+    permuted_v = vec_create(v->size, NULL);
     for (i = 0; i < v->size; i++) {
         permuted_v->elements[i] = v->elements[p[i]];
     }
 
-    return permuted_v;
+#ifdef SPM_NUMA
+    vec_copy(permuted_v, v);
+    vec_destroy(permuted_v);
+#else
+    v->elements = permuted_v->elements;
+    permuted_v->elements = NULL;
+    permuted_v = NULL;
+#endif
+    return SPX_SUCCESS;
 }

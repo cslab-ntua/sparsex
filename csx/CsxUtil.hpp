@@ -189,7 +189,8 @@ static void DestroyCsx(csx_t<ValueType> *csx)
     alloc.Destroy(csx->rows_info, csx->nrows);
     alloc.Destroy(csx);
 #else
-    delete[] csx->ctl;
+    StdAllocator &alloc = StdAllocator::GetInstance();
+    alloc.Destroy(csx->ctl, csx->ctl_size);
     delete[] csx->values;
     delete[] csx->rows_info;
     delete csx;

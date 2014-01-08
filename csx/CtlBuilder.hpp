@@ -30,7 +30,7 @@ public:
 
     uint8_t *Finalize()
     {
-        ctl_da_.ShrinkToFit();
+        // ctl_da_.ShrinkToFit();
         return ctl_da_.TakeElems();
     }
 

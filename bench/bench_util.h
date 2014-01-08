@@ -16,15 +16,9 @@
 #include <dirent.h>
 #include <boost/function.hpp>
 
-#include "libcsx_module.h"
-
-#ifdef BENCH_MKL
-#include "mkl_module.h"
-#endif
-
-#ifdef BENCH_POSKI
-#include "poski_module.h"
-#endif
+#include "sparsex_module.h"
+// #include "mkl_module.h"
+// #include "poski_module.h"
 
 using namespace std;
 
@@ -32,7 +26,7 @@ namespace bench {
 
 /* The available libraries */
 enum library {
-    LIBCSX,
+    SparseX,
     MKL,
     pOSKI
 };

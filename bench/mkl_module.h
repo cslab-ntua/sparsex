@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include "mkl.h"
-#include "macros.h"
+#include "timer.h"
 
 using namespace std;
 

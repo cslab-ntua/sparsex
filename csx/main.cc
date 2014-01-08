@@ -91,11 +91,11 @@ int main(int argc, char **argv)
         BenchLoop<value_t>(spm_mt, argv[0]);
         double imbalance = CalcImbalance(spm_mt);
         std::cout << "Load imbalance: " << 100*imbalance << "%\n";
-        std::cout << "Dumping Csx to binary file...\n";
-        matrix.Save("csx_file");
+        // std::cout << "Dumping Csx to binary file...\n";
+        // matrix.Save("csx_file");
         std::cout << "Convert to internal repr.: " << internal_time << std::endl;
         std::cout << "Convert to CSX: " << csx_time << std::endl;
-        std::cout << "Dump to binary file: " << dump_time << std::endl;
+        // std::cout << "Dump to binary file: " << dump_time << std::endl;
         std::cout << "==== END BENCHMARK ====" << std::endl;
         matrix.Destroy();
     }

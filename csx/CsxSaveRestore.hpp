@@ -212,16 +212,6 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
             (total_ctlsize * sizeof(uint8_t), ctl_parts, nr_threads, ctl_nodes);
         ValueType *values_interleaved = (ValueType *) alloc_interleaved
             (total_nnz * sizeof(ValueType), val_parts, nr_threads, val_nodes);
-
-#ifdef NUMA_CHECKS
-        int alloc_err = check_interleaved(ctl_interleaved, ctl_parts, nr_threads,
-                                          ctl_nodes);
-        print_alloc_status("ctl_interleaved", alloc_err);
-        alloc_err = check_interleaved(values_interleaved, val_parts, nr_threads,
-				      val_nodes);
-        print_alloc_status("values_interleaved", alloc_err);
-#endif
-
         size_t values_index = 0, ctl_index = 0;
 		int cpu = sched_getcpu();
         int node = numa_node_of_cpu(cpu);
@@ -322,6 +312,14 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
         delete[] Jits;
 
 #ifdef SPM_NUMA
+#ifdef NUMA_CHECKS
+        int alloc_err = check_interleaved(ctl_interleaved, ctl_parts, nr_threads,
+                                          ctl_nodes);
+        print_alloc_status("ctl_interleaved", alloc_err);
+        alloc_err = check_interleaved(values_interleaved, val_parts, nr_threads,
+				      val_nodes);
+        print_alloc_status("values_interleaved", alloc_err);
+#endif
         free(val_parts);
         free(ctl_parts);
         free(val_nodes);

@@ -198,6 +198,7 @@ float SPMV_NAME(_bench_kernel_mt)(spm_mt_t *spm_mt, unsigned long loops,
     int alloc_err = 0;
     x = VECTOR_NAME(_create_interleaved)(ncols, xparts, spm_mt->nr_threads,
                                          xnodes);
+    VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -0.01, (ELEM_TYPE) 0.1);
     alloc_err = check_interleaved(x->elements, xparts, spm_mt->nr_threads,
                                   xnodes);
     print_alloc_status("input vector", alloc_err);
@@ -205,19 +206,20 @@ float SPMV_NAME(_bench_kernel_mt)(spm_mt_t *spm_mt, unsigned long loops,
     // Allocate an interleaved y.
     y = VECTOR_NAME(_create_interleaved)(nrows, yparts, spm_mt->nr_threads,
                                          ynodes);
+    VECTOR_NAME(_init_rand_range)(y, (ELEM_TYPE) -0.01, (ELEM_TYPE) 0.1);
     alloc_err = check_interleaved(y->elements, yparts, spm_mt->nr_threads,
                                   ynodes);
     print_alloc_status("output vector", alloc_err);
 
-    tmp = VECTOR_NAME(_create_interleaved)(nrows, xparts, spm_mt->nr_threads,
-                                           xnodes);
+    tmp = VECTOR_NAME(_create_interleaved)(nrows, tparts, spm_mt->nr_threads,
+                                           tnodes);
 #else
     x = VECTOR_NAME(_create)(ncols);
     y = VECTOR_NAME(_create)(nrows);
     tmp = VECTOR_NAME(_create)(nrows);
-#endif
     VECTOR_NAME(_init_rand_range)(x, (ELEM_TYPE) -0.01, (ELEM_TYPE) 0.1);
     VECTOR_NAME(_init_rand_range)(y, (ELEM_TYPE) -0.01, (ELEM_TYPE) 0.1);
+#endif
     VECTOR_NAME(_init)(tmp, 0);
 
 	err = pthread_barrier_init(&barrier, NULL, spm_mt->nr_threads);

@@ -1,5 +1,5 @@
 /**
- * libcsx/common.h -- Common utilities.
+ * SparseX/common.h -- Common utilities.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,8 +7,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LIBCSX_COMMON_H
-#define LIBCSX_COMMON_H
+#ifndef SPARSEX_COMMON_H
+#define SPARSEX_COMMON_H
 
 #include "error.h"
 #include "LoggerUtil.hpp"
@@ -35,14 +35,20 @@ typedef struct input input_t;
 /**
  *  \brief Matrix property type.
  */
+typedef struct partition partition_t;
+
+/**
+ *  \brief Matrix property type.
+ */
 typedef int property_t;
 
 #define INVALID_INPUT ((input_t *) NULL)
 #define INVALID_MAT ((matrix_t *) NULL)
 #define INVALID_VEC ((vector_t *) NULL)
+#define INVALID_PART ((partition_t *) NULL)
 #define INVALID_PERM ((perm_t *) NULL)
 
-#define OP_REORDER          1
+#define OP_REORDER          42
 #define INDEXING_ZERO_BASED 0
 #define INDEXING_ONE_BASED  1
 
@@ -68,43 +74,43 @@ int check_vec_dim(const vector_t *x, unsigned long dim)
  *  \brief Logging utilities.
  */
 static inline
-void log_disable_all()
+void spx_log_disable_all()
 {
     DisableLogging();
 }
 
 static inline
-void log_disable_error()
+void spx_log_disable_error()
 {
     DisableError();
 }
 
 static inline
-void log_disable_warning()
+void spx_log_disable_warning()
 {
     DisableWarning();
 }
 
 static inline
-void log_disable_info()
+void spx_log_disable_info()
 {
     DisableInfo();
 }
 
 static inline 
-void log_disable_debug()
+void spx_log_disable_debug()
 {
     DisableDebug();
 }
 
 static inline
-void log_enable_all_console()
+void spx_log_enable_all_console()
 {
     AlwaysUseConsole();
 }
 
 static inline
-void log_enable_all_file(const char *file)
+void spx_log_enable_all_file(const char *file)
 {
     AlwaysUseFile(file);
 }
@@ -112,12 +118,17 @@ void log_enable_all_file(const char *file)
 /**
  *  \brief Library initialization routine.
  */
-void libcsx_init();
+void spx_init();
+
+/**
+ *  \brief Library shutdown routine.
+ */
+void spx_finalize();
 
 /**
  *  \brief malloc() wrapper.
  */
-#define libcsx_malloc(type, size) \
+#define spx_malloc(type, size) \
 	(type *)malloc_internal(size, __FILE__, __LINE__, __FUNCTION__)
 void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
                       const char *function);
@@ -125,9 +136,9 @@ void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
 /**
  *  \brief free() wrapper.
  */
-#define libcsx_free(object) \
+#define spx_free(object) \
     free_internal(object, __FILE__, __LINE__, __FUNCTION__)
 void free_internal(void *ptr, const char *sourcefile, unsigned long lineno,
                    const char *function);
 
-#endif // LIBCSX_COMMON_H
+#endif // SPARSEX_COMMON_H

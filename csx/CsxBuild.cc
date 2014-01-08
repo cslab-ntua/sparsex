@@ -20,6 +20,7 @@ spm_mt_t *PrepareSpmMt()
 
     spm_mt = new spm_mt_t;
     spm_mt->nr_threads = rt_context.GetNrThreads();
+    spm_mt->local_buffers = NULL;
 #ifdef SPM_NUMA
     spm_mt->interleaved = false;
 #endif

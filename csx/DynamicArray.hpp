@@ -69,8 +69,14 @@ public:
             size_ = nr_elems;
         }
 
-        elems_ = alloc_.reallocate(capacity_, nr_elems, elems_);
-        capacity_ = nr_elems;
+        // We can't reallocate to 0!
+        if (nr_elems == 0) {
+            elems_ = alloc_.reallocate(capacity_, 1, elems_);
+            capacity_ = 1;
+        } else { 
+            elems_ = alloc_.reallocate(capacity_, nr_elems, elems_);
+            capacity_ = nr_elems;
+        }
     }
 
     const T *GetElems() const
@@ -102,7 +108,8 @@ public:
     void ShrinkToFit()
     {
         Resize(size_);
-        assert((size_ == capacity_) && "[BUG] shrink failed");
+        if (size_)
+            assert((size_ == capacity_) && "[BUG] shrink failed");
     }
 
     Allocator &GetAllocator()

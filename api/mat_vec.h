@@ -1,5 +1,5 @@
 /**
- * libcsx/mat_vec.h -- Sparse matrix routines.
+ * SparseX/mat_vec.h -- Sparse matrix routines.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,8 +7,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LIBCSX_MAT_VEC_H
-#define LIBCSX_MAT_VEC_H
+#ifndef SPARSEX_MAT_VEC_H
+#define SPARSEX_MAT_VEC_H
 
 #include "common.h"
 
@@ -19,47 +19,42 @@
  *  @param[in] rowptr       array "rowptr" of CSR format.
  *  @param[in] colind       array "colind" of CSR format.
  *  @param[in] values       array "values" of CSR format.
- *  @param[in] nr_rosw      number of rows.
+ *  @param[in] nr_rows      number of rows.
  *  @param[in] nr_cols      number of columns.
- *  @param[in] zero_based   indexing.
+ *  @param[in] indexing     indexing.
  *  @return                 a handle to the input matrix.
  */
-input_t *libcsx_mat_create_csr(index_t *rowptr, index_t *colind, value_t *values,
-                               index_t nr_rows, index_t nr_cols, 
-                               property_t indexing);
+input_t *spx_input_load_csr(index_t *rowptr, index_t *colind, value_t *values,
+                            index_t nr_rows, index_t nr_cols, 
+                            property_t indexing);
 
 /**
  *  Creates and returns a valid tunable matrix object from a file in the
- *  Matrix Market Format (MMF).
+ *  Matrix Market File Format (MMF).
  *
  *  @param[in] filename     name of the file where the matrix is kept.
  *  @return                 a handle to the input matrix.
  */
-input_t *libcsx_mat_create_mmf(const char *filename);
+input_t *spx_input_load_mmf(const char *filename);
 
 /**
- *  Converts the input matrix in the CSX format according to the options set.
+ *  This routine releases any memory internally used by the sparse input
+ *  handle A.
+ *
+ *  @param[in] A            the input matrix.
+ *  @return                 an error code.
+ */
+spx_error_t spx_input_destroy(input_t *A);
+
+/**
+ *  Converts the input matrix into the CSX format.
  *
  *  @param[in] input        the input matrix.
- *  @param[in] ...          optional flag that indicates whether the input 
+ *  @param[in] ...          optional flag that indicates whether the matrix 
  *                          should be reordered, <OP_REORDER>.
  *  @return                 a handle to the tuned matrix.
  */
-matrix_t *libcsx_mat_tune(input_t *input, ...);
-
-/**
- *  This routines performs a matrix-vector multiplication defined as:
- *                  y <-- alpha*A*x + beta*y
- *
- *  @param[in] A            the tuned matrix.
- *  @param[in] alpha        a scalar.
- *  @param[in] x            a dense vector.
- *  @param[in] beta         a scalar.
- *  @param[in] y            a dense vector.
- *  @return                 an error code.
- */
-libcsx_error_t libcsx_matvec_mult(const matrix_t *A, scalar_t alpha, vector_t *x,
-                                  scalar_t beta, vector_t *y);
+matrix_t *spx_mat_tune(input_t *input, ...);
 
 /**
  *  Returns the value of the corresponding element in (row, column), where
@@ -69,11 +64,11 @@ libcsx_error_t libcsx_matvec_mult(const matrix_t *A, scalar_t alpha, vector_t *x
  *  @param[in] A            the tuned matrix.
  *  @param[in] row          the row of the element to be retrieved.
  *  @param[in] column       the column of the element to be retrieved.
- *  @param[out] value       the value of the element (row, column).
+ *  @param[out] value       the value of the element in (row, column).
  *  @return                 an error code.
  */
-libcsx_error_t libcsx_mat_get_entry(const matrix_t *A, index_t row,
-                                    index_t column, value_t *value);
+spx_error_t spx_mat_get_entry(const matrix_t *A, index_t row,
+                              index_t column, value_t *value);
 
 /**
  *  Sets the value of the corresponding element in (row, column), where
@@ -83,49 +78,62 @@ libcsx_error_t libcsx_mat_get_entry(const matrix_t *A, index_t row,
  *  @param[in] A            the tuned matrix.
  *  @param[in] row          the row of the element to be set.
  *  @param[in] column       the column of the element to be set.
- *  @param[out] value       the new value of the element in (row, column).
+ *  @param[in] value        the new value of the element in (row, column).
  *  @return                 an error code.
  */
-libcsx_error_t libcsx_mat_set_entry(matrix_t *A, index_t row, index_t column,
-                                    value_t value);
+spx_error_t spx_mat_set_entry(matrix_t *A, index_t row, index_t column,
+                              value_t value);
 
 /**
- *  Dumps the matrix in the CSX format in a binary file.
+ *  Stores the matrix in the CSX format into a binary file.
  *
  *  @param[in] A            the tuned matrix.
- *  @param[in] filename     name of the file where the matrix will be dumped.
+ *  @param[in] filename     the name of the file where the matrix will be dumped.
  *  @return                 an error code.
  */
-libcsx_error_t libcsx_mat_save(const matrix_t *A, const char *filename);
+spx_error_t spx_mat_save(const matrix_t *A, const char *filename);
 
 /**
  *  Reconstructs the matrix in the CSX format from a binary file.
  *
- *  @param[in] filename     name of the file where the matrix is dumped.
+ *  @param[in] filename     the name of the file where the matrix is dumped.
  *  @return                 a handle to the tuned matrix.
  */
-matrix_t *libcsx_mat_restore(const char *filename);
+matrix_t *spx_mat_restore(const char *filename);
 
 /**
  *  \brief Returns the number of rows of the matrix.
  */
-index_t libcsx_mat_get_nrows(const matrix_t *A);
+index_t spx_mat_get_nrows(const matrix_t *A);
 
 /**
  *  \brief Returns the number of columns of the matrix.
  */
-index_t libcsx_mat_get_ncols(const matrix_t *A);
-
-perm_t *libcsx_mat_get_perm(const matrix_t *A);
+index_t spx_mat_get_ncols(const matrix_t *A);
 
 /**
- *  This routine releases any memory internally used by the sparse input
- *  handle A.
+ *  \brief Returns information on the partitioning of the matrix.
+ */
+partition_t *spx_mat_get_parts(matrix_t *A);
+
+/**
+ *  \brief Returns the permutation applied to the matrix.
+ */
+perm_t *spx_mat_get_perm(const matrix_t *A);
+
+/**
+ *  This routines performs a matrix-vector multiplication of the following form:
+ *                      y <-- alpha*A*x + beta*y
  *
- *  @param[in] A            the input matrix.
+ *  @param[in] A            the tuned matrix.
+ *  @param[in] alpha        a scalar.
+ *  @param[in] x            the input vector.
+ *  @param[in] beta         a scalar.
+ *  @param[in/out] y        the output vector.
  *  @return                 an error code.
  */
-libcsx_error_t libcsx_mat_destroy_input(input_t *A);
+spx_error_t spx_matvec_mult(scalar_t alpha, const matrix_t *A, vector_t *x,
+                            scalar_t beta, vector_t *y);
 
 /**
  *  This routine releases any memory internally used by the sparse matrix
@@ -134,7 +142,16 @@ libcsx_error_t libcsx_mat_destroy_input(input_t *A);
  *  @param[in] A            the tuned matrix.
  *  @return                 an error code.
  */
-libcsx_error_t libcsx_mat_destroy_tuned(matrix_t *A);
+spx_error_t spx_mat_destroy(matrix_t *A);
+
+/**
+ *  This routine releases any memory internally used by the partition
+ *  handle p.
+ *
+ *  @param[in] p            the partitioning handle.
+ *  @return                 an error code.
+ */
+spx_error_t spx_part_destroy(partition_t *p);
 
 /**
  *  Sets the option #option according to the string #string for the tuning
@@ -144,13 +161,13 @@ libcsx_error_t libcsx_mat_destroy_tuned(matrix_t *A);
  *  @param[in] option       the option to be set.
  *  @param[in] string       a description of how to set the option.
  */
-void libcsx_set_option(const char *option, const char *string);
+void spx_option_set(const char *option, const char *string);
 
 /**
  *  Sets the tuning options according to the environmental variables 
  *  set on the command line. For available tuning options \see #FIXME
  */
-void libcsx_set_options_from_env();
+void spx_options_set_from_env();
 
 /**
  *  Creates and returns a valid vector object, whose values must be explicitly
@@ -159,12 +176,12 @@ void libcsx_set_options_from_env();
  *  @param[in] size         the size of the vector to be created.
  *  @return                 a valid vector object.
  */
-vector_t *vec_create(unsigned long size, void *A);
-vector_t *vec_create_numa(unsigned long size, matrix_t *A);
+vector_t *vec_create(unsigned long size, void *p);
+vector_t *vec_create_numa(unsigned long size, partition_t *p);
 #ifdef SPM_NUMA
-#   define libcsx_vec_create vec_create_numa
+#   define spx_vec_create vec_create_numa
 #else
-#   define libcsx_vec_create vec_create
+#   define spx_vec_create vec_create
 #endif
 
 /**
@@ -175,13 +192,13 @@ vector_t *vec_create_numa(unsigned long size, matrix_t *A);
  *  @param[in] size         the size of the buffer.
  *  @return                 a valid vector object.
  */
-vector_t *vec_create_from_buff(value_t *buff, unsigned long size, void *A);
+vector_t *vec_create_from_buff(value_t *buff, unsigned long size, void *p);
 vector_t *vec_create_from_buff_numa(double *buff, unsigned long size, 
-                                    matrix_t *A);
+                                    partition_t *p);
 #ifdef SPM_NUMA
-#   define libcsx_vec_create_from_buff vec_create_from_buff_numa
+#   define spx_vec_create_from_buff vec_create_from_buff_numa
 #else
-#   define libcsx_vec_create_from_buff vec_create_from_buff
+#   define spx_vec_create_from_buff vec_create_from_buff
 #endif
 
 /**
@@ -190,12 +207,12 @@ vector_t *vec_create_from_buff_numa(double *buff, unsigned long size,
  *  @param[in] size         the size of the vector to be created.
  *  @return                 a valid vector object.
  */
-vector_t *vec_create_random(unsigned long size, void *A);
-vector_t *vec_create_random_numa(unsigned long size, matrix_t *A);
+vector_t *vec_create_random(unsigned long size, void *p);
+vector_t *vec_create_random_numa(unsigned long size, partition_t *p);
 #ifdef SPM_NUMA
-#   define libcsx_vec_create_random vec_create_random_numa
+#   define spx_vec_create_random vec_create_random_numa
 #else
-#   define libcsx_vec_create_random vec_create_random
+#   define spx_vec_create_random vec_create_random
 #endif
 
 /**
@@ -205,7 +222,7 @@ vector_t *vec_create_random_numa(unsigned long size, matrix_t *A);
  *  @param[in] val          the value to fill the vector with.
  */
 void vec_init(vector_t *v, double val);
-#define libcsx_vec_init vec_init
+#define spx_vec_init vec_init
 
 /**
  *  Initializes the [@start, @end) part of the valid vector object @v
@@ -216,9 +233,9 @@ void vec_init(vector_t *v, double val);
  *  @param[in] start        starting index.
  *  @param[in] end          ending index.
  */
-void libcsxvec_init_part(vector_t *v, double val, unsigned long start,
+void spxvec_init_part(vector_t *v, double val, unsigned long start,
                          unsigned long end);
-#define libcsx_vec_init_part vec_init_part
+#define spx_vec_init_part vec_init_part
 
 /**
  *  Initializes the valid vector object @v with random values in the
@@ -229,7 +246,7 @@ void libcsxvec_init_part(vector_t *v, double val, unsigned long start,
  *  @param[in] min          minimum value of initializing range.
  */
 void vec_init_rand_range(vector_t *v, double max, double min);
-#define libcsx_vec_init_rand_range vec_init_rand_range
+#define spx_vec_init_rand_range vec_init_rand_range
 
 /**
  *  Sets the element at index @idx of vector @v to be equal to @val.
@@ -239,7 +256,7 @@ void vec_init_rand_range(vector_t *v, double max, double min);
  *  @param[in] idx          an index inside the vector.
  *  @param[in] val          the value to be set.
  */
-libcsx_error_t libcsx_vec_set_entry(vector_t *v, int idx, double val);
+spx_error_t spx_vec_set_entry(vector_t *v, int idx, double val);
 
 /**
  *  \brief v2 -> num * v1
@@ -252,7 +269,7 @@ libcsx_error_t libcsx_vec_set_entry(vector_t *v, int idx, double val);
  *  @param[in] num          the const by which to scale @v1.
  */
 void vec_scale(vector_t *v1, vector_t *v2, double num);
-#define libcsx_vec_scale vec_scale
+#define spx_vec_scale vec_scale
 
 /**
  *  \brief v3 -> v1 + num * v2
@@ -266,7 +283,7 @@ void vec_scale(vector_t *v1, vector_t *v2, double num);
  *  @param[in] num          the const by which to scale @v1..
  */
 void vec_scale_add(vector_t *v1, vector_t *v2, vector_t *v3, double num);
-#define libcsx_vec_scale_add vec_scale_add
+#define spx_vec_scale_add vec_scale_add
 
 /**
  *  \brief v3[start...end-1] -> v1[start...end-1] + num * v2[start...end-1]
@@ -278,9 +295,9 @@ void vec_scale_add(vector_t *v1, vector_t *v2, vector_t *v3, double num);
  *  @param[in] end          ending index.
  */
 void vec_scale_add_part(vector_t *v1, vector_t *v2, vector_t *v3,
-                               double num, unsigned long start,
-                               unsigned long end);
-#define libcsx_vec_scale_add_part vec_scale_add_part
+                        double num, unsigned long start,
+                        unsigned long end);
+#define spx_vec_scale_add_part vec_scale_add_part
 
 /**
  *  \brief v3 -> v1 + v2
@@ -292,7 +309,7 @@ void vec_scale_add_part(vector_t *v1, vector_t *v2, vector_t *v3,
  *  @param[in] v3           a valid vector object.
  */
 void vec_add(vector_t *v1, vector_t *v2, vector_t *v3);
-#define libcsx_vec_add vec_add
+#define spx_vec_add vec_add
 
 /**
  *  \brief v3[start...end-1] -> v1[start...end-1] + v2[start...end-1]
@@ -304,8 +321,8 @@ void vec_add(vector_t *v1, vector_t *v2, vector_t *v3);
  *  @param[in] end          ending index.
  */
 void vec_add_part(vector_t *v1, vector_t *v2, vector_t *v3,
-                         unsigned long start, unsigned long end);
-#define libcsx_vec_add_part vec_add_part
+                  unsigned long start, unsigned long end);
+#define spx_vec_add_part vec_add_part
 
 /**
  *  \brief v3 -> v1 - v2
@@ -317,7 +334,7 @@ void vec_add_part(vector_t *v1, vector_t *v2, vector_t *v3,
  *  @param[in] v3           a valid vector object.
  */
 void vec_sub(vector_t *v1, vector_t *v2, vector_t *v3);
-#define libcsx_vec_sub vec_sub
+#define spx_vec_sub vec_sub
 
 /**
  *  \brief v3[start...end-1] -> v1[start...end-1] - v2[start...end-1]
@@ -329,8 +346,8 @@ void vec_sub(vector_t *v1, vector_t *v2, vector_t *v3);
  *  @param[in] end          ending index.
  */
 void vec_sub_part(vector_t *v1, vector_t *v2, vector_t *v3,
-                         unsigned long start, unsigned long end);
-#define libcsx_vec_sub_part vec_sub_part
+                  unsigned long start, unsigned long end);
+#define spx_vec_sub_part vec_sub_part
 
 /**
  *  Returns the product of the input vectors @v1 and @v2.
@@ -340,7 +357,7 @@ void vec_sub_part(vector_t *v1, vector_t *v2, vector_t *v3,
  *  @return                 the product of the input vectors.
  */
 double vec_mul(const vector_t *v1, const vector_t *v2);
-#define libcsx_vec_mul vec_mul
+#define spx_vec_mul vec_mul
 
 /**
  *  \brief Returns v1[start...end-1] * v2[start...end-1]
@@ -355,8 +372,8 @@ double vec_mul(const vector_t *v1, const vector_t *v2);
  *  @return                 the product of the input vectors.
  */
 double vec_mul_part(const vector_t *v1, const vector_t *v2,
-                           unsigned long start, unsigned long end);
-#define libcsx_vec_mul_part vec_mul_part
+                    unsigned long start, unsigned long end);
+#define spx_vec_mul_part vec_mul_part
 
 /**
  *  Reorders the input vector @v according to the permutation @p, leaving
@@ -366,17 +383,18 @@ double vec_mul_part(const vector_t *v1, const vector_t *v2,
  *  @param[in] p            a permutation.
  *  @return                 the permuted input vector.
  */
-vector_t *libcsx_vec_reorder(const vector_t *v, perm_t *p);
+spx_error_t spx_vec_reorder(vector_t *v, perm_t *p);
 
 /**
- *  Restores the permuted input vector @v to its original ordering, according
- *  to the permutation @p, leaving the original vector intact.
+ *  Inverse-reorders the permuted input vector @v1, according
+ *  to the permutation @p, storing the result in @v2.
  *
- *  @param[in] v            a valid permuted vector object.
+ *  @param[in] v1           a valid permuted vector object.
+ *  @param[in/out] v2       the output inverse-reordered vector object.
  *  @param[in] p            a permutation.
- *  @return                 the permuted input vector in its original ordering.
+ *  @return                 an error code.
  */
-vector_t *libcsx_vec_inv_reorder(const vector_t *v, perm_t *p);
+spx_error_t spx_vec_inv_reorder(vector_t *v, perm_t *p);
 
 /**
  *  Copies the elements of @v1 to @v2.
@@ -385,7 +403,7 @@ vector_t *libcsx_vec_inv_reorder(const vector_t *v, perm_t *p);
  *  @param[in] v2           a valid vector object.
  */
 void vec_copy(const vector_t *v1, vector_t *v2);
-#define libcsx_vec_copy vec_copy
+#define spx_vec_copy vec_copy
 
 /**
  *  Compares the elements of @v1 and @v2. If they are equal it returns 0,
@@ -395,7 +413,7 @@ void vec_copy(const vector_t *v1, vector_t *v2);
  *  @param[in] v2           a valid vector object.
  */
 int vec_compare(const vector_t *v1, const vector_t *v2);
-#define libcsx_vec_compare vec_compare
+#define spx_vec_compare vec_compare
 
 /**
  *  Prints the input vector @v.
@@ -404,7 +422,7 @@ int vec_compare(const vector_t *v1, const vector_t *v2);
  *  @return                 error code.
  */
 void vec_print(const vector_t *v);
-#define libcsx_vec_print vec_print
+#define spx_vec_print vec_print
 
 /**
  *  Destroys the input vector @v.
@@ -412,8 +430,8 @@ void vec_print(const vector_t *v);
  *  @param[in] v            a valid vector object.
  */
 void vec_destroy(vector_t *v);
-#define libcsx_vec_destroy vec_destroy
+#define spx_vec_destroy vec_destroy
 
-#endif // LIBCSX_MAT_VEC_H
+#endif // SPARSEX_MAT_VEC_H
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

@@ -176,7 +176,7 @@ spm_mt_t *SparseMatrix<InputPolicy>::CreateCsx(internal::Sym<true>)
     RuntimeContext& rt_context = RuntimeContext::GetInstance();
     SparseInternal<SparsePartitionSym<idx_t, val_t> > *spi;
     timing::Timer timer;
-                   
+
     // Converting to internal representation
     timer.Start();
     spi = SparseInternal<SparsePartitionSym<idx_t, val_t> >::

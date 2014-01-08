@@ -5,6 +5,7 @@
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2011-2012, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
+ * Copyright (C) 2013,      Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -25,9 +26,9 @@ extern "C" {
 ///< CSX matrix format
 typedef struct {
     unsigned long rowptr;    /* rowptr is the index in csx->ctl of
-                         the first element of row i */
+                                the first element of row i */
     unsigned long valptr;    /* valptr is the index in csx->values of
-                         the first element of row i */
+                                the first element of row i */
     unsigned long span;
 } row_info_t;
 

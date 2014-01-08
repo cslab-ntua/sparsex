@@ -603,6 +603,7 @@ private:
     SparsePartitionSym<IndexType, ValueType> *spm_sym_;
     typename SparsePartition<IndexType, ValueType>::Builder *spm_bld_;
     DynamicValueArray da_dvalues_;
+    size_t nr_rows_;
 };
 
 
@@ -1365,8 +1366,6 @@ Builder::Builder(SparsePartition<IndexType, ValueType> *sp, size_t nr_rows,
       da_elems_(((sp_->elems_mapped_) ?
                  DynamicElemArray(sp_->elems_, 0,
                                   sp_->elems_size_) :
-                 // DynamicElemArray(sp_->elems_, sp_->elems_size_,
-                 //                  sp_->elems_size_) :
                  DynamicElemArray(nr_elems))),
       da_rowptr_(DynamicIndexArray(nr_rows+1))
 {
@@ -1521,7 +1520,7 @@ void SparsePartitionSym<IndexType, ValueType>::DivideMatrix()
     IndexType nr_cols = matrix->GetNrCols();
     IndexType rows1 = 0;
     IndexType rows2 = 0;
-    
+
     typename SparsePartition<IndexType, ValueType>::Builder *spmbld1 = new
         typename SparsePartition<IndexType, ValueType>::Builder(m1_,
                                                                 nr_rows + 1,
@@ -1638,10 +1637,11 @@ template<typename IndexType, typename ValueType>
 SparsePartitionSym<IndexType, ValueType>::Builder::
 Builder(SparsePartitionSym *spm_sym, size_t nr_elems, size_t nr_rows)
     : spm_sym_(spm_sym),
-      da_dvalues_(DynamicValueArray(nr_rows))
+      da_dvalues_(DynamicValueArray(nr_rows)),
+      nr_rows_(nr_rows)
 {
     SparsePartition<IndexType, ValueType> *spm = spm_sym_->GetLowerMatrix();
-    
+
     spm_bld_ = new typename SparsePartition<IndexType, ValueType>::Builder
         (spm, nr_rows, nr_elems);
 }
@@ -1656,8 +1656,9 @@ template<typename IndexType, typename ValueType>
 void SparsePartitionSym<IndexType, ValueType>::Builder::AppendDiagElem(
     ValueType val)
 {
-    assert(da_dvalues_.GetSize() <
-          (spm_sym_->GetLowerMatrix()->GetRowptrSize() - 1) && "out of bounds");
+    // assert(da_dvalues_.GetSize() <
+    //       (spm_sym_->GetLowerMatrix()->GetRowptrSize() - 1) && "out of bounds");
+    assert(da_dvalues_.GetSize() < nr_rows_ && "out of bounds");
     da_dvalues_.Append(val);
 }
 

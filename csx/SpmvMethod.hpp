@@ -15,8 +15,8 @@
 #include "Vector.hpp"
 
 typedef void spmv_double_fn_t(void *matrix, vector_t *in, vector_t *out,
-                              double alpha);
+                              double scale_f);
 typedef void spmv_double_sym_fn_t(void *matrix, vector_t *in, vector_t *out,
-                                  vector_t *temp, double alpha);
+                                  vector_t *temp, double scale_f);
 
 #endif  // SPMV_METHOD_H

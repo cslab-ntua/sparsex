@@ -1,5 +1,5 @@
 /**
- * libcsx/libcsx.h -- LIBCSX header files.
+ * SparseX/sparsex.h -- SparseX header files.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,12 +7,12 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LIBCSX_H
-#define LIBCSX_H
+#ifndef SPARSEX_H
+#define SPARSEX_H
 
 #include "common.h"
 #include "error.h"
 #include "mat_vec.h"
 #include "types.h"
 
-#endif  // LIBCSX_H
+#endif  // SPARSEX_H

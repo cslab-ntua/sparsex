@@ -295,7 +295,7 @@ float spmv_bench_mt(spm_mt_t *spm_mt, unsigned long loops,
     }
 
 	// Allocate an interleaved x.
-	x = vec_create_interleaved(rows_nr, xparts, nr_threads, xnodes);
+	x = vec_create_interleaved(cols_nr, xparts, nr_threads, xnodes);
 	vec_init_rand_range(x, (value_t) -1000, (value_t) 1000);
 
 	// Allocate an interleaved y.
@@ -360,7 +360,7 @@ float spmv_bench_mt(spm_mt_t *spm_mt, unsigned long loops,
 	return secs;
 }
 
-void spmv_check_mt(csx::CSR<index_t, value_t> *spm, spm_mt_t *spm_mt,
+void spmv_check_mt(csx::CSR<index_t, value_t> *csr, spm_mt_t *spm_mt,
                    unsigned long loops, unsigned long rows_nr,
                    unsigned long cols_nr)
 {
@@ -369,8 +369,8 @@ void spmv_check_mt(csx::CSR<index_t, value_t> *spm, spm_mt_t *spm_mt,
     nr_threads = spm_mt->nr_threads;
 
 #ifdef SPM_NUMA
-	size_t *parts = (size_t *) malloc(sizeof(*parts)*spm_mt->nr_threads);
-	int *nodes = (int *) malloc(sizeof(*nodes)*spm_mt->nr_threads);
+	size_t *parts = (size_t *) malloc(sizeof(*parts)*nr_threads);
+	int *nodes = (int *) malloc(sizeof(*nodes)*nr_threads);
 	if (!parts || !nodes) {
 		perror("malloc");
 		exit(1);
@@ -384,7 +384,7 @@ void spmv_check_mt(csx::CSR<index_t, value_t> *spm, spm_mt_t *spm_mt,
 
 	int node = spm_mt->spm_threads[0].node;
 	x = vec_create_onnode(cols_nr, node);
-	y = vec_create_interleaved(rows_nr, parts, spm_mt->nr_threads, nodes);
+	y = vec_create_interleaved(rows_nr, parts, nr_threads, nodes);
 	y2 = vec_create(rows_nr, NULL);
 #else
 	x = vec_create(cols_nr, NULL);
@@ -415,7 +415,7 @@ void spmv_check_mt(csx::CSR<index_t, value_t> *spm, spm_mt_t *spm_mt,
 	for (unsigned int i = 0; i < loops; i++) {
 		cur_barrier.wait();
 		cur_barrier.wait();
-		csr_spmv(spm, x, y2);
+		csr_spmv(csr, x, y2);
 		if (vec_compare(y2, y) < 0)
 			exit(1);
 	}

@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 #include <iostream>
-#include "macros.h"
+#include "timer.h"
 
 using namespace std;
 
