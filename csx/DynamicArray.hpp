@@ -33,7 +33,7 @@ public:
         elems_ = alloc_.allocate(capacity_);
     }
 
-    DynamicArray(T *storage, size_t size, size_t capacity)
+    DynamicArray(T *storage, size_t capacity)
         : elems_(storage),
           size_(0),
           capacity_(capacity),
@@ -69,14 +69,8 @@ public:
             size_ = nr_elems;
         }
 
-        // We can't reallocate to 0!
-        if (nr_elems == 0) {
-            elems_ = alloc_.reallocate(capacity_, 1, elems_);
-            capacity_ = 1;
-        } else { 
-            elems_ = alloc_.reallocate(capacity_, nr_elems, elems_);
-            capacity_ = nr_elems;
-        }
+        elems_ = alloc_.reallocate(capacity_, nr_elems, elems_);
+        capacity_ = nr_elems;
     }
 
     const T *GetElems() const
@@ -86,6 +80,8 @@ public:
 
     T *TakeElems()
     {
+        // Be safe and shrink-to-fit first, since the user is (conceptually)
+        // aware only of the dynamic array size, so avoid future memory leaks
         ShrinkToFit();
         own_elems_ = false;
         return elems_;
@@ -93,23 +89,31 @@ public:
 
     void Append(const T &val)
     {
-        if (size_ == capacity_)
+        if (size_ == capacity_) {
             // Expand array
-            Resize(2*capacity_);
+            if (!capacity_)
+                // we were previously resized to zero, so re-initialize
+                Resize(1024);
+            else
+                Resize(2*capacity_);
+        }
+
         alloc_.construct(&elems_[size_], val);
         ++size_;
     }
 
     const T &GetLast() const
     {
+        if (!size_)
+            throw out_of_range(__FUNCTION__);
+
         return elems_[size_-1];
     }
 
     void ShrinkToFit()
     {
         Resize(size_);
-        if (size_)
-            assert((size_ == capacity_) && "[BUG] shrink failed");
+        assert((size_ == capacity_) && "[BUG] shrink failed");
     }
 
     Allocator &GetAllocator()
@@ -119,11 +123,17 @@ public:
 
     T &operator[](size_t pos)
     {
+        if (pos >= size_)
+            throw out_of_range(__FUNCTION__);
+
         return elems_[pos];
     }
 
     const T &operator[](size_t pos) const
     {
+        if (pos >= size_)
+            throw out_of_range(__FUNCTION__);
+
         return elems_[pos];
     }
 

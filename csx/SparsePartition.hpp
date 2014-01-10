@@ -1364,8 +1364,7 @@ Builder::Builder(SparsePartition<IndexType, ValueType> *sp, size_t nr_rows,
                  size_t nr_elems)
     : sp_(sp),
       da_elems_(((sp_->elems_mapped_) ?
-                 DynamicElemArray(sp_->elems_, 0,
-                                  sp_->elems_size_) :
+                 DynamicElemArray(sp_->elems_, sp_->elems_size_) :
                  DynamicElemArray(nr_elems))),
       da_rowptr_(DynamicIndexArray(nr_rows+1))
 {

@@ -1,7 +1,7 @@
 1. C API
    -- BLAS for matrix operations
    -- PETSc (?)
-   -- Matrix tuning
+   -- [DONE] Matrix tuning
       * [DONE] Pattern setup
    -- [DONE] Matrix I/O
       * [DONE] from file (enriched MM, etc.)
@@ -11,25 +11,27 @@
    -- [DONE] Matrix access
       * [DONE] set matrix values in CSX
    -- [DONE] Matrix reordering (RCM)
-   -- [50%] Multithreaded setup
+   -- [67%] Multithreaded setup
       * [DONE] Threads/Thread pool?
-      * NUMA setup (allocators)
+      * [DONE] NUMA setup (allocators)
+      * Automatically detect number of cores/hyperthreading
    -- [DONE] Support for symmetrics
    -- [DONE] Timing/Profiling framework
-      * SpMV, preproc, etc.
+      * [DONE] SpMV, preproc, etc.
    -- [DONE] Preprocessing optimization
-      * CSX file vs. online preproc.
-   -- Verbosity control
-      * verbosity levels (debug, info, warning, error)
-      * logger (standard / streams, low overhead, use of templates)
-   -- Baseline benchmarking code for all libs (MKL, OSKI, CSX) out-of-the-box
+      * [DONE] CSX file vs. online preproc.
+   -- [DONE] Verbosity control
+      * [DONE] verbosity levels (debug, info, warning, error)
+      * [DONE] logger (standard / streams, low overhead, use of templates)
+   -- [DONE] Baseline benchmarking code for all libs (MKL, OSKI, CSX)
+      out-of-the-box
 
 2. Refactoring
-   -- Homogenize variable types (size_t, signed/unsigned)->nrows...
-   -- Variable naming
-   -- [50%] Code cleanup (also thgoud)
+   -- [90%] Homogenize variable types (size_t, signed/unsigned)->nrows...
+   -- [75%] Variable naming
+   -- [75%] Code cleanup (also thgoud)
    -- [75%] Classes/Structures revisiting
-   -- Memory management (leaks, double free corruptions, etc.)
+   -- [90%] Memory management (leaks, double free corruptions, etc.)
    -- [DONE] SPM indexing (C++ templates?)
 
 3. User config & installation
@@ -42,12 +44,12 @@
    -- Test suite
 
 5. Documentation
-   -- doxygen
+   -- [50%] doxygen (API/Development)
    -- User guide & Manual
 
 6. Demo
    -- Libcsx vs. pOSKI vs. Intel MKL vs. Banded matrices
 
-7. Symmetrics revisiting
-8. What about libspm C library?
-   -- Rewrite Bench/CheckLoop() in C++ and ditch the rest
+7. [DONE] Symmetrics revisiting
+8. [DONE] What about libspm C library?
+   -- [DONE] Rewrite Bench/CheckLoop() in C++ and ditch the rest

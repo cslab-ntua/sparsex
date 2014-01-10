@@ -129,7 +129,7 @@ void spx_finalize();
  *  \brief malloc() wrapper.
  */
 #define spx_malloc(type, size) \
-	(type *)malloc_internal(size, __FILE__, __LINE__, __FUNCTION__)
+	(type *) malloc_internal(size, __FILE__, __LINE__, __FUNCTION__)
 void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
                       const char *function);
 

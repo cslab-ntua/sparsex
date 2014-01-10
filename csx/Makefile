@@ -57,28 +57,28 @@ BOOST_LIB_PATH	= -L$(boost_dir)/lib
 DEPDIR = .deps
 df = $(DEPDIR)/$(*F)
 CSX_SRC = \
-	Affinity.cc \
-	Compiler.cc \
-	CsxBench.cc \
-	CsxBuild.cc \
-	CsxMatvec.cc \
-	CsxSpmvMt.cc \
-	CsxUtil.cc \
-	CtlBuilder.cc \
-	DynamicArrayTest.cc \
-	Encodings.cc \
-	Jit.cc \
-	JitUtil.cc \
-	Node.cc \
-	Runtime.cc \
-	SparseMatrixWrapper.cc \
-	TemplateText.cc \
-	Timer.cc \
-	Vector.cc \
-	$(log_dir)/Logger.cc \
-	$(log_dir)/OutputPolicy.cc \
+	Affinity.cpp \
+	Compiler.cpp \
+	CsxBench.cpp \
+	CsxBuild.cpp \
+	CsxMatvec.cpp \
+	CsxSpmvMt.cpp \
+	CsxUtil.cpp \
+	CtlBuilder.cpp \
+	DynamicArrayTest.cpp \
+	Encodings.cpp \
+	Jit.cpp \
+	JitUtil.cpp \
+	Node.cpp \
+	Runtime.cpp \
+	SparseMatrixWrapper.cpp \
+	TemplateText.cpp \
+	Timer.cpp \
+	Vector.cpp \
+	$(log_dir)/Logger.cpp \
+	$(log_dir)/OutputPolicy.cpp \
 
-CSX_OBJECTS = $(CSX_SRC:%.cc=%.o) numa_util.o
+CSX_OBJECTS = $(CSX_SRC:%.cpp=%.o) numa_util.o
 
 ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
 	override CPPFLAGS += -DSPM_NUMA
@@ -97,7 +97,7 @@ ARCHIVE     = $(AR) $(AR_FLAGS)
 	    -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $(df).P; \
 	rm -f $*.d
 
-%.o: %.cc
+%.o: %.cpp
 	$(MKDIR_P) $(DEPDIR)
 	$(CXX_COMPILE) -c -MD -o $@ $<
 	@cp $*.d $(df).P; \
@@ -105,7 +105,7 @@ ARCHIVE     = $(AR) $(AR_FLAGS)
 	    -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $(df).P; \
 	rm -f $*.d
 
--include $(CSX_SRC:%.cc=$(DEPDIR)/%.P)
+-include $(CSX_SRC:%.cpp=$(DEPDIR)/%.P)
 
 libcsximpl.so: $(CSX_OBJECTS) $(libadd)
 	$(LINK) -shared -o $@ $^ $(libadd) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS)

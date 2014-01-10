@@ -20,8 +20,8 @@
  */
 struct matrix {
     index_t nrows, ncols, nnz;
-    int symmetric;          /**< Flag that indicates whether the symmetric version
-                               of CSX will be used */
+    int symmetric;          /**< Flag that indicates whether the symmetric
+                               version of CSX will be used */
     perm_t *permutation;    /**< The permutation, in case the matrix has been
                                reordered */
     void *csx;              /**< The tuned matrix representation, i.e. the input
