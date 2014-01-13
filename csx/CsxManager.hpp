@@ -16,21 +16,16 @@
 #include "Allocators.hpp"
 #include "Csx.hpp"
 #include "CtlBuilder.hpp"
+#include "CtlUtil.hpp"
 #include "SparsePartition.hpp"
 #include "Delta.hpp"
 #include "SpmMt.hpp"
 #include "Logger.hpp"
 
-extern "C" {
-#include "Ctl_ll.hpp"
-}
-
 #ifdef SPM_NUMA
 #   include <numa.h>
 #   include "numa_util.h"
 #endif
-
-#define PID_DELTA_BASE 0
 
 namespace csx {
 
@@ -607,7 +602,6 @@ void CsxManager<IndexType, ValueType>::AddXs(std::vector<IndexType> &xs)
     unsigned long patt_id;
     size_t xs_size, delta_bytes;
     IndexType last_col, max;
-    DeltaSize delta_size;
     typename std::vector<IndexType>::iterator vi;
 
     // Do delta encoding.
@@ -625,8 +619,8 @@ void CsxManager<IndexType, ValueType>::AddXs(std::vector<IndexType> &xs)
         max = *(std::max_element(vi, xs.end()));
     }
 
-    delta_size = getDeltaSize(max);
-    patt_id = (8<<delta_size) + PID_DELTA_BASE;
+    delta_bytes = GetDeltaSize(max);
+    patt_id = GetDeltaPatternId(delta_bytes);
 
     // Variables ctls_size, ctl_flags are not valid after this call.
     pair<bool, size_t> newrow_info = UpdateNewRow();
@@ -638,12 +632,11 @@ void CsxManager<IndexType, ValueType>::AddXs(std::vector<IndexType> &xs)
 
     assert( (xs_size > 0) && (xs_size <= CTL_SIZE_MAX));
     ctl_builder_.AppendCtlHead(newrow_info.first, newrow_info.second,
-                               GetFlag(PID_DELTA_BASE + patt_id, xs_size),
+                               GetFlag(patt_id, xs_size),
                                xs_size, ucol, sizeof(IndexType),
                                full_column_indices_);
 
     // Add deltas (if needed).
-    delta_bytes = DeltaSize_getBytes(delta_size);
     for (size_t i = 1; i < xs_size; ++i)
         ctl_builder_.AppendFixedInt(xs[i], delta_bytes);
 

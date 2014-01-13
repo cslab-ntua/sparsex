@@ -9,14 +9,13 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef __NUMA_UTIL_H__
-#define __NUMA_UTIL_H__
+#ifndef NUMA_UTIL_H
+#define NUMA_UTIL_H
 
+#include "cdecl.h"
 #include <stddef.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+BEGIN_C_DECLS
 
 /*
  *  Custom interleaved allocation.
@@ -38,8 +37,6 @@ int check_interleaved(void *addr, const size_t *parts,
 int check_region(void *addr, size_t size, int node);
 void print_alloc_status(const char *data_descr, int err);
 
-#ifdef __cplusplus
-}
-#endif
+END_C_DECLS
 
-#endif  /* __NUMA_UTIL_H__ */
+#endif  /* NUMA_UTIL_H */

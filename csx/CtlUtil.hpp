@@ -8,14 +8,17 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CTX_CTL_LL_HPP
-#define CTX_CTL_LL_HPP
+#ifndef CTL_UTIL_HPP
+#define CTL_UTIL_HPP
 
+#include "cdecl.h"
 #include <assert.h>
 #include <inttypes.h>
 
+BEGIN_C_DECLS
+
 /*
- * bit functions
+ * Bit functions
  */
 static inline void set_bit(uint8_t *byte, int bit)
 {
@@ -55,13 +58,7 @@ static inline int test_bit(uint8_t *byte, int bit)
 
 /* Encode and Decode functions for Ctl arrays */
 
-#ifdef CTL_LL_NOSTATIC
-#define CTL_LL_STATIC
-#else
-#define CTL_LL_STATIC static inline
-#endif
-
-CTL_LL_STATIC uint64_t u8_get(uint8_t **ctl)
+static inline uint64_t u8_get(uint8_t **ctl)
 {
     uint8_t ret = **ctl;
     (*ctl)++;
@@ -69,7 +66,7 @@ CTL_LL_STATIC uint64_t u8_get(uint8_t **ctl)
     return (uint64_t)ret;
 }
 
-CTL_LL_STATIC uint64_t u16_get(uint8_t **ctl)
+static inline uint64_t u16_get(uint8_t **ctl)
 {
     uint16_t ret, **u16;
 
@@ -80,7 +77,7 @@ CTL_LL_STATIC uint64_t u16_get(uint8_t **ctl)
     return (uint64_t)ret;
 }
 
-CTL_LL_STATIC uint64_t u32_get(uint8_t **ctl)
+static inline uint64_t u32_get(uint8_t **ctl)
 {
     uint32_t ret, **u32;
 
@@ -91,7 +88,7 @@ CTL_LL_STATIC uint64_t u32_get(uint8_t **ctl)
     return (uint64_t)ret;
 }
 
-CTL_LL_STATIC uint64_t u64_get(uint8_t **ctl)
+static inline uint64_t u64_get(uint8_t **ctl)
 {
     uint64_t ret, **u64;
 
@@ -127,6 +124,8 @@ end:
     return ret;
 }
 
-#endif // CTL_CTX_LL_HPP
+END_C_DECLS
 
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4__
+#endif // CTL_UTIL_HPP
+
+// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

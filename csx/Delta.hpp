@@ -2,8 +2,9 @@
  *
  * Delta.hpp -- Utilities for delta units.
  *
- * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2013-2014, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -15,52 +16,33 @@
 
 namespace csx {
 
-// Size for the delta-encoded units
-typedef enum {
-	DELTA_U8  = 0,
-	DELTA_U16,
-	DELTA_U32,
-	DELTA_U64,
-	DELTA_MAX
-} DeltaSize;
+#define PID_DELTA_BASE  0UL
 
-//#define  spm_csrdu_ucmax(ci_size) (1UL<<(8<<ci_size)) XXX: not 32-bit compatible
-static inline uint64_t spm_csrdu_ucmax(DeltaSize ci_size)
+typedef union {
+    uint8_t d8;
+    uint16_t d16;
+    uint32_t d32;
+    uint64_t d64;
+} DeltaType;
+
+size_t GetDeltaSize(size_t val)
 {
-	uint64_t one = 1;
-	return (one << (8<<ci_size));
+    DeltaType du;
+    if ( (du.d8 = val) == val)
+        return sizeof(du.d8);
+
+    if ( (du.d16 = val) == val)
+        return sizeof(du.d16);
+
+    if ( (du.d32 = val) == val)
+        return sizeof(du.d32);
+
+    return sizeof(du.d64);
 }
 
-static inline DeltaSize getDeltaSize(uint64_t u)
+unsigned long GetDeltaPatternId(size_t delta_size)
 {
-	if ( u < spm_csrdu_ucmax(DELTA_U8)){
-		return DELTA_U8;
-	}
-
-	if ( u < spm_csrdu_ucmax(DELTA_U16)){
-		return DELTA_U16;
-	}
-
-	if ( u < spm_csrdu_ucmax(DELTA_U32)){
-		return DELTA_U32;
-	}
-
-	return DELTA_U64;
-}
-
-
-// number of bytes required for specified DeltaSize
-static inline int DeltaSize_getBytes(DeltaSize delta_size)
-{
-	switch (delta_size){
-		case DELTA_U8:
-		case DELTA_U16:
-		case DELTA_U32:
-		case DELTA_U64:
-		return (1<<delta_size);
-		default:
-		assert(false);
-	}
+    return (delta_size << 3) + PID_DELTA_BASE;
 }
 
 } // end csx namespace

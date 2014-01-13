@@ -13,15 +13,7 @@
 #ifndef CSX_HPP
 #define CSX_HPP
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "Ctl_ll.hpp"
-
-#ifdef __cplusplus
-}
-#endif
+#include "CtlUtil.hpp"
 
 ///< CSX matrix format
 typedef struct {
@@ -47,6 +39,7 @@ typedef struct {
 } csx_double_sym_t;
 
 #ifdef __cplusplus
+// C++ only
 
 template<typename ValueType>
 struct csx_t {

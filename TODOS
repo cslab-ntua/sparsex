@@ -27,10 +27,11 @@
       out-of-the-box
 
 2. Refactoring
-   -- [90%] Homogenize variable types (size_t, signed/unsigned)->nrows...
+   -- [50%] Homogenize variable types (size_t, signed/unsigned)->nrows...
    -- [75%] Variable naming
    -- [75%] Code cleanup (also thgoud)
    -- [75%] Classes/Structures revisiting
+   -- Cleanup the way C and C++ are mixed
    -- [90%] Memory management (leaks, double free corruptions, etc.)
    -- [DONE] SPM indexing (C++ templates?)
 

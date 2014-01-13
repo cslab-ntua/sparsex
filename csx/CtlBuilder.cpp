@@ -10,7 +10,7 @@
  */
 
 #include "CtlBuilder.hpp"
-#include "Ctl_ll.hpp"
+#include "CtlUtil.hpp"
 
 static inline void SetBit(uint8_t *byte, int bit)
 {
