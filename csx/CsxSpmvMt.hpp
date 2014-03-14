@@ -11,13 +11,13 @@
 #ifndef CSX_SPMV_MT_HPP
 #define CSX_SPMV_MT_HPP
 
-#include "types.h"
 #include "Affinity.hpp"
 #include "Csr.hpp"
 #include "SpmMt.hpp"
 #include "SpmvMethod.hpp"
-#include "tsc.h"
+#include "Types.hpp"
 #include "Vector.hpp"
+#include "tsc.h"
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>

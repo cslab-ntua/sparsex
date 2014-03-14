@@ -23,10 +23,11 @@
 #include <algorithm>
 #include <string>
 #include <boost/algorithm/string.hpp>
+#include <boost/assign/list_of.hpp>
+#include <boost/bind/bind.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/bind/bind.hpp>
-#include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
 
 using namespace std;
@@ -40,12 +41,6 @@ bool DoRead(ifstream &in, vector<string> &arguments);
 template<typename IndexType, typename ValueType>
 void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x, 
                   ValueType &v);
-
-// Forward declarations
-template<typename IndexType, typename ValueType>
-struct CooElem;
-template<typename IndexType, typename ValueType>
-struct CooElemSorter;
 
 template<typename IndexType, typename ValueType>
 class MMF
@@ -101,22 +96,20 @@ public:
         return reordered_;
     }
 
-    void GetCoordinates(IndexType idx, IndexType &row, IndexType &col)
+    pair<IndexType, IndexType> GetCoordinates(IndexType idx) const
     {
-        row = matrix_[idx].row;
-        col = matrix_[idx].col;
+        return matrix_[idx].GetCoordinates();
     }
 
     void SetCoordinates(IndexType idx, IndexType row, IndexType col)
     {
-        matrix_[idx].row = row;
-        matrix_[idx].col = col;
+        matrix_[idx] = Element<IndexType, ValueType>(row, col,
+                                                     matrix_[idx].GetValue());
     }
 
     void Sort()
     {
-        sort(matrix_.begin(), matrix_.end(),
-             CooElemSorter<IndexType, ValueType>());
+        sort(matrix_.begin(), matrix_.end());
     }
 
     /*void Print(std::ostream &os) const
@@ -146,7 +139,7 @@ public:
 
     void ResetStream();
     
-    void InsertElement(CooElem<IndexType, ValueType> &elem)
+    void InsertElement(const Element<IndexType, ValueType> &elem)
     {
         matrix_.push_back(elem);
     }
@@ -165,7 +158,7 @@ private:
     ifstream in;
     bool symmetric_, col_wise_, zero_based_, reordered_;
     int file_mode_;     // 0 for MMF files, 1 for regular files
-    vector<CooElem<IndexType, ValueType> > matrix_;
+    boost::container::vector<Element<IndexType, ValueType> > matrix_;
 
     enum MmfInfo {
         Banner,
@@ -187,33 +180,31 @@ private:
     void ParseMmfHeaderLine(vector<string> &arguments);
     void ParseMmfSizeLine(vector<string> &arguments); 
     void DoLoadMmfMatrix();
-    bool GetNext(IndexType &y, IndexType &x, ValueType &val);
+    bool GetNext(IndexType &r, IndexType &c, ValueType &v);
 };
 
 template<typename IndexType, typename ValueType>
 class MMF<IndexType, ValueType>::iterator 
-    : public std::iterator<forward_iterator_tag, CooElem<IndexType, ValueType> >
+    : public std::iterator<forward_iterator_tag, Element<IndexType, ValueType> >
 {
 public:
-    iterator() {}
-
     // In case subsequent calls to DoLoadMatrix() are made
     ~iterator() {
         mmf_->ResetStream();
     }
     
     iterator(MMF *mmf, size_t cnt)
-      :
-        mmf_(mmf),
-        cnt_(cnt)
+      : mmf_(mmf),
+        cnt_(cnt),
+        elem_(Element<IndexType, ValueType>(0, 0, 0)),
+        valid_(false)
     {
         if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_)
             return;
 
         // this is the initializer
-        if (cnt_ == 0) {
-            this->DoSet();
-        }
+        if (cnt_ == 0)
+            DoSet();
     }
     
     bool operator==(const iterator &i)
@@ -234,10 +225,11 @@ public:
         if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_) {
             return;
         }
-        this->DoSet();
+
+        DoSet();
     }
 
-    CooElem<IndexType, ValueType> &operator*()
+    Element<IndexType, ValueType> &operator*()
     {
         if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_) {
             return mmf_->matrix_[cnt_];
@@ -247,7 +239,8 @@ public:
                           << cnt_ << "/" << mmf_->nr_nzeros_ << ").\n";
                 exit(1);
             }
-            assert(valid_);
+
+            assert(valid_); // FIXME: why this; you just checked
             return elem_;
         }
     }
@@ -255,12 +248,15 @@ public:
 private:
     void DoSet()
     {
-        valid_ = mmf_->GetNext(elem_.row, elem_.col, elem_.val);
+        IndexType row, col;
+        ValueType val;
+        valid_ = mmf_->GetNext(row, col, val);
+        elem_ = Element<IndexType, ValueType>(row, col, val);
     }
 
     MMF *mmf_;
     size_t cnt_;
-    CooElem<IndexType, ValueType> elem_;
+    Element<IndexType, ValueType> elem_;
     bool valid_;
 };
 
@@ -414,40 +410,40 @@ void MMF<IndexType, ValueType>::ParseMmfSizeLine(vector<string> &arguments)
 template<typename IndexType, typename ValueType>
 void MMF<IndexType, ValueType>::DoLoadMmfMatrix()
 {
-    CooElem<IndexType, ValueType> elem;
-    IndexType tmp;
+    IndexType row, col;
+    ValueType val;
 
     if (symmetric_) {
         matrix_.reserve(nr_nzeros_ << 1);
         for (size_t i = 0; i < nr_nzeros_; i++) {
-            if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
+            if (!MMF::GetNext(row, col, val)) {
                 LOG_ERROR << "Requesting dereference, but mmf ended.\n";
                 exit(1);
             }
-            matrix_.push_back(elem);
-            if (elem.row != elem.col) {
-                tmp = elem.row;
-                elem.row = elem.col;
-                elem.col = tmp;
-                matrix_.push_back(elem);          
-            }
+
+            matrix_.emplace_back(row, col, val);
+            if (row != col)
+                // Emplace also the symmetric element
+                matrix_.emplace_back(col, row, val);
         }
     } else {
         matrix_.reserve(nr_nzeros_);
         for (size_t i = 0; i < nr_nzeros_; i++) {
-            if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
+            if (!MMF::GetNext(row, col, val)) {
                 LOG_ERROR << "Requesting dereference, but mmf ended.\n";
                 exit(1);
             }
-            matrix_.push_back(elem);
+
+            matrix_.emplace_back(row, col, val);
         }
     }
 
-    sort(matrix_.begin(), matrix_.end(), CooElemSorter<IndexType, ValueType>());
+    sort(matrix_.begin(), matrix_.end());
 }
 
 template<typename IndexType, typename ValueType>
-bool MMF<IndexType, ValueType>::GetNext(IndexType &y, IndexType &x, ValueType &v)
+bool MMF<IndexType, ValueType>::GetNext(IndexType &r, IndexType &c,
+                                        ValueType &v)
 {
     vector<string> arguments;
 
@@ -455,11 +451,10 @@ bool MMF<IndexType, ValueType>::GetNext(IndexType &y, IndexType &x, ValueType &v
         return false;
     }
 
-    ParseElement(arguments, y, x, v);
-
+    ParseElement(arguments, r, c, v);
     if (zero_based_) {
-        y++;
-        x++;
+        r++;
+        c++;
     }
 
     return true;

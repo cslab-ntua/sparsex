@@ -71,7 +71,7 @@ void spm_csx32_double_multiply(void *spm, vector_t *in, vector_t *out,
 	uint8_t patt_id;
 
     /* uint8_t *ctl_start = ctl; */
-    /* ctl_print(ctl, 0, csx->ctl_size, "ctl"); */
+    // ctl_print(ctl, 0, csx->ctl_size, "ctl");
 	do {
 		flags = *ctl++;
 		size = *ctl++;

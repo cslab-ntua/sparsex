@@ -13,7 +13,6 @@
 
 #include "Encodings.hpp"
 #include "Runtime.hpp"
-#include "SparseUtil.hpp"
 #include "SparsePartition.hpp"
 
 namespace csx {
@@ -66,6 +65,7 @@ public:
                                                  input.GetNrCols(),
                                                  input.GetNrNonzeros(),
                                                  nr);
+        // FIXME: why initialization is happening twice?
         ret->nr_rows_ = input.GetNrRows();
         ret->nr_cols_ = input.GetNrCols();
         ret->nr_nzeros_ = input.GetNrNonzeros();
@@ -104,8 +104,6 @@ private:
     PartitionType *partitions_;
 };
 
-}  //end of csx namespace
-
 template<typename PartitionType>
 template<typename InputType>
 void SparseInternal<PartitionType>::BuildPartitions(InputType &input, size_t nr)
@@ -123,7 +121,7 @@ void SparseInternal<PartitionType>::BuildPartitions(InputType &input, size_t nr)
         partition = partitions_ + i;
         limit = (nr_nzeros_ - cnt) / (nr - i);
         size_t nnz = partition->SetElems(iter, iter_end, row_start + 1,
-                                         limit, limit + 2 * input.GetNrRows() - 1,
+                                         limit, limit + 2*input.GetNrRows() - 1,
                                          input.GetNrRows() + 1);
         partition->SetNrNonzeros(nnz);
         partition->SetNrRows(partition->GetRowptrSize() - 1);
@@ -136,6 +134,8 @@ void SparseInternal<PartitionType>::BuildPartitions(InputType &input, size_t nr)
 
     assert(cnt == nr_nzeros_);
 }
+
+}  //end of csx namespace
 
 #endif // SPARSE_INTERNAL_HPP
 

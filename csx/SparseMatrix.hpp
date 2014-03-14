@@ -20,7 +20,7 @@
 #include "Rcm.hpp"
 #include "SparseInternal.hpp"
 #include "Timer.hpp"
-#include "types.h"
+#include "Types.hpp"
 
 #include <boost/interprocess/detail/move.hpp>
 

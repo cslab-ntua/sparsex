@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: libcsximpl.a libcsximpl.so spmv set_test 
+all: libcsximpl.a libcsximpl.so spmv element_test
 #dynamic_array_test
 
 # Configuration
@@ -66,6 +66,7 @@ CSX_SRC = \
 	CsxUtil.cpp \
 	CtlBuilder.cpp \
 	DynamicArrayTest.cpp \
+	ElementTest.cpp \
 	Encodings.cpp \
 	Jit.cpp \
 	JitUtil.cpp \
@@ -74,6 +75,7 @@ CSX_SRC = \
 	SparseMatrixWrapper.cpp \
 	TemplateText.cpp \
 	Timer.cpp \
+	Statistics.cpp \
 	Vector.cpp \
 	$(log_dir)/Logger.cpp \
 	$(log_dir)/OutputPolicy.cpp \
@@ -124,6 +126,9 @@ set_test: set_test.o libcsximpl.so
 
 dynamic_array_test: DynamicArrayTest.o Timer.o $(libadd)
 	$(LINK) -o $@ $^ $(libadd) -lnuma
+
+element_test: ElementTest.o Encodings.o Statistics.o numa_util.o
+	$(LINK) -o $@ $^ $(LIBS)
 
 clean:
 	rm -rf $(DEPDIR)

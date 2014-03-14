@@ -12,8 +12,6 @@
 #define ALLOCATORS_HPP
 
 #include "numa_util.h"
-#include <numa.h>
-
 #include <cassert>
 #include <cstdlib>
 #include <exception>
@@ -57,10 +55,13 @@ public:
         return DoReallocate(p, old_size, new_size);
     }
 
+    /**
+     *  realloc() contract; see realloc(3)
+     */
     void *Reallocate(void *p, size_t old_size, size_t new_size)
     {
         void *ret = Reallocate(p, old_size, new_size, nothrow);
-        if (!ret)
+        if (!ret && new_size)
             throw bad_alloc();
         return ret;
     }
@@ -79,7 +80,7 @@ public:
     {
         if (p) {
             for (size_t i = 0; i < nr_elems; ++i) {
-                p->~T();
+                p[i].~T();
             }
 
             Deallocate(p, nr_elems*sizeof(T));
@@ -188,7 +189,12 @@ private:
 
     void *DoReallocate(void *p, size_t old_size, size_t new_size) throw()
     {
-        return numa_realloc(p, old_size, new_size);
+        if (!new_size)
+            DoDeallocate(p, old_size);
+        else
+            p = numa_realloc(p, old_size, new_size);
+
+        return p;
     }
 
     void DoDeallocate(void *p, size_t size) throw()
@@ -354,6 +360,12 @@ public:
     void destroy(pointer p)
     {
         p->~value_type();
+    }
+
+    void destroy(pointer p, size_type n)
+    {
+        for (size_t i = 0; i < n; ++i)
+            p[i].~value_type();
     }
 };
 

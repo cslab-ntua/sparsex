@@ -131,9 +131,9 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
 
 	(*rowptr)[row_i++] = val_i;
     for (;iter != iter_end; ++iter) {
-        row = (*iter).row - 1;
-        col = (*iter).col - 1;
-        val = (*iter).val;
+        row = (*iter).GetRow() - 1;
+        col = (*iter).GetCol() - 1;
+        val = (*iter).GetValue();
 		assert(row >= row_prev);
 		if (row != row_prev) {
 			for (IndexType i = 0; i < row - row_prev; i++) {
@@ -145,6 +145,7 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
 		(*colind)[val_i] = col;
 		val_i++;
     }
+
 	(*rowptr)[row_i++] = val_i;
 }
 

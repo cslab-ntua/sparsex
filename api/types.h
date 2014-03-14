@@ -23,7 +23,7 @@
 #endif
 
 #ifndef index_t
-#define index_t int
+#   define index_t int
 #endif
 
 #ifdef USE_SINGLE_PRECISION

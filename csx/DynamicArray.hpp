@@ -44,8 +44,7 @@ public:
     {
         if (own_elems_) {
             // Destroy array elements and deallocate
-            for (size_t i = 0; i < size_; ++i)
-                alloc_.destroy(&elems_[i]);
+            alloc_.destroy(elems_, size_);
             alloc_.deallocate(elems_, capacity_);
         }
     }

@@ -12,11 +12,9 @@
 #ifndef DELTA_HPP
 #define DELTA_HPP
 
-#include <inttypes.h>
+#include <cstdint>
 
 namespace csx {
-
-#define PID_DELTA_BASE  0UL
 
 typedef union {
     uint8_t d8;
@@ -38,11 +36,6 @@ size_t GetDeltaSize(size_t val)
         return sizeof(du.d32);
 
     return sizeof(du.d64);
-}
-
-unsigned long GetDeltaPatternId(size_t delta_size)
-{
-    return (delta_size << 3) + PID_DELTA_BASE;
 }
 
 } // end csx namespace

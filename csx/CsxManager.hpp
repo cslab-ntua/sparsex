@@ -17,6 +17,7 @@
 #include "Csx.hpp"
 #include "CtlBuilder.hpp"
 #include "CtlUtil.hpp"
+#include "Element.hpp"
 #include "SparsePartition.hpp"
 #include "Delta.hpp"
 #include "SpmMt.hpp"
@@ -26,6 +27,8 @@
 #   include <numa.h>
 #   include "numa_util.h"
 #endif
+
+using namespace std;
 
 namespace csx {
 
@@ -70,7 +73,8 @@ public:
           flag_avail_(0),
           row_jmps_(false),
           full_column_indices_(false),
-          ctl_builder_(CtlBuilder(6*spm_sym_->GetLowerMatrix()->GetNrNonzeros())),
+          ctl_builder_(
+              CtlBuilder(6*spm_sym_->GetLowerMatrix()->GetNrNonzeros())),
           last_col_(0), empty_rows_(0) {}
 
     /**
@@ -130,10 +134,13 @@ private:
      *  @rstart first element of the row.
      *  @rend   last element of the row.
      */
-    void DoRow(const Elem<IndexType, ValueType> *rstart,
-               const Elem<IndexType, ValueType> *rend, IndexType row);
-    void DoSymRow(const Elem<IndexType, ValueType> *rstart,
-                  const Elem<IndexType, ValueType> *rend);
+    void DoRow(
+        typename SparsePartition<IndexType, ValueType>::iterator &rstart,
+        typename SparsePartition<IndexType, ValueType>::iterator &rend,
+        IndexType row);
+    void DoSymRow(
+        typename SparsePartition<IndexType, ValueType>::iterator &rstart,
+        typename SparsePartition<IndexType, ValueType>::iterator &rend);
 
     /**
      *  Set flags that concern change of row.
@@ -156,20 +163,20 @@ private:
      *
      *  @param elem elements of current pattern.
      */
-    void AddPattern(const Elem<IndexType, ValueType> &elem);
+    void AddPattern(const Element<IndexType, ValueType> &elem);
 
     /**
      *  @param xs  elements found before pattern.
      */
     void PreparePat(std::vector<IndexType> &xs,
-                    const Elem<IndexType, ValueType> &elem);
+                    const Element<IndexType, ValueType> &elem);
 
     /**
      *  Updates the span of a row.
      *
-     *  @param pat  the pattern of an element in the row.
+     *  @param elem     An element representing a pattern.
      */
-    void UpdateRowSpan(const DeltaRLE *pat);
+    void UpdateRowSpan(const Element<IndexType, ValueType> &elem);
 
     SparsePartition<IndexType, ValueType> *spm_;
     SparsePartitionSym<IndexType, ValueType> *spm_sym_;
@@ -267,7 +274,6 @@ csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
         exit(1);
     }
 
-    // FIXME: does not compile
     csx = new (numa_alloc, node) csx_sym_t<ValueType>;
     csx->dvalues = new (numa_alloc, node) ValueType[diagonal_size];
 #else  
@@ -326,10 +332,10 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
     if (!symmetric) {
         curr_row_ = 0;
         for (size_t i = 0; i < spm_->GetRowptrSize() - 1; ++i, ++curr_row_) {
-            const Elem<IndexType, ValueType> *rbegin, *rend;
-
-            rbegin = spm_->RowBegin(i);
-            rend = spm_->RowEnd(i);
+            typename SparsePartition<IndexType, ValueType>::iterator rbegin =
+                spm_->begin(i);
+            typename SparsePartition<IndexType, ValueType>::iterator rend =
+                spm_->end(i);
 
             LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
     
@@ -366,10 +372,11 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
         }
     } else {
         for (size_t i = 0; i < spm_->GetRowptrSize() - 1; i++) {
-            const Elem<IndexType, ValueType> *rbegin, *rend;
-    
-            rbegin = spm_->RowBegin(i);
-            rend = spm_->RowEnd(i);
+            typename SparsePartition<IndexType, ValueType>::iterator rbegin =
+                spm_->begin(i);
+            typename SparsePartition<IndexType, ValueType>::iterator rend =
+                spm_->end(i);
+
             LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
     
             if (rbegin == rend){		// Check if row is empty.
@@ -405,6 +412,12 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
         }
     }
 
+#ifdef DEBUG_MODE
+    LOG_DEBUG << "values_\n";
+    for (size_t i = 0; i < spm_->GetNrNonzeros(); ++i)
+        LOG_DEBUG << values_[i] << "\n";
+#endif
+
     csx->row_jumps = row_jmps_;
     csx->ctl_size = ctl_builder_.GetCtlSize();
     csx->ctl = ctl_builder_.Finalize();
@@ -414,9 +427,7 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
     values_idx_ = 0;
     csx->rows_info = rows_info_;
     rows_info_ = NULL;
-
     AddMappings(csx->id_map);
-
     return csx;
 }
 
@@ -433,13 +444,17 @@ void CsxManager<IndexType, ValueType>::AddMappings(long *map)
 }
 
 template<typename IndexType, typename ValueType>
-void CsxManager<IndexType, ValueType>::UpdateRowSpan(const DeltaRLE *pat)
+void CsxManager<IndexType, ValueType>::UpdateRowSpan(
+    const Element<IndexType, ValueType> &elem)
 {
-    Encoding::Type type = pat->GetType();
-    long size = pat->GetSize();
-    uint32_t delta = pat->GetDelta();
-    size_t span;
+    assert(elem.IsPattern());
+    const Encoding::Instantiation &inst = elem.GetInstantiation();
+    size_t size = elem.GetSize();
+    Encoding::Type type = inst.first;
+    size_t delta = inst.second;
 
+    Encoding e(type);
+    size_t span;
     switch (type) {
     case Encoding::Vertical:
     case Encoding::Diagonal:
@@ -450,11 +465,12 @@ void CsxManager<IndexType, ValueType>::UpdateRowSpan(const DeltaRLE *pat)
         span = type - Encoding::BlockRowMin;
         break;
     case Encoding::BlockColMin ... Encoding::BlockColMax:
-        span = pat->GetOtherDim() - 1;//CHECK -1
+        span = size / e.GetBlockAlignment() - 1;
         break;
     default:
         span = 0;
     }
+
     if (span > span_)
         span_ = span;
 }
@@ -467,26 +483,28 @@ void CsxManager<IndexType, ValueType>::UpdateRowSpan(const DeltaRLE *pat)
  */
 template<typename IndexType, typename ValueType>
 void CsxManager<IndexType, ValueType>::
-DoRow(const Elem<IndexType, ValueType> *rbegin,
-      const Elem<IndexType, ValueType> *rend, IndexType row)
+DoRow(typename SparsePartition<IndexType, ValueType>::iterator &rbegin,
+      typename SparsePartition<IndexType, ValueType>::iterator &rend,
+      IndexType row)
 {
     std::vector<IndexType> xs;
-    span_ = 0;
 
+    span_ = 0;
     last_col_ = 1;
-    for (const Elem<IndexType, ValueType> *spm_elem = rbegin;
-         spm_elem < rend; spm_elem++) {
-        LOG_DEBUG << "\t" << *spm_elem << "\n";
+    typename SparsePartition<IndexType, ValueType>::iterator &ri = rbegin;
+    for (; ri != rend; ++ri) {
+        LOG_DEBUG << "\t" << *ri << "\n";
 
         // Check if this element contains a pattern.
-        if (spm_elem->pattern != NULL) {
-            UpdateRowSpan(spm_elem->pattern);
-            PreparePat(xs, *spm_elem);
+        if ((*ri).IsPattern()) {
+            UpdateRowSpan(*ri);
+            PreparePat(xs, *ri);
             assert(xs.size() == 0);
-            AddPattern(*spm_elem);
-            for (size_t i = 0; i < spm_elem->pattern->GetSize(); i++)
-                values_[values_idx_++] = spm_elem->vals[i];
-
+            AddPattern(*ri);
+            const ValueType *elem_vals = &(*ri).GetValues();
+            std::copy(elem_vals, elem_vals + (*ri).GetSize(),
+                      values_ + values_idx_);
+            values_idx_ += (*ri).GetSize();
             continue;
         }
 
@@ -495,8 +513,8 @@ DoRow(const Elem<IndexType, ValueType> *rbegin,
         if (xs.size() == CTL_SIZE_MAX)
              AddXs(xs);
 
-        xs.push_back(spm_elem->col);
-        values_[values_idx_++] = spm_elem->val;
+        xs.push_back((*ri).GetCol());
+        values_[values_idx_++] = (*ri).GetValue();
     }
 
     if (xs.size() > 0)
@@ -511,27 +529,27 @@ DoRow(const Elem<IndexType, ValueType> *rbegin,
  */
 template<typename IndexType, typename ValueType>
 void CsxManager<IndexType, ValueType>::
-DoSymRow(const Elem<IndexType, ValueType> *rbegin,
-         const Elem<IndexType, ValueType> *rend)
+DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
+         typename SparsePartition<IndexType, ValueType>::iterator &rend)
 {
     std::vector<IndexType> xs;
-    const Elem<IndexType, ValueType> *spm_elem = rbegin;
+    typename SparsePartition<IndexType, ValueType>::iterator &ri = rstart;
     span_ = 0;
 
     last_col_ = 1;
-    for ( ; spm_elem < rend && spm_elem->col < spm_->GetRowStart() + 1; 
-         spm_elem++) {
-        LOG_DEBUG << "\t" << *spm_elem << "\n";
+    for ( ; ri != rend && (*ri).GetCol() < spm_->GetRowStart() + 1; ++ri) {
+        LOG_DEBUG << "\t" << *ri << "\n";
 
         // Check if this element contains a pattern.
-        if (spm_elem->pattern != NULL) {
-            UpdateRowSpan(spm_elem->pattern);
-            PreparePat(xs, *spm_elem);
+        if ((*ri).IsPattern()) {
+            UpdateRowSpan(*ri);
+            PreparePat(xs, *ri);
             assert(xs.size() == 0);
-            AddPattern(*spm_elem);
-            for (size_t i = 0; i < spm_elem->pattern->GetSize(); i++)
-                values_[values_idx_++] = spm_elem->vals[i];
-
+            AddPattern(*ri);
+            const ValueType *elem_vals = &(*ri).GetValues();
+            std::copy(elem_vals, elem_vals + (*ri).GetSize(),
+                      values_ + values_idx_);
+            values_idx_ += (*ri).GetSize();
             continue;
         }
 
@@ -540,25 +558,27 @@ DoSymRow(const Elem<IndexType, ValueType> *rbegin,
         if (xs.size() == CTL_SIZE_MAX)
              AddXs(xs);
 
-        xs.push_back(spm_elem->col);
-        values_[values_idx_++] = spm_elem->val;
+        xs.push_back((*ri).GetCol());
+        values_[values_idx_++] = (*ri).GetValue();
     }
 
     if (xs.size() > 0)
         AddXs(xs);
 
-    for ( ; spm_elem < rend; spm_elem++) {
-        LOG_DEBUG << "\t" << *spm_elem << "\n";
+    // FIXME: this is completely the same as before!
+    for ( ; ri != rend; ++ri) {
+        LOG_DEBUG << "\t" << *ri << "\n";
 
         // Check if this element contains a pattern.
-        if (spm_elem->pattern != NULL) {
-            UpdateRowSpan(spm_elem->pattern);
-            PreparePat(xs, *spm_elem);
+        if ((*ri).IsPattern()) {
+            UpdateRowSpan(*ri);
+            PreparePat(xs, *ri);
             assert(xs.size() == 0);
-            AddPattern(*spm_elem);
-            for (size_t i = 0; i < spm_elem->pattern->GetSize(); i++)
-                values_[values_idx_++] = spm_elem->vals[i];
-
+            AddPattern(*ri);
+            const ValueType *elem_vals = &(*ri).GetValues();
+            std::copy(elem_vals, elem_vals + (*ri).GetSize(),
+                      values_ + values_idx_);
+            values_idx_ += (*ri).GetSize();
             continue;
         }
 
@@ -567,15 +587,14 @@ DoSymRow(const Elem<IndexType, ValueType> *rbegin,
         if (xs.size() == CTL_SIZE_MAX)
              AddXs(xs);
 
-        xs.push_back(spm_elem->col);
-        values_[values_idx_++] = spm_elem->val;
+        xs.push_back((*ri).GetCol());
+        values_[values_idx_++] = (*ri).GetValue();
     }
 
     if (xs.size() > 0)
         AddXs(xs);
 }
 
-// Note that this function may allocate space in ctl_da.
 template<typename IndexType, typename ValueType>
 pair<bool, size_t>
 CsxManager<IndexType, ValueType>::UpdateNewRow()
@@ -599,30 +618,28 @@ CsxManager<IndexType, ValueType>::UpdateNewRow()
 template<typename IndexType, typename ValueType>
 void CsxManager<IndexType, ValueType>::AddXs(std::vector<IndexType> &xs)
 {
-    unsigned long patt_id;
-    size_t xs_size, delta_bytes;
-    IndexType last_col, max;
     typename std::vector<IndexType>::iterator vi;
 
-    // Do delta encoding.
-    xs_size = xs.size();
-    last_col = xs[xs_size-1];
+    size_t xs_size = xs.size();
+    IndexType last_col = xs[xs_size-1];
     IndexType x_start = xs[0];
+
+    // Do delta encoding
     DeltaEncode(xs.begin(), xs.end(), last_col_);
     last_col_ = last_col;
 
-    // Calculate the delta's size and the pattern id.
-    max = 0;
+    // Calculate the delta's size and the pattern id
+    IndexType max = 0;
     if (xs_size > 1) {
         vi = xs.begin();
         std::advance(vi, 1);
         max = *(std::max_element(vi, xs.end()));
     }
 
-    delta_bytes = GetDeltaSize(max);
-    patt_id = GetDeltaPatternId(delta_bytes);
-
-    // Variables ctls_size, ctl_flags are not valid after this call.
+    size_t delta_bytes = GetDeltaSize(max);
+    unsigned long patt_id = GetPatternId(delta_bytes);
+    
+    // Variables ctls_size, ctl_flags are not valid after this call
     pair<bool, size_t> newrow_info = UpdateNewRow();
     IndexType ucol;
     if (full_column_indices_)
@@ -630,13 +647,16 @@ void CsxManager<IndexType, ValueType>::AddXs(std::vector<IndexType> &xs)
     else
         ucol = xs[0];
 
-    assert( (xs_size > 0) && (xs_size <= CTL_SIZE_MAX));
+    LOG_DEBUG << "AddXs() ucol " << ucol << "\n";
+    LOG_DEBUG << "last_col_: " << last_col_ << "\n";
+
+    assert(xs_size > 0 && xs_size <= CTL_SIZE_MAX);
     ctl_builder_.AppendCtlHead(newrow_info.first, newrow_info.second,
                                GetFlag(patt_id, xs_size),
                                xs_size, ucol, sizeof(IndexType),
                                full_column_indices_);
 
-    // Add deltas (if needed).
+    // Add deltas (if needed)
     for (size_t i = 1; i < xs_size; ++i)
         ctl_builder_.AppendFixedInt(xs[i], delta_bytes);
 
@@ -646,16 +666,16 @@ void CsxManager<IndexType, ValueType>::AddXs(std::vector<IndexType> &xs)
 
 template<typename IndexType, typename ValueType>
 void CsxManager<IndexType, ValueType>::
-AddPattern(const Elem<IndexType, ValueType> &elem)
+AddPattern(const Element<IndexType, ValueType> &elem)
 {
-    unsigned long patt_id = elem.pattern->GetPatternId();
-    size_t patt_size = elem.pattern->GetSize();
+    unsigned long patt_id = GetPatternId(elem);
+    size_t patt_size = elem.GetSize();
     pair<bool, size_t> newrow_info = UpdateNewRow();
     IndexType ucol;
     if (full_column_indices_)
-        ucol = elem.col - 1;
+        ucol = elem.GetCol() - 1;
     else
-        ucol = elem.col - last_col_;
+        ucol = elem.GetCol() - last_col_;
 
     assert(patt_size <= CTL_SIZE_MAX);
     ctl_builder_.AppendCtlHead(newrow_info.first, newrow_info.second,
@@ -663,14 +683,15 @@ AddPattern(const Elem<IndexType, ValueType> &elem)
                                patt_size, ucol, sizeof(IndexType),
                                full_column_indices_);
 
-    LOG_DEBUG << "AddPattern ujmp " << ucol << "\n";
-    last_col_ = elem.pattern->ColIncreaseJmp(spm_->GetType(), elem.col);
-    LOG_DEBUG << "last_col: " << last_col_ << "\n";
+    LOG_DEBUG << "AddPattern() ucol " << ucol << "\n";
+    last_col_ = GetLastCol(elem, spm_->GetType());
+    LOG_DEBUG << "last_col_: " << last_col_ << "\n";
 }
 
 template<typename IndexType, typename ValueType>
 void CsxManager<IndexType, ValueType>::
-PreparePat(std::vector<IndexType> &xs, const Elem<IndexType, ValueType> &elem)
+PreparePat(std::vector<IndexType> &xs,
+           const Element<IndexType, ValueType> &elem)
 {
     if (xs.size() != 0)
         AddXs(xs);

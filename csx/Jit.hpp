@@ -16,9 +16,9 @@
 #include "Compiler.hpp"
 #include "CsxManager.hpp"
 #include "Encodings.hpp"
+#include "Element.hpp"
 #include "JitConfig.hpp"
 #include "JitUtil.hpp"
-#include "SparseUtil.hpp"
 #include "TemplateText.hpp"
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
@@ -110,6 +110,10 @@ public:
             delete it->second;
         if (compiler_)
             delete compiler_;
+
+        // FIXME: this is a leak; but if the following is uncommented LLVM
+        // crashes at runtime
+
         // if (context_)
         //     delete context_;
     }
@@ -176,7 +180,7 @@ CsxJit<IndexType, ValueType>::CsxJit(CsxManager<IndexType, ValueType> *csxmg,
     compiler_ = new ClangCompiler();
     compiler_->AddHeaderSearchPath(CSX_PREFIX "/csx");
     compiler_->AddHeaderSearchPath(CSX_PREFIX "/lib/spm");
-    // compiler_->SetDebugMode(true);
+    //compiler_->SetDebugMode(true);
 };
 
 template<typename IndexType, typename ValueType>
@@ -454,8 +458,8 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
             std::string patt_code, patt_func_entry;
             long patt_id = i_patt->second.flag;
             Encoding::Type type =
-                static_cast<Encoding::Type>(i_patt->first / CSX_PID_OFFSET);
-            delta = i_patt->first % CSX_PID_OFFSET;
+                static_cast<Encoding::Type>(i_patt->first / PatternIdOffset);
+            delta = i_patt->first % PatternIdOffset;
             Encoding e(type);
             switch (e.GetType()) {
             case Encoding::None:
@@ -552,8 +556,8 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
 
         for (int i = 0; csx_->id_map[i] != -1; i++) {
             Encoding::Type type =
-                static_cast<Encoding::Type>(csx_->id_map[i] / CSX_PID_OFFSET);
-            delta = csx_->id_map[i] % CSX_PID_OFFSET;
+                static_cast<Encoding::Type>(csx_->id_map[i] / PatternIdOffset);
+            delta = csx_->id_map[i] % PatternIdOffset;
             std::string patt_code, patt_func_entry;
             Encoding e(type);
             switch (e.GetType()) {
@@ -674,13 +678,13 @@ void CsxJit<IndexType, ValueType>::GenCode(std::ostream &log)
 {
     std::map<std::string, std::string> hooks;
     
+    hooks["header_prefix"] = CSX_PREFIX;
     if (!symmetric_) {
         // Load the template source
         TemplateText source_tmpl(SourceFromFile(CsxTemplateSource));
         
         DoNewRowHook(hooks, log);
         DoSpmvFnHook(hooks, log);
-        hooks["header_prefix"] = CSX_PREFIX;
 
         // Substitute and compile into an LLVM module
         compiler_->SetLogStream(&log);

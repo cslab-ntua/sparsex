@@ -11,12 +11,12 @@
 #define CDECL_H
 
 #ifdef __cplusplus
-#   define BEGIN_C_DECLS extern "C" {
-#   define END_C_DECLS }
+#   define BEGIN_C_DECLS    extern "C" {
+#   define END_C_DECLS      }
 #else
 #   define BEGIN_C_DECLS    /* nothing */
 #   define END_C_DECLS      /* nothing */
-#endif
+#endif  // __cplusplus
 
 #endif  // CDECL_H
 

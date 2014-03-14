@@ -13,8 +13,10 @@
 
 #include "Csx.hpp"
 #include "Encodings.hpp"
-#include "SparseUtil.hpp"
+#include "Element.hpp"
 #include "SpmMt.hpp"
+
+using namespace csx;
 
 /**
  *  Returns the value of the corresponding element (0 if element doesn't exist)
@@ -224,8 +226,8 @@ bool SearchValue(void *spm, IndexType row, IndexType col,
             ucol += ul_get(&ctl_ptr);
 #endif
             patt_id = flags & CTL_PATTERN_MASK;
-            type = csx->id_map[patt_id] / CSX_PID_OFFSET;
-            delta = csx->id_map[patt_id] % CSX_PID_OFFSET;
+            type = csx->id_map[patt_id] / PatternIdOffset;
+            delta = csx->id_map[patt_id] % PatternIdOffset;
 
             switch(type) {
             case Encoding::None:

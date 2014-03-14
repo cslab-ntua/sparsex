@@ -12,8 +12,6 @@
  */
 
 #include "Runtime.hpp"
-#include "SparseUtil.hpp"
-
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
@@ -22,6 +20,8 @@
 
 using namespace std;
 using namespace boost;
+
+namespace csx {
 
 static std::map<string, int> XformIndex = boost::assign::map_list_of
     ("none", 0)
@@ -33,9 +33,9 @@ static std::map<string, int> XformIndex = boost::assign::map_list_of
     ("bc", 6)
     ("all", 7);
 
-const int XformBlockRow = XformIndex["br"];
-const int XformBlockCol = XformIndex["bc"];
-const int XformBlockAll = XformIndex["all"];
+// const int XformBlockRowIdx = XformIndex["br"];
+// const int XformBlockColIdx = XformIndex["bc"];
+// const int XformBlockAllIdx = XformIndex["all"];
 
 /**
  *  Load default CSX runtime properties
@@ -164,3 +164,5 @@ void RuntimeContext::SetRuntimeContext(const RuntimeConfiguration &conf)
                           RuntimeConfiguration::RtCpuAffinity),
                       cpu_affinity_);
 }
+
+} // end of namespace csx

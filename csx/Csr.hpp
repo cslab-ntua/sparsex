@@ -13,8 +13,7 @@
 #ifndef CSR_HPP
 #define CSR_HPP
 
-#include "SparseUtil.hpp"
-
+#include "Element.hpp"
 #include <inttypes.h>
 #include <iterator>
 #include <vector>
@@ -110,7 +109,7 @@ public:
         std::swap(permutation_, inv_perm);
     }
 
-    // CooElem iterator
+    // Element iterator
     class iterator;
 
     iterator begin()
@@ -159,10 +158,8 @@ public:
             
             os << "Elements of Matrix" << endl;
             os << "------------------" << endl;
-            for (;iter != iter_end; ++iter)
-                os << "(" << std::setw(2) << (*iter).row << "," 
-                   << std::setw(2) << (*iter).col << "): "
-                   << std::setw(2) << (*iter).val << std::endl;
+            for (; iter != iter_end; ++iter)
+                os << *iter << "\n";
         }
     }
 
@@ -231,14 +228,9 @@ std::ostream &operator<<(std::ostream &os,
 template<typename IndexType, typename ValueType>
 class CSR<IndexType, ValueType>::iterator :
         public std::iterator<std::forward_iterator_tag,
-                             CooElem<IndexType, ValueType> >
+                             Element<IndexType, ValueType> >
 {
 public:
-    iterator()
-    {
-        assert(false && "no default iterator");
-    }
-
     iterator(CSR<IndexType, ValueType> *csr)
         : csr_(csr),
           curr_row_(0),
@@ -335,36 +327,25 @@ public:
         }
     }
 
-    /*void operator++()
-    {
-        IndexType new_row_elem =
-            csr_->rowptr_[curr_row_+1] - !csr_->zero_based_;
-        ++curr_elem_;
-        while (new_row_elem == curr_elem_) {
-            ++curr_row_;
-            new_row_elem = csr_->rowptr_[curr_row_+1] - !csr_->zero_based_;
-        }
-
-        if (curr_row_ == csr_->nr_rows_)
-            assert(curr_elem_ == csr_->nr_nzeros_);
-    }*/
-
-    CooElem<IndexType, ValueType> operator*()
+    Element<IndexType, ValueType> operator*()
     {
         assert(curr_row_ <= csr_->nr_rows_ && "out of bounds");
         assert(static_cast<size_t>(curr_elem_) < csr_->nr_nzeros_
                && "out of bounds");
 
-        CooElem<IndexType, ValueType> ret;    // CooElem's are one-based!
-        if (csr_->reordered_) {
-            ret.row = row_index_ + 1;
-        } else {
-            ret.row = curr_row_ + 1;
-        }
-        ret.col = csr_->colind_[curr_elem_] + csr_->zero_based_;
-        ret.val = csr_->values_[curr_elem_];
+        IndexType row, col;
+        ValueType val;
 
-        return ret;
+        // Element's are one-based!
+        if (csr_->reordered_) {
+            row = row_index_ + 1;
+        } else {
+            row = curr_row_ + 1;
+        }
+
+        col = csr_->colind_[curr_elem_] + csr_->zero_based_;
+        val = csr_->values_[curr_elem_];
+        return Element<IndexType, ValueType>(row, col, val);
     }
 
 private:

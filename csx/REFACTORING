@@ -1,0 +1,58 @@
+* [DONE] RowBegin()/RowEnd() should be replaced by the SparsePartition::iterator
+* [DONE] Replace all instances of Elem/CooElem/RLEs with the Element
+* [DONE] Revisit statistics collecting mechanism
+  -- Stats structure, element markers (new heur)
+* Revisit pattern-id assigning mechanism
+* Revisit namespace csx (should become sparsex, probably)
+* Eliminate unused/dead code, incl. commented out code
+* [ 50%] Clean up thgoud code
+* Revisit SparsePartition building, especially SetElems()
+* Remove the emacs directive from header files
+* Heuristic selection could be an spx option
+* Consider making SparsePartition::iterator a const iterator
+* Treat zero-sized windows
+* Block alignment -> fixed dim vs. variable dim
+* Cbegin() -> cbegin()
+* Revisit PreparePat()'s arguments
+* Check FIXME tags
+* Remove std:: prefixes where possible
+* Revise iterators (Mmf, Csr, SparsePartition)
+* Consider zero-based indexing for Element
+* Clean the interfaces, one- or zero-based, decide!
+* Replace Print() methods with friend operator<<()'s
+* Consider implementing operator->() in iterators
+* Gather all general utilities (iceil, gcd, check_iterator) in a single file
+* Advanced type checking with type traits
+* Unsigned to signed conversions
+* Remove `inline' keyword and move member function definitions inside the class
+  (SparseMatrix.hpp)
+* Xs -> Cols
+* [DONE] Rethink element marking mechanism
+* valgrind check / memory leaks
+* DEBUG_MODE compilation macro
+* Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
+* Remove default arguments or document precisely
+* [DONE] Fix Diag <-> AntiDiag conversions
+* Use auto variables instead of heap allocated if their scope is limited inside
+  a function
+* Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
+* Code replication
+
+Requirements for StatsCollection
+* [DONE] Scale stats
+
+Tests:
+* [DONE] demopatt
+* [DONE] Multithreaded
+* [DONE] Sampling
+* [DONE] NUMA
+* [DONE] Symmetric
+* Reordering
+
+XFORM_CONF: none|h|v|br|all
+SAMPLING_PORTION: .4
+SAMPLES: 1
+MT_CONF: 0|0,1
+matrices: (10x10) demopatt | (8x8) symmetric
+NUMA|SMP
+reordering

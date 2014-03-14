@@ -20,6 +20,8 @@
 
 using namespace std;
 
+namespace csx {
+
 class Encoding
 {
 public:
@@ -52,6 +54,8 @@ public:
         All,
         __EndOfGroups__,
     };
+
+    typedef pair<Type, size_t> Instantiation;
 
     Encoding(Type type)
         : type_(type)
@@ -250,6 +254,8 @@ ostream &operator<<(ostream &out, PreprocessingMethod &meth)
     out << meth.GetName();
     return out;
 }
+
+}   // end of namespace csx
 
 #endif  // ENCODINGS_HPP
 

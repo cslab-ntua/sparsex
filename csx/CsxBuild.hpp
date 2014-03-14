@@ -19,7 +19,6 @@
 #include "Jit.hpp"
 #include "Runtime.hpp"
 #include "SparseInternal.hpp"
-#include "SparseUtil.hpp"
 #include "SparsePartition.hpp"
 #include "SpmMt.hpp"
 
@@ -29,6 +28,8 @@
 #include <boost/thread/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+
+using namespace csx;
 
 double csx_create_time, encode_time;
 
@@ -405,9 +406,12 @@ void MakeMap(spm_mt_t *spm_mt,
         start = spm->GetRowStart();
         end = spm->GetRowStart() + spm->GetRowptrSize() - 1;
         for (uint32_t j = 0; j < (uint32_t) spm->GetRowptrSize() - 1; j++) {
-            for (Elem<IndexType, ValueType> *elem = spm->RowBegin(j); elem != spm->RowEnd(j);
-                 elem++) {
-                col = elem->col;
+            typename SparsePartition<IndexType, ValueType>::iterator ri =
+                spm->begin(j);
+            typename SparsePartition<IndexType, ValueType>::iterator re =
+                spm->end(j);
+            for (; ri != re; ++ri) {
+                col = (*ri).GetCol();
                 assert(col < end);
                 if (col < start + 1 && !initial_map[i][col]) {
                     initial_map[i][col] = 1;
@@ -416,6 +420,7 @@ void MakeMap(spm_mt_t *spm_mt,
             }
         }
     }
+
     total_count = 0;
     for (unsigned int i = 0; i < n; i++)
         total_count += count[i];

@@ -1,7 +1,7 @@
-#include "types.h"
 #include "CsxBench.hpp"
 #include "LoggerUtil.hpp"
 #include "SparseMatrix.hpp"
+#include "Types.hpp"
 
 #include <cfloat>
 
@@ -50,7 +50,8 @@ int main(int argc, char **argv)
     spm_mt_t *spm_mt;
 
     AlwaysUseConsole();
-    DisableInfo();
+    UseConsole(Debug);
+    //DisableInfo();
 
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
@@ -77,8 +78,8 @@ int main(int argc, char **argv)
         PrintUsage(std::cerr);
         exit(1);
     }
-    argv = &argv[optind];
 
+    argv = &argv[optind];
     SparseMatrix<MMF<index_t, value_t> > matrix(argv[0]);
     // matrix.Reorder();
 

@@ -13,9 +13,11 @@
 #define NUMA_UTIL_H
 
 #include "cdecl.h"
-#include <stddef.h>
 
 BEGIN_C_DECLS
+
+#include <numa.h>
+#include <stddef.h>
 
 /*
  *  Custom interleaved allocation.

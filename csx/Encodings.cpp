@@ -19,6 +19,8 @@
 using namespace std;
 using namespace boost;
 
+namespace csx {
+
 std::map<Encoding::Type, pair<string, string> >
 Encoding::names_ = boost::assign::map_list_of
     (Encoding::None, make_pair("none", "Delta"))
@@ -87,7 +89,7 @@ const void Encoding::GetTypes(vector<Type> &types) const
 EncodingSequence::EncodingSequence(const string &seq_str)
     : explicit_(false)
 {
-    regex xform_syntax("([a-z]+)(\\{([0-9]+(,[0-9]+)*)\\})?");
+    regex xform_syntax("([a-z]+([0-9]*))(\\{([0-9]+(,[0-9]+)*)\\})?");
     match_results<string::const_iterator> match;
     string::const_iterator s_start = seq_str.begin();
     string::const_iterator s_end = seq_str.end();
@@ -95,7 +97,7 @@ EncodingSequence::EncodingSequence(const string &seq_str)
     vector<size_t> deltas;
     while (regex_search(s_start, s_end, match, xform_syntax)) {
         string xform_str(match[1].first, match[1].second);
-        string deltas_str(match[3].first, match[3].second);
+        string deltas_str(match[4].first, match[4].second);
         s_start = match[0].second;
 
         // parse specific delta values
@@ -137,3 +139,5 @@ void EncodingSequence::Print(ostream &out) const
 }
 
 bimap<PreprocessingMethod::Type, string> PreprocessingMethod::method_names_;
+
+} // end of namespace csx

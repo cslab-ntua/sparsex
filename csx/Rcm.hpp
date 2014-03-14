@@ -158,22 +158,23 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
     typename MMF<IndexType, ValueType>::iterator iter = mat.begin();
     typename MMF<IndexType, ValueType>::iterator iter_end = mat.end();
     size_t index = 0;
-
     if (!mat.IsSymmetric() && !mat.IsColWise()) {
         mat.InitMatrix(mat.GetNrNonzeros());
-        for (;iter != iter_end; ++iter) {
+        for (; iter != iter_end; ++iter) {
             mat.InsertElement(*iter);
-            if ((*iter).row != (*iter).col)
-                edges[index++] = Pair(((*iter).row) - 1, ((*iter).col) - 1);
+            if ((*iter).GetRow() != (*iter).GetCol())
+                edges[index++] = make_pair((*iter).GetRow() - 1,
+                                           (*iter).GetCol() - 1);
         }
     } else {
         for (;iter != iter_end; ++iter)
-            if ((*iter).row < (*iter).col)
-                edges[index++] = Pair(((*iter).row) - 1, ((*iter).col) - 1);
+            if ((*iter).GetRow() < (*iter).GetCol())
+                edges[index++] = make_pair((*iter).GetRow() - 1,
+                                           (*iter).GetCol() - 1);
     }
+
     // index -> actual nr_edges
     assert(index <= nr_edges);
-
     if (index == 0) {
         LOG_WARNING << "no reordering available for this matrix, "
                     << "all non-zero elements on main diagonal\n";
@@ -195,12 +196,12 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
 template<typename IndexType, typename ValueType>
 void ReorderMat_MMF(MMF<IndexType, ValueType>& mat, const vector<size_t>& perm)
 {    
-    IndexType row, col;
-
     for (size_t i = 0; i < mat.GetNrNonzeros(); i++) {
-        mat.GetCoordinates(i, row, col);
-        mat.SetCoordinates(i, perm[row-1] + 1, perm[col-1] + 1);
+        pair<IndexType, ValueType> coord = mat.GetCoordinates(i);
+        mat.SetCoordinates(i, perm[coord.first-1] + 1,
+                           perm[coord.second-1] + 1);
     }
+
     mat.Sort();
 }
 
@@ -265,14 +266,16 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
     size_t index = 0;
     if (symmetric) {
         for (;iter != iter_end; ++iter) {
-            if ((*iter).row < (*iter).col) {
-                edges[index++] = Pair(((*iter).row) - 1, ((*iter).col) - 1);
+            if ((*iter).GetRow() < (*iter).GetCol()) {
+                edges[index++] = make_pair(((*iter).GetRow()) - 1,
+                                           ((*iter).GetCol()) - 1);
             }
         }
     } else {
         for (;iter != iter_end; ++iter) {
-            if ((*iter).row != (*iter).col) {
-                edges[index++] = Pair(((*iter).row) - 1, ((*iter).col) - 1);
+            if ((*iter).GetRow() != (*iter).GetCol()) {
+                edges[index++] = make_pair(((*iter).GetRow()) - 1,
+                                           ((*iter).GetCol()) - 1);
             }
         }
     }

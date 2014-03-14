@@ -12,10 +12,10 @@
 #ifndef VECTOR_HPP
 #define VECTOR_HPP
 
-#include "../api/types.h"
 #include "Map.hpp"
 #include "numa_util.h"
 #include "SpmMt.hpp"
+#include "../api/types.h"
 
 #ifdef __cplusplus
 

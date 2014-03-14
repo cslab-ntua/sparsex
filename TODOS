@@ -34,6 +34,12 @@
    -- Cleanup the way C and C++ are mixed
    -- [90%] Memory management (leaks, double free corruptions, etc.)
    -- [DONE] SPM indexing (C++ templates?)
+   -- Replace old Elem's
+   -- Revisit one-based indexing of sparse matrix elements.
+   -- Decide on whether to use always uint64_t for internal indexing.
+      * Less templated code --> faster compilation
+      * Larger working set during preprocessing --> possibly slower
+   -- Cleanup dead code.
 
 3. User config & installation
    -- autotools (configure;make;install)

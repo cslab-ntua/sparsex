@@ -172,9 +172,10 @@ void PutSpmMt(spm_mt_t *spm_mt)
             delete[] spm_mt->spm_threads[i].map->elems_pos;
             delete spm_mt->spm_threads[i].map;
 #endif
-            if (i != 0) 
+            if (spm_mt->local_buffers && i != 0) 
                 vec_destroy(spm_mt->local_buffers[i]);
         }
+
         free(spm_mt->local_buffers);
     }
 

@@ -12,11 +12,11 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#include "Ctl_ll.hpp"
+#include  "${header_prefix}/csx/CtlUtil.hpp"
 
 #define ELEM_TYPE double
-#include "Vector.hpp"
-#include "Csx.hpp"
+#include "${header_prefix}/csx/Vector.hpp"
+#include "${header_prefix}/csx/Csx.hpp"
 
 #define CSX_SPMV_FN_MAX CTL_PATTERNS_MAX
 
