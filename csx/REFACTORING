@@ -37,6 +37,7 @@
   a function
 * Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
 * Code replication
+* max_rowptr_size_ is never used.
 
 Requirements for StatsCollection
 * [DONE] Scale stats

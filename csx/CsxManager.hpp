@@ -283,8 +283,8 @@ csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
 
     for (uint64_t i = 0; i < diagonal_size; i++)
         csx->dvalues[i] = diagonal[i];
+
     csx->lower_matrix = MakeCsx(true);
-    
     return csx;
 }
 
