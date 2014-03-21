@@ -309,11 +309,11 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
 
     csx = new (numa_alloc, node) csx_t<ValueType>;
     values_ = new (numa_alloc, node) ValueType[spm_->GetNrNonzeros()];
-    rows_info_ = new (numa_alloc, node) row_info_t[spm_->GetNrNonzeros()];
+    rows_info_ = new (numa_alloc, node) row_info_t[spm_->GetNrRows()];
 #else    
     csx = new csx_t<ValueType>;
     values_ = new ValueType[spm_->GetNrNonzeros()];
-    rows_info_ = new row_info_t[spm_->GetNrNonzeros()];
+    rows_info_ = new row_info_t[spm_->GetNrRows()];
 #endif  // SPM_NUMA
     if (!csx || !values_ || !rows_info_) {
         LOG_ERROR << "malloc failed\n";
