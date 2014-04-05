@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * SpmvMethod.hpp -- SpMV function types.
  *
  * Copyright (C) 2007-2012, Computing Systems Laboratory (CSLab), NTUA
@@ -14,9 +13,10 @@
 
 #include "Vector.hpp"
 
-typedef void spmv_double_fn_t(void *matrix, vector_t *in, vector_t *out,
-                              double scale_f);
-typedef void spmv_double_sym_fn_t(void *matrix, vector_t *in, vector_t *out,
-                                  vector_t *temp, double scale_f);
+typedef void spmv_double_fn_t(void *matrix, spx_vector_t *in, spx_vector_t *out,
+                              spx_scalar_t scale_f);
+typedef void spmv_double_sym_fn_t(void *matrix, spx_vector_t *in,
+                                  spx_vector_t *out, spx_vector_t *temp, 
+                                  spx_scalar_t scale_f);
 
 #endif  // SPMV_METHOD_H

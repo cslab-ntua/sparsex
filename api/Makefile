@@ -10,7 +10,7 @@ CC          = gcc
 LD          = gcc
 CFLAGS      = -g -Wall -O3 -Wno-unused-function -fPIC
 # -Wpadded
-LDFLAGS     = -L$(csx_dir) -Wl,--rpath=$(csx_dir) -L$(logger_dir) -Wl,--rpath=$(logger_dir)
+LDFLAGS     = -L$(csx_dir) -Wl,--rpath=$(csx_dir) -L$(logger_dir) -Wl,--rpath=$(logger_dir) -D_GNU_SOURCE
 COMPILE     = $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK        = $(LD) $(LDFLAGS)
 LIBS        = -lcsximpl
@@ -25,7 +25,7 @@ endif
 LIB_OBJECTS = error.o common.o mat_vec.o
 
 %.o: %.c %.h
-	$(COMPILE) -c $< -o $@
+	$(COMPILE) -D_GNU_SOURCE -c $< -o $@
 
 libsparsex.so: $(LIB_OBJECTS)
 	$(LINK) -shared -o $@ $^ $(LIBS)

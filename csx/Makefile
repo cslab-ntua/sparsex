@@ -62,18 +62,18 @@ CSX_SRC = \
 	CsxBench.cpp \
 	CsxBuild.cpp \
 	CsxMatvec.cpp \
-	CsxSpmvMt.cpp \
 	CsxUtil.cpp \
 	CtlBuilder.cpp \
 	DynamicArrayTest.cpp \
 	ElementTest.cpp \
 	Encodings.cpp \
+	Facade.cpp \
 	Jit.cpp \
 	JitUtil.cpp \
 	Node.cpp \
 	Runtime.cpp \
-	SparseMatrixWrapper.cpp \
 	TemplateText.cpp \
+	ThreadPool.cpp \
 	Timer.cpp \
 	Statistics.cpp \
 	Vector.cpp \
@@ -118,9 +118,6 @@ libcsximpl.a: $(CSX_OBJECTS) $(libadd)
 spmv: main.o libcsximpl.so
 	$(LINK) -o $@ $^ $(libadd) $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(LIBS)
 
-libcsx_test: libcsx_test.o libcsximpl.so
-	$(LINK) -o $@ $^ $(LIBS)
-
 set_test: set_test.o libcsximpl.so
 	$(LINK) -o $@ $^ $(CLANG_LDFLAGS) $(LLVM_LDFLAGS) $(libadd) $(LIBS)
 
@@ -132,4 +129,4 @@ element_test: ElementTest.o Encodings.o Statistics.o numa_util.o
 
 clean:
 	rm -rf $(DEPDIR)
-	rm -f *.o *.d $(log_dir)/*.o libcsximpl.a libcsximpl.so spmv set_test dynamic_array_test
+	rm -f *.o *.d $(log_dir)/*.o libcsximpl.a libcsximpl.so spmv element_test dynamic_array_test

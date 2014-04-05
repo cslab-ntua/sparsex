@@ -1,5 +1,5 @@
-SUBDIRS = scripts lib/prfcnt lib/dynarray csx C-API
-# bench lib/spm cg
+SUBDIRS = scripts csx api bench
+# lib/spm cg
 
 .PHONY: all clean $(SUBDIRS)
 .NOTPARALLEL: $(SUBDIRS)

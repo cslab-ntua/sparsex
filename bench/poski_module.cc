@@ -21,7 +21,8 @@ void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
 
     /* 1. Matrix loading phase */
     poski_threadarg_t *poski_thread = poski_InitThreads();
-    poski_ThreadHints(poski_thread, NULL, POSKI_THREADPOOL, NR_THREADS);
+    // poski_ThreadHints(poski_thread, NULL, POSKI_THREADPOOL, NR_THREADS);
+    poski_ThreadHints(poski_thread, NULL, POSKI_PTHREAD, NR_THREADS);
     poski_partitionarg_t *partitionMat = poski_partitionMatHints(OneD, NR_THREADS,
                                                                  KERNEL_MatMult,
                                                                  OP_NORMAL);

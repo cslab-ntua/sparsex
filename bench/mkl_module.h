@@ -12,8 +12,8 @@
 #define MKL_MODULE_H__
 
 #include <iostream>
-#include "mkl.h"
 #include "timer.h"
+#include "mkl.h"
 
 using namespace std;
 

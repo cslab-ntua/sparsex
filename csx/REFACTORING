@@ -18,13 +18,14 @@
 * Remove std:: prefixes where possible
 * Revise iterators (Mmf, Csr, SparsePartition)
 * Consider zero-based indexing for Element
-* Clean the interfaces, one- or zero-based, decide!
+* [DONE?] Clean the interfaces, one- or zero-based, decide! -> core library uses
+          one-base indexing everywhere, api provides both
 * Replace Print() methods with friend operator<<()'s
 * Consider implementing operator->() in iterators
 * Gather all general utilities (iceil, gcd, check_iterator) in a single file
 * Advanced type checking with type traits
 * Unsigned to signed conversions
-* Remove `inline' keyword and move member function definitions inside the class
+* [DONE] Remove `inline' keyword and move member function definitions inside the class
   (SparseMatrix.hpp)
 * Xs -> Cols
 * [DONE] Rethink element marking mechanism

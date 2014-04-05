@@ -17,8 +17,14 @@
 #include <boost/function.hpp>
 
 #include "sparsex_module.h"
-// #include "mkl_module.h"
-// #include "poski_module.h"
+
+#ifdef MKL
+#   include "mkl_module.h"
+#endif
+
+#ifdef POSKI
+#   include "poski_module.h"
+#endif
 
 using namespace std;
 

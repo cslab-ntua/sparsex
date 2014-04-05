@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * EncodingManager.hpp -- Delta Run-Length Encoding Manager
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
@@ -550,9 +549,9 @@ GenerateDeltaStats(SparsePartition<IndexType, ValueType> *sp,
         typename SparsePartition<IndexType, ValueType>::iterator ee =
             sp->end(i);
         for (; ei != ee; ++ei) {
-            Marker &em = ei.GetMarker();
+            Marker &em = (*ei).GetMarker();
             if (!em.IsMarked(PatternMarker::InPattern))
-                xs.push_back(ei.GetCol());
+                xs.push_back((*ei).GetCol());
             else
                 em.Unmark(PatternMarker::InPattern);
 
@@ -661,7 +660,6 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
 
             Encoding e(t);
             size_t block_align = e.GetBlockAlignment();
-
             spm_->Transform(t);
             GenerateStats(0, spm_->GetRowptrSize() - 1, stats);
             if (block_align && split_blocks_) {
@@ -675,6 +673,25 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
             CoverageFilter cfilter(spm_->GetNrNonzeros(), min_perc_,
                                    encoded_inst_);
             stats.ManipulateStats(cfilter);
+            // // std::cout << "after"<< t<<" " <<__FUNCTION__<<std::endl;
+            // stats_[t] = GenerateStats(0, spm_->GetRowptrSize() - 1);
+            // sp = &stats_[t];
+            // if (block_align && split_blocks_)
+            //     CorrectBlockStats(sp, block_align);
+            // // std::cout << "ok1"<< __FUNCTION__<<std::endl;
+
+            // for (iter = sp->begin(); iter != sp->end(); ) {
+            //     tmp = iter++;
+            //     double p = (double) tmp->second.nnz / (double) spm_->GetNrNonzeros();
+            //     if (block_align == 1 && (unsigned int) tmp->first < min_limit_)
+            //         // The dimension of one-dimensional blocks must exceed
+            //         // min_limit_.
+            //         sp->erase(tmp);
+            //     else if (p < min_perc_ || tmp->first >= CSX_PID_OFFSET)
+            //         sp->erase(tmp);
+            //     else
+            //         deltas_to_encode_[t].insert(tmp->first);
+            // }
 #ifdef SPM_HEUR_NEW
             GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1, stats);
 #endif

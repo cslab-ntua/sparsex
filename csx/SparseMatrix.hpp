@@ -1,6 +1,6 @@
-/* -*- C++ -*-
- *
- * SparseMatrix.hpp --  Generic representation of a sparse matrix.
+/*
+ * SparseMatrix.hpp --  Generic representation of a sparse matrix - policy-based
+ *                      design.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -64,214 +64,175 @@ public:
 
     // CSR-specific constructor
     SparseMatrix(idx_t *rowptr, idx_t *colind, val_t *values,
-                 idx_t nr_rows, idx_t nr_cols, bool zero_based);
-    // MMF-specific constructor
-    SparseMatrix(const char* filename);
-    ~SparseMatrix();
+                 idx_t nr_rows, idx_t nr_cols, bool zero_based)
+        : InputPolicy(boost::interprocess::forward<idx_t*>(rowptr),
+                      boost::interprocess::forward<idx_t*>(colind), 
+                      boost::interprocess::forward<val_t*>(values),
+                      boost::interprocess::forward<idx_t>(nr_rows),
+                      boost::interprocess::forward<idx_t>(nr_cols),
+                      boost::interprocess::forward<bool>(zero_based)),
+          csx_(0) {}
 
-    void Reorder(vector<size_t>& perm);
-    spm_mt_t *CreateCsx();
-    val_t GetValue(idx_t row_idx, idx_t col_idx);
-    bool SetValue(idx_t row_idx, idx_t col_idx, val_t value);
-    void Save(const char *filename);
-    void Destroy();
+    // MMF-specific constructor
+    SparseMatrix(const char *filename)
+        : InputPolicy(boost::interprocess::forward<const char*>(filename)),
+          csx_(0) {}
+
+    ~SparseMatrix()
+    {
+        // if (csx_)
+        //     Destroy();
+    }
+
+    void Reorder(vector<size_t>& perm)
+    {
+        DoReorder_RCM(*this, perm);
+    }
+
+    spm_mt_t *CreateCsx()
+    {
+        spm_mt_t *spm = 0;
+        RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
+
+        try {
+            if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
+                spm = CreateCsx(internal::Sym<true>());
+            } else {
+                spm = CreateCsx(internal::Sym<false>());
+            }
+        } catch (std::exception &e) {
+            LOG_ERROR << e.what() << "\n";
+            exit(1);
+        }
+
+        return spm;
+    }
+
+    val_t GetValue(idx_t row_idx, idx_t col_idx)
+    {
+        val_t value = 0;
+
+        if (!csx_) {
+            LOG_ERROR << "matrix hasn't been encoded yet\n";
+            exit(1);
+        } else {
+            if (csx_->symmetric) {
+                if (!GetValueCsxSym<idx_t, val_t>(csx_, row_idx,
+                                                  col_idx, &value))
+                    LOG_WARNING << "matrix entry not found\n";
+            } else {
+                if (!GetValueCsx<idx_t, val_t>(csx_, row_idx,
+                                               col_idx, &value))
+                    LOG_WARNING << "matrix entry not found\n";
+            }
+        }
+
+        return value;
+    }
+
+    bool SetValue(idx_t row_idx, idx_t col_idx, val_t value)
+    {
+        if (!csx_) {
+            LOG_ERROR << "matrix hasn't been encoded yet\n";
+            exit(1);
+        } else { 
+            if (csx_->symmetric) {
+                if (!SetValueCsxSym<idx_t, val_t>(csx_, row_idx,
+                                                  col_idx, value)) {
+                    LOG_WARNING << "matrix entry not found\n";
+                    return false;
+                }
+            } else {
+                if (!SetValueCsx<idx_t, val_t>(csx_, row_idx,
+                                               col_idx, value)) {
+                    LOG_WARNING << "matrix entry not found\n";
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void Save(const char *filename)
+    {
+        timing::Timer timer;
+        if (!csx_) {
+            LOG_ERROR << "Matrix hasn't been encoded yet\n";
+            exit(1);
+        } else {
+            timer.Start();
+            SaveCsx<idx_t, val_t>(csx_, filename, NULL);
+            timer.Pause();
+            dump_time = timer.ElapsedTime();
+        }
+    }
+
+    void Destroy()
+    {
+        PutSpmMt<val_t>(csx_);
+        csx_ = 0;
+    }
 
 private:
     spm_mt_t *csx_;
     internal::AllowInstantiation<InputPolicy> instantiation;
 
-    spm_mt_t *CreateCsx(internal::Sym<true>);
-    spm_mt_t *CreateCsx(internal::Sym<false>);
+    spm_mt_t *CreateCsx(internal::Sym<true>)
+    {
+        RuntimeContext& rt_context = RuntimeContext::GetInstance();
+        SparseInternal<SparsePartitionSym<idx_t, val_t> > *spi;
+        timing::Timer timer;
+
+        // Converting to internal representation
+        timer.Start();
+        spi = SparseInternal<SparsePartitionSym<idx_t, val_t> >::
+            DoLoadMatrixSym(*this, rt_context.GetNrThreads());
+        timer.Pause();
+        internal_time = timer.ElapsedTime();
+
+        // Converting to CSX
+        timer.Clear();
+        timer.Start();
+        csx_ = BuildCsxSym<idx_t, val_t>(spi);
+        timer.Pause();
+        csx_time = timer.ElapsedTime();
+
+        // Clenaup
+        delete spi;
+        spi = 0;
+
+        return csx_;
+    }
+
+    spm_mt_t *CreateCsx(internal::Sym<false>)
+    {
+        RuntimeContext& rt_context = RuntimeContext::GetInstance();
+        SparseInternal<SparsePartition<idx_t, val_t> > *spi;
+        timing::Timer timer;
+
+        // Converting to internal representation
+        timer.Start();
+        spi = SparseInternal<SparsePartition<idx_t, val_t> >::
+            DoLoadMatrix(*this, rt_context.GetNrThreads());
+        timer.Pause();
+        internal_time = timer.ElapsedTime();
+
+        // Converting to CSX
+        timer.Clear();
+        timer.Start();
+        csx_ = BuildCsx<idx_t, val_t>(spi);
+        timer.Pause();
+        csx_time = timer.ElapsedTime();
+
+        // Clenaup
+        delete spi;
+        return csx_;
+    }
 };
 
-/*
- * SparseMatrix class implementation
- */
-template<class InputPolicy>
-inline 
-SparseMatrix<InputPolicy>::SparseMatrix(idx_t *rowptr, idx_t *colind,
-                                        val_t *values, idx_t nr_rows,
-                                        idx_t nr_cols, bool zero_based)
-    : InputPolicy(boost::interprocess::forward<idx_t*>(rowptr),
-                  boost::interprocess::forward<idx_t*>(colind), 
-                  boost::interprocess::forward<val_t*>(values),
-                  boost::interprocess::forward<idx_t>(nr_rows),
-                  boost::interprocess::forward<idx_t>(nr_cols),
-                  boost::interprocess::forward<bool>(zero_based)),
-      csx_(0)
-{}
-
-template<class InputPolicy>
-inline 
-SparseMatrix<InputPolicy>::SparseMatrix(const char *filename)
-    : InputPolicy(boost::interprocess::forward<const char*>(filename)),
-      csx_(0)
-{}
- 
-template<class InputPolicy>
-inline
-SparseMatrix<InputPolicy>::~SparseMatrix()
-{
-    // if (csx_)
-    //     Destroy();
-}
-
-template<class InputPolicy>
-inline 
-void SparseMatrix<InputPolicy>::Reorder(vector<size_t>& perm)
-{
-    DoReorder_RCM(*this, perm);
-}
-
-template<class InputPolicy>
-inline
-spm_mt_t *SparseMatrix<InputPolicy>::CreateCsx()
-{
-    spm_mt_t *spm = 0;
-    RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
-
-    try {
-        if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
-            spm = CreateCsx(internal::Sym<true>());
-        } else {
-            spm = CreateCsx(internal::Sym<false>());
-        }
-    } catch (std::exception &e) {
-        LOG_ERROR << e.what() << "\n";
-        exit(1);
-    }
-
-    return spm;
-}
-
-template<class InputPolicy>
-spm_mt_t *SparseMatrix<InputPolicy>::CreateCsx(internal::Sym<false>)
-{
-    RuntimeContext& rt_context = RuntimeContext::GetInstance();
-    SparseInternal<SparsePartition<idx_t, val_t> > *spi;
-    timing::Timer timer;
-
-    // Converting to internal representation
-    timer.Start();
-    spi = SparseInternal<SparsePartition<idx_t, val_t> >::
-        DoLoadMatrix(*this, rt_context.GetNrThreads());
-    timer.Pause();
-    internal_time = timer.ElapsedTime();
-
-    // Converting to CSX
-    timer.Clear();
-    timer.Start();
-    csx_ = BuildCsx<idx_t, val_t>(spi);
-    timer.Pause();
-    csx_time = timer.ElapsedTime();
-
-    // Clenaup
-    delete spi;
-    return csx_;
-}
-
-template<class InputPolicy>
-spm_mt_t *SparseMatrix<InputPolicy>::CreateCsx(internal::Sym<true>)
-{
-    RuntimeContext& rt_context = RuntimeContext::GetInstance();
-    SparseInternal<SparsePartitionSym<idx_t, val_t> > *spi;
-    timing::Timer timer;
-
-    // Converting to internal representation
-    timer.Start();
-    spi = SparseInternal<SparsePartitionSym<idx_t, val_t> >::
-        DoLoadMatrixSym(*this, rt_context.GetNrThreads());
-    timer.Pause();
-    internal_time = timer.ElapsedTime();
-
-    // Converting to CSX
-    timer.Clear();
-    timer.Start();
-    csx_ = BuildCsxSym<idx_t, val_t>(spi);
-    timer.Pause();
-    csx_time = timer.ElapsedTime();
-
-    // Clenaup
-    delete spi;
-    spi = 0;
-
-    return csx_;
-}
-
-template<class InputPolicy>
-inline
-typename SparseMatrix<InputPolicy>::val_t SparseMatrix<InputPolicy>::
-GetValue(idx_t row_idx, idx_t col_idx)
-{
-    val_t value = 0;
-
-    if (!csx_) {
-        LOG_ERROR << "matrix hasn't been encoded yet\n";
-        exit(1);
-    } else {
-        if (csx_->symmetric) {
-            if (!GetValueCsxSym<idx_t, val_t>(csx_, row_idx, col_idx, &value))
-                LOG_WARNING << "matrix entry not found\n";
-        } else {
-            if (!GetValueCsx<idx_t, val_t>(csx_, row_idx, col_idx, &value))
-                LOG_WARNING << "matrix entry not found\n";
-        }
-    }
-
-    return value;
-}
-
-template<class InputPolicy>
-inline
-bool SparseMatrix<InputPolicy>::SetValue(idx_t row_idx, idx_t col_idx,
-                                         val_t value)
-{
-    if (!csx_) {
-        LOG_ERROR << "matrix hasn't been encoded yet\n";
-        exit(1);
-    } else { 
-        if (csx_->symmetric) {
-            if (!SetValueCsxSym<idx_t, val_t>(csx_, row_idx, col_idx, value)) {
-                LOG_WARNING << "matrix entry not found\n";
-                return false;
-            }
-        } else {
-            if (!SetValueCsx<idx_t, val_t>(csx_, row_idx, col_idx, value)) {
-                LOG_WARNING << "matrix entry not found\n";
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-template<class InputPolicy>
-inline
-void SparseMatrix<InputPolicy>::Save(const char *filename)
-{
-    timing::Timer timer;
-    if (!csx_) {
-        LOG_ERROR << "Matrix hasn't been encoded yet\n";
-        exit(1);
-    } else {
-        timer.Start();
-        SaveCsx<idx_t, val_t>(csx_, filename, NULL);//FIXME
-        timer.Pause();
-        dump_time = timer.ElapsedTime();
-    }
-}
-
-template<class InputPolicy>
-inline
-void SparseMatrix<InputPolicy>::Destroy()
-{
-    PutSpmMt<val_t>(csx_);
-    csx_ = 0;
-}
-
-extern template class SparseMatrix<MMF<index_t, value_t> >;
-extern template class SparseMatrix<CSR<index_t, value_t> >;
+// extern template class SparseMatrix<MMF<index_t, value_t> >;
+// extern template class SparseMatrix<CSR<index_t, value_t> >;
 
 #endif // SPARSE_MATRIX_HPP
 

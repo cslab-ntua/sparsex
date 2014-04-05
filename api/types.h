@@ -13,27 +13,27 @@
 #include <inttypes.h>
 
 #ifdef USE_UNSIGNED_INDICES
-#   undef index_t
-#   define index_t uint32_t
+#   undef spx_index_t
+#   define spx_index_t uint32_t
 #endif
 
 #ifdef USE_64BIT_INDICES
-#   undef index_t
-#   define index_t uint64_t
+#   undef spx_index_t
+#   define spx_index_t uint64_t
 #endif
 
-#ifndef index_t
-#   define index_t int
+#ifndef spx_index_t
+#   define spx_index_t int
 #endif
 
 #ifdef USE_SINGLE_PRECISION
-#   define value_t float
+#   define spx_value_t float
 #else
-#   define value_t double
+#   define spx_value_t double
 #endif
 
-#ifndef scalar_t
-#   define scalar_t double
+#ifndef spx_scalar_t
+#   define spx_scalar_t double
 #endif
 
 #endif // SPARSEX_MATTYPE_H

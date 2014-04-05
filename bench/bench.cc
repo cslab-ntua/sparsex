@@ -70,18 +70,20 @@ void Bench_Matrix(const char *filename, const char *library,
     BETA = max + val*(min-max);
 
     if (!library) {
-        // cout << "Using library Intel MKL..." << endl;
-        // mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
-        // for (int i = 0; i < nrows; i++) {
-        //     y[i] = 1;
-        // }
-
-        // cout << "Using library pOSKI..." << endl;
-        // poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
-        // for (int i = 0; i < nrows; i++) {
-        //     y[i] = 1;
-        // }
-
+#ifdef MKL
+        cout << "Using library Intel MKL..." << endl;
+        mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
+        for (int i = 0; i < nrows; i++) {
+            y[i] = 1;
+        }
+#endif
+#ifdef POSKI
+        cout << "Using library pOSKI..." << endl;
+        poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
+        for (int i = 0; i < nrows; i++) {
+            y[i] = 1;
+        }
+#endif
         cout << "Using library SparseX..." << endl;
         sparsex_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y); 
     } else {
@@ -143,12 +145,16 @@ static SpmvFn GetSpmvFn(library type)
     case SparseX:
         ret = sparsex_spmv;
         break;
+#ifdef MKL
     case MKL:
         // ret = mkl_spmv;
         break;
+#endif
+#ifdef POSKI
     case pOSKI:
-        // ret = poski_spmv;
+        ret = poski_spmv;
         break;
+#endif
     default:
         cerr << "Unknown library" << endl;
         assert(false);

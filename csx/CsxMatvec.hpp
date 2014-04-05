@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * CsxMatvec.hpp -- Multithreaded kernel y <-- alpha*A*x + beta*y
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
@@ -12,7 +11,6 @@
 #ifndef CSX_MATVEC_HPP
 #define CSX_MATVEC_HPP
 
-#include "numa_util.h"
 #include "SpmMt.hpp"
 #include "SpmvMethod.hpp"
 #include "Vector.hpp"
@@ -22,25 +20,16 @@
 #include "Affinity.hpp"
 #include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
 #include <vector>
 
 extern "C" {
 #endif
 
-typedef struct matvec_params
-{
-    spm_mt_thread_t     *spm_thread;
-    vector_t            *tmp;
-    int                 start;
-    int                 end;
-} matvec_params;
-
-void matvec_mt(spm_mt_t *spm_mt, vector_t *x, double alpha, vector_t *y,
-               double beta);
-void matvec_sym_mt(spm_mt_t *spm_mt, vector_t *x, double alpha, vector_t *y,
-                   double beta);
+void do_matvec_thread(void *params);
+void MatVecMult(spm_mt_t *spm_mt, spx_vector_t *x, spx_scalar_t alpha, 
+                spx_vector_t *y, spx_scalar_t beta);
+void MatVecMult_sym(spm_mt_t *spm_mt, spx_vector_t *x, spx_scalar_t alpha, 
+                    spx_vector_t *y, spx_scalar_t beta);
 
 #ifdef __cplusplus
 }

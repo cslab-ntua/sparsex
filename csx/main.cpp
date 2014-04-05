@@ -78,20 +78,20 @@ int main(int argc, char **argv)
         PrintUsage(std::cerr);
         exit(1);
     }
-
     argv = &argv[optind];
-    SparseMatrix<MMF<index_t, value_t> > matrix(argv[0]);
+
+    SparseMatrix<MMF<spx_index_t, spx_value_t> > matrix(argv[0]);
     // matrix.Reorder();
 
     for (int i = 0; i < remargc; i++) {
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
         std::cout << "Creating CSX...\n";
         spm_mt = matrix.CreateCsx();
-        CheckLoop<index_t, value_t>(spm_mt, argv[0]);
+        CheckLoop<spx_index_t, spx_value_t>(spm_mt, argv[0]);
         std::cout << "Running 128 SpMV loops...\n";
-        BenchLoop<value_t>(spm_mt, argv[0]);
-        double imbalance = CalcImbalance(spm_mt);
-        std::cout << "Load imbalance: " << 100*imbalance << "%\n";
+        BenchLoop<spx_value_t>(spm_mt, argv[0]);
+        // double imbalance = CalcImbalance(spm_mt);
+        // std::cout << "Load imbalance: " << 100*imbalance << "%\n";
         // std::cout << "Dumping Csx to binary file...\n";
         // matrix.Save("csx_file");
         std::cout << "Convert to internal repr.: " << internal_time << std::endl;

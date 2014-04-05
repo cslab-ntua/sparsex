@@ -12,9 +12,6 @@
 
 void spx_init()
 {
-    spx_log_enable_all_console();
-    spx_log_disable_info();
-    spx_log_disable_debug();
 }
 
 void spx_finalize()

@@ -1,11 +1,11 @@
-/* -*- C++ -*-
- *
+/*
  * SpmMt.hpp
  *
  * Copyright (C) 2007-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
  * Copyright (C) 2011-2012, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
+ * Copyright (C) 2013,      Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -27,6 +27,7 @@ struct spm_mt_thread {
 	unsigned int id;
 	int node;
 	uint64_t row_start;
+	uint64_t end;
 	uint64_t nr_rows;
 	// uint64_t *col_map;
 	map_t *map;
@@ -34,6 +35,7 @@ struct spm_mt_thread {
 	uint64_t size_assigned;
 	double secs;
 	void *data;
+    bool local_sense;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
 

@@ -17,36 +17,37 @@
 
 #include <stdlib.h>
 
+typedef struct spx_thread spx_thread_pool_t;
 /**
  *  \brief Dense array object that represents a permutation.
  */
-typedef index_t perm_t;
+typedef spx_index_t spx_perm_t;
 
 /**
  *  \brief The sparse matrix handle type.
  */
-typedef struct matrix matrix_t;
+typedef struct matrix spx_matrix_t;
 
 /**
  *  \brief The input matrix handle type.
  */
-typedef struct input input_t;
+typedef struct input spx_input_t;
 
 /**
  *  \brief Matrix property type.
  */
-typedef struct partition partition_t;
+typedef struct partition spx_partition_t;
 
 /**
  *  \brief Matrix property type.
  */
-typedef int property_t;
+typedef int spx_property_t;
 
-#define INVALID_INPUT ((input_t *) NULL)
-#define INVALID_MAT ((matrix_t *) NULL)
-#define INVALID_VEC ((vector_t *) NULL)
-#define INVALID_PART ((partition_t *) NULL)
-#define INVALID_PERM ((perm_t *) NULL)
+#define INVALID_INPUT ((spx_input_t *) NULL)
+#define INVALID_MAT ((spx_matrix_t *) NULL)
+#define INVALID_VEC ((spx_vector_t *) NULL)
+#define INVALID_PART ((spx_partition_t *) NULL)
+#define INVALID_PERM ((spx_perm_t *) NULL)
 
 #define OP_REORDER          42
 #define INDEXING_ZERO_BASED 0
@@ -59,13 +60,13 @@ int check_indexing(int base)
 }
 
 static inline
-int check_mat_dim(index_t dim)
+int check_mat_dim(spx_index_t dim)
 {
     return (dim >= 0);
 }
 
 static inline
-int check_vec_dim(const vector_t *x, unsigned long dim)
+int check_vec_dim(const spx_vector_t *x, unsigned long dim)
 {
     return (x->size == dim);
 }
@@ -95,12 +96,6 @@ static inline
 void spx_log_disable_info()
 {
     DisableInfo();
-}
-
-static inline 
-void spx_log_disable_debug()
-{
-    DisableDebug();
 }
 
 static inline

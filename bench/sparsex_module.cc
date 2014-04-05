@@ -19,22 +19,22 @@ void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols
 {
     spx_init();
     /* 1. Matrix loading phase */
-    input_t *input = spx_input_load_csr(rowptr, colind, values, nrows, ncols,
-                                        INDEXING_ZERO_BASED);
+    spx_input_t *input = spx_input_load_csr(rowptr, colind, values, nrows, ncols,
+                                            INDEXING_ZERO_BASED);
 
     /* 2. Tuning phase */
     spx_options_set_from_env();
     // spx_option_set("libcsx.matrix.symmetric", "true");
     t.Clear();
     t.Start();
-    matrix_t *A = spx_mat_tune(input);
+    spx_matrix_t *A = spx_mat_tune(input);
     t.Pause();
     double pt = t.ElapsedTime();
 
     /* 3. Vector loading */
-    partition_t *parts = spx_mat_get_parts(A);
-    vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts);
-    vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts);
+    spx_partition_t *parts = spx_mat_get_parts(A);
+    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts);
+    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts);
 
     /* 4. SpMV benchmarking phase */
     std::vector<double> mt(OUTER_LOOPS);
@@ -61,7 +61,7 @@ void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols
     /* 5. Cleanup */
     spx_input_destroy(input);
     spx_mat_destroy(A);
-    spx_part_destroy(parts);
+    spx_partition_destroy(parts);
     spx_vec_destroy(x_view);
     spx_vec_destroy(y_view);
 }
