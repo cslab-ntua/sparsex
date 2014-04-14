@@ -4,7 +4,7 @@
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011-2012, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
- * Copyright (C) 2013,      Athena Elafrou
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -21,13 +21,14 @@
 #include "SpmvMethod.hpp"
 #include "ThreadPool.hpp"
 #include "tsc.h"
-#include "types.h"  // FIXME remove but converting to templates
+#include "Types.hpp"
 #include "Vector.hpp"
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>
 #include <boost/bind.hpp>
 
+using namespace std;
 using namespace csx;
 
 extern double csx_time;
@@ -35,11 +36,11 @@ extern double csx_time;
 int GetOptionOuterLoops();
 float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t rows_nr,
                     size_t cols_nr);
-void spmv_check_mt(CSR<spx_index_t, spx_value_t> *spm, spm_mt_t *spm_mt,
+void spmv_check_mt(CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
                    size_t loops, size_t rows_nr, size_t cols_nr);
 float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t rows_nr,
                         size_t cols_nr);
-void spmv_check_sym_mt(CSR<spx_index_t, spx_value_t> *spm, spm_mt_t *spm_mt,
+void spmv_check_sym_mt(CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
                        size_t loops, size_t rows_nr, size_t cols_nr);
 
 /**
@@ -64,10 +65,6 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name);
 template<typename IndexType, typename ValueType>
 void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
               ValueType **values, size_t *nrows, size_t *ncols, size_t *nnz);
-// template<typename IndexType, typename ValueType>
-// void MMFtoCSR_sym(const char *filename, IndexType **rowptr, IndexType **colind,
-//                   ValueType **values, ValueType **dvalues, size_t *nrows,
-//                   size_t *ncols, size_t *nnz);
 
 /* Implementations */
 template<typename IndexType, typename ValueType>
@@ -78,14 +75,13 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
                                    &csr->values_, &csr->nr_rows_,
                                    &csr->nr_cols_, &csr->nr_nzeros_);
 
-    std::cout << "Checking... " << std::flush;
+    cout << "Checking... " << flush;
     if (!spm_mt->symmetric) {
         spmv_check_mt(csr, spm_mt, 1, csr->GetNrRows(), csr->GetNrCols());
     } else{
         spmv_check_sym_mt(csr, spm_mt, 1, csr->GetNrRows(), csr->GetNrCols());
     }
-
-    std::cout << "Check Passed" << std::endl;
+    cout << "Check Passed" << endl;
 
     // Cleanup
     delete[] csr->rowptr_;

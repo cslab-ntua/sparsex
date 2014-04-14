@@ -1,5 +1,5 @@
 /*
- * TemplateText.cc -- Class for manipulating template texts.
+ * TemplateText.cpp -- Class for manipulating template texts.
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis

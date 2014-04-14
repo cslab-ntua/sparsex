@@ -1,7 +1,6 @@
-/* -*- C++ -*-
- *
- * Compiler.cc -- Wrapper of a Clang compiler instance. Responsible for
- *                generating LLVM IR code from C99 source.
+/*
+ * Compiler.cpp -- Wrapper of a Clang compiler instance. Responsible for
+ *                 generating LLVM IR code from C99 source.
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis

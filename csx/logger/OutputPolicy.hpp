@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * OutputPolicy.hpp --  Output policies for logging.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.

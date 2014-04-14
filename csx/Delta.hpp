@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Delta.hpp -- Utilities for delta units.
  *
  * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.

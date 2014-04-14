@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Statistics.cpp -- CSX statistics collection framework
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.

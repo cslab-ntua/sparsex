@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- * 
+/*
  * Runtime.hpp -- Front-end utilities for runtime configuration
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.

@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Affinity.hpp -- Routine that sets the cpu affinity.
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
@@ -18,5 +17,6 @@
 #include <sched.h>
 
 void setaffinity_oncpu(unsigned int cpu);
+int get_cpu_count();
 
 #endif /* AFFINITY_HPP */

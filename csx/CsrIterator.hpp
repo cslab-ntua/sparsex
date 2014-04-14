@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * CsrIterator.hpp -- An iterator that simultaneously iterates through two arrays.
  *                    Based on iterator_facade by boost, compliant with std::sort.
  *

@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * SparseInternal.hpp --  Internal representation of sparse matrices.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.

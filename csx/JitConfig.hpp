@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * JitConfig.hpp -- JIT global configuration options.
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.

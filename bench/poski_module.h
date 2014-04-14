@@ -15,9 +15,7 @@
 extern "C" {
 #endif
 
-#ifdef POSKI
-#   include <poski.h>
-#endif
+#include <poski.h>
 
 #ifdef __cplusplus
 }
@@ -35,10 +33,8 @@ extern unsigned int NR_THREADS;
 extern double ALPHA, BETA;
 extern Timer t;
 
-#ifdef POSKI
 void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
                 int nnz, double *x, double *y);
-#endif
 
 #endif  // POSKI_MODULE_H__
 

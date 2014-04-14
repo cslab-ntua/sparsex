@@ -13,7 +13,6 @@
 #include <atomic>
 #include <cstdlib>
 
-std::atomic<int> cnt;
-void central_barrier(bool& local_sense, size_t nr_threads);
+void central_barrier(bool *local_sense, size_t nr_threads);
 
 #endif  // BARRIER_HPP

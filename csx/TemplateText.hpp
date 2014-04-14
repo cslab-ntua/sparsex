@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * TemplateText.hpp -- Class for manipulating template texts.
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.

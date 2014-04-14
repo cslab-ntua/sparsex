@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * SparsePartition.hpp --  Internal representation of sparse matrice partition.
  *
  * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
@@ -759,7 +758,6 @@ Transform(Encoding::Type t, IndexType rs, IndexType re)
 
     if (elems_size_)
         SetElems(e0, ee, rs + 1, 0, elems_size_, FindNewRowptrSize(t));
-
     elems.clear();
     type_ = t;
 }

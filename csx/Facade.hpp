@@ -10,12 +10,10 @@
 #ifndef FACADE_HPP
 #define FACADE_HPP
 
-#ifdef __cplusplus
+#include "cdecl.h"
+#include "../api/types.h"
 
-#include "types.h"
-
-extern "C" {
-#endif
+BEGIN_C_DECLS
 
 /**
  *  SparseMatrix wrapper functions.
@@ -40,8 +38,6 @@ void SetPropertyByMnemonic(const char *key, const char *value);
 void SetPropertiesFromEnv();
 void GetNodes(int *nodes);
 
-#ifdef __cplusplus
-}
-#endif
+END_C_DECLS
 
 #endif // FACADE_HPP

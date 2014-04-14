@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Encodings.hpp -- All about encoding types
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.

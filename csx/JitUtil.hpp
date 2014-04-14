@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * JitUtil.hpp -- Jit-related utility functions
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.

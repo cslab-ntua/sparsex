@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * CsxUtil.cc -- CSX-related routines.
+/*
+ * CsxUtil.cpp -- CSX-related routines.
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis

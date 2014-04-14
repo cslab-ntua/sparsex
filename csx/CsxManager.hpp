@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * CsxManager.hpp -- The CSX Manager interface.
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.

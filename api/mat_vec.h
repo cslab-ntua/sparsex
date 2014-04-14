@@ -122,6 +122,11 @@ spx_index_t spx_mat_get_nrows(const spx_matrix_t *A);
 spx_index_t spx_mat_get_ncols(const spx_matrix_t *A);
 
 /**
+ *  \brief Returns the number of non-zeros of the matrix.
+ */
+spx_index_t spx_mat_get_nnz(const spx_matrix_t *A);
+
+/**
  *  \brief Returns information on the partitioning of the matrix.
  */
 spx_partition_t *spx_mat_get_parts(spx_matrix_t *A);

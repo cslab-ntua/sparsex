@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Node.hpp -- Node class.
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.

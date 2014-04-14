@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011-2012, Vasileios Karakasis
- * Copyright (C) 2013,      Athena Elafrou
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -18,21 +18,25 @@
 #ifdef __cplusplus
 
 #include "Affinity.hpp"
-#include <boost/thread/thread.hpp>
-#include <boost/thread/barrier.hpp>
-#include <vector>
+#include "Barrier.hpp"
 
-extern "C" {
+#ifdef DISABLE_POOL
+#   include <boost/thread/barrier.hpp>
+#endif
+#include <boost/thread/thread.hpp>
+#include <vector>
 #endif
 
-void do_matvec_thread(void *params);
+BEGIN_C_DECLS
+
 void MatVecMult(spm_mt_t *spm_mt, spx_vector_t *x, spx_scalar_t alpha, 
                 spx_vector_t *y, spx_scalar_t beta);
-void MatVecMult_sym(spm_mt_t *spm_mt, spx_vector_t *x, spx_scalar_t alpha, 
+void MatVecMult_sym(spm_mt_t *spm_mt, spx_vector_t *x, spx_scalar_t alpha,
                     spx_vector_t *y, spx_scalar_t beta);
 
-#ifdef __cplusplus
-}
-#endif
+END_C_DECLS
+
+void do_matvec_thread(void *params);
+void do_matvec_sym_thread(void *args);
 
 #endif // CSX_MATVEC_HPP

@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * CsxSaveRestore.hpp -- Saving/Restoring Csx to/from archive.
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.

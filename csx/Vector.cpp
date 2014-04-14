@@ -12,6 +12,10 @@
 #include "Vector.hpp"
 #include "Logger.hpp"
 
+#include <cstdlib>
+#include <cassert>
+#include <numa.h>
+#include <math.h>
 #include <sys/mman.h>
 
 namespace internal {
@@ -173,9 +177,9 @@ void vec_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
 		exit(1);
 	}
 
-	if (start > v1->size || end > v1->size || start > end) {
+	if ((size_t) start > v1->size || (size_t) end > v1->size || start > end) {
 		fprintf(stderr, "start=%lu end=%lu v->size=%lu not compatible\n",
-		        start, end, v1->size);
+		        (size_t) start, (size_t) end, v1->size);
 		exit(1);
 	}
 

@@ -24,7 +24,7 @@ void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols
 
     /* 2. Tuning phase */
     spx_options_set_from_env();
-    // spx_option_set("libcsx.matrix.symmetric", "true");
+    // spx_option_set("spx.matrix.symmetric", "true");
     t.Clear();
     t.Start();
     spx_matrix_t *A = spx_mat_tune(input);
@@ -57,6 +57,7 @@ void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols
          << " pt: " << pt
          << " mt(median): " << mt_median
          << " flops: " << flops << endl;
+    // vec_print(y_view);
 
     /* 5. Cleanup */
     spx_input_destroy(input);

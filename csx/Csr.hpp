@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Csr.hpp -- Routines for converting standard CSR to our intermediate
  *            representation.
  *

@@ -35,7 +35,7 @@ struct spm_mt_thread {
 	uint64_t size_assigned;
 	double secs;
 	void *data;
-    bool local_sense;
+    bool *sense;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
 

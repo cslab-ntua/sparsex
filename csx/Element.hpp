@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Element.hpp -- A generic matrix element of the internal CSX representation
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.

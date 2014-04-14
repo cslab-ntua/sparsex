@@ -7,7 +7,7 @@
 * Eliminate unused/dead code, incl. commented out code
 * [ 50%] Clean up thgoud code
 * Revisit SparsePartition building, especially SetElems()
-* Remove the emacs directive from header files
+* [DONE] Remove the emacs directive from header files
 * Heuristic selection could be an spx option
 * Consider making SparsePartition::iterator a const iterator
 * Treat zero-sized windows
@@ -18,8 +18,8 @@
 * Remove std:: prefixes where possible
 * Revise iterators (Mmf, Csr, SparsePartition)
 * Consider zero-based indexing for Element
-* [DONE?] Clean the interfaces, one- or zero-based, decide! -> core library uses
-          one-base indexing everywhere, api provides both
+* [DONE] Clean the interfaces, one- or zero-based, decide! -> core library uses
+         one-base indexing everywhere, api provides both
 * Replace Print() methods with friend operator<<()'s
 * Consider implementing operator->() in iterators
 * Gather all general utilities (iceil, gcd, check_iterator) in a single file

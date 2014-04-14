@@ -11,20 +11,18 @@
 #ifndef BENCH_UTIL_H__
 #define BENCH_UTIL_H__
 
+#ifdef POSKI
+#   include "poski_module.h"
+#endif
+#ifdef MKL
+#   include "mkl_module.h"
+#endif
+#include "sparsex_module.h"
+
 #include <cstdlib>
 #include <iostream>
 #include <dirent.h>
 #include <boost/function.hpp>
-
-#include "sparsex_module.h"
-
-#ifdef MKL
-#   include "mkl_module.h"
-#endif
-
-#ifdef POSKI
-#   include "poski_module.h"
-#endif
 
 using namespace std;
 

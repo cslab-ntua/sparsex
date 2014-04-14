@@ -29,9 +29,30 @@ double internal_time, csx_time, dump_time;
 namespace internal {
 
 template<class MatrixType>
-struct sparse_matrix_traits {
+struct matrix_traits {
     typedef typename MatrixType::idx_t idx_t;
     typedef typename MatrixType::val_t val_t;
+};
+
+/**
+ *  Helper structs that generate a compile time error if SparseMatrix
+ *  class is instantiated with something other than the defined template
+ *  specialization, i.e., an integral and a floating point type.
+ */
+template<bool integral, bool floating>
+void valid_instantiation();
+
+template<>
+void valid_instantiation<true, true>() {}
+
+template<typename index_type, typename value_type>
+struct allow_instantiation
+{
+    allow_instantiation()
+    {
+        valid_instantiation<std::is_integral<index_type>::value,
+                            std::is_floating_point<value_type>::value>();
+    }
 };
 
 template<int T>
@@ -40,27 +61,14 @@ struct Sym
     enum { value = T };
 };
 
-/**
- *  Helper template class that generates a compile time error
- *  if SparseMatrix class is instantiated with something other
- *  than this class' template specializations.
- */
-template<class MatrixType> class AllowInstantiation { AllowInstantiation() {} };
-template<> class AllowInstantiation<MMF<uint64_t, double> > {};
-template<> class AllowInstantiation<CSR<uint64_t, double> > {};
-template<> class AllowInstantiation<MMF<uint32_t, double> > {};
-template<> class AllowInstantiation<CSR<uint32_t, double> > {};
-template<> class AllowInstantiation<MMF<int, double> > {};
-template<> class AllowInstantiation<CSR<int, double> > {};
-
 } // end namespace internal
 
 template<class InputPolicy>
 class SparseMatrix : public InputPolicy
 {
 public:
-    typedef typename internal::sparse_matrix_traits<InputPolicy>::idx_t idx_t;
-    typedef typename internal::sparse_matrix_traits<InputPolicy>::val_t val_t;
+    typedef typename internal::matrix_traits<InputPolicy>::idx_t idx_t;
+    typedef typename internal::matrix_traits<InputPolicy>::val_t val_t;
 
     // CSR-specific constructor
     SparseMatrix(idx_t *rowptr, idx_t *colind, val_t *values,
@@ -95,7 +103,8 @@ public:
         RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
 
         try {
-            if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
+            if (config.GetProperty<bool>
+                (RuntimeConfiguration::MatrixSymmetric)) {
                 spm = CreateCsx(internal::Sym<true>());
             } else {
                 spm = CreateCsx(internal::Sym<false>());
@@ -176,8 +185,9 @@ public:
 
 private:
     spm_mt_t *csx_;
-    internal::AllowInstantiation<InputPolicy> instantiation;
+    internal::allow_instantiation<idx_t, val_t> instantiation;
 
+private:
     spm_mt_t *CreateCsx(internal::Sym<true>)
     {
         RuntimeContext& rt_context = RuntimeContext::GetInstance();
@@ -230,9 +240,6 @@ private:
         return csx_;
     }
 };
-
-// extern template class SparseMatrix<MMF<index_t, value_t> >;
-// extern template class SparseMatrix<CSR<index_t, value_t> >;
 
 #endif // SPARSE_MATRIX_HPP
 

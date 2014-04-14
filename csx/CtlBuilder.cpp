@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- * 
- * CtlBuilder.cc -- Utility class for building the CSX's ctl structure
+/*
+ * CtlBuilder.cpp -- Utility class for building the CSX's ctl structure
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis

@@ -1,5 +1,5 @@
 /*
- * Runtime.cc -- Front-end utilities for runtime configuration
+ * Runtime.cpp -- Front-end utilities for runtime configuration
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2013, Vasileios Karakasis
@@ -126,7 +126,7 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         SetProperty(RuntimeConfiguration::PreprocSamplingPortion,
                     string(sampling_portion_str));
     } else {
-        // cout << "sampling is disabled\n";
+        LOG_INFO << "Sampling is disabled\n";
     }
     
     return *this;
@@ -146,13 +146,13 @@ vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
     }
     
     // Printing
-    cout << "MT_CONF=";
-    for (size_t i = 0; i < affinity.size(); ++i) {
-        if (i != 0)
-            cout << ",";
-        cout << affinity[i];
-    }
-    cout << "\n";
+    // cout << "MT_CONF=";
+    // for (size_t i = 0; i < affinity.size(); ++i) {
+    //     if (i != 0)
+    //         cout << ",";
+    //     cout << affinity[i];
+    // }
+    // cout << "\n";
 
     return affinity;
 }

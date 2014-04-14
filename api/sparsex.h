@@ -13,6 +13,7 @@
 #include "common.h"
 #include "error.h"
 #include "mat_vec.h"
+#include "timing.h"
 #include "types.h"
 
 #endif  // SPARSEX_H

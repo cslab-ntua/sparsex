@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- * 
+/*
  * CsxBuild.hpp -- Front-end utilities for building CSX.
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
@@ -126,7 +125,7 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
 
     // Set CPU affinity.
     setaffinity_oncpu(data.GetCpu());
-    
+
     // Search for encodings
     timer.Start();
 
@@ -221,7 +220,7 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType>
     } else {
         DrleMg1->RemoveIgnore(encseq);
         DrleMg2->RemoveIgnore(encseq);
-        DrleMg1->EncodeAll(data.GetBuffer());
+        if (data.GetId()) DrleMg1->EncodeAll(data.GetBuffer());
         DrleMg2->EncodeAll(data.GetBuffer());
     }
 

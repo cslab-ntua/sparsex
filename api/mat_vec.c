@@ -302,7 +302,7 @@ spx_error_t spx_mat_get_entry(const spx_matrix_t *A, spx_index_t row,
     va_end(ap);
     if (!check_indexing(indexing)) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
-        return INVALID_INPUT;
+        return SPX_FAILURE;
     }
 
     /* Check validity of input argument */
@@ -342,7 +342,7 @@ spx_error_t spx_mat_set_entry(spx_matrix_t *A, spx_index_t row,
     va_end(ap);
     if (!check_indexing(indexing)) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
-        return INVALID_INPUT;
+        return SPX_FAILURE;
     }
 
     /* Check validity of input arguments */
@@ -421,6 +421,11 @@ spx_index_t spx_mat_get_nrows(const spx_matrix_t *A)
 spx_index_t spx_mat_get_ncols(const spx_matrix_t *A)
 {
     return A->ncols;
+}
+
+spx_index_t spx_mat_get_nnz(const spx_matrix_t *A)
+{
+    return  A->nnz;
 }
 
 spx_partition_t *spx_mat_get_parts(spx_matrix_t *A)

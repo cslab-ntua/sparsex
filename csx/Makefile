@@ -58,6 +58,7 @@ DEPDIR = .deps
 df = $(DEPDIR)/$(*F)
 CSX_SRC = \
 	Affinity.cpp \
+	Barrier.cpp \
 	Compiler.cpp \
 	CsxBench.cpp \
 	CsxBuild.cpp \

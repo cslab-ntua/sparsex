@@ -1,5 +1,5 @@
 /*
- * ThreadPool.hpp --  Thread management in SparseX.
+ * ThreadPool.cpp --  Thread management in SparseX.
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Athena Elafrou
@@ -10,31 +10,11 @@
 
 #include "ThreadPool.hpp"
 
-atomic<int> cnt;
-atomic<bool> sense(true);
-static int no_threads;
-
-void central_barrier(bool& local_sense, size_t nr_threads)
-{
-    local_sense = !local_sense; // each processor toggles its own sense
-    if (atomic_fetch_sub(&cnt, 1) == 1) {
-        cnt = nr_threads;   // atomic store?
-        sense.store(local_sense); // last processor toggles global sense 
-    } else {
-        while (local_sense != sense.load()) {}
-    }
-}
-
 ThreadPool::~ThreadPool() 
 {
     work_done_.store(true);
-#ifdef USE_BOOST_BARRIER
-    start_barrier_->wait();
-    end_barrier_->wait();
-#else
-    central_barrier(local_sense, size_ + 1);
-    central_barrier(local_sense, size_ + 1);
-#endif
+    central_barrier(GetSense(), size_ + 1);
+    central_barrier(GetSense(), size_ + 1);
 
     for (size_t i = 0; i < size_; i++) {
         if (workers_[i].thread_->joinable())
@@ -50,90 +30,52 @@ void ThreadPool::InitThreads(size_t nr_threads)
     }
 
     size_ = nr_threads;
+    barrier_cnt = nr_threads + 1;
     if (size_)
         workers_.resize(size_);
-    cnt = nr_threads + 1;
-    local_sense = true;
-    no_threads = nr_threads + 1;
-
-#ifdef USE_BOOST_BARRIER
-    start_barrier_ = make_shared<boost::barrier>(size_ + 1);
-    end_barrier_ = make_shared<boost::barrier>(size_ + 1);
-#endif
 
     for (size_t i = 0; i < size_; i++) {
-        workers_[i].tid_ = i;
-        workers_[i].local_sense = true;
-#ifdef USE_BOOST_BARRIER
-        workers_[i].start_barrier_ = start_barrier_;
-        workers_[i].end_barrier_ = end_barrier_;
-#endif
+        workers_[i].SetId(i);
         // You can pass a member function pointer as the function, provided you
         // supply a suitable object pointer as the first argument
         workers_[i].thread_ = make_shared<boost::thread>
             (&ThreadPool::Run, this, workers_.data() + i);  // exception throwing try-catch
     }
 
-#ifdef USE_BOOST_BARRIER
-    start_barrier_->wait();
-    end_barrier_->wait();
-#else
-    central_barrier(local_sense, nr_threads + 1);
-#endif
+    central_barrier(GetSense(), size_ + 1);
 }
 
 void ThreadPool::Run(Worker *worker)
 {
-    tsc_t thread_tsc;
-    tsc_init(&thread_tsc);
-
-#ifdef USE_BOOST_BARRIER
-    worker->start_barrier_->wait();
-    worker->end_barrier_->wait();
-#else
-    central_barrier(worker->local_sense, no_threads);
-#endif
+    central_barrier(worker->GetSense(), size_ + 1);
 
     // Wait for the main thread to set a kernel to be executed
-#ifdef USE_BOOST_BARRIER
-    worker->start_barrier_->wait();
-#else
-    central_barrier(worker->local_sense, no_threads);
-#endif
+    central_barrier(worker->GetSense(), size_ + 1);
     while (!work_done_.load()) {
-        switch (worker->job_) {
+        switch (worker->GetJob()) {
         case SPMV:
-            tsc_start(&thread_tsc);
             do_matvec_thread(worker->data_);
-            tsc_pause(&thread_tsc);
+            break;
+        case SPMV_SYM:
+            do_matvec_sym_thread(worker->data_);
             break;
         default:
             break;
         }
-#ifdef USE_BOOST_BARRIER
-        worker->end_barrier_->wait();
+        central_barrier(worker->GetSense(), size_ + 1);
         // Wait for a new kernel to be set
-        worker->start_barrier_->wait();
-#else
-        central_barrier(worker->local_sense, no_threads);
-        // Wait for a new kernel to be set
-        central_barrier(worker->local_sense, no_threads);
-#endif
+        central_barrier(worker->GetSense(), size_ + 1);
     }
-#ifdef USE_BOOST_BARRIER
-    worker->end_barrier_->wait();
-#else
-    central_barrier(worker->local_sense, no_threads);
-#endif
-
-	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) worker->data_;
-    spm_thread->secs = tsc_getsecs(&thread_tsc);
-    tsc_shut(&thread_tsc);
+    central_barrier(worker->GetSense(), size_ + 1);
 }
 
 void ThreadPool::SetKernel(int kernel_id)
 {
     for (size_t i = 0; i < size_; i++) {
         workers_[i].SetJob(kernel_id);
+        if (kernel_id == SPMV_SYM) {
+            spm_mt_thread_t *data = (spm_mt_thread_t *) workers_[i].data_;
+            data->sense = workers_[i].GetSense();
+        }
     }
 }

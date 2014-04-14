@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * TimingFramework.hpp --  Timing utilities
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.

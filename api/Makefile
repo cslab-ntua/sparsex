@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: libsparsex.so libsparsex.a libtest
+all: libsparsex.so libsparsex.a mmf_example csr_example reordering_example
 
 ## Configuration
 csx_dir     = ../csx
@@ -33,8 +33,14 @@ libsparsex.so: $(LIB_OBJECTS)
 libsparsex.a: $(LIB_OBJECTS)
 	ar cru $@ $^
 
-libtest: main.o libsparsex.so
+mmf_example: mmf_example.o libsparsex.so
+	$(LINK) -o $@ $^ $(LIBS)
+
+csr_example: csr_example.o libsparsex.so
+	$(LINK) -o $@ $^ $(LIBS)
+
+reordering_example: reordering_example.o libsparsex.so
 	$(LINK) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f *.o libsparsex.so libsparsex.a libtest
+	rm -f *.o libsparsex.so libsparsex.a mmf_example csr_example reordering_example

@@ -147,7 +147,7 @@ static SpmvFn GetSpmvFn(library type)
         break;
 #ifdef MKL
     case MKL:
-        // ret = mkl_spmv;
+        ret = mkl_spmv;
         break;
 #endif
 #ifdef POSKI

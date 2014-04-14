@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Compiler.hpp -- Wrapper of a Clang compiler instance. Responsible for
  *                 generating LLVM IR code from C99 source.
  *

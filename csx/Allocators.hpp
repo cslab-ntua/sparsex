@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Allocators.hpp -- Custom memory allocation
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
@@ -340,6 +339,14 @@ public:
         return static_cast<pointer>(
             Alloc::GetInstance().Reallocate(addr, old_n*sizeof(T),
                                             new_n*sizeof(T)));
+    }
+
+    pointer reallocate(size_type old_n, size_t new_n, void *addr, 
+                       const nothrow_t &) throw()
+    {
+        return static_cast<pointer>(
+            Alloc::GetInstance().Reallocate(addr, old_n*sizeof(T),
+                                            new_n*sizeof(T), nothrow));
     }
 
     void deallocate(pointer p, size_type n)

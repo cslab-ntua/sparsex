@@ -1,5 +1,5 @@
 /*
- * CsxBuild.cc -- Front-end utilities for building CSX.
+ * CsxBuild.cpp -- Front-end utilities for building CSX.
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis

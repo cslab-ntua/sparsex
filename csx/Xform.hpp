@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Xform.hpp -- Matrix coordinate transformations
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.

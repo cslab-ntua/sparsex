@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * DynamicArray.cc -- Test dynamic array implementation
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.

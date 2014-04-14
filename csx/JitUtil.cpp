@@ -1,5 +1,5 @@
 /*
- * JitUtil.cc -- Implementation of jit-related utility functions.
+ * JitUtil.cpp -- Implementation of jit-related utility functions.
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis

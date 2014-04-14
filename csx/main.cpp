@@ -49,9 +49,9 @@ int main(int argc, char **argv)
     char c;
     spm_mt_t *spm_mt;
 
-    AlwaysUseConsole();
-    UseConsole(Debug);
-    //DisableInfo();
+    // AlwaysUseConsole();
+    // UseConsole(Debug);
+    DisableInfo();
 
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
@@ -80,16 +80,16 @@ int main(int argc, char **argv)
     }
     argv = &argv[optind];
 
-    SparseMatrix<MMF<spx_index_t, spx_value_t> > matrix(argv[0]);
+    SparseMatrix<MMF<unsigned int, double> > matrix(argv[0]);
     // matrix.Reorder();
 
     for (int i = 0; i < remargc; i++) {
         std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
         std::cout << "Creating CSX...\n";
         spm_mt = matrix.CreateCsx();
-        CheckLoop<spx_index_t, spx_value_t>(spm_mt, argv[0]);
+        CheckLoop<unsigned int, double>(spm_mt, argv[0]);
         std::cout << "Running 128 SpMV loops...\n";
-        BenchLoop<spx_value_t>(spm_mt, argv[0]);
+        BenchLoop<double>(spm_mt, argv[0]);
         // double imbalance = CalcImbalance(spm_mt);
         // std::cout << "Load imbalance: " << 100*imbalance << "%\n";
         // std::cout << "Dumping Csx to binary file...\n";

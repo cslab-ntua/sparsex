@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Logger.hpp --  Logging interface.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
@@ -40,7 +39,7 @@ enum Sink {
 
 #define DEFAULT_ERROR_POLICY Console
 #define DEFAULT_WARNING_POLICY Console
-#define DEFAULT_INFO_POLICY Console
+#define DEFAULT_INFO_POLICY Null
 #define DEFAULT_DEBUG_POLICY Null
 
 class LoggingHandler
@@ -143,10 +142,12 @@ void UseFile(Level level, const char *log_file);
         << "(" << __FILE__                                          \
         << ":" << __LINE__                                          \
         << ":" << __FUNCTION__ << "()) "
+
 #define LOG_WARNING Logger<Warning>() << LoggingHandler::Prefix(Warning) \
         << "(" << __FILE__                                              \
         << ":" << __LINE__                                              \
         << ":" << __FUNCTION__ << "()) "
+
 #define LOG_INFO Logger<Info>() << LoggingHandler::Prefix(Info)
 
 #ifdef DEBUG_MODE

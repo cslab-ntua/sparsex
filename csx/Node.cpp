@@ -1,5 +1,5 @@
 /*
- * Node.cc -- Node class implementation.
+ * Node.cpp -- Node class implementation.
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis

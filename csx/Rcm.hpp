@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Rcm.hpp -- Reverse Cuthill-Mckee Ordering Interface
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.

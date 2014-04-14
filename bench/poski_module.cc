@@ -69,6 +69,8 @@ void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
          << " pt: " << pt 
          << " mt(median): " << mt_median
          << " flops: " << flops << endl;
+    // cout << y[nrows - 100] << endl;
+    // cout << y[100] << endl;
 
     /* 4. Cleanup */
     poski_DestroyPartitionVec(partitionVecX);

@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Mmf.hpp --  Matrix Market Format routines
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.

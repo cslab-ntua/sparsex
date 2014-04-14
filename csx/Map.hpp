@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * Map.hpp -- Map used for symmetric sparse matrices.
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA

@@ -1,5 +1,5 @@
 /*
- * Jit.cc -- Just In Time compilation routines.
+ * Jit.cpp -- Just In Time compilation routines.
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis

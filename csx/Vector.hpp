@@ -16,15 +16,7 @@
 #include "SpmMt.hpp"
 #include "../api/types.h"
 
-#ifdef __cplusplus
-
-#include <cstdlib>
-#include <cassert>
-#include <numa.h>
-#include <math.h>
-
-extern "C" {
-#endif
+BEGIN_C_DECLS
 
 typedef struct vec {
     spx_value_t *elements;
@@ -72,8 +64,6 @@ spx_vector_t *vec_reorder(const spx_vector_t *v, spx_perm_t *p);
 spx_vector_t *vec_inv_reorder(const spx_vector_t *v, spx_perm_t *p);
 void vec_print(const spx_vector_t *v);
 
-#ifdef __cplusplus
-}
-#endif
+END_C_DECLS
 
 #endif // VECTOR_HPP

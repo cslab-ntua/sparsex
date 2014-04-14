@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * DynamicArray.hpp -- Dynamic Array implementation supporting efficient
  *                     resizing.
  *
@@ -68,7 +67,8 @@ public:
             size_ = nr_elems;
         }
 
-        elems_ = alloc_.reallocate(capacity_, nr_elems, elems_);
+        // Use no-throw version 
+        elems_ = alloc_.reallocate(capacity_, nr_elems, elems_, nothrow);
         capacity_ = nr_elems;
     }
 

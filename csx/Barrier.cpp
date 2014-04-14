@@ -12,15 +12,16 @@
 
 using namespace std;
 
-static atomic<bool> sense(true);
+static atomic<bool> global_sense(true);
+atomic<int> barrier_cnt;
 
-void central_barrier(bool& local_sense, size_t nr_threads)
+void central_barrier(bool *local_sense, size_t nr_threads)
 {
-    local_sense = !local_sense; // each processor toggles its own sense
-    if (atomic_fetch_sub(&cnt, 1) == 1) {
-        cnt = nr_threads;   // atomic store?
-        sense.store(local_sense); // last processor toggles global sense 
+    *local_sense = !(*local_sense); // each processor toggles its own sense
+    if (atomic_fetch_sub(&barrier_cnt, 1) == 1) {
+        barrier_cnt = nr_threads;   // atomic store?
+        global_sense.store(*local_sense); // last processor toggles global sense 
     } else {
-        while (local_sense != sense.load()) {}
+        while ((*local_sense) != global_sense.load()) {}
     }
 }

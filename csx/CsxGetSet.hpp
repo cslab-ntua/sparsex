@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * CsxGetSet.hpp -- Get/Set routines for CSX.
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
@@ -175,8 +174,8 @@ void align_ptr(uint8_t **ctl, int align)
 #endif
 
 template<typename IndexType, typename ValueType>
-bool SearchValue(void *spm, IndexType row, IndexType col,
-                 ValueType& value, bool mode)
+bool SearchValue(void *spm, IndexType row, IndexType col, ValueType& value,
+                 bool mode)
 {
     csx_t<ValueType> *csx = (csx_t<ValueType> *) spm;
     IndexType current_row = row - 1;

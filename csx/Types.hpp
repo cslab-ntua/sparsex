@@ -11,7 +11,7 @@
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
-#include "types.h"
+#include "../api/types.h"
 
 #include <boost/type_traits.hpp>
 

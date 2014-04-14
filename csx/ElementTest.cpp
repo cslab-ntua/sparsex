@@ -1,5 +1,4 @@
-/* -*- C++ -*-
- *
+/*
  * ElementTest.cpp -- Simple program for testing generic elements
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.

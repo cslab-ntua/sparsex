@@ -15,27 +15,18 @@
 #include "Facade.hpp"
 #include "Runtime.hpp"
 #include "SparseMatrix.hpp"
-#ifdef USE_THREAD_POOL
-#   include "ThreadPool.hpp"
-#endif
-
-/**
- *  Explicit instantiation definitions.
- */
-// template class SparseMatrix<CSR<spx_index_t, spx_value_t> >;
-// template class SparseMatrix<MMF<spx_index_t, spx_value_t> >;
+#include "ThreadPool.hpp"
 
 /**
  *  Wrapper routines.
  */
-extern "C" {
-
 void *CreateCSR(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
                 spx_index_t nr_rows, spx_index_t nr_cols, int zero_based)
 {
     SparseMatrix<CSR<spx_index_t, spx_value_t> > *matrix =
         new SparseMatrix<CSR<spx_index_t, spx_value_t> >(rowptr, colind, values,
-                                                 nr_rows, nr_cols, zero_based);
+                                                      nr_rows, nr_cols,
+                                                      zero_based);
     return (void *) matrix;
 }
 
@@ -94,7 +85,7 @@ void *TuneCSR(void *matrix, int *symmetric)
         *symmetric = 1;
     }
 
-#ifdef USE_THREAD_POOL
+#ifndef DISABLE_POOL
     // FIXME: temporarily initialize here
     ThreadPool &pool = ThreadPool::GetInstance();
     pool.InitThreads(rt_context.GetNrThreads() - 1);
@@ -116,7 +107,7 @@ void *TuneMMF(void *matrix, int *symmetric)
         *symmetric = 1;
     }
 
-#ifdef USE_THREAD_POOL
+#ifndef DISABLE_POOL
     // FIXME: temporarily initialize here
     ThreadPool &pool = ThreadPool::GetInstance();
     pool.InitThreads(rt_context.GetNrThreads() - 1);
@@ -203,6 +194,4 @@ void GetNodes(int *nodes)
     for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
         nodes[i] = numa_node_of_cpu(rt_context.GetAffinity(i));
     }
-}
-
 }
