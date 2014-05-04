@@ -55,7 +55,7 @@ typedef double (csx_spmv_fn_t)(uint8_t **ctl, uint8_t size, double **values,
 
 ${spmv_func_definitions}
 
-void spm_csx32_double_multiply(void *spm, spx_vector_t *in, spx_vector_t *out,
+void spm_csx32_double_multiply(void *spm, vector_t *in, vector_t *out,
                                spx_scalar_t scale_f)
 {
 	csx_double_t *csx = (csx_double_t *) spm;

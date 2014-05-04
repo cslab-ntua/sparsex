@@ -16,8 +16,6 @@ csx_prefix   = $(shell pwd)/..
 llvm_dir     = $(shell $(llvmconf) --includedir)
 llvm_prefix  = $(shell $(llvmconf) --prefix)
 clang_prefix = $(llvm_prefix)
-icu_dir		= /usr/lib
-boost_dir	= /various/common_tools/boost-1.54
 
 # This is ugly and non-portable
 # (we need a script to return CPU MhZs)

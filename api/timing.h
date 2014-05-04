@@ -1,5 +1,5 @@
 /**
- * \file SparseX/timing.h -- \brief Timing routines.
+ * \file timing.h -- \brief Timing routines.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -16,12 +16,22 @@ struct timer {
 };
 typedef struct timer spx_timer_t;
 
+/**
+ *  Initialises a timer object.
+ *
+ *  @param[in] t       timer to be initialized.
+ */
 static inline void spx_timer_clear(spx_timer_t *t)
 {
     timerclear(&(t->elapsed_time));
     timerclear(&(t->timestamp));
 }
 
+/**
+ *  Starts a timer object.
+ *
+ *  @param[in] t       timer to be launched.
+ */
 static inline void spx_timer_start(spx_timer_t *t)
 {
     if (gettimeofday(&(t->timestamp), NULL) < 0) {
@@ -30,6 +40,11 @@ static inline void spx_timer_start(spx_timer_t *t)
     }
 }
 
+/**
+ *  Pauses a timer object.
+ *
+ *  @param[in] t       timer to be paused.
+ */
 static inline void spx_timer_pause(spx_timer_t *t)
 {
     struct timeval t_stop;
@@ -44,6 +59,12 @@ static inline void spx_timer_pause(spx_timer_t *t)
     timeradd(&(t->elapsed_time), &t_interval, &(t->elapsed_time));
 }
 
+/**
+ *  Returns the elapsed time in seconds.
+ *
+ *  @param[in] t        timer.
+ *  @return             elapsed seconds.
+ */
 static inline double spx_timer_get_secs(spx_timer_t *t)
 {
     return (t->elapsed_time.tv_sec + t->elapsed_time.tv_usec / (double) 1000000);

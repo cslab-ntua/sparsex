@@ -1,5 +1,5 @@
 /**
- * SparseX/types.h -- Available indexing and value types.
+ * \file types.h -- Available indexing and value types.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou

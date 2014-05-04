@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * bench.cc --  Benchmarking interface.
+/*
+ * bench.cpp --  Benchmarking interface.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -9,8 +8,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "bench.h"
-#include "mmf.h"
+#include "bench.hpp"
+#include "mmf.hpp"
 #include <cassert>
 #include <libgen.h>
 
@@ -23,14 +22,15 @@ unsigned int OUTER_LOOPS = 5;   /**< Number of SpMV iterations */
 unsigned long LOOPS = 128;      /**< Number of repeats */
 unsigned int NR_THREADS = 1;    /**< Number of threads for a multithreaded
                                    execution */
-double ALPHA = 1, BETA = 0;     /**< Scalar parameters of the SpMV kernel
+double ALPHA = 1.32, BETA = 0.48;     /**< Scalar parameters of the SpMV kernel
                                         (y->APLHA*A*x + BETA*y) */
 Timer t;                        /**< Timer for benchmarking */
 
 static SpmvFn GetSpmvFn(library type);
 static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
                      double **values, int *nrows, int *ncols, int *nnz);
-
+static inline int elems_neq(double a, double b);
+static int vec_compare(const double *v1, const double *v2, size_t size);
 
 void Bench_Directory(const char *directory, const char *library,
                      const char *stats_file)
@@ -59,11 +59,18 @@ void Bench_Matrix(const char *filename, const char *library,
 
 	double *x = (double *) malloc(sizeof(double) * ncols);
 	double *y = (double *) malloc(sizeof(double) * nrows);
+#if defined(MKL) || defined(POSKI)
+	double *y_cmp = (double *) malloc(sizeof(double) * nrows);
+#endif
     double val = 0, max = 1, min = -1;
+ 
     for (int i = 0; i < nrows; i++) {
 		val = ((double) (rand()+i) / ((double) RAND_MAX + 1));
 		x[i] = min + val*(max-min);
 		y[i] = max + val*(min-max);
+#if defined(MKL) || defined(POSKI)
+        y_cmp[i] = y[i];
+#endif
     }
 
     ALPHA = min + val*(max-min);
@@ -72,20 +79,21 @@ void Bench_Matrix(const char *filename, const char *library,
     if (!library) {
 #ifdef MKL
         cout << "Using library Intel MKL..." << endl;
-        mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
-        for (int i = 0; i < nrows; i++) {
-            y[i] = 1;
-        }
+        mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);            
 #endif
 #ifdef POSKI
         cout << "Using library pOSKI..." << endl;
-        poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);            
-        for (int i = 0; i < nrows; i++) {
-            y[i] = 1;
-        }
+        poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);
 #endif
         cout << "Using library SparseX..." << endl;
-        sparsex_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y); 
+        sparsex_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);
+
+#ifdef COMPARE_RESULT
+        if (vec_compare(y, y_cmp, nrows) < 0)
+            cout << "Error in resulting vector!" << endl;
+        else
+            cout << "Checked passed!" << endl;
+#endif
     } else {
         cout << "Using library " << library << "...\n";
         if (strcmp(library, "MKL") == 0) {
@@ -106,6 +114,9 @@ void Bench_Matrix(const char *filename, const char *library,
     free(values);
     free(x);
     free(y);
+#if defined(MKL) || defined(POSKI)
+    free(y_cmp);
+#endif
 }
 
 void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file)
@@ -196,4 +207,24 @@ static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
 		val_i++;
     }
 	(*rowptr)[row_i++] = val_i;
+}
+
+static inline int elems_neq(double a, double b)
+{
+	if (fabs((double) (a - b) / (double) a)  > 1.e-7)
+		return 1;
+	return 0;
+}
+
+static int vec_compare(const double *v1, const double *v2, size_t size)
+{
+	for (size_t i = 0; i < size; i++) {
+		if (elems_neq(v1[i], v2[i])) {
+            std::cout << "element " << i << " differs: "<< v1[i] << " != "
+                      << v2[i] << std::endl;
+			return -1;
+		}
+	}
+
+	return 0;
 }

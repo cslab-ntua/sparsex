@@ -1,46 +1,39 @@
 .PHONY: all clean
 
-all: libsparsex.so libsparsex.a mmf_example csr_example reordering_example
+all: libsparsex.so libsparsex.a
 
 ## Configuration
-csx_dir     = ../csx
-logger_dir	= ../csx/logger
-script_dir	= ../scripts
+SRC_DIR		= .
+CSX_DIR     = ../csx
+LOGGER_DIR	= ../csx/logger
+SCRIPT_DIR	= ../scripts
+
 CC          = gcc
 LD          = gcc
-CFLAGS      = -g -Wall -O3 -Wno-unused-function -fPIC
-# -Wpadded
-LDFLAGS     = -L$(csx_dir) -Wl,--rpath=$(csx_dir) -L$(logger_dir) -Wl,--rpath=$(logger_dir) -D_GNU_SOURCE
+CFLAGS      = -g -Wall -O3 -fPIC
+LDFLAGS     = -L$(CSX_DIR) -Wl,--rpath=$(CSX_DIR) -L$(LOGGER_DIR) -Wl,--rpath=$(LOGGER_DIR)
 COMPILE     = $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK        = $(LD) $(LDFLAGS)
 LIBS        = -lcsximpl
 
-override CFLAGS += -I$(csx_dir) -I$(logger_dir)
+override CFLAGS += -I$(CSX_DIR) -I$(LOGGER_DIR)
 override LDFLAGS  += -Wl,--allow-multiple-definition -Wl,--rpath=$(shell pwd)
 
-ifeq ($(shell $(script_dir)/numa_lib.sh FOO), FOO)
+ifeq ($(shell $(SCRIPT_DIR)/numa_lib.sh FOO), FOO)
 	override CPPFLAGS += -DSPM_NUMA
 endif
 
-LIB_OBJECTS = error.o common.o mat_vec.o
+SPARSEX_SOURCES := $(wildcard $(SRC_DIR)/*.c)
+SPARSEX_OBJECTS := $(SPARSEX_SOURCES:%.c=%.o)
 
-%.o: %.c %.h
-	$(COMPILE) -D_GNU_SOURCE -c $< -o $@
+$(SPARSEX_OBJECTS): %.o : %.c
+	$(COMPILE) -c $< -o $@
 
-libsparsex.so: $(LIB_OBJECTS)
+libsparsex.so: $(SPARSEX_OBJECTS)
 	$(LINK) -shared -o $@ $^ $(LIBS)
 
-libsparsex.a: $(LIB_OBJECTS)
+libsparsex.a: $(SPARSEX_OBJECTS)
 	ar cru $@ $^
 
-mmf_example: mmf_example.o libsparsex.so
-	$(LINK) -o $@ $^ $(LIBS)
-
-csr_example: csr_example.o libsparsex.so
-	$(LINK) -o $@ $^ $(LIBS)
-
-reordering_example: reordering_example.o libsparsex.so
-	$(LINK) -o $@ $^ $(LIBS)
-
 clean:
-	rm -f *.o libsparsex.so libsparsex.a mmf_example csr_example reordering_example
+	rm -f *.o libsparsex.so libsparsex.a

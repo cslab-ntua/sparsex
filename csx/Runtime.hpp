@@ -27,6 +27,7 @@
 #include <boost/lexical_cast.hpp>
 
 using namespace std;
+using boost::bimaps::tags::tagged;
 
 namespace csx {
 
@@ -55,6 +56,8 @@ public:
         LogFilename,
         LogLevel,
     };
+    
+    struct Mnemonic {};
 
     static RuntimeConfiguration &GetInstance()
     {
@@ -68,6 +71,10 @@ public:
     Target GetProperty(const Property &key) const
     {
         PropertyMap::const_iterator iter = property_map_.find(key);
+        if (iter == property_map_.end()) {
+            LOG_ERROR << "key " << key << " not found\n";
+            exit(1);
+        }
         return boost::lexical_cast<Target, string>(iter->second);
     }
 
@@ -80,11 +87,14 @@ public:
         }
     }
 
-    Property GetMnemonic(const string &key) const
+    Property GetPropertyByMnemonic(const string &key) const
     {
-        MnemonicMap::right_const_iterator iter = mnemonic_map_.right.find(key);
+        MnemonicMap::right_const_iterator iter = 
+            mnemonic_map_.by<Mnemonic>().find(key);
+
         if (iter == mnemonic_map_.right.end()) {
             LOG_ERROR << "mnemonic not found\n";
+            exit(1);
         }
 
         return iter->second;
@@ -92,8 +102,8 @@ public:
 
 private:
     typedef std::map<Property, string> PropertyMap;
-    typedef boost::bimap<Property, string> MnemonicMap;
-    typedef MnemonicMap::value_type mnemonic_type;
+    typedef boost::bimap<Property, tagged<string, Mnemonic> > MnemonicMap;
+    typedef MnemonicMap::value_type mnemonic_pair;
 
     RuntimeConfiguration()
         : property_map_(DefaultProperties())

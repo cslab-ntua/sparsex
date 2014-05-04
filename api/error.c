@@ -1,5 +1,5 @@
 /**
- * SparseX/error.c -- Error handling interface.
+ * \file error.c -- Error handling interface.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou

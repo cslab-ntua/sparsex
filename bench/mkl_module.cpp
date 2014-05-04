@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * mkl_module.cc --  The SpMV kernel with Intel MKL.
+/*
+ * mkl_module.cpp --  The SpMV kernel with Intel MKL.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -9,7 +8,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "mkl_module.h"
+#include "mkl_module.hpp"
 #include <algorithm>
 #include <vector>
 #include <sched.h>

@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * sparsex_module.h --  Implementation of the SpMV kernel with SparseX.
+/*
+ * sparsex_module.cpp --  Implementation of the SpMV kernel with SparseX.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -9,11 +8,11 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex_module.h"
+#include "sparsex_module.hpp"
 #include <algorithm>
 #include <vector>
 
-/* SpMV kernel implemented with LIBCSX */
+/* SpMV kernel implemented with SparseX */
 void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
                   int nnz, double *x, double *y)
 {
@@ -33,8 +32,8 @@ void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols
 
     /* 3. Vector loading */
     spx_partition_t *parts = spx_mat_get_parts(A);
-    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts);
-    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts);
+    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts, OP_SHARE);
+    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts, OP_SHARE);
 
     /* 4. SpMV benchmarking phase */
     std::vector<double> mt(OUTER_LOOPS);
@@ -42,12 +41,11 @@ void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols
         t.Clear();
         t.Start();
         for (unsigned long int j = 0; j < LOOPS; j++) {
-            spx_matvec_mult(ALPHA, A, x_view, BETA, y_view);
+            spx_matvec_kernel(ALPHA, A, x_view, BETA, y_view);
         }
         t.Pause();
         mt[i] = t.ElapsedTime();
     }
-
     sort(mt.begin(), mt.end());
     double mt_median = 
         (OUTER_LOOPS % 2) ? mt[((OUTER_LOOPS+1)/2)-1]
@@ -57,8 +55,7 @@ void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols
          << " pt: " << pt
          << " mt(median): " << mt_median
          << " flops: " << flops << endl;
-    // vec_print(y_view);
-
+    
     /* 5. Cleanup */
     spx_input_destroy(input);
     spx_mat_destroy(A);

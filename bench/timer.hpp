@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- * 
- * timer.h -- Timing framework
+/*
+ * timer.hpp -- Timing framework
  *
  * Copyright (C) 2012-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2010-2012, Vasileios Karakasis

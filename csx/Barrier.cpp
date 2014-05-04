@@ -1,5 +1,5 @@
 /*
- * Barrier.cpp --  A centralized barrier implementation.
+ * Barrier.cpp --  A centralized barrier with timeout implementation.
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Athena Elafrou
@@ -9,19 +9,57 @@
  */
 
 #include "Barrier.hpp"
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <linux/futex.h>
 
 using namespace std;
 
-static atomic<bool> global_sense(true);
+static atomic<int> global_sense(1);
 atomic<int> barrier_cnt;
 
-void central_barrier(bool *local_sense, size_t nr_threads)
+static inline int do_spin(int *local_sense)
 {
-    *local_sense = !(*local_sense); // each processor toggles its own sense
+    unsigned long long i, spin_cnt = 300000;
+
+    for (i = 0; i < spin_cnt; i++) {
+        if ((*local_sense) == global_sense) {
+            return 0; 
+        } else {
+            __asm volatile ("" : : : "memory");
+        }
+    }
+    return 1;
+}
+
+static inline void futex_wait(int *addr, int val)
+{
+    int err;
+    if ((err = syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL)) < 0) {
+        exit(1);
+    }
+}
+
+static inline void futex_wake (int *addr, int count)
+{
+    int err;
+    if ((err = syscall(SYS_futex, addr, FUTEX_WAKE, count)) < 0) {
+        exit(1);
+    }
+}
+
+void centralized_barrier(int *local_sense, size_t nr_threads)
+{
+    // each processor toggles its own sense
+    *local_sense = !(*local_sense);
     if (atomic_fetch_sub(&barrier_cnt, 1) == 1) {
-        barrier_cnt = nr_threads;   // atomic store?
-        global_sense.store(*local_sense); // last processor toggles global sense 
+        barrier_cnt.store(nr_threads);   // atomic store?
+        // last processor toggles global sense
+        global_sense.store(*local_sense);
+        // wake up the other threads
+        futex_wake((int *) &global_sense, nr_threads);
     } else {
-        while ((*local_sense) != global_sense.load()) {}
+        if (do_spin(local_sense))
+            futex_wait((int *) &global_sense, !(*local_sense));
     }
 }

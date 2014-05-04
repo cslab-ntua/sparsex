@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * bench.h --  Benchmarking interface.
+/*
+ * bench.hpp --  Benchmarking interface.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -11,7 +10,7 @@
 #ifndef BENCH_H__
 #define BENCH_H__
 
-#include "bench_util.h"
+#include "bench_util.hpp"
 
 using namespace bench;
 

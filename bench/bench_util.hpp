@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * bench_util.h --  Benchmarking utilities.
+/*
+ * bench_util.hpp --  Benchmarking utilities.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -12,12 +11,12 @@
 #define BENCH_UTIL_H__
 
 #ifdef POSKI
-#   include "poski_module.h"
+#   include "poski_module.hpp"
 #endif
 #ifdef MKL
-#   include "mkl_module.h"
+#   include "mkl_module.hpp"
 #endif
-#include "sparsex_module.h"
+#include "sparsex_module.hpp"
 
 #include <cstdlib>
 #include <iostream>

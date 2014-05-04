@@ -13,9 +13,9 @@
 
 #include "CsxBench.hpp"
 
-static spx_vector_t *x = NULL;
-static spx_vector_t *y = NULL;
-static spx_vector_t **tmp = NULL;
+static vector_t *x = NULL;
+static vector_t *y = NULL;
+static vector_t **tmp = NULL;
 static size_t nr_loops = 0;
 static size_t nr_threads = 0;
 static size_t n = 0;
@@ -84,7 +84,7 @@ static void do_spmv_thread_main_swap(spm_mt_thread_t *thread,
 	prfcnt_t *prfcnt = (prfcnt_t *) thread->data;
 #endif
 
-	vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
+	spx_vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
 
 	// Assert this is a square matrix and swap is ok.
 	assert(x->size == y->size);
@@ -145,7 +145,7 @@ static void do_spmv_thread_sym(spm_mt_thread_t *thread,
 		if (id != 0)
 			vec_init(tmp[id], 0);
 			*/
-		vec_init_from_map(tmp, 0, thread->map);
+		spx_vec_init_from_map(tmp, 0, thread->map);
 		cur_barrier.wait();
         tsc_start(&thread_tsc);
 		spmv_mt_sym_fn(thread->spm, x, y, tmp[id], 1);
@@ -156,7 +156,7 @@ static void do_spmv_thread_sym(spm_mt_thread_t *thread,
 		for (j = 1; j < ncpus; j++)
 			vec_add_part(y, tmp[j], y, start, end);
 		*/
-		vec_add_from_map(y, tmp, y, thread->map);
+		spx_vec_add_from_map(y, tmp, y, thread->map);
 		cur_barrier.wait();
 	}
 
@@ -181,7 +181,7 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 	prfcnt_t *prfcnt = (prfcnt_t *) thread->data;
 #endif
 
-	vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
+	spx_vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
 
 	// Assert that the matrix is square and swap is OK.
 	assert(x->size == y->size);
@@ -202,7 +202,7 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 	*/
 	for (size_t i = 0; i < nr_loops; i++) {
 		// Switch Reduction Phase
-		vec_init_from_map(tmp, 0, thread->map);
+		spx_vec_init_from_map(tmp, 0, thread->map);
 		cur_barrier.wait();
 		tsc_start(&thread_tsc);
 		spmv_mt_sym_fn(thread->spm, x, y, y, 1);
@@ -213,7 +213,7 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 		for (j = 1; j < ncpus; j++)
 			VECTOR_NAME(_add_part)(y, tmp[j], y, start, end);
 		*/
-		vec_add_from_map(y, tmp, y, thread->map);
+		spx_vec_add_from_map(y, tmp, y, thread->map);
 		cur_barrier.wait();
 		SWAP(x, y);
 	}
@@ -234,7 +234,7 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 #endif
 
 static void csr_spmv(csx::CSR<uindex_t, spx_value_t> *spm, 
-                     spx_vector_t *in, spx_vector_t *out)
+                     vector_t *in, vector_t *out)
 {
 	spx_value_t *x = in->elements;
 	spx_value_t *y = out->elements;
@@ -292,11 +292,11 @@ float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 
 	// Allocate an interleaved x.
 	x = vec_create_interleaved(nr_cols, xparts, nr_threads, xnodes);
-	vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
+	spx_vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
 
 	// Allocate an interleaved y.
 	y = vec_create_interleaved(nr_rows, yparts, nr_threads, ynodes);
-	vec_init(y, 0);
+	spx_vec_init(y, 0);
 
 #   if defined(SPM_NUMA) && defined(NUMA_CHECKS)
 	int alloc_err = 0;
@@ -310,7 +310,7 @@ float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 	y = vec_create(nr_rows, NULL);
 #endif
 
-	vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
+	spx_vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
 
 #ifdef DISABLE_POOL
 	/*
@@ -339,7 +339,7 @@ float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
     tsc_init(&total_tsc);
     tsc_start(&total_tsc);
     for (size_t i = 0; i < loops; i++) {
-        MatVecMult(spm_mt, x, 1, y, 1);
+        MatVecKernel(spm_mt, x, 1, y, 1);
     }
     tsc_pause(&total_tsc);
     secs = tsc_getsecs(&total_tsc);
@@ -359,8 +359,8 @@ float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 	}
 #endif
 
-	vec_destroy(x);
-	vec_destroy(y);
+	spx_vec_destroy(x);
+	spx_vec_destroy(y);
 #ifdef SPM_NUMA
 	free(xparts);
 	free(yparts);
@@ -374,7 +374,7 @@ float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 void spmv_check_mt(csx::CSR<uindex_t, spx_value_t> *csr, spm_mt_t *spm_mt,
                    size_t loops, size_t nr_rows, size_t nr_cols)
 {
-	spx_vector_t *y_tmp;
+	vector_t *y_tmp;
 	nr_loops = loops;
     nr_threads = spm_mt->nr_threads;
 
@@ -401,9 +401,9 @@ void spmv_check_mt(csx::CSR<uindex_t, spx_value_t> *csr, spm_mt_t *spm_mt,
 	y = vec_create(nr_rows, NULL);
 	y_tmp = vec_create(nr_rows, NULL);
 #endif
-	vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
-	vec_init(y, (spx_value_t) 0);
-    vec_init(y_tmp, (spx_value_t) 0);
+	spx_vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
+	spx_vec_init(y, (spx_value_t) 0);
+    spx_vec_init(y_tmp, (spx_value_t) 0);
 
     vector<std::shared_ptr<boost::thread> > threads(nr_threads);
     boost::barrier cur_barrier(nr_threads + 1);
@@ -425,7 +425,7 @@ void spmv_check_mt(csx::CSR<uindex_t, spx_value_t> *csr, spm_mt_t *spm_mt,
 		cur_barrier.wait();
 		cur_barrier.wait();
 		csr_spmv(csr, x, y_tmp);
-		if (vec_compare(y_tmp, y) < 0)
+		if (spx_vec_compare(y_tmp, y) < 0)
 			exit(1);
 	}
 
@@ -442,9 +442,9 @@ void spmv_check_mt(csx::CSR<uindex_t, spx_value_t> *csr, spm_mt_t *spm_mt,
 	}
 #endif
 
-	vec_destroy(x);
-	vec_destroy(y);
-	vec_destroy(y_tmp);
+	spx_vec_destroy(x);
+	spx_vec_destroy(y);
+	spx_vec_destroy(y_tmp);
 #ifdef SPM_NUMA
 	free(nodes);
 	free(parts);
@@ -489,11 +489,11 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 
 	// Allocate an interleaved x.
 	x = vec_create_interleaved(nr_rows, xparts, nr_threads, xnodes);
-	vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
+	spx_vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
 
 	// Allocate an interleaved y.
 	y = vec_create_interleaved(nr_rows, yparts, nr_threads, ynodes);
-	vec_init(y, 0);
+	spx_vec_init(y, 0);
 
 #   if defined(SPM_NUMA) && defined(NUMA_CHECKS)
 	int alloc_err = 0;
@@ -507,7 +507,7 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 	y = vec_create(n, NULL);
 #endif
 
-	tmp = (spx_vector_t **) malloc(nr_threads * sizeof(spx_vector_t *));
+	tmp = (vector_t **) malloc(nr_threads * sizeof(vector_t *));
 	if (!tmp) {
 		perror("malloc");
 		exit(1);
@@ -555,7 +555,7 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
     }
 #else
     spm_mt->local_buffers =
-        (spx_vector_t **) malloc(nr_threads*sizeof(spx_vector_t *));
+        (vector_t **) malloc(nr_threads*sizeof(vector_t *));
 
     unsigned int i;
 #   ifdef SPM_NUMA
@@ -574,7 +574,7 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
     tsc_init(&total_tsc);
     tsc_start(&total_tsc);
     for (size_t i = 0; i < loops; i++) {
-        MatVecMult_sym(spm_mt, x, 1, y, 1);
+        MatVecKernel_sym(spm_mt, x, 1, y, 1);
     }
     tsc_pause(&total_tsc);
     secs = tsc_getsecs(&total_tsc);
@@ -594,10 +594,10 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 	}
 #endif
 
-	vec_destroy(x);
-	vec_destroy(y);
+	spx_vec_destroy(x);
+	spx_vec_destroy(y);
 	for (size_t i = 1; i < nr_threads; i++)
-		vec_destroy(tmp[i]);
+		spx_vec_destroy(tmp[i]);
 	free(tmp);
 #ifdef SPM_NUMA
     free(xparts);
@@ -612,7 +612,7 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 void spmv_check_sym_mt(csx::CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
                        size_t loops, size_t nr_rows, size_t nr_cols)
 {
-	spx_vector_t *y_tmp;
+	vector_t *y_tmp;
 
 	nr_loops = loops;
 	nr_threads = spm_mt->nr_threads;
@@ -641,11 +641,11 @@ void spmv_check_sym_mt(csx::CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
 	y = vec_create(n, NULL);
 	y_tmp = vec_create(n, NULL);
 #endif
-    vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
-    vec_init(y, (spx_value_t) 0);
-    vec_init(y_tmp, (spx_value_t) 0);
+    spx_vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
+    spx_vec_init(y, (spx_value_t) 0);
+    spx_vec_init(y_tmp, (spx_value_t) 0);
 
-	tmp = (spx_vector_t **) malloc(nr_threads * sizeof(spx_vector_t *));
+	tmp = (vector_t **) malloc(nr_threads * sizeof(vector_t *));
 	if (!tmp) {
 		perror("malloc");
 		exit(1);
@@ -684,7 +684,7 @@ void spmv_check_sym_mt(csx::CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
 		cur_barrier.wait();
 		cur_barrier.wait();
 		csr_spmv(spm, x, y_tmp);
-		if (vec_compare(y_tmp, y) < 0)
+		if (spx_vec_compare(y_tmp, y) < 0)
 			exit(1);
 	}
 
@@ -701,11 +701,11 @@ void spmv_check_sym_mt(csx::CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
 	}
 #endif
 
-	vec_destroy(x);
-	vec_destroy(y);
-	vec_destroy(y_tmp);
+	spx_vec_destroy(x);
+	spx_vec_destroy(y);
+	spx_vec_destroy(y_tmp);
 	for (size_t i = 1; i < nr_threads; i++)
-		vec_destroy(tmp[i]);
+		spx_vec_destroy(tmp[i]);
 	free(tmp);
 #ifdef SPM_NUMA
     free(parts);

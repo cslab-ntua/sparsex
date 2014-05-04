@@ -14,11 +14,10 @@
 #define SPM_MT_HPP
 
 #include "Map.hpp"
+#include "Vector.hpp"
 
 #include <stdbool.h>
 #include <stdint.h>
-
-struct vec;
 
 struct spm_mt_thread {
 	void *spm;
@@ -35,7 +34,7 @@ struct spm_mt_thread {
 	uint64_t size_assigned;
 	double secs;
 	void *data;
-    bool *sense;
+    int *sense;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
 

@@ -29,14 +29,20 @@
 
 BEGIN_C_DECLS
 
-void MatVecMult(spm_mt_t *spm_mt, spx_vector_t *x, spx_scalar_t alpha, 
-                spx_vector_t *y, spx_scalar_t beta);
-void MatVecMult_sym(spm_mt_t *spm_mt, spx_vector_t *x, spx_scalar_t alpha,
-                    spx_vector_t *y, spx_scalar_t beta);
+void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha, 
+                vector_t *y);
+void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
+                    vector_t *y);
+void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha, 
+                  vector_t *y, spx_scalar_t beta);
+void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
+                      vector_t *y, spx_scalar_t beta);
 
 END_C_DECLS
 
-void do_matvec_thread(void *params);
-void do_matvec_sym_thread(void *args);
+void do_mv_thread(void *args);
+void do_mv_sym_thread(void *args);
+void do_kernel_thread(void *params);
+void do_kernel_sym_thread(void *args);
 
 #endif // CSX_MATVEC_HPP

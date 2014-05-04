@@ -65,29 +65,29 @@ RuntimeConfiguration::PropertyMap RuntimeConfiguration::DefaultProperties()
 
 void RuntimeConfiguration::InitPropertyMnemonics()
 {
-    mnemonic_map_.insert(mnemonic_type(RtNrThreads, 
+    mnemonic_map_.insert(mnemonic_pair(RtNrThreads, 
                                        "spx.rt.nr_threads"));
-    mnemonic_map_.insert(mnemonic_type(RtCpuAffinity, 
+    mnemonic_map_.insert(mnemonic_pair(RtCpuAffinity, 
                                        "spx.rt.cpu_affinity"));
-    mnemonic_map_.insert(mnemonic_type(PreprocXform, 
+    mnemonic_map_.insert(mnemonic_pair(PreprocXform, 
                                        "spx.preproc.xform"));
-    mnemonic_map_.insert(mnemonic_type(PreprocMethod, 
+    mnemonic_map_.insert(mnemonic_pair(PreprocMethod, 
                                        "spx.preproc.sampling"));
-    mnemonic_map_.insert(mnemonic_type(PreprocNrSamples,
+    mnemonic_map_.insert(mnemonic_pair(PreprocNrSamples,
                                        "spx.preproc.sampling.nr_samples"));
-    mnemonic_map_.insert(mnemonic_type(PreprocSamplingPortion,
+    mnemonic_map_.insert(mnemonic_pair(PreprocSamplingPortion,
                                        "spx.preproc.sampling.portion"));
-    mnemonic_map_.insert(mnemonic_type(MatrixSymmetric,
+    mnemonic_map_.insert(mnemonic_pair(MatrixSymmetric,
                                        "spx.matrix.symmetric"));
-    mnemonic_map_.insert(mnemonic_type(MatrixSplitBlocks, 
+    mnemonic_map_.insert(mnemonic_pair(MatrixSplitBlocks, 
                                        "spx.matrix.split_blocks"));
-    mnemonic_map_.insert(mnemonic_type(MatrixFullColind,
+    mnemonic_map_.insert(mnemonic_pair(MatrixFullColind,
                                        "spx.matrix.full_colind"));
-    mnemonic_map_.insert(mnemonic_type(MatrixMinUnitSize,
+    mnemonic_map_.insert(mnemonic_pair(MatrixMinUnitSize,
                                        "spx.matrix.min_unit_size"));
-    mnemonic_map_.insert(mnemonic_type(MatrixMaxUnitSize,
+    mnemonic_map_.insert(mnemonic_pair(MatrixMaxUnitSize,
                                        "spx.matrix.max_unit_size"));
-    mnemonic_map_.insert(mnemonic_type(MatrixMinCoverage,
+    mnemonic_map_.insert(mnemonic_pair(MatrixMinCoverage,
                                        "spx.matrix.min_coverage"));
 }
 

@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * poski_module.h --  The SpMV kernel with pOSKI.
+/*
+ * poski_module.hpp --  The SpMV kernel with pOSKI.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -21,8 +20,8 @@ extern "C" {
 }
 #endif
 
+#include "timer.hpp"
 #include <iostream>
-#include "timer.h"
 
 using namespace std;
 

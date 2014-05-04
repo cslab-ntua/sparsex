@@ -13,8 +13,8 @@
 ThreadPool::~ThreadPool() 
 {
     work_done_.store(true);
-    central_barrier(GetSense(), size_ + 1);
-    central_barrier(GetSense(), size_ + 1);
+    centralized_barrier(GetSense(), size_ + 1);
+    centralized_barrier(GetSense(), size_ + 1);
 
     for (size_t i = 0; i < size_; i++) {
         if (workers_[i].thread_->joinable())
@@ -42,40 +42,48 @@ void ThreadPool::InitThreads(size_t nr_threads)
             (&ThreadPool::Run, this, workers_.data() + i);  // exception throwing try-catch
     }
 
-    central_barrier(GetSense(), size_ + 1);
+    centralized_barrier(GetSense(), size_ + 1);
 }
 
 void ThreadPool::Run(Worker *worker)
 {
-    central_barrier(worker->GetSense(), size_ + 1);
+    centralized_barrier(worker->GetSense(), size_ + 1);
 
     // Wait for the main thread to set a kernel to be executed
-    central_barrier(worker->GetSense(), size_ + 1);
+    centralized_barrier(worker->GetSense(), size_ + 1);
     while (!work_done_.load()) {
         switch (worker->GetJob()) {
-        case SPMV:
-            do_matvec_thread(worker->data_);
+        case SPMV_MULT:
+            do_mv_thread(worker->data_);
             break;
-        case SPMV_SYM:
-            do_matvec_sym_thread(worker->data_);
+        case SPMV_KERNEL:
+            do_kernel_thread(worker->data_);
+            break;
+        case SPMV_MULT_SYM:
+            do_mv_sym_thread(worker->data_);
+            break;
+        case SPMV_KERNEL_SYM:
+            do_kernel_sym_thread(worker->data_);
             break;
         default:
             break;
         }
-        central_barrier(worker->GetSense(), size_ + 1);
+        centralized_barrier(worker->GetSense(), size_ + 1);
         // Wait for a new kernel to be set
-        central_barrier(worker->GetSense(), size_ + 1);
+        centralized_barrier(worker->GetSense(), size_ + 1);
     }
-    central_barrier(worker->GetSense(), size_ + 1);
+    centralized_barrier(worker->GetSense(), size_ + 1);
 }
 
 void ThreadPool::SetKernel(int kernel_id)
 {
     for (size_t i = 0; i < size_; i++) {
         workers_[i].SetJob(kernel_id);
-        if (kernel_id == SPMV_SYM) {
+        if (kernel_id == SPMV_MULT_SYM || kernel_id == SPMV_KERNEL_SYM) {
             spm_mt_thread_t *data = (spm_mt_thread_t *) workers_[i].data_;
             data->sense = workers_[i].GetSense();
+        } else if (kernel_id == IDLE) {
+            workers_[i].data_ = NULL;
         }
     }
 }

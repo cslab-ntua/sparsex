@@ -32,6 +32,7 @@ spm_mt_t *PrepareSpmMt()
         spm_mt->spm_threads[i].node =
             numa_node_of_cpu(rt_context.GetAffinity(i));
         spm_mt->spm_threads[i].id = i;
+        spm_mt->spm_threads[i].sense = NULL;
     }
 
     return spm_mt;

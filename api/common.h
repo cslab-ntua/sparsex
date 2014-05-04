@@ -1,5 +1,5 @@
 /**
- * SparseX/common.h -- Common utilities.
+ * \file common.h -- \brief Common library utilities and definitions.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -17,12 +17,6 @@
 
 #include <stdlib.h>
 
-typedef struct spx_thread spx_thread_pool_t;
-/**
- *  \brief Dense array object that represents a permutation.
- */
-typedef spx_index_t spx_perm_t;
-
 /**
  *  \brief The sparse matrix handle type.
  */
@@ -34,14 +28,29 @@ typedef struct matrix spx_matrix_t;
 typedef struct input spx_input_t;
 
 /**
- *  \brief Matrix property type.
+ *  \brief The vector handle type.
+ */
+typedef struct vec spx_vector_t;
+
+/**
+ *  \brief Partitioning object.
  */
 typedef struct partition spx_partition_t;
+
+/**
+ *  \brief Dense array object that represents a permutation.
+ */
+typedef spx_index_t spx_perm_t;
 
 /**
  *  \brief Matrix property type.
  */
 typedef int spx_property_t;
+
+/**
+ *  \brief A vector copy-mode type.
+ */
+typedef int spx_copymode_t;
 
 #define INVALID_INPUT ((spx_input_t *) NULL)
 #define INVALID_MAT ((spx_matrix_t *) NULL)
@@ -50,6 +59,8 @@ typedef int spx_property_t;
 #define INVALID_PERM ((spx_perm_t *) NULL)
 
 #define OP_REORDER          42
+#define OP_SHARE            43
+#define OP_COPY             44
 #define INDEXING_ZERO_BASED 0
 #define INDEXING_ONE_BASED  1
 

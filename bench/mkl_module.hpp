@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * mkl_module.h --  The SpMV kernel with Intel MKL.
+/*
+ * mkl_module.hpp --  The SpMV kernel with Intel MKL.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -12,7 +11,7 @@
 #define MKL_MODULE_H__
 
 #include <iostream>
-#include "timer.h"
+#include "timer.hpp"
 #include "mkl.h"
 
 using namespace std;

@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * sparsex_module.h --  The SpMV kernel implemented with SparseX.
+/*
+ * sparsex_module.hpp --  The SpMV kernel implemented with SparseX.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -21,8 +20,8 @@ extern "C" {
 }
 #endif
 
+#include "timer.hpp"
 #include <iostream>
-#include "timer.h"
 
 using namespace std;
 

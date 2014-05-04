@@ -178,7 +178,8 @@ void DestroyCsx(void *matrix)
 void SetPropertyByMnemonic(const char *key, const char *value)
 {
     RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
-    rt_config.SetProperty(rt_config.GetMnemonic(string(key)), string(value));
+    rt_config.SetProperty(rt_config.GetPropertyByMnemonic(string(key)),
+                          string(value));
 }
 
 void SetPropertiesFromEnv()

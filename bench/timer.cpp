@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- * 
- * timer.cc -- Timing framework
+/*
+ * timer.cpp -- Timing framework
  *
  * Copyright (C) 2010-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2010-2012, Vasileios Karakasis
@@ -10,10 +9,9 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "timer.h"
+#include "timer.hpp"
 #include <stdlib.h>
 #include <iostream>
-
 
 using namespace std;
 

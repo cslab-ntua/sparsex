@@ -35,11 +35,11 @@ COMPILE = $(CXX) $(CPPFLAGS) $(CXXFLAGS)
 LINK    = $(LD)
 
 BENCH_SRC = \
-	bench.cc \
-	timer.cc \
-	sparsex_module.cc \
+	bench.cpp \
+	timer.cpp \
+	sparsex_module.cpp \
 
-BENCH_OBJECTS = $(BENCH_SRC:%.cc=%.o)
+BENCH_OBJECTS = $(BENCH_SRC:%.cpp=%.o)
 
 ifneq ($(strip $(mkl_prefix)),)
 	override CPPFLAGS += -I$(mkl_dir)/include
@@ -52,15 +52,15 @@ ifneq ($(strip $(poski_prefix)),)
 	BENCH_OBJECTS += poski_module.o
 endif
 
-%.o: %.cc %.h
+%.o: %.cpp %.hpp
 	$(COMPILE) -c $< -o $@
 
-poski_module.o: poski_module.cc
+poski_module.o: poski_module.cpp
 ifneq ($(strip $(poski_prefix)),)
 	$(COMPILE) $(POSKI_CXXFLAGS) -c $< -o $@
 endif
 
-mkl_module.o: mkl_module.cc
+mkl_module.o: mkl_module.cpp
 ifneq ($(strip $(mkl_prefix)),)
 	$(COMPILE) $(MKL_CXXFLAGS) -c $< -o $@
 endif

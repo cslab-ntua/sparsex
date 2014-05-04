@@ -13,23 +13,30 @@
 #include "Logger.hpp"
 
 #include <cstdlib>
+#include <cstdarg>
 #include <cassert>
 #include <numa.h>
 #include <math.h>
 #include <sys/mman.h>
 
 namespace internal {
+
 enum alloc_type {
 	ALLOC_STD = 1,
 	ALLOC_NUMA,
 	ALLOC_MMAP,
 	ALLOC_OTHER,
 };
+
+enum copy_mode {
+	SHARE = 43,
+	COPY
+};
 }
 
-spx_vector_t *vec_create(unsigned long size, void *arg)
+vector_t *vec_create(unsigned long size, void *arg)
 {
-	spx_vector_t *v = (spx_vector_t *) malloc(sizeof(spx_vector_t));
+	vector_t *v = (vector_t *) malloc(sizeof(vector_t));
 	if (!v) {
 		LOG_ERROR << "malloc\n";
 		exit(1);
@@ -37,7 +44,7 @@ spx_vector_t *vec_create(unsigned long size, void *arg)
 
 	v->size = size;
 	v->alloc_type = internal::ALLOC_STD;
-	v->elements = (spx_value_t *) malloc(sizeof(spx_value_t)*(size + 12));
+	v->elements = (spx_value_t *) malloc(sizeof(spx_value_t) * size);
 	if (!v->elements) {
 		LOG_ERROR << "malloc\n";
 		exit(1);
@@ -46,24 +53,39 @@ spx_vector_t *vec_create(unsigned long size, void *arg)
 	return v;
 }
 
-spx_vector_t *vec_create_from_buff(spx_value_t *buff, unsigned long size,
-                                   void *arg)
+vector_t *vec_create_from_buff(spx_value_t *buff, unsigned long size,
+                               void *arg, int mode)
 {
-	spx_vector_t *v = (spx_vector_t *) malloc(sizeof(spx_vector_t));
+	vector_t *v = (vector_t *) malloc(sizeof(vector_t));
 	if (!v) {
 		LOG_ERROR << "malloc\n";
 		exit(1);
 	}
 	v->size = size;
 	v->alloc_type = internal::ALLOC_OTHER;
-	v->elements = buff;
+    if (mode == internal::SHARE) {
+        v->copy_mode = internal::SHARE;
+        v->elements = buff;
+    } else if (mode == internal::COPY) {
+        v->copy_mode = internal::COPY;
+        v->elements = (spx_value_t *) malloc(sizeof(spx_value_t) * size);
+        if (!v->elements) {
+            LOG_ERROR << "malloc\n";
+            exit(1);
+        }
+        
+        memcpy(v->elements, buff, size * sizeof(spx_value_t));
+    } else {
+        LOG_ERROR << "Invalid copy-mode type";
+        exit(1);
+    }
 
 	return v;
 }
 
-spx_vector_t *vec_create_onnode(unsigned long size, int node)
+vector_t *vec_create_onnode(unsigned long size, int node)
 {
-	spx_vector_t *v = (spx_vector_t *) alloc_onnode(sizeof(spx_vector_t), node);
+	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t), node);
 
 	v->size = size;
 	v->alloc_type = internal::ALLOC_MMAP;
@@ -72,11 +94,11 @@ spx_vector_t *vec_create_onnode(unsigned long size, int node)
 	return v;
 }
 
-spx_vector_t *vec_create_interleaved(unsigned long size, size_t *parts,
-                                     int nr_parts, int *nodes)
+vector_t *vec_create_interleaved(unsigned long size, size_t *parts,
+                                 int nr_parts, int *nodes)
 {
-	spx_vector_t *v = (spx_vector_t *) alloc_onnode(sizeof(spx_vector_t),
-                                                    nodes[0]);
+	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t),
+                                            nodes[0]);
 
 	v->size = size;
 	v->alloc_type = internal::ALLOC_MMAP;
@@ -85,27 +107,31 @@ spx_vector_t *vec_create_interleaved(unsigned long size, size_t *parts,
 	return v;
 }
 
-spx_vector_t *vec_create_random(unsigned long size, void *A)
+vector_t *vec_create_random(unsigned long size, void *A)
 {
-    spx_vector_t *x = NULL;
+    vector_t *x = NULL;
 
     x = vec_create(size, NULL);
-    vec_init_rand_range(x, (spx_value_t) -0.1, (spx_value_t) 0.1);
+    spx_vec_init_rand_range(x, (spx_value_t) -0.1, (spx_value_t) 0.1);
 
     return x;
 }
 
-void vec_destroy(spx_vector_t *v)
+void spx_vec_destroy(vector_t *v)
 {
 	if (v->alloc_type == internal::ALLOC_STD) {
 		free(v->elements);
 		free(v);
 	} else if (v->alloc_type == internal::ALLOC_NUMA) {
-		numa_free(v->elements, sizeof(spx_value_t)*v->size);
-		numa_free(v, sizeof(spx_vector_t));
+		numa_free(v->elements, sizeof(spx_value_t) * v->size);
+		numa_free(v, sizeof(vector_t));
 	} else if (v->alloc_type == internal::ALLOC_MMAP) {
-		munmap(v->elements, sizeof(spx_value_t)*v->size);
-		munmap(v, sizeof(spx_vector_t));
+        if (v->copy_mode == internal::SHARE)
+            for (size_t i = 0; i < v->size; i++)
+                v->ptr_buff[i] = v->elements[i];
+        v->ptr_buff = NULL;
+		munmap(v->elements, sizeof(spx_value_t) * v->size);
+		munmap(v, sizeof(vector_t));
 	} else if (v->alloc_type == internal::ALLOC_OTHER) {
 		/* Just free our stuff; elements are supplied from user */
 		free(v);
@@ -114,20 +140,20 @@ void vec_destroy(spx_vector_t *v)
 	}
 }
 
-void vec_init(spx_vector_t *v, spx_value_t val)
+void spx_vec_init(vector_t *v, spx_value_t val)
 {
 	for (unsigned long i = 0 ; i < v->size; i++)
 		v->elements[i] = val;
 }
 
-void vec_init_part(spx_vector_t *v, spx_value_t val, spx_index_t start,
-                   spx_index_t end)
+void spx_vec_init_part(vector_t *v, spx_value_t val, spx_index_t start,
+                       spx_index_t end)
 {
 	for (spx_index_t i = start; i < end; i++)
 		v->elements[i] = val;
 }
 
-void vec_init_from_map(spx_vector_t **v, spx_value_t val, map_t *map)
+void spx_vec_init_from_map(vector_t **v, spx_value_t val, map_t *map)
 {
 	unsigned int *cpus = map->cpus;
 	unsigned int *pos = map->elems_pos;
@@ -136,7 +162,7 @@ void vec_init_from_map(spx_vector_t **v, spx_value_t val, map_t *map)
 		v[cpus[i]]->elements[pos[i]] = val;
 }
 
-void vec_init_rand_range(spx_vector_t *v, spx_value_t max, spx_value_t min)
+void spx_vec_init_rand_range(vector_t *v, spx_value_t max, spx_value_t min)
 {
 	spx_value_t val;
 
@@ -146,7 +172,7 @@ void vec_init_rand_range(spx_vector_t *v, spx_value_t max, spx_value_t min)
 	}
 }
 
-void vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val)
+void vec_set_entry(vector_t *v, spx_index_t idx, spx_value_t val)
 {
     /* Check if index is out of bounds */
     if (idx <= 0 || static_cast<unsigned long>(idx) > v->size) {
@@ -156,7 +182,7 @@ void vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val)
     v->elements[idx - 1] = val;
 }
 
-void vec_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3)
+void spx_vec_add(vector_t *v1, vector_t *v2, vector_t *v3)
 {
 	if (v1->size != v2->size || v1->size != v3->size) {
 		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ\n",
@@ -168,8 +194,8 @@ void vec_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3)
 		v3->elements[i] = v1->elements[i] + v2->elements[i];
 }
 
-void vec_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3, 
-                  spx_index_t start, spx_index_t end)
+void spx_vec_add_part(vector_t *v1, vector_t *v2, vector_t *v3, 
+                      spx_index_t start, spx_index_t end)
 {
 	if (v1->size != v2->size || v1->size != v3->size) {
 		fprintf(stderr, "v1->size=%lu v2->size=%lu v3->size=%lu differ\n",
@@ -187,8 +213,8 @@ void vec_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
 		v3->elements[i] = v1->elements[i] + v2->elements[i];
 }
 
-void vec_add_from_map(spx_vector_t *v1, spx_vector_t **v2, spx_vector_t *v3,
-                      map_t *map)
+void spx_vec_add_from_map(vector_t *v1, vector_t **v2, vector_t *v3,
+                          map_t *map)
 {
 	unsigned int *cpus = map->cpus;
 	unsigned int *pos = map->elems_pos;
@@ -198,7 +224,7 @@ void vec_add_from_map(spx_vector_t *v1, spx_vector_t **v2, spx_vector_t *v3,
 		    v1->elements[pos[i]] + v2[cpus[i]]->elements[pos[i]];
 }
 
-void vec_sub(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3)
+void spx_vec_sub(vector_t *v1, vector_t *v2, vector_t *v3)
 {
 	assert(v1->size == v2->size && v1->size == v3->size && 
 	       "vectors for sub have different size");
@@ -207,8 +233,8 @@ void vec_sub(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3)
 		v3->elements[i] = v1->elements[i] - v2->elements[i];
 }
 
-void vec_sub_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
-                  spx_index_t start, spx_index_t end)
+void spx_vec_sub_part(vector_t *v1, vector_t *v2, vector_t *v3,
+                      spx_index_t start, spx_index_t end)
 {
 	assert(v1->size == v2->size && v1->size == v3->size &&
 	       "vectors for sub have different size");
@@ -217,7 +243,7 @@ void vec_sub_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
 		v3->elements[i] = v1->elements[i] - v2->elements[i];
 }
 
-spx_value_t vec_mul(const spx_vector_t *v1, const spx_vector_t *v2)
+spx_value_t spx_vec_mul(const vector_t *v1, const vector_t *v2)
 {
 	assert(v1->size == v2->size &&  "vectors for mul have incompatible sizes");
 
@@ -228,8 +254,8 @@ spx_value_t vec_mul(const spx_vector_t *v1, const spx_vector_t *v2)
 	return ret;
 }
 
-spx_value_t vec_mul_part(const spx_vector_t *v1, const spx_vector_t *v2,
-                         spx_index_t start, spx_index_t end)
+spx_value_t spx_vec_mul_part(const vector_t *v1, const vector_t *v2,
+                             spx_index_t start, spx_index_t end)
 {
 	assert(v1->size == v2->size &&  "vectors for mul have incompatible sizes");
 
@@ -240,7 +266,7 @@ spx_value_t vec_mul_part(const spx_vector_t *v1, const spx_vector_t *v2,
 	return ret;
 }
 
-void vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num)
+void spx_vec_scale(vector_t *v1, vector_t *v2, spx_scalar_t num)
 {
 	assert(v1->size == v2->size && "incompatible vector sizes");
 
@@ -248,8 +274,8 @@ void vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num)
 		v2->elements[i] = num * v1->elements[i];
 }
 
-void vec_scale_part(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num,
-                    spx_index_t start, spx_index_t end)
+void spx_vec_scale_part(vector_t *v1, vector_t *v2, spx_scalar_t num,
+                        spx_index_t start, spx_index_t end)
 {
 	assert(v1->size == v2->size &&  "vectors have incompatible sizes");
 
@@ -257,8 +283,8 @@ void vec_scale_part(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num,
 		v2->elements[i] = num * v1->elements[i];
 }
 
-void vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
-                   spx_scalar_t num)
+void spx_vec_scale_add(vector_t *v1, vector_t *v2, vector_t *v3,
+                       spx_scalar_t num)
 {
 	assert(v1->size == v2->size && v1->size == v3->size &&
 	       "vectors for scale have incompatible sizes");
@@ -267,8 +293,8 @@ void vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
 		v3->elements[i] = v1->elements[i] + num * v2->elements[i];
 }
 
-void vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
-                        spx_scalar_t num, spx_index_t start, spx_index_t end)
+void spx_vec_scale_add_part(vector_t *v1, vector_t *v2, vector_t *v3,
+                            spx_scalar_t num, spx_index_t start, spx_index_t end)
 {
 	assert(v1->size == v2->size && v1->size == v3->size &&
 	       "vectors for scale add have incompatible  sizes");
@@ -277,7 +303,7 @@ void vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
 		v3->elements[i] = v1->elements[i] + num * v2->elements[i];
 }
 
-void vec_copy(const spx_vector_t *v1, spx_vector_t *v2)
+void spx_vec_copy(const vector_t *v1, vector_t *v2)
 {
     assert(v1->size == v2->size && "vectors for copy have different size");
 
@@ -292,7 +318,7 @@ static inline int elems_neq(spx_value_t a, spx_value_t b)
 	return 0;
 }
 
-int vec_compare(const spx_vector_t *v1, const spx_vector_t *v2)
+int spx_vec_compare(const vector_t *v1, const vector_t *v2)
 {
 	if (v1->size != v2->size) {
 		fprintf(stderr, "v1->size=%lu v2->size=%lu differ\n", v1->size,
@@ -311,7 +337,7 @@ int vec_compare(const spx_vector_t *v1, const spx_vector_t *v2)
 	return 0;
 }
 
-void vec_print(const spx_vector_t *v)
+void spx_vec_print(const vector_t *v)
 {
     std::cout << "[ ";
 	for (unsigned long i = 0; i < v->size; i++)

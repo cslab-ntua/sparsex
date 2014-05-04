@@ -1,6 +1,5 @@
-/* -*- C++ -*-
- *
- * poski_module.h --  The SpMV kernel with pOSKI.
+/*
+ * poski_module.cpp --  The SpMV kernel with pOSKI.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -9,7 +8,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "poski_module.h"
+#include "poski_module.hpp"
 #include <algorithm>
 #include <vector>
 
@@ -69,8 +68,6 @@ void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
          << " pt: " << pt 
          << " mt(median): " << mt_median
          << " flops: " << flops << endl;
-    // cout << y[nrows - 100] << endl;
-    // cout << y[100] << endl;
 
     /* 4. Cleanup */
     poski_DestroyPartitionVec(partitionVecX);

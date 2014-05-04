@@ -17,18 +17,22 @@
 #include <boost/thread/thread.hpp>
 #include <vector>
 
-#define SPMV     42
-#define SPMV_SYM 43
+enum Op {
+    IDLE = -1,
+    SPMV_MULT,
+    SPMV_MULT_SYM,
+    SPMV_KERNEL,
+    SPMV_KERNEL_SYM
+};
 
 extern atomic<int> barrier_cnt;
 
 class ThreadPool;
 
-// Maybe turn to nested?
 class Worker
 {
 public:
-    Worker() : sense_(true), job_(-1) {}
+    Worker() : sense_(1), job_(IDLE) {}
 
     void SetId(size_t id)
     {
@@ -50,17 +54,18 @@ public:
         return job_;
     }
 
-    bool *GetSense()
+    int *GetSense()
     {
         return &sense_;
     }
     
 private:
     size_t id_;
-    bool sense_;
+    int sense_;
     int job_;
 public:
-    std::shared_ptr<boost::thread> thread_;  // use unique_ptr when C++14 available (make_unique)
+    // use unique_ptr when C++14 available (make_unique)
+    std::shared_ptr<boost::thread> thread_;
     void *data_;    // FIXME
 };
 
@@ -83,7 +88,7 @@ public:
         workers_[worker_id].SetData(data);
     }
 
-    bool *GetSense()
+    int *GetSense()
     {
         return &sense_;
     }
@@ -94,12 +99,12 @@ public:
     }
 
 private:
-    bool sense_;
+    int sense_;
     size_t size_;
     atomic_bool work_done_;
-    vector<Worker> workers_;    // FIXME maybe use pointers?
+    vector<Worker> workers_;
 
-    ThreadPool() : sense_(true), size_(0), work_done_(false) {}
+    ThreadPool() : sense_(1), size_(0), work_done_(false) {}
     ThreadPool(ThreadPool const&);
     ThreadPool& operator=(ThreadPool const&);
 };

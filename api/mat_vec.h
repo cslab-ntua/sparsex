@@ -94,7 +94,7 @@ spx_error_t spx_mat_set_entry(spx_matrix_t *A, spx_index_t row,
                               spx_index_t column, spx_value_t value, ...);
 
 /**
- *  \brief Stores the matrix in the CSX format into a binary file.
+ *  Stores the matrix in the CSX format into a binary file.
  *
  *  @param[in] A            the tuned matrix handle.
  *  @param[in] filename     the name of the binary file where the matrix
@@ -112,29 +112,44 @@ spx_error_t spx_mat_save(const spx_matrix_t *A, const char *filename);
 spx_matrix_t *spx_mat_restore(const char *filename);
 
 /**
- *  \brief Returns the number of rows of the matrix.
+ *  Returns the number of rows of the matrix.
  */
 spx_index_t spx_mat_get_nrows(const spx_matrix_t *A);
 
 /**
- *  \brief Returns the number of columns of the matrix.
+ *  Returns the number of columns of the matrix.
  */
 spx_index_t spx_mat_get_ncols(const spx_matrix_t *A);
 
 /**
- *  \brief Returns the number of non-zeros of the matrix.
+ *  Returns the number of non-zeros of the matrix.
  */
 spx_index_t spx_mat_get_nnz(const spx_matrix_t *A);
 
 /**
- *  \brief Returns information on the partitioning of the matrix.
+ *  Returns information on the partitioning of the matrix.
  */
 spx_partition_t *spx_mat_get_parts(spx_matrix_t *A);
 
 /**
- *  \brief Returns the permutation applied to the matrix.
+ *  Returns the permutation applied to the matrix.
  */
 spx_perm_t *spx_mat_get_perm(const spx_matrix_t *A);
+
+/**
+ *  This routines performs a matrix-vector multiplication of the following form:
+ *                      <em> y <-- alpha*A*x </em>
+ *  where \a alpha is a scalar, \a x and \a y are vectors
+ *  and \a A is a sparse matrix in the CSX format.
+ *
+ *  @param[in] A            the tuned matrix handle.
+ *  @param[in] alpha        a scalar.
+ *  @param[in] x            the input vector.
+ *  @param[in,out] y        the output vector.
+ *  @return                 an error code.
+ */
+spx_error_t spx_matvec_mult(spx_scalar_t alpha, const spx_matrix_t *A,
+                            spx_vector_t *x, spx_vector_t *y);
 
 /**
  *  This routines performs a matrix-vector multiplication of the following form:
@@ -149,8 +164,8 @@ spx_perm_t *spx_mat_get_perm(const spx_matrix_t *A);
  *  @param[in,out] y        the output vector.
  *  @return                 an error code.
  */
-spx_error_t spx_matvec_mult(spx_scalar_t alpha, const spx_matrix_t *A,
-                            spx_vector_t *x, spx_scalar_t beta, spx_vector_t *y);
+spx_error_t spx_matvec_kernel(spx_scalar_t alpha, const spx_matrix_t *A,
+                              spx_vector_t *x, spx_scalar_t beta, spx_vector_t *y);
 
 /**
  *  This routines performs a matrix-vector multiplication of the following form:
@@ -180,12 +195,12 @@ spx_error_t spx_matvec_mult(spx_scalar_t alpha, const spx_matrix_t *A,
  *  @param[in,out] y        the output vector.
  *  @return                 an error code.
  */
-spx_error_t spx_csr_matvec_mult(spx_matrix_t *A, 
-                                spx_index_t nr_rows, spx_index_t nr_cols,
-                                spx_index_t *rowptr, spx_index_t *colind, 
-                                spx_value_t *values,
-                                spx_scalar_t alpha, spx_vector_t *x, 
-                                spx_scalar_t beta, spx_vector_t *y);
+spx_error_t spx_csr_matvec_kernel(spx_matrix_t *A, 
+                                  spx_index_t nr_rows, spx_index_t nr_cols,
+                                  spx_index_t *rowptr, spx_index_t *colind, 
+                                  spx_value_t *values,
+                                  spx_scalar_t alpha, spx_vector_t *x, 
+                                  spx_scalar_t beta, spx_vector_t *y);
 
 /**
  *  This routine releases any memory internally used by the tuned matrix
@@ -240,6 +255,7 @@ void spx_options_set_from_env();
  *  @param[in] p            a partitioning handle.
  *  @return                 a valid vector object.
  */
+/* spx_vector_t *spx_vec_create(unsigned long size, spx_partition_t *p); */
 spx_vector_t *vec_create(unsigned long size, void *p);
 spx_vector_t *vec_create_numa(unsigned long size, spx_partition_t *p);
 #ifdef SPM_NUMA
@@ -258,9 +274,9 @@ spx_vector_t *vec_create_numa(unsigned long size, spx_partition_t *p);
  *  @return                 a valid vector object.
  */
 spx_vector_t *vec_create_from_buff(spx_value_t *buff, unsigned long size,
-                                   void *p);
+                                   void *p, spx_copymode_t mode);
 spx_vector_t *vec_create_from_buff_numa(spx_value_t *buff, unsigned long size,
-                                        spx_partition_t *p);
+                                        spx_partition_t *p, spx_copymode_t mode);
 #ifdef SPM_NUMA
 #   define spx_vec_create_from_buff vec_create_from_buff_numa
 #else
@@ -283,16 +299,15 @@ spx_vector_t *vec_create_random_numa(unsigned long size, spx_partition_t *p);
 #endif
 
 /**
- *  Initializes the valid vector object \a v with \a val.
+ *  Initializes the vector object \a v with \a val.
  *
  *  @param[in] v            a valid vector object.
  *  @param[in] val          the value to fill the vector with.
  */
-void vec_init(spx_vector_t *v, spx_value_t val);
-#define spx_vec_init vec_init
+void spx_vec_init(spx_vector_t *v, spx_value_t val);
 
 /**
- *  Initializes the [\a start, \a end) part of the valid vector object \a v
+ *  Initializes the [\a start, \a end) range of the vector object \a v
  *  with \a val.
  *
  *  @param[in] v            a valid vector object.
@@ -300,20 +315,18 @@ void vec_init(spx_vector_t *v, spx_value_t val);
  *  @param[in] start        starting index.
  *  @param[in] end          ending index.
  */
-void vec_init_part(spx_vector_t *v, spx_value_t val, spx_index_t start,
-                   spx_index_t end);
-#define spx_vec_init_part vec_init_part
+void spx_vec_init_part(spx_vector_t *v, spx_value_t val, spx_index_t start,
+                       spx_index_t end);
 
 /**
- *  Initializes the valid vector object \a v with random values in the
+ *  Initializes the vector object \a v with random values in the
  *  range [\a min, \a max].
  *
  *  @param[in] v            a valid vector object.
  *  @param[in] max          maximum value of initializing range.
  *  @param[in] min          minimum value of initializing range.
  */
-void vec_init_rand_range(spx_vector_t *v, spx_value_t max, spx_value_t min);
-#define spx_vec_init_rand_range vec_init_rand_range
+void spx_vec_init_rand_range(spx_vector_t *v, spx_value_t max, spx_value_t min);
 
 /**
  *  Sets the element at index \a idx of vector \a v to be equal to \a val.
@@ -326,35 +339,33 @@ void vec_init_rand_range(spx_vector_t *v, spx_value_t max, spx_value_t min);
 spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val);
 
 /**
- *  \brief v2 -> num * v1
  *
  *  Scales the input vector \a v1 by a constant value \a num and places the 
  *  result in vector \a v2.
+ *  \a v2 -> \a num * \a v1
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
- *  @param[in] num          the const by which to scale \a v1.
+ *  @param[in] num          the constant by which to scale \a v1.
  */
-void vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num);
-#define spx_vec_scale vec_scale
+void spx_vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num);
 
 /**
- *  \brief v3 -> v1 + num * v2
- *
  *  Scales the input vector \a v2 by a constant value \a num, adds the
  *  result to vector \a v1 and places the result in vector \a v3.
+ *  \a v3 -> \a v1 + \a num * \a v2
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
  *  @param[in] v3           a valid vector object.
  *  @param[in] num          the scalar by which to scale \a v1.
  */
-void vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3, 
-                   spx_scalar_t num);
-#define spx_vec_scale_add vec_scale_add
+void spx_vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3, 
+                       spx_scalar_t num);
 
 /**
- *  \brief \a v3[\a start...\a end-1] -> \a v1[\a start...\a end-1] + \a num * \a v2[\a start...\a end-1]
+ *  \a v3[\a start...\a end) <-- \a v1[\a start...\a end) 
+ *  + \a num * \a v2[\a start...\a end)
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -363,24 +374,24 @@ void vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
  *  @param[in] start        starting index.
  *  @param[in] end          ending index.
  */
-void vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
-                        spx_scalar_t num, spx_index_t start, spx_index_t end);
-#define spx_vec_scale_add_part vec_scale_add_part
+void spx_vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
+                            spx_scalar_t num, spx_index_t start,
+                            spx_index_t end);
 
 /**
- *  \brief v3 -> v1 + v2
- *
  *  Adds the input vectors \a v1 and \a v2 and places the result in \a v3.
+ *  \a v3 <-- \a v1 + \a v2
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
  *  @param[in] v3           a valid vector object.
  */
-void vec_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
-#define spx_vec_add vec_add
+void spx_vec_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
 
 /**
- *  \brief v3[start...end-1] -> v1[start...end-1] + v2[start...end-1]
+ *  Adds the range [start...end) of the input vectors \a v1 and \a v2 and
+ *  places the result in \a v3.
+ *  \a v3[start...end) <-- \a v1[start...end) + \a v2[start...end)
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -388,24 +399,23 @@ void vec_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
  *  @param[in] start        starting index.
  *  @param[in] end          ending index.
  */
-void vec_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
-                  spx_index_t start, spx_index_t end);
-#define spx_vec_add_part vec_add_part
+void spx_vec_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
+                      spx_index_t start, spx_index_t end);
 
 /**
- *  \brief v3 -> v1 - v2
- *
  *  Subtracts the input vector \a v2 from \a v1 and places the result in \a v3.
+ *  \a v3 -> \a v1 - \a v2
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
  *  @param[in] v3           a valid vector object.
  */
-void vec_sub(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
-#define spx_vec_sub vec_sub
+void spx_vec_sub(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
 
 /**
- *  \brief v3[start...end-1] -> v1[start...end-1] - v2[start...end-1]
+ *  Subtracts the input vector \a v2 from \a v1 in the range [start...end) and
+ *  places the result in \a v3.
+ *  \a v3[start...end-1] <-- \a v1[start...end-1] - \a v2[start...end-1]
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -413,9 +423,8 @@ void vec_sub(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
  *  @param[in] start        starting index.
  *  @param[in] end          ending index.
  */
-void vec_sub_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
-                  spx_index_t start, spx_index_t end);
-#define spx_vec_sub_part vec_sub_part
+void spx_vec_sub_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
+                      spx_index_t start, spx_index_t end);
 
 /**
  *  Returns the product of the input vectors \a v1 and \a v2.
@@ -424,13 +433,10 @@ void vec_sub_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
  *  @param[in] v2           a valid vector object.
  *  @return                 the product of the input vectors.
  */
-spx_value_t vec_mul(const spx_vector_t *v1, const spx_vector_t *v2);
-#define spx_vec_mul vec_mul
+spx_value_t spx_vec_mul(const spx_vector_t *v1, const spx_vector_t *v2);
 
 /**
- *  \brief Returns v1[start...end-1] * v2[start...end-1]
- *
- *  Returns the product of the part [\a start, \a end) of the input vectors
+ *  Returns the product of the range [\a start, \a end) of the input vectors
  *  \a v1 and \a v2.
  *
  *  @param[in] v1           a valid vector object.
@@ -439,9 +445,8 @@ spx_value_t vec_mul(const spx_vector_t *v1, const spx_vector_t *v2);
  *  @param[in] end          ending index.
  *  @return                 the product of the input vectors.
  */
-spx_value_t vec_mul_part(const spx_vector_t *v1, const spx_vector_t *v2,
-                         spx_index_t start, spx_index_t end);
-#define spx_vec_mul_part vec_mul_part
+spx_value_t spx_vec_mul_part(const spx_vector_t *v1, const spx_vector_t *v2,
+                             spx_index_t start, spx_index_t end);
 
 /**
  *  Reorders the input vector v according to the permutation p, leaving
@@ -469,8 +474,7 @@ spx_error_t spx_vec_inv_reorder(spx_vector_t *v, spx_perm_t *p);
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
  */
-void vec_copy(const spx_vector_t *v1, spx_vector_t *v2);
-#define spx_vec_copy vec_copy
+void spx_vec_copy(const spx_vector_t *v1, spx_vector_t *v2);
 
 /**
  *  Compares the elements of v1 and v2. If they are equal it returns 0,
@@ -479,30 +483,24 @@ void vec_copy(const spx_vector_t *v1, spx_vector_t *v2);
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
  */
-int vec_compare(const spx_vector_t *v1, const spx_vector_t *v2);
-#define spx_vec_compare vec_compare
+int spx_vec_compare(const spx_vector_t *v1, const spx_vector_t *v2);
 
 /**
- *  \brief Prints the input vector v.
+ *  Prints the input vector v.
  *
  *  @param[in] v            a valid vector object.
- *  @return                 error code.
+ *  @return                 an error code.
  */
-void vec_print(const spx_vector_t *v);
-#define spx_vec_print vec_print
+void spx_vec_print(const spx_vector_t *v);
 
 /**
- *  \brief Destroys the input vector v.
+ *  Destroys the input vector v, after optionally moving data to a user-
+ *  defined buffer.
  *
  *  @param[in] v            a valid vector object.
+ *  @param[in] ...          an optional user-defined buffer.
  */
-void vec_destroy(spx_vector_t *v);
-#define spx_vec_destroy vec_destroy
-
-
-spx_error_t spx_matvec_mult_pool(spx_scalar_t alpha, const spx_matrix_t *A, 
-                                 spx_vector_t *x, spx_scalar_t beta, spx_vector_t *y);
-spx_thread_pool_t *spx_thread_pool_create(size_t nthreads);
+void spx_vec_destroy(spx_vector_t *v);
 
 #endif // SPARSEX_MAT_VEC_H
 
