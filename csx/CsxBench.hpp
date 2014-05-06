@@ -20,8 +20,8 @@
 #include "SpmMt.hpp"
 #include "SpmvMethod.hpp"
 #include "ThreadPool.hpp"
-#include "tsc.h"
 #include "Types.hpp"
+#include "Timer.hpp"
 #include "Vector.hpp"
 
 #include <boost/thread/thread.hpp>

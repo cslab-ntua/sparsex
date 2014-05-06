@@ -8,7 +8,6 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 #include "DynamicArray.hpp"
-#include "dynarray.h"
 #include "Allocators.hpp"
 #include "Timer.hpp"
 
@@ -40,19 +39,7 @@ int main(void)
     const size_t capacity = 10;
     DynamicArray<int, reallocator<int, NumaAllocator> > dynarray(capacity);
     vector<int> vec(capacity);
-    dynarray_t *da;
     timing::Timer timer;
-
-    da = dynarray_create(sizeof(int), 1024, 10);
-    timer.Start();
-    for (size_t i = 0; i < array_size; ++i) {
-        int *value = (int *) dynarray_alloc(da);
-        *value = i;
-    }
-
-    timer.Pause();
-    std::cout << "C dynarray impl.: " << timer.ElapsedTime() << " s\n";
-    timer.Stop();
 
     timer.Start();
     for (size_t i = 0; i < array_size; ++i) {

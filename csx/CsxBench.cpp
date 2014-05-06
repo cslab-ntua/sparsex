@@ -21,6 +21,8 @@ static size_t nr_threads = 0;
 static size_t n = 0;
 static float secs = 0.0;
 
+using namespace timing;
+
 #define SWAP(x,y) \
 	do { \
 		__typeof__(x) _tmp; \
@@ -47,29 +49,17 @@ static void do_spmv_thread(spm_mt_thread_t *thread, boost::barrier &cur_barrier)
 {
 	setaffinity_oncpu(thread->cpu);
 	spmv_double_fn_t *spmv_mt_fn = (spmv_double_fn_t *) thread->spmv_fn;
-    tsc_t thread_tsc;
+    Timer timer_thr("Thread time");
 
-#ifdef SPMV_PRFCNT
-	prfcnt_t *prfcnt = (prfcnt_t *) thread->data;
-	prfcnt_init(prfcnt, thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
-	prfcnt_start(prfcnt);
-#endif
-
-    tsc_init(&thread_tsc);
 	for (size_t i = 0; i < nr_loops; i++) {
 		cur_barrier.wait();
-        tsc_start(&thread_tsc);
+        timer_thr.Start();
 		spmv_mt_fn(thread->spm, x, y, 1);
-        tsc_pause(&thread_tsc);
+        timer_thr.Pause();
 		cur_barrier.wait();
 	}
 
-#ifdef SPMV_PRFCNT
-	prfcnt_pause(prfcnt);
-#endif
-
-    thread->secs = tsc_getsecs(&thread_tsc);
-    tsc_shut(&thread_tsc);
+    thread->secs = timer_thr.ElapsedTime();
 }
 
 #ifdef DISABLE_POOL
@@ -78,41 +68,26 @@ static void do_spmv_thread_main_swap(spm_mt_thread_t *thread,
 {
 	setaffinity_oncpu(thread->cpu);
 	spmv_double_fn_t *spmv_mt_fn = (spmv_double_fn_t *) thread->spmv_fn;
-	tsc_t total_tsc, thread_tsc;
-
-#ifdef SPMV_PRFCNT
-	prfcnt_t *prfcnt = (prfcnt_t *) thread->data;
-#endif
+    Timer timer_total("Total time");
+    Timer timer_thr("Thread time");
 
 	spx_vec_init_rand_range(x, (spx_value_t) -1000, (spx_value_t) 1000);
 
 	// Assert this is a square matrix and swap is ok.
 	assert(x->size == y->size);
-	tsc_init(&total_tsc);
-	tsc_init(&thread_tsc);
-	tsc_start(&total_tsc);
-#ifdef SPMV_PRFCNT
-	prfcnt_init(prfcnt, thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
-	prfcnt_start(prfcnt);
-#endif
-
+    timer_total.Start();
 	for (size_t i = 0; i < nr_loops; i++) {
 		cur_barrier.wait();
-		tsc_start(&thread_tsc);
+        timer_thr.Start();
 		spmv_mt_fn(thread->spm, x, y, 1);
-		tsc_pause(&thread_tsc);
+        timer_thr.Pause();
 		cur_barrier.wait();
 		SWAP(x, y);
 	}
 
-	tsc_pause(&total_tsc);
-#ifdef SPMV_PRFCNT
-	prfcnt_pause(prfcnt);
-#endif
-	thread->secs = tsc_getsecs(&thread_tsc);
-	secs = tsc_getsecs(&total_tsc);
-	tsc_shut(&total_tsc);
-	tsc_shut(&thread_tsc);
+    timer_total.Pause();
+	thread->secs = timer_thr.ElapsedTime();
+	secs = timer_total.ElapsedTime();
 }
 #endif
 
@@ -123,48 +98,28 @@ static void do_spmv_thread_sym(spm_mt_thread_t *thread,
 	spmv_double_sym_fn_t *spmv_mt_sym_fn = 
         (spmv_double_sym_fn_t *) thread->spmv_fn;
 	int id = thread->id;
-    tsc_t thread_tsc;
+    Timer timer_thr("Thread time");
 	// Switch Reduction Phase.
 	/* int j, start, end*/;
 
-#ifdef SPMV_PRFCNT
-	prfcnt_t *prfcnt = (prfcnt_t *) thread->data;
-	prfcnt_init(prfcnt, thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
-	prfcnt_start(prfcnt);
-#endif
 	// Switch Reduction Phase.
 	/*
 	start = (id * n) / ncpus;
 	end = ((id + 1) * n) / ncpus;
 	*/
 
-    tsc_init(&thread_tsc);
 	for (size_t i = 0; i < nr_loops; i++) {
-		// Switch Reduction Phase.
-		/*
-		if (id != 0)
-			vec_init(tmp[id], 0);
-			*/
 		spx_vec_init_from_map(tmp, 0, thread->map);
 		cur_barrier.wait();
-        tsc_start(&thread_tsc);
+        timer_thr.Start();
 		spmv_mt_sym_fn(thread->spm, x, y, tmp[id], 1);
-        tsc_pause(&thread_tsc);
+        timer_thr.Pause();
 		cur_barrier.wait();
-		// Switch Reduction Phase.
-		/*
-		for (j = 1; j < ncpus; j++)
-			vec_add_part(y, tmp[j], y, start, end);
-		*/
 		spx_vec_add_from_map(y, tmp, y, thread->map);
 		cur_barrier.wait();
 	}
 
-#ifdef SPMV_PRFCNT
-	prfcnt_pause(prfcnt);
-#endif
-    thread->secs = tsc_getsecs(&thread_tsc);
-    tsc_shut(&thread_tsc);
+    thread->secs = timer_thr.ElapsedTime();
 }
 
 #ifdef DISABLE_POOL
@@ -174,8 +129,9 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 	setaffinity_oncpu(thread->cpu);
 	spmv_double_sym_fn_t *spmv_mt_sym_fn = 
         (spmv_double_sym_fn_t *) thread->spmv_fn;
-	tsc_t tsc, total_tsc, thread_tsc;
-	// int id = thread->id;
+    
+    Timer timer_thr("Thread time");
+    Timer timer_total("Total time");
 
 #ifdef SPMV_PRFCNT
 	prfcnt_t *prfcnt = (prfcnt_t *) thread->data;
@@ -185,51 +141,25 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 
 	// Assert that the matrix is square and swap is OK.
 	assert(x->size == y->size);
-	tsc_init(&tsc);
-	tsc_start(&tsc);
-	tsc_init(&total_tsc);
-	tsc_init(&thread_tsc);
-	tsc_start(&total_tsc);
-#ifdef SPMV_PRFCNT
-	prfcnt_init(prfcnt, thread->cpu, PRFCNT_FL_T0 | PRFCNT_FL_T1);
-	prfcnt_start(prfcnt);
-#endif
-	// Switch Reduction Phase.
-	/*int j, start, end*/;
-	/*
-	start = (id * n) / ncpus;
-	end = ((id + 1) * n) / ncpus;
-	*/
+    timer_total.Start();
 	for (size_t i = 0; i < nr_loops; i++) {
 		// Switch Reduction Phase
 		spx_vec_init_from_map(tmp, 0, thread->map);
 		cur_barrier.wait();
-		tsc_start(&thread_tsc);
+        timer_thr.Start();
 		spmv_mt_sym_fn(thread->spm, x, y, y, 1);
-		tsc_pause(&thread_tsc);
+        timer_thr.Pause();
 		cur_barrier.wait();
 		// Switch Reduction Phase
-		/*
-		for (j = 1; j < ncpus; j++)
-			VECTOR_NAME(_add_part)(y, tmp[j], y, start, end);
-		*/
 		spx_vec_add_from_map(y, tmp, y, thread->map);
 		cur_barrier.wait();
 		SWAP(x, y);
 	}
-	tsc_pause(&tsc);
-	tsc_pause(&total_tsc);
+    
+    timer_total.Pause();
 
-#ifdef SPMV_PRFCNT
-	prfcnt_pause(prfcnt);
-#endif
-
-	secs = tsc_getsecs(&tsc);
-	tsc_shut(&tsc);
-	thread->secs = tsc_getsecs(&thread_tsc);
-	secs = tsc_getsecs(&total_tsc);
-	tsc_shut(&total_tsc);
-	tsc_shut(&thread_tsc);
+	thread->secs = timer_thr.ElapsedTime();
+	secs = timer_total.ElapsedTime();
 }
 #endif
 
@@ -335,28 +265,14 @@ float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 #else
     ThreadPool &pool = ThreadPool::GetInstance();
     pool.InitThreads(nr_threads - 1);
-    tsc_t total_tsc;
-    tsc_init(&total_tsc);
-    tsc_start(&total_tsc);
+    Timer timer_total("Total time");
+    timer_total.Start();
     for (size_t i = 0; i < loops; i++) {
         MatVecKernel(spm_mt, x, 1, y, 1);
     }
-    tsc_pause(&total_tsc);
-    secs = tsc_getsecs(&total_tsc);
-    tsc_shut(&total_tsc);
-#endif
 
-#ifdef SPMV_PRFCNT
-	// Report performance counters for every thread.
-	for (size_t i = 0; i < nr_threads; i++) {
-		spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
-		prfcnt_t *prfcnt = (prfcnt_t *) spmv_thread.data;
-		fprintf(stdout, "Perf. counters: thread %d on cpu %d\n", i,
-		        spmv_thread.cpu);
-		prfcnt_report(prfcnt);
-		prfcnt_shut(prfcnt);
-		free(prfcnt);
-	}
+    timer_total.Pause();
+    secs = timer_total.ElapsedTime();
 #endif
 
 	spx_vec_destroy(x);
@@ -566,32 +482,18 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 #   else
     for (i = 1; i < nr_threads; i++)
         spm_mt->local_buffers[i] = vec_create(n, NULL);
-#   endif
+#   endif   // SPM_NUMA
 
     ThreadPool &pool = ThreadPool::GetInstance();
     pool.InitThreads(nr_threads - 1);
-    tsc_t total_tsc;
-    tsc_init(&total_tsc);
-    tsc_start(&total_tsc);
+    Timer timer_total("Total time");
+    timer_total.Start();
     for (size_t i = 0; i < loops; i++) {
         MatVecKernel_sym(spm_mt, x, 1, y, 1);
     }
-    tsc_pause(&total_tsc);
-    secs = tsc_getsecs(&total_tsc);
-    tsc_shut(&total_tsc);
-#endif
 
-#ifdef SPMV_PRFCNT
-	// Report performance counters for every thread.
-	for (size_t i = 0; i < nr_threads; i++) {
-		spm_mt_thread_t spmv_thread = spm_mt->spm_threads[i];
-		prfcnt_t *prfcnt = (prfcnt_t *) spmv_thread.data;
-		fprintf(stdout, "Perf. counters: thread %d on cpu %d\n", i,
-		        spmv_thread.cpu);
-		prfcnt_report(prfcnt);
-		prfcnt_shut(prfcnt);
-		free(prfcnt);
-	}
+    timer_total.Pause();
+    secs = timer_total.ElapsedTime();
 #endif
 
 	spx_vec_destroy(x);
