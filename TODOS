@@ -1,5 +1,5 @@
 1. C API
-   -- BLAS for matrix operations
+   -- [DONE] BLAS for matrix operations
    -- PETSc (?)
    -- [DONE] Matrix tuning
       * [DONE] Pattern setup
@@ -26,7 +26,7 @@
    -- [DONE] Baseline benchmarking code for all libs (MKL, OSKI, CSX)
       out-of-the-box
 
-2. Refactoring
+2. Refactoring (see REFACTORING for an updated view)
    -- [50%] Homogenize variable types (size_t, signed/unsigned)->nrows...
    -- [75%] Variable naming
    -- [75%] Code cleanup (also thgoud)
@@ -34,16 +34,18 @@
    -- Cleanup the way C and C++ are mixed
    -- [90%] Memory management (leaks, double free corruptions, etc.)
    -- [DONE] SPM indexing (C++ templates?)
-   -- Replace old Elem's
+   -- [DONE] Replace old Elem's
    -- Revisit one-based indexing of sparse matrix elements.
-   -- Decide on whether to use always uint64_t for internal indexing.
+   -- [DONE] Decide on whether to use always uint64_t for internal indexing.
       * Less templated code --> faster compilation
       * Larger working set during preprocessing --> possibly slower
-   -- Cleanup dead code.
+   -- [DONE] Cleanup dead code.
 
 3. User config & installation
-   -- autotools (configure;make;install)
-   -- config.h
+   -- [DONE] autotools (configure; make; make install)
+   -- [DONE] config.h
+   -- version.h (with version string)
+   -- Add an installable sparsex-config script
 
 4. Testing
    -- Command-line interface
@@ -54,7 +56,7 @@
    -- [50%] doxygen (API/Development)
    -- User guide & Manual
 
-6. Demo
+6. [DONE] Demo
    -- Libcsx vs. pOSKI vs. Intel MKL vs. Banded matrices
 
 7. [DONE] Symmetrics revisiting

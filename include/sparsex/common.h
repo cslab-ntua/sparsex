@@ -10,9 +10,9 @@
 #ifndef SPARSEX_COMMON_H
 #define SPARSEX_COMMON_H
 
-#include <sparse/error.h>
+#include <sparsex/error.h>
 #include <sparsex/types.h>
-#include "sparsex/internals/LoggerUtil.hpp"
+#include "sparsex/internals/logger/LoggerUtil.hpp"
 #include "sparsex/internals/Vector.hpp"
 
 #include <stdlib.h>

@@ -258,7 +258,7 @@ void spx_options_set_from_env();
 /* spx_vector_t *spx_vec_create(unsigned long size, spx_partition_t *p); */
 spx_vector_t *vec_create(unsigned long size, void *p);
 spx_vector_t *vec_create_numa(unsigned long size, spx_partition_t *p);
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
 #   define spx_vec_create vec_create_numa
 #else
 #   define spx_vec_create vec_create
@@ -277,7 +277,7 @@ spx_vector_t *vec_create_from_buff(spx_value_t *buff, unsigned long size,
                                    void *p, spx_copymode_t mode);
 spx_vector_t *vec_create_from_buff_numa(spx_value_t *buff, unsigned long size,
                                         spx_partition_t *p, spx_copymode_t mode);
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
 #   define spx_vec_create_from_buff vec_create_from_buff_numa
 #else
 #   define spx_vec_create_from_buff vec_create_from_buff
@@ -292,7 +292,7 @@ spx_vector_t *vec_create_from_buff_numa(spx_value_t *buff, unsigned long size,
  */
 spx_vector_t *vec_create_random(unsigned long size, void *p);
 spx_vector_t *vec_create_random_numa(unsigned long size, spx_partition_t *p);
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
 #   define spx_vec_create_random vec_create_random_numa
 #else
 #   define spx_vec_create_random vec_create_random

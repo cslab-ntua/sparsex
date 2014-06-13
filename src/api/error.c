@@ -8,8 +8,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "error.h"
-#include "LoggerUtil.hpp"
+#include "sparsex/error.h"
+#include "sparsex/internals/logger/LoggerUtil.hpp"
 
 /**
  *  The first global variable points to the current error handler. The default

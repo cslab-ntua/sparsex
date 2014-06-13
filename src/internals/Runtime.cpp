@@ -11,6 +11,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
+#include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Runtime.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
@@ -53,7 +54,7 @@ RuntimeConfiguration::PropertyMap RuntimeConfiguration::DefaultProperties()
         (MatrixSymmetric, "false")
         (MatrixSplitBlocks, "true")
         (MatrixOneDimBlocks, "false")
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         (MatrixFullColind, "true")
 #else
         (MatrixFullColind, "false")

@@ -8,7 +8,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "common.h"
+#include "sparsex/common.h"
 
 void spx_init()
 {

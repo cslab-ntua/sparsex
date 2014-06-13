@@ -41,7 +41,7 @@ public:
 private:
     void AlignCtl(size_t boundary);
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     typedef DynamicArray<uint8_t, reallocator<uint8_t, NumaAllocator> >
     CtlDynamicArray;
 #else

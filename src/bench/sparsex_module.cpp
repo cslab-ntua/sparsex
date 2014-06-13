@@ -13,8 +13,8 @@
 #include <vector>
 
 /* SpMV kernel implemented with SparseX */
-void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
-                  int nnz, double *x, double *y)
+void sparsex_spmv(int *rowptr, int *colind, double *values,
+                  int nrows, int ncols, int nnz, double *x, double *y)
 {
     spx_init();
     /* 1. Matrix loading phase */

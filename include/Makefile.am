@@ -14,7 +14,7 @@ install_data = @INSTALL_DATA@
 nobase_include_HEADERS = \
 	sparsex/common.h \
 	sparsex/error.h \
-	sparsex/mat_vec.h \
+	sparsex/matvec.h \
 	sparsex/sparsex.h \
 	sparsex/timing.h \
 	sparsex/types.h \

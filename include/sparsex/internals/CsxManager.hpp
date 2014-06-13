@@ -13,6 +13,7 @@
 #define CSX_MANAGER_HPP
 
 #include "sparsex/internals/Allocators.hpp"
+#include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Csx.hpp"
 #include "sparsex/internals/CtlBuilder.hpp"
 #include "sparsex/internals/CtlUtil.hpp"
@@ -22,7 +23,7 @@
 #include "sparsex/internals/SpmMt.hpp"
 #include "sparsex/internals/logger/Logger.hpp"
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
 #   include <numa.h>
 #   include "sparsex/internals/numa_util.h"
 #endif
@@ -254,13 +255,13 @@ csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
     csx_sym_t<ValueType> *csx;
     double *diagonal = spm_sym_->GetDiagonal();
     uint64_t diagonal_size = spm_sym_->GetDiagonalSize();
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
 #endif
     
     spm_ = spm_sym_->GetLowerMatrix();
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     int cpu = sched_getcpu();
     if (cpu < 0) {
         LOG_ERROR << "sched_getcpu() failed " << strerror(errno);
@@ -292,7 +293,7 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
 {
     csx_t<ValueType> *csx;
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
     int cpu = sched_getcpu();
     if (cpu < 0) {
@@ -313,7 +314,7 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
     csx = new csx_t<ValueType>;
     values_ = new ValueType[spm_->GetNrNonzeros()];
     rows_info_ = new row_info_t[spm_->GetNrRows()];
-#endif  // SPM_NUMA
+#endif  // SPX_USE_NUMA
     if (!csx || !values_ || !rows_info_) {
         LOG_ERROR << "malloc failed\n";
         exit(1);
@@ -411,7 +412,7 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
         }
     }
 
-#ifdef DEBUG_MODE
+#if SPX_DEBUG
     LOG_DEBUG << "values_\n";
     for (size_t i = 0; i < spm_->GetNrNonzeros(); ++i)
         LOG_DEBUG << values_[i] << "\n";

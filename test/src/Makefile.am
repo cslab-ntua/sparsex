@@ -9,6 +9,7 @@
 #
 
 AM_DEFAULT_VERBOSITY = 0
+ACLOCAL_AMFLAGS = -I m4check
 
 AM_CPPFLAGS = \
 	-I$(top_builddir)/include \
@@ -19,8 +20,7 @@ AM_LDFLAGS	= \
 	-L$(top_builddir)/src/internals/.libs \
 	$(AX_LDFLAGS)
 
-check_PROGRAMS = \
-	test_spmv
+check_PROGRAMS = test_spmv
 
 test_spmv_SOURCES = SpmvTest.cpp
 test_spmv_LDADD = \

@@ -14,6 +14,7 @@
 #define CSX_UTIL_HPP
 
 #include "sparsex/internals/Allocators.hpp"
+#include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Csx.hpp"
 #include "sparsex/internals/SpmMt.hpp"
 #include "sparsex/internals/Vector.hpp"
@@ -113,7 +114,7 @@ unsigned long CsxSymSize(spm_mt_t *spm_mt)
 template<typename ValueType>
 void PutSpmMt(spm_mt_t *spm_mt)
 {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         if (spm_mt->interleaved) {
             size_t total_ctl_size = 0, total_nnz = 0;
             csx_t<ValueType> *csx = 0;
@@ -159,7 +160,7 @@ void PutSpmMt(spm_mt_t *spm_mt)
             csx_sym_t<ValueType> *csx_sym =
                 (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;           
             DestroyCsxSym(csx_sym);
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
             NumaAllocator &alloc = NumaAllocator::GetInstance();
             alloc.Destroy(spm_mt->spm_threads[i].map->cpus, 
                           spm_mt->spm_threads[i].map->length);
@@ -185,7 +186,7 @@ void PutSpmMt(spm_mt_t *spm_mt)
 template<typename ValueType>
 static void DestroyCsx(csx_t<ValueType> *csx)
 {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     NumaAllocator &alloc = NumaAllocator::GetInstance();
     if (csx->ctl && csx->values) {
         alloc.Destroy(csx->ctl, csx->ctl_size);
@@ -205,12 +206,12 @@ static void DestroyCsx(csx_t<ValueType> *csx)
 template<typename ValueType>
 static void DestroyCsxSym(csx_sym_t<ValueType> *csx_sym)
 {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     uint64_t diag_size = csx_sym->lower_matrix->nrows;
 #endif
 
     DestroyCsx(csx_sym->lower_matrix);
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     NumaAllocator &alloc = NumaAllocator::GetInstance();
     alloc.Destroy(csx_sym->dvalues, diag_size);
     alloc.Destroy(csx_sym);

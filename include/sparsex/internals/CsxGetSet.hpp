@@ -10,6 +10,7 @@
 #ifndef CSX_GET_SET_HPP
 #define CSX_GET_SET_HPP
 
+#include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Csx.hpp"
 #include "sparsex/internals/Encodings.hpp"
 #include "sparsex/internals/Element.hpp"
@@ -219,7 +220,7 @@ bool SearchValue(void *spm, IndexType row, IndexType col, ValueType& value,
                 if (cnt != 0) break;
             }
             cnt++;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
             ucol = u32_get(&ctl_ptr);
 #else
             ucol += ul_get(&ctl_ptr);

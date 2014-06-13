@@ -8,9 +8,9 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "mat_vec.h"
-#include "CsxMatvec.hpp"
-#include "Facade.hpp"
+#include "sparsex/matvec.h"
+#include "sparsex/internals/CsxMatvec.hpp"
+#include "sparsex/internals/Facade.hpp"
 
 #include <unistd.h>
 #include <float.h>

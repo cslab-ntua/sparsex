@@ -13,6 +13,7 @@
 #ifndef SPM_MT_HPP
 #define SPM_MT_HPP
 
+#include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Map.hpp"
 #include "sparsex/internals/Vector.hpp"
 
@@ -42,11 +43,12 @@ struct spm_mt {
 	spm_mt_thread_t *spm_threads;
 	unsigned int nr_threads;
 	bool symmetric;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     bool interleaved;
 #endif
     struct vec **local_buffers;
 };
+
 typedef struct spm_mt spm_mt_t;
 
 #endif /* SPM_MT_HPP */

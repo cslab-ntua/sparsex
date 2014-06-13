@@ -913,7 +913,7 @@ DoEncode(IndexType row_no,
                 Element<IndexType, ValueType> &last_elem = encoded.back();
                 rle_start = col;
                 rle_freq = rle.freq;
-#ifndef SPM_NUMA
+#if !SPX_USE_NUMA
                 if (!last_elem.IsPattern()) {
                     // include the previous element, too
                     rle_start -= rle.val;
@@ -1214,14 +1214,14 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
         elems.end();
 
     FOREACH(RLE<IndexType> &rle, rles) {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         size_t real_limit = min_limit_;
 #else
         size_t real_limit = (col && !last_rle_patt) ?
             min_limit_ - 1 : min_limit_;
 #endif
         if (rle.freq > 1 && rle.freq >= real_limit) {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
             size_t real_nnz = rle.freq;
 #else
             size_t real_nnz = (col && !last_rle_patt) ? rle.freq + 1 : rle.freq;

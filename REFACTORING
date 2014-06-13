@@ -22,8 +22,9 @@
          one-base indexing everywhere, api provides both
 * Replace Print() methods with friend operator<<()'s
 * Consider implementing operator->() in iterators
-* Gather all general utilities (iceil, gcd, check_iterator) in a single file
-* Advanced type checking with type traits
+* [DONE] Gather all general utilities (iceil, gcd, check_iterator) in a single
+  file
+* [DONE] Advanced type checking with type traits
 * Unsigned to signed conversions
 * [DONE] Remove `inline' keyword and move member function definitions inside the class
   (SparseMatrix.hpp)
@@ -43,6 +44,10 @@
 * When _GLIBCXX_DEBUG is defined, error in debug mode compilation
 * Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion defines in
   header files
+* [DONE] Staged SPX_JIT_INCLUDE/SPX_MULT_TEMPLATE_DIR should use absolute paths
+* Segfault when TemplateText placeholders are empty/not found. Print error and
+  inform about installation.
+* [ 50%] Use SPX_ prefix in macros, e.g., DEBUG_MODE -> SPX_DEBUG
 
 Requirements for StatsCollection
 * [DONE] Scale stats

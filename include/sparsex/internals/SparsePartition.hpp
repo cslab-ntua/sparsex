@@ -14,6 +14,7 @@
 #define SPARSE_PARTITION_HPP
 
 #include "sparsex/internals/Allocators.hpp"
+#include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/DynamicArray.hpp"
 #include "sparsex/internals/Element.hpp"
 #include "sparsex/internals/Utility.hpp"
@@ -43,7 +44,7 @@ class SparsePartition
 public:
     typedef IndexType idx_t;
     typedef ValueType val_t;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     typedef NumaAllocator MemoryAllocatorImpl;
 #else
     typedef StdAllocator MemoryAllocatorImpl;
@@ -262,7 +263,7 @@ template<typename IndexType, typename ValueType>
 class SparsePartition<IndexType, ValueType>::Builder
 {
 public:
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     typedef DynamicArray<Element<IndexType, ValueType>,
                          reallocator<Element<IndexType, ValueType>,
                                      NumaAllocator> > DynamicElemArray;
@@ -363,7 +364,7 @@ private:
     SparsePartition<IndexType, ValueType> *m2_; // Matrix that contains the rest
                                                 // of the elements.
     MemoryAllocator &alloc_;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     typedef NumaAllocator MemoryAllocatorImpl;
 #else
     typedef StdAllocator MemoryAllocatorImpl;
@@ -502,7 +503,7 @@ template<typename IndexType, typename ValueType>
 class SparsePartitionSym<IndexType, ValueType>::Builder
 {
 public:
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     typedef DynamicArray<ValueType,
                      reallocator<ValueType, NumaAllocator> > DynamicValueArray;
 #else

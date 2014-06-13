@@ -12,11 +12,12 @@
 
 #include "sparsex/internals/Affinity.hpp"
 #include "sparsex/internals/Allocators.hpp"
+#include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Csx.hpp"
 #include "sparsex/internals/Jit.hpp"
 #include "sparsex/internals/logger/Logger.hpp"
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
 #   include "sparsex/internals/numa_util.h"
 #   include <numa.h>
 #endif
@@ -83,7 +84,7 @@ void SaveCsx(void *spm, const char *filename, IndexType *permutation)
         for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
             oa << spm_mt->spm_threads[i].cpu & spm_mt->spm_threads[i].id 
                 & spm_mt->spm_threads[i].node;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
             if (spm_mt->symmetric) {
                 csx_sym = (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;
                 csx = (csx_t<ValueType> *) csx_sym->lower_matrix;
@@ -146,7 +147,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
     csx_sym_t<ValueType> *csx_sym = 0;
     csx_t<ValueType> *csx = 0;
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
 #endif
 
@@ -172,7 +173,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
         spm_mt->symmetric = symmetric;
         spm_mt->spm_threads = new spm_mt_thread_t[nr_threads];
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         full_column_indices = true;
 
         // Allocate structures with alloc_interleaved
@@ -191,7 +192,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
         for (unsigned int i = 0; i < nr_threads; i++) {
             ia >> spm_mt->spm_threads[i].cpu & spm_mt->spm_threads[i].id 
                 & spm_mt->spm_threads[i].node;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
             ia >> nnz & ctl_size;
             ctl_parts[i] = ctl_size * sizeof(uint8_t);
             val_parts[i] = nnz * sizeof(ValueType);
@@ -201,7 +202,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
 #endif
         }
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         spm_mt->interleaved = true;
         // uint8_t *ctl_interleaved = 
         //     new (numa_alloc, ctl_parts, ctl_nodes) uint8_t[total_ctlsize];      
@@ -217,7 +218,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
 #endif
 
         for (unsigned int i = 0; i < nr_threads; i++) {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
             if (symmetric)
                 csx_sym = new (numa_alloc, node) csx_sym_t<ValueType>;
             csx = new (numa_alloc, node) csx_t<ValueType>;
@@ -228,7 +229,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
 #endif
             ia >> csx->nnz & csx->ncols & csx->nrows & csx->ctl_size &
                 csx->row_start;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
             if (symmetric)
                 csx_sym->dvalues = new (numa_alloc, node) ValueType[csx->nrows];
             csx->values = values_interleaved + values_index;
@@ -254,7 +255,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
                 map_t *map = 0;
                 unsigned int length;
                 ia >> length;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
                 map = new (numa_alloc, node) map_t;
                 map->cpus = new (numa_alloc, node) unsigned int[length];
                 map->elems_pos = new (numa_alloc, node) unsigned int[length];
@@ -310,20 +311,20 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
             delete Jits[i];
         delete[] Jits;
 
-#ifdef SPM_NUMA
-#ifdef NUMA_CHECKS
-        int alloc_err = check_interleaved(ctl_interleaved, ctl_parts, nr_threads,
-                                          ctl_nodes);
+#if SPX_USE_NUMA
+#if NUMA_CHECKS
+        int alloc_err = check_interleaved(ctl_interleaved, ctl_parts,
+                                          nr_threads, ctl_nodes);
         print_alloc_status("ctl_interleaved", alloc_err);
         alloc_err = check_interleaved(values_interleaved, val_parts, nr_threads,
 				      val_nodes);
         print_alloc_status("values_interleaved", alloc_err);
-#endif
+#endif  // NUMA_CHECKS
         free(val_parts);
         free(ctl_parts);
         free(val_nodes);
         free(ctl_nodes);
-#endif
+#endif  // SPX_USE_NUMA
     } catch (ios_base::failure &e) {
         LOG_ERROR << "CSX file error: " << e.what() << "\n";
         exit(1);
@@ -415,7 +416,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
 //     csx_sym_t<ValueType> *csx_sym = 0;
 //     csx_t<ValueType> *csx = 0;
 
-// #ifdef SPM_NUMA
+// #if SPX_USE_NUMA
 //     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
 // #endif
 
@@ -440,14 +441,14 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
 //         spm_mt->symmetric = symmetric;
 //         spm_mt->spm_threads = new spm_mt_thread_t[nr_threads];
 
-// #ifdef SPM_NUMA
+// #if SPX_USE_NUMA
 //         full_column_indices = true;
 // #endif
 
 //         for (unsigned int i = 0; i < nr_threads; i++) {
 //             ia >> spm_mt->spm_threads[i].cpu & spm_mt->spm_threads[i].id 
 //                 & spm_mt->spm_threads[i].node;
-// #ifdef SPM_NUMA
+// #if SPX_USE_NUMA
 //             int node = spm_mt->spm_threads[i].node;
 //             if (symmetric)
 //                 csx_sym = new (numa_alloc, node) csx_sym_t<ValueType>;
@@ -466,7 +467,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
 
 //             ia >> csx->nnz & csx->ncols & csx->nrows & csx->ctl_size
 //                 & csx->row_start;
-// #ifdef SPM_NUMA
+// #if SPX_USE_NUMA
 //             if (symmetric)
 //                 csx_sym->dvalues = new (numa_alloc, node) ValueType[csx->nrows];
 
@@ -506,7 +507,7 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
 //                 map_t *map = 0;
 //                 unsigned int length;
 //                 ia >> length;
-// #ifdef SPM_NUMA
+// #if SPX_USE_NUMA
 //                 map = new (numa_alloc, node) map_t;
 //                 map->cpus = new (numa_alloc, node) unsigned int[length];
 //                 map->elems_pos = new (numa_alloc, node) unsigned int[length];

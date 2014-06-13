@@ -13,6 +13,7 @@
 #define CSX_BUILD_HPP
 
 #include "sparsex/internals/Affinity.hpp"
+#include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Csx.hpp"
 #include "sparsex/internals/EncodingManager.hpp"
 #include "sparsex/internals/Jit.hpp"
@@ -165,7 +166,7 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
     data.GetSpmEncoded()->nr_rows = csx->nrows;
     data.GetSpmEncoded()->row_start = csx->row_start;
 
-#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+#if SPX_USE_NUMA && NUMA_CHECKS
     int alloc_err = 0;
     alloc_err = check_region(csx->ctl, csx->ctl_size * sizeof(uint8_t),
                              data.GetSpmEncoded()->node);
@@ -231,7 +232,7 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType>
     data.GetSpmEncoded()->row_start = csx->lower_matrix->row_start;
     data.GetSpmEncoded()->nr_rows = csx->lower_matrix->nrows;
    
-#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+#if SPX_USE_NUMA && NUMA_CHECKS
     int alloc_err = check_region(csx->lower_matrix->ctl,
                                  csx->lower_matrix->ctl_size * sizeof(uint8_t),
                                  data.GetSpmEncoded()->node);
@@ -380,7 +381,7 @@ void MakeMap(spm_mt_t *spm_mt,
     uint32_t start, end, col, total_count, temp_count, limit;
     uint32_t ncpus = spm_mt->nr_threads;
     uint32_t n = spms->GetPartition(0)->GetLowerMatrix()->GetNrCols();
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
     int node;
 #endif
@@ -440,7 +441,7 @@ void MakeMap(spm_mt_t *spm_mt,
     end = 0;
     for (unsigned int i = 0; i < ncpus - 1; i++) {
         spm_thread = spm_mt->spm_threads + i;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         node = spm_thread->node;
         map = new (numa_alloc, node) map_t;
 #else
@@ -454,7 +455,7 @@ void MakeMap(spm_mt_t *spm_mt,
             temp_count += count[end++];
         total_count -= temp_count;
         map->length = temp_count;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         map->cpus = new (numa_alloc, node) unsigned int[temp_count];
         map->elems_pos = new (numa_alloc, node) unsigned int[temp_count];
 #else
@@ -481,7 +482,7 @@ void MakeMap(spm_mt_t *spm_mt,
     
     spm_thread = spm_mt->spm_threads + ncpus - 1;
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     node = spm_thread->node;
 
     map = new (numa_alloc, node) map_t;
@@ -511,7 +512,7 @@ void MakeMap(spm_mt_t *spm_mt,
     assert(temp_count == map->length);
     spm_thread->map = map;
 
-#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+#if SPX_USE_NUMA && NUMA_CHECKS
     int alloc_err = 0;
     for (unsigned int i = 0; i < ncpus; i++) {
         node = spm_mt->spm_threads[i].node;

@@ -56,6 +56,18 @@ dnl Initialize libtool after compilers; its sets CFLAGS otherwise
 LT_PREREQ([2.2.2])
 LT_INIT
 
+dnl --enable-bench option
+AC_ARG_ENABLE([bench],
+   [AS_HELP_STRING([--enable-bench@<:@={yes|no}@:>@],
+       [Compile also library benchmarks. Default value is `no'.])]
+   [AS_HELP_STRING([--disable-bench], [Disable library benchmarks.])],
+   [
+       if test x"$enableval" != x"yes" && test x"$enableval" != x"no"; then
+           AC_MSG_ERROR([Invalid value for option `--enable-bench'. dnl
+Type `configure --help' for more information.])
+       fi
+   ], [enable_bench=no])
+
 dnl Check for programs
 AC_PROG_INSTALL
 AC_PROG_SED
@@ -69,22 +81,41 @@ AX_CHECK_BOOST_LIB([serialization])
 AX_CHECK_BOOST_LIB([system])
 AX_CHECK_BOOST_LIB([thread])
 AX_CHECK_LLVM([3.0])
+AC_CHECK_LIB([pthread], [pthread_create], [],
+             [
+                 AC_MSG_ERROR([Could not find a proper Pthread implementation.])
+             ])
+
+dnl Always check for libnuma, since it is needed for linking
 AC_CHECK_LIB([numa], [numa_realloc], [],
              [
                  AC_MSG_ERROR([Could not find a proper libnuma installation dnl
 Please make sure you have installed correctly libnuma >= 2.0.8.])
              ])
 
-AC_CHECK_LIB([pthread], [pthread_create], [],
-             [
-                 AC_MSG_ERROR([Could not find a proper Pthread implementation.])
-             ])
+dnl If library benchmarks are enabled, check also for MKL and pOSKI
+if test x"$enable_bench" = x"yes"; then
+    SPX_BUILD_BENCH=1
+else
+    SPX_BUILD_BENCH=0
+fi
+
+dnl Other system checks
+AX_SYSTEM_MEMORY_NODES
+if test $ax_memory_nodes -eq 0; then
+    AC_MSG_WARN([Could not determine the number of memory nodes of your dnl
+system. Is sysfs properly mounted? Assuming a single-node system.])
+    SPX_USE_NUMA=0
+elif test $ax_memory_nodes -gt 1; then
+    SPX_USE_NUMA=1
+else
+    SPX_USE_NUMA=0
+fi
 
 dnl Set package default flags
 AX_CXXFLAGS=""
 AX_CPPFLAGS="$BOOST_CPPFLAGS $LLVM_CPPFLAGS"
 AX_LDFLAGS="$BOOST_LDFLAGS $LLVM_LDFLAGS"
-
 
 dnl Set up the compilation flags for the package.
 dnl If user did not specify any custom flags, use our default
@@ -122,10 +153,11 @@ AX_LDFLAGS="$AX_LDFLAGS $AX_PKG_LDFLAGS"
 dnl Initialize variables for package
 dnl AX_PACKAGE_INIT
 
-SPARSEX_MULT_TEMPLATE_DIR="$srcdir/src/templates"
-SPARSEX_JIT_INCLUDE="$srcdir/include"
+SPX_MULT_TEMPLATE_DIR="`pwd`/$srcdir/src/templates"
+SPX_JIT_INCLUDE="`pwd`/$srcdir/include"
 
 AM_CONDITIONAL([USE_LIB_SUFFIX], [test ! -z $ax_lib_suffix])
+AM_CONDITIONAL([SPX_BUILD_BENCH], [ test x"$enable_bench" = x"yes" ])
 AC_SUBST([ax_lib_suffix])
 AC_SUBST([AX_PKG_CPPFLAGS])
 AC_SUBST([AX_PKG_CXXFLAGS])
@@ -139,14 +171,17 @@ AC_SUBST([BOOST_REGEX_LIB])
 AC_SUBST([BOOST_SERIALIZATION_LIB])
 AC_SUBST([BOOST_SYSTEM_LIB])
 AC_SUBST([BOOST_THREAD_LIB])
-AC_SUBST([SPARSEX_MULT_TEMPLATE_DIR])
-AC_SUBST([SPARSEX_JIT_INCLUDE])
+AC_SUBST([SPX_MULT_TEMPLATE_DIR])
+AC_SUBST([SPX_JIT_INCLUDE])
+AC_SUBST([SPX_USE_NUMA])
 
 AC_CONFIG_FILES([
         Makefile
         include/Makefile
         include/sparsex/internals/Config.hpp
         src/Makefile
+        src/api/Makefile
+        src/bench/Makefile
         src/internals/Makefile
         src/templates/Makefile
         test/Makefile

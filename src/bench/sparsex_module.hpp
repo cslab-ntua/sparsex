@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-#include "sparsex.h"
+#include "sparsex/sparsex.h"
 
 #ifdef __cplusplus
 }
