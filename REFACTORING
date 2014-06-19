@@ -31,7 +31,7 @@
 * Xs -> Cols
 * [DONE] Rethink element marking mechanism
 * valgrind check / memory leaks
-* DEBUG_MODE compilation macro
+* [DONE] DEBUG_MODE compilation macro
 * Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
 * Remove default arguments or document precisely
 * [DONE] Fix Diag <-> AntiDiag conversions
@@ -41,6 +41,7 @@
 * Code replication
 * max_rowptr_size_ is never used.
 * Use -Wextra? Lots of warnings of unused function parameters
+* Eliminate all -Wall warnings (debug version)
 * When _GLIBCXX_DEBUG is defined, error in debug mode compilation
 * Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion defines in
   header files

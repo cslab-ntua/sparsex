@@ -219,14 +219,14 @@ AC_DEFUN([AX_SELECT_BUILD],
 		    ax_build_mode="debug"
 			ax_link_mode="static"
 			ax_lib_suffix="gd" ;;
-		"debug-shared")
+		"debug" | "debug-shared")
 		    ax_build_mode="debug"
 			ax_link_mode="shared"
 			ax_lib_suffix="gd" ;;
 		"release-static")
 		    ax_build_mode="release"
 			ax_link_mode="static" ;;
-		"release-shared")
+		"release" | "release-shared")
 		    ax_build_mode="release"
 			ax_link_mode="shared" ;;
 		*)

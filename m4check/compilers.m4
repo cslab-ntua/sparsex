@@ -9,6 +9,85 @@ dnl This file is distributed under the BSD License. See LICENSE.txt for details.
 dnl
 
 dnl
+dnl AX_CHECK_{CPPFLAGS,CFLAGS,CXXFLAGS}([flags])
+dnl
+dnl     Checks if `flags' or the user supplied CPP/CXX/CFLAGS (if `flags' is
+dnl     empty) are supported by the system's compiler.
+dnl
+
+AC_DEFUN([AX_CHECK_CPPFLAGS],
+[
+# save user's flags first
+CPPFLAGS_save=$CPPFLAGS
+if test x"$1" != x; then
+    CPPFLAGS="$1"
+fi
+
+AC_MSG_CHECKING([if preprocessor supports `$CPPFLAGS' option(s)])
+AC_PREPROC_IFELSE(
+    [AC_LANG_PROGRAM([], [return 0;])],
+    [AC_MSG_RESULT([yes])],
+    [AC_MSG_RESULT([no])
+     AC_MSG_FAILURE([`$CPPFLAGS' option(s) are not supported by the dnl
+preprocessor])])
+    
+CPPFLAGS="$CPPFLAGS_save"
+])
+
+AC_DEFUN([AX_CHECK_CFLAGS],
+[
+# save user's flags first
+CPPFLAGS_save="$CPPFLAGS"
+CFLAGS_save="$CFLAGS"
+
+CPPFLAGS=""
+if test x"$1" != x; then
+    CFLAGS="$1"
+fi
+
+AC_MSG_CHECKING([if C compiler supports `$CFLAGS' option(s)])
+AC_LANG_PUSH([C])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM([], [return 0;])],
+    [AC_MSG_RESULT([yes])],
+    [AC_MSG_RESULT([no])
+     AC_MSG_FAILURE([`$CFLAGS' option(s) are not supported by the C compiler])])
+    
+AC_LANG_POP
+
+# restore user's flags now
+CPPFLAGS="$CPPFLAGS_save"
+CFLAGS="$CFLAGS_save"
+])
+
+AC_DEFUN([AX_CHECK_CXXFLAGS],
+[
+# save user's flags first
+CPPFLAGS_save="$CPPFLAGS"
+CXXFLAGS_save="$CXXFLAGS"
+
+CPPFLAGS=""
+if test x"$1" != x; then
+    CXXFLAGS="$1"
+fi
+
+AC_MSG_CHECKING([if C++ compiler supports `$CXXFLAGS' option(s)])
+AC_LANG_PUSH([C++])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM([], [return 0;])],
+    [AC_MSG_RESULT([yes])],
+    [AC_MSG_RESULT([no])
+     AC_MSG_FAILURE([`$CXXFLAGS' option(s) are not supported by the dnl
+C++ compiler])])
+    
+AC_LANG_POP
+
+# restore user's flags now
+CPPFLAGS="$CPPFLAGS_save"
+CXXFLAGS="$CXXFLAGS_save"
+])
+
+dnl
 dnl AX_PACKAGE_FLAGS
 dnl
 dnl     Defines the default CPPFLAGS, CXXFLAGS and LDFLAGS for configured
@@ -21,33 +100,32 @@ AC_DEFUN([AX_PACKAGE_FLAGS],
 AC_REQUIRE([AX_PLATFORM])
 AC_REQUIRE([AX_SELECT_BUILD])
 
-ax_cxx=$1
-if test -z $ax_cxx; then
-   ax_cxx=$CXX
-fi
+# Check compiler flags
+AX_CHECK_CPPFLAGS([-DFOO])
+AX_CHECK_CPPFLAGS([-UFOO])
+AX_CHECK_CFLAGS([-g])
+AX_CHECK_CFLAGS([-O0])
+AX_CHECK_CFLAGS([-O3])
+AX_CHECK_CFLAGS([-std=c99])
+AX_CHECK_CFLAGS([-Wall])
+AX_CHECK_CXXFLAGS([-std=c++0x])
+AX_CHECK_CXXFLAGS([-Wall])
+AX_CHECK_CXXFLAGS([-Woverloaded-virtual])
 
-if test x"$ax_cxx" == x"g++"; then
-    # g++ flags
-	case "$ax_build_mode" in
-	    "debug")
-            # undefine DEBUG; LLVM doesn't want it
-            ax_pkg_cppflags="-UNDEBUG -DSPX_DEBUG=1"
-            ax_pkg_cxxflags="-g -O0 -std=c++0x dnl
--fstrict-aliasing -Wall -Woverloaded-virtual"
-            ax_pkg_cflags="-g -O0 -std=c99 -Wall -fstrict-aliasing" ;;
-        "release")
-            ax_pkg_cppflags="-DNDEBUG"
-            ax_pkg_cxxflags="-O3 -std=c++0x"
-            ax_pkg_cflags="-O3 -std=c99" ;;
-		*)
-			AC_MSG_ERROR(
-				[@<:@BUG@:>@ should not have entered here: m4_location]) ;;
-    esac
+case "$ax_build_mode" in
+    "debug")
+        # undefine DEBUG; LLVM doesn't want it
+        ax_pkg_cppflags="-UNDEBUG -DSPX_DEBUG=1"
+        ax_pkg_cxxflags="-g -O0 -std=c++0x -Wall -Woverloaded-virtual"
+        ax_pkg_cflags="-g -O0 -std=c99 -Wall" ;;
+    "release")
+        ax_pkg_cppflags="-DNDEBUG"
+        ax_pkg_cxxflags="-O3 -std=c++0x"
+        ax_pkg_cflags="-O3 -std=c99" ;;
+    *)
+        AC_MSG_ERROR(
+            [@<:@BUG@:>@ should not have entered here: m4_location]) ;;
+esac
 
-	if test x"$ax_link_mode" = x"static"; then
-	    ax_pkg_ldflags="-all-static -pthread -Wl,--allow-multiple-definition"
-    else
-        ax_pkg_ldflags="-Wl,--allow-multiple-definition"
-	fi
-fi
+ax_pkg_ldflags="-Wl,--allow-multiple-definition"
 ])

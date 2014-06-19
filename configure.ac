@@ -45,12 +45,21 @@ AC_PROG_CXX([g++])
 if test x"$have_cxxflags" == x"no"; then
     # Restore `CXXFLAGS' to nothing.
     CXXFLAGS=""
+else
+    # Check user's flag for validity
+    AX_CHECK_CXXFLAGS
 fi
 
 if test x"$have_cflags" == x"no"; then
     # Restore `CFLAGS' to nothing.
     CFLAGS=""
+else
+    # Check user's flag for validity
+    AX_CHECK_CFLAGS
 fi
+
+# Check also user supplied CPPFLAGS for validity
+AX_CHECK_CPPFLAGS
 
 dnl Initialize libtool after compilers; its sets CFLAGS otherwise
 LT_PREREQ([2.2.2])
@@ -112,7 +121,7 @@ else
     SPX_USE_NUMA=0
 fi
 
-dnl Set package default flags
+dnl Set necessary flags
 AX_CXXFLAGS=""
 AX_CPPFLAGS="$BOOST_CPPFLAGS $LLVM_CPPFLAGS"
 AX_LDFLAGS="$BOOST_LDFLAGS $LLVM_LDFLAGS"
