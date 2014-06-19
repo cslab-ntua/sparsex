@@ -36,10 +36,11 @@ AC_DEFUN([AX_CHECK_BOOST],
          search_dirs=$with_boostdir
      fi
 
-     CPPFLAGS_save=$CPPFLAGS
-     CXXFLAGS_save=$CXXFLAGS
+     CPPFLAGS_save="$CPPFLAGS"
+     CXXFLAGS_save="$CXXFLAGS"
      AC_LANG_PUSH([C++])
      for d in $search_dirs; do
+         CPPFLAGS=""
          CXXFLAGS=""
          AC_LINK_IFELSE([
              AC_LANG_PROGRAM([
@@ -74,11 +75,11 @@ try using the `--with-boostdir' option.])
      fi
 
      # restore compiler flags
-     CPPFLAGS=$CPPFLAGS_save
-     CXXFLAGS=$CXXFLAGS_save
+     CPPFLAGS="$CPPFLAGS_save"
+     CXXFLAGS="$CXXFLAGS_save"
 
-     AC_SUBST(BOOST_CPPFLAGS)
-     AC_SUBST(BOOST_LDFLAGS)
+     AC_SUBST([BOOST_CPPFLAGS])
+     AC_SUBST([BOOST_LDFLAGS])
 ])
 
 dnl

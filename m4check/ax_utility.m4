@@ -106,11 +106,10 @@ AC_LANG_POP
 dnl
 dnl AX_PACKAGE_INIT
 dnl
-dnl     Initialises necessary variables for Technoos projects.
+dnl     Initialization of some package variables (version numbers, system date)
 dnl
 dnl     This macro sets and substitutes the following variables:
 dnl
-dnl     AX_MODULE_NAME           : the module name
 dnl     AX_PACKAGE_VERSION_NUMBER: the version number of the package being
 dnl                                configured
 dnl
@@ -118,7 +117,6 @@ AC_DEFUN([AX_PACKAGE_INIT],
 [
     AC_REQUIRE([AC_PROG_SED])
     AC_REQUIRE([AX_SYSTEM_DATE])
-	AX_MODULE_NAME="$PACKAGE_NAME"
 
     # strip the revision number from the package version
     pkg_version_stripped=`echo $PACKAGE_VERSION | $SED -e 's/_.*//'`
@@ -126,7 +124,6 @@ AC_DEFUN([AX_PACKAGE_INIT],
     PACKAGE_VERSION_NUMBER([$pkg_version_stripped])
     AX_PACKAGE_VERSION_NUMBER="$AX_VERSION_NUMBER"
 
-    AC_SUBST([AX_MODULE_NAME])
     AC_SUBST([AX_PACKAGE_VERSION_NUMBER])
 ])
 

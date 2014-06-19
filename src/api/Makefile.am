@@ -28,7 +28,8 @@ libsparsex_la_SOURCES = \
 	matvec.c
 
 libsparsex_la_LIBADD = \
-	$(top_builddir)/src/internals/.libs/libsparseximpl.la
+	-lsparseximpl
+#	$(top_builddir)/src/internals/.libs/libsparseximpl.la
 
 if USE_LIB_SUFFIX
 libsparsex_la_LDFLAGS = $(AM_LDFLAGS) -release $(ax_lib_suffix)

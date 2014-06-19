@@ -12,7 +12,7 @@
 
 #include <sparsex/common.h>
 #include <sparsex/error.h>
-#include <sparsex/mat_vec.h>
+#include <sparsex/matvec.h>
 #include <sparsex/timing.h>
 #include <sparsex/types.h>
 

@@ -35,7 +35,8 @@ void mkl_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
         pointerB[i] = rowptr[i];
         pointerE[i] = rowptr[i+1];
     }
-    mkl_set_num_threads(NR_THREADS);                                                                                                                                                                                              
+    mkl_set_num_threads(NR_THREADS);
+    
     /* 2. SpMV benchmarking phase */
     std::vector<double> mt(OUTER_LOOPS);
     for (unsigned int i = 0; i < OUTER_LOOPS; i++) {
@@ -43,7 +44,7 @@ void mkl_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
         t.Start();
         for (unsigned long int j = 0; j < LOOPS; j++) {
             mkl_dcsrmv(&transa, &nrows, &ncols, &ALPHA, matdescra, values,
-                       colind, pointerB, pointerE, x, &BETA, y);            
+                       colind, pointerB, pointerE, x, &BETA, y);
         }
         t.Pause();
         mt[i] = t.ElapsedTime();

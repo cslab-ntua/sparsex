@@ -67,15 +67,15 @@ LT_INIT
 
 dnl --enable-bench option
 AC_ARG_ENABLE([bench],
-   [AS_HELP_STRING([--enable-bench@<:@={yes|no}@:>@],
-       [Compile also library benchmarks. Default value is `no'.])]
-   [AS_HELP_STRING([--disable-bench], [Disable library benchmarks.])],
-   [
-       if test x"$enableval" != x"yes" && test x"$enableval" != x"no"; then
-           AC_MSG_ERROR([Invalid value for option `--enable-bench'. dnl
+    [AS_HELP_STRING([--enable-bench@<:@={yes|no}@:>@],
+        [Compile also library benchmarks. Default value is `no'.])]
+    [AS_HELP_STRING([--disable-bench], [Disable library benchmarks.])],
+    [
+        if test x"$enableval" != x"yes" && test x"$enableval" != x"no"; then
+            AC_MSG_ERROR([Invalid value for option `--enable-bench'. dnl
 Type `configure --help' for more information.])
-       fi
-   ], [enable_bench=no])
+        fi
+    ], [enable_bench=no])
 
 dnl Check for programs
 AC_PROG_INSTALL
@@ -90,6 +90,8 @@ AX_CHECK_BOOST_LIB([serialization])
 AX_CHECK_BOOST_LIB([system])
 AX_CHECK_BOOST_LIB([thread])
 AX_CHECK_LLVM([3.0])
+AX_CHECK_MKL
+AX_CHECK_POSKI
 AC_CHECK_LIB([pthread], [pthread_create], [],
              [
                  AC_MSG_ERROR([Could not find a proper Pthread implementation.])
@@ -123,8 +125,8 @@ fi
 
 dnl Set necessary flags
 AX_CXXFLAGS=""
-AX_CPPFLAGS="$BOOST_CPPFLAGS $LLVM_CPPFLAGS"
-AX_LDFLAGS="$BOOST_LDFLAGS $LLVM_LDFLAGS"
+AX_CPPFLAGS="$BOOST_CPPFLAGS $LLVM_CPPFLAGS $MKL_CPPFLAGS $POSKI_CPPFLAGS"
+AX_LDFLAGS="$BOOST_LDFLAGS $LLVM_LDFLAGS $MKL_LDFLAGS $POSKI_LDFLAGS"
 
 dnl Set up the compilation flags for the package.
 dnl If user did not specify any custom flags, use our default
@@ -160,7 +162,7 @@ AX_CFLAGS="$AX_CFLAGS $AX_PKG_CFLAGS"
 AX_LDFLAGS="$AX_LDFLAGS $AX_PKG_LDFLAGS"
 
 dnl Initialize variables for package
-dnl AX_PACKAGE_INIT
+AX_PACKAGE_INIT
 
 SPX_MULT_TEMPLATE_DIR="`pwd`/$srcdir/src/templates"
 SPX_JIT_INCLUDE="`pwd`/$srcdir/include"
@@ -188,6 +190,7 @@ AC_CONFIG_FILES([
         Makefile
         include/Makefile
         include/sparsex/internals/Config.hpp
+        scripts/Makefile
         src/Makefile
         src/api/Makefile
         src/bench/Makefile
@@ -197,8 +200,8 @@ AC_CONFIG_FILES([
         test/src/Makefile
         ])
 
-dnl AC_CONFIG_FILES([scripts/tn-base-config],
-dnl                 [chmod +x scripts/tn-base-config])
+AC_CONFIG_FILES([scripts/sparsex-config],
+                [chmod +x scripts/sparsex-config])
 
 AC_OUTPUT
 

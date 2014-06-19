@@ -29,12 +29,26 @@ bench_spmv_SOURCES = \
 	timer.cpp \
 	sparsex_module.cpp
 
+if SPX_BUILD_BENCH_MKL
+bench_spmv_SOURCES += mkl_module.cpp
+endif
+
+if SPX_BUILD_BENCH_POSKI
+bench_spmv_SOURCES += poski_module.cpp
+endif
+
+# FIXME: libsparseximpl should not be necessary
+# This is due to the spx_vector_* dependencies which are only defined in impl.
 bench_spmv_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
 	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
 	$(CLANG_LIBS) \
-	$(LLVM_LIBS) \
-	$(BOOST_REGEX_LIB) \
-	$(BOOST_SERIALIZATION_LIB) \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_THREAD_LIB)
+	$(LLVM_LIBS)
+
+if SPX_BUILD_BENCH_MKL
+bench_spmv_LDADD += $(MKL_LIBS)
+endif
+
+if SPX_BUILD_BENCH_POSKI
+bench_spmv_LDADD += $(POSKI_LIBS)
+endif
