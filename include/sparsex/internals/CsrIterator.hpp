@@ -1,6 +1,7 @@
 /*
- * CsrIterator.hpp -- An iterator that simultaneously iterates through two arrays.
- *                    Based on iterator_facade by boost, compliant with std::sort.
+ * CsrIterator.hpp -- An iterator that simultaneously iterates through two
+ *                    arrays. Based on iterator_facade by boost, compliant
+ *                    with std::sort.
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2012-2013, Athena Elafrou
@@ -8,8 +9,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSR_ITERATOR_HPP
-#define CSR_ITERATOR_HPP
+
+#ifndef SPARSEX_INTERNALS_CSR_ITERATOR_HPP
+#define SPARSEX_INTERNALS_CSR_ITERATOR_HPP
 
 #include <iostream>
 #include <algorithm>
@@ -111,4 +113,4 @@ struct CSR_Comp : public std::binary_function<
     } 
 };
 
-#endif  // CSR_ITERATOR_HPP
+#endif  // SPARSEX_INTERNALS_CSR_ITERATOR_HPP

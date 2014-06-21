@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef TEMPLATE_TEXT_HPP
-#define TEMPLATE_TEXT_HPP
+
+#ifndef SPARSEX_INTERNALS_TEMPLATE_TEXT_HPP
+#define SPARSEX_INTERNALS_TEMPLATE_TEXT_HPP
 
 #include <map>
 #include <string>
@@ -52,4 +53,4 @@ private:
     };
 };
 
-#endif  // TEMPLATE_TEXT_HPP
+#endif  // SPARSEX_INTERNALS_TEMPLATE_TEXT_HPP

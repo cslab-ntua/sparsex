@@ -10,8 +10,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSX_UTIL_HPP
-#define CSX_UTIL_HPP
+
+#ifndef SPARSEX_INTERNALS_CSX_UTIL_HPP
+#define SPARSEX_INTERNALS_CSX_UTIL_HPP
 
 #include "sparsex/internals/Allocators.hpp"
 #include "sparsex/internals/Config.hpp"
@@ -173,7 +174,7 @@ void PutSpmMt(spm_mt_t *spm_mt)
             delete spm_mt->spm_threads[i].map;
 #endif
             if (spm_mt->local_buffers && i != 0) 
-                spx_vec_destroy(spm_mt->local_buffers[i]);
+                VecDestroy(spm_mt->local_buffers[i]);
         }
 
         free(spm_mt->local_buffers);
@@ -221,4 +222,4 @@ static void DestroyCsxSym(csx_sym_t<ValueType> *csx_sym)
 #endif
 }
 
-#endif  // CSX_UTIL_HPP
+#endif  // SPARSEX_INTERNALS_CSX_UTIL_HPP

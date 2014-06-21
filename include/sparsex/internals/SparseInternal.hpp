@@ -7,12 +7,15 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPARSE_INTERNAL_HPP
-#define SPARSE_INTERNAL_HPP
+
+#ifndef SPARSEX_INTERNALS_SPARSE_INTERNAL_HPP
+#define SPARSEX_INTERNALS_SPARSE_INTERNAL_HPP
 
 #include "sparsex/internals/Encodings.hpp"
 #include "sparsex/internals/Runtime.hpp"
 #include "sparsex/internals/SparsePartition.hpp"
+
+using namespace std;
 
 namespace csx {
 
@@ -64,10 +67,6 @@ public:
                                                  input.GetNrCols(),
                                                  input.GetNrNonzeros(),
                                                  nr);
-        // FIXME: why initialization is happening twice?
-        ret->nr_rows_ = input.GetNrRows();
-        ret->nr_cols_ = input.GetNrCols();
-        ret->nr_nzeros_ = input.GetNrNonzeros();
         ret->BuildPartitions(input, nr);
         return ret;
     }
@@ -97,6 +96,10 @@ public:
             os << endl;
         }
     }
+
+    template<typename I, typename V>
+    friend ostream &operator<<(ostream &, const SparseInternal
+                               <SparsePartition<I, V> >&);
 
 private:
     size_t nr_rows_, nr_cols_, nr_nzeros_, nr_partitions_; 
@@ -134,8 +137,16 @@ void SparseInternal<PartitionType>::BuildPartitions(InputType &input, size_t nr)
     assert(cnt == nr_nzeros_);
 }
 
+template<typename IndexType, typename ValueType>
+ostream &operator<<(ostream &os, const SparseInternal
+                    <SparsePartition<IndexType, ValueType> > &mat)
+{
+    mat.Print(os);
+    return os;
+}
+
 }  //end of csx namespace
 
-#endif // SPARSE_INTERNAL_HPP
+#endif // SPARSEX_INTERNALS_SPARSE_INTERNAL_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

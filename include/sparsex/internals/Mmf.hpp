@@ -10,8 +10,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef MMF_HPP
-#define MMF_HPP
+
+#ifndef SPARSEX_INTERNALS_MMF_HPP
+#define SPARSEX_INTERNALS_MMF_HPP
 
 #include "sparsex/internals/logger/Logger.hpp"
 
@@ -239,7 +240,6 @@ public:
                 exit(1);
             }
 
-            assert(valid_); // FIXME: why this; you just checked
             return elem_;
         }
     }
@@ -396,7 +396,7 @@ void MMF<IndexType, ValueType>::ParseMmfSizeLine(vector<string> &arguments)
 
     if (!file_mode_ || ignore_comments) {
         while (in.peek() == '%') {
-            in.ignore(numeric_limits<std::streamsize>::max(), '\n');
+            in.ignore(numeric_limits<streamsize>::max(), '\n');
         }
         if (!DoRead(in, arguments)) {
             LOG_ERROR << "size line error in MMF file\n";
@@ -465,9 +465,9 @@ void MMF<IndexType, ValueType>::ResetStream()
     in.clear();
     in.seekg(0, ios::beg);
     while (in.peek() == '%') {
-        in.ignore(numeric_limits<std::streamsize>::max(), '\n');
+        in.ignore(numeric_limits<streamsize>::max(), '\n');
     }
-    in.ignore(numeric_limits<std::streamsize>::max(), '\n');
+    in.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 // For testing purposes
@@ -484,7 +484,7 @@ void ReadMmfSizeLine(const char *mmf_file, size_t &nr_rows, size_t &nr_cols,
         in.seekg(0, ios::beg);
         // Ignore comments
         while (in.peek() == '%') {
-            in.ignore(numeric_limits<std::streamsize>::max(), '\n');
+            in.ignore(numeric_limits<streamsize>::max(), '\n');
         }
     } catch (ios_base::failure &e) {
         LOG_ERROR << "MMF file error\n";
@@ -539,6 +539,6 @@ void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x,
 
 }  //csx namespace end
 
-#endif  // MMF_HPP
+#endif  // SPARSEX_INTERNALS_MMF_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

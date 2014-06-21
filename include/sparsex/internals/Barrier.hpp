@@ -17,12 +17,13 @@
  * reached the barrier. At this point, all threads stop spinning and continue
  * execution.
  */
-#ifndef BARRIER_HPP
-#define BARRIER_HPP
+
+#ifndef SPARSEX_INTERNALS_BARRIER_HPP
+#define SPARSEX_INTERNALS_BARRIER_HPP
 
 #include <atomic>
 #include <cstdlib>
 
 void centralized_barrier(int *local_sense, size_t nr_threads);
 
-#endif  // BARRIER_HPP
+#endif  // SPARSEX_INTERNALS_BARRIER_HPP

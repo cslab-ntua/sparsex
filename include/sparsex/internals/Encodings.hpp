@@ -3,13 +3,16 @@
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
+ * Copyright (C) 2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef ENCODINGS_HPP
-#define ENCODINGS_HPP
+#ifndef SPARSEX_INTERNALS_ENCODINGS_HPP
+#define SPARSEX_INTERNALS_ENCODINGS_HPP
+
+#include "sparsex/internals/logger/Logger.hpp"
 
 #include <boost/bimap.hpp>
 #include <iostream>
@@ -99,7 +102,6 @@ public:
         return IsBlockRow() || IsBlockCol();
     }
 
-
     size_t GetBlockAlignment() const
     {
         size_t ret;
@@ -119,6 +121,9 @@ public:
     static const Type BlockRowMax = BlockRow8;
     static const Type BlockColMin = BlockCol1;
     static const Type BlockColMax = BlockCol8;
+
+    static void CheckNameValidity(const string &name);
+
 private:
     static std::map<string, Type> InitInverseNameMap();
 
@@ -214,12 +219,12 @@ public:
     PreprocessingMethod(Type meth)
         : method_type_(meth)
     {
-        InitMethodNames();
+        // InitMethodNames();
     }
 
     PreprocessingMethod(const string &name)
     {
-        InitMethodNames();
+        // InitMethodNames();
         method_type_ = method_names_.right.at(name);
     }
 
@@ -233,19 +238,30 @@ public:
         return method_type_;
     }
 
-private:
-    static void InitMethodNames()
-    {
-        if (method_names_.empty()) {
-            method_names_.insert(NameMap::value_type(None, "none"));
-            method_names_.insert(NameMap::value_type(FixedWindow, "window"));
-            method_names_.insert(NameMap::value_type(FixedPortion, "portion"));
-        }
-    }
+    static void CheckNameValidity(const string &name);
 
+private:
     typedef boost::bimap<Type, string> NameMap;
     static NameMap method_names_;
     Type method_type_;
+
+    // static void InitMethodNames()
+    // {
+    //     if (method_names_.empty()) {
+    //         method_names_.insert(NameMap::value_type(None, "none"));
+    //         method_names_.insert(NameMap::value_type(FixedWindow, "window"));
+    //         method_names_.insert(NameMap::value_type(FixedPortion, "portion"));
+    //     }
+    // }
+
+    static NameMap InitMethodNames()
+    {
+        NameMap ret;
+        ret.insert(NameMap::value_type(None, "none"));
+        ret.insert(NameMap::value_type(FixedWindow, "window"));
+        ret.insert(NameMap::value_type(FixedPortion, "portion"));
+        return ret;
+    }
 };
 
 ostream &operator<<(ostream &out, PreprocessingMethod &meth)
@@ -254,8 +270,68 @@ ostream &operator<<(ostream &out, PreprocessingMethod &meth)
     return out;
 }
 
+class PreprocessingHeuristic
+{
+public:
+    enum Type {
+        MinCost,
+        MaxRatio
+    };
+
+    PreprocessingHeuristic(Type meth)
+        : heur_type_(meth)
+    {
+        // InitHeuristicNames();
+    }
+
+    PreprocessingHeuristic(const string &name)
+    {
+        // InitHeuristicNames();
+        heur_type_ = heur_names_.right.at(name);
+    }
+
+    const string &GetName() const
+    {
+        return heur_names_.left.at(heur_type_);
+    }
+
+    Type GetType() const
+    {
+        return heur_type_;
+    }
+
+    static void CheckNameValidity(const string &name);
+
+private:
+    typedef boost::bimap<Type, string> NameMap;
+    static NameMap heur_names_;
+    Type heur_type_;
+
+    // static void InitHeuristicNames()
+    // {
+    //     if (heur_names_.empty()) {
+    //         heur_names_.insert(NameMap::value_type(MaxRatio, "ratio"));
+    //         heur_names_.insert(NameMap::value_type(MinCost, "cost"));
+    //     }
+    // }
+
+    static NameMap InitHeuristicNames()
+    {
+        NameMap ret;
+        ret.insert(NameMap::value_type(MaxRatio, "ratio"));
+        ret.insert(NameMap::value_type(MinCost, "cost"));
+        return ret;
+    }
+};
+
+ostream &operator<<(ostream &out, PreprocessingHeuristic &heur)
+{
+    out << heur.GetName();
+    return out;
+}
+
 }   // end of namespace csx
 
-#endif  // ENCODINGS_HPP
+#endif  // SPARSEX_INTERNALS_ENCODINGS_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

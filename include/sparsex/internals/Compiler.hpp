@@ -9,8 +9,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef COMPILER_HPP
-#define COMPILER_HPP
+#ifndef SPARSEX_INTERNALS_COMPILER_HPP
+#define SPARSEX_INTERNALS_COMPILER_HPP
 
 #include <clang/Frontend/DiagnosticOptions.h>
 #include <clang/Frontend/CompilerInstance.h>
@@ -36,14 +36,14 @@ public:
         /* Just let CompilerInvocation object be released through CompilerInstance */
     };
 
-    Module *Compile(const std::string &source, LLVMContext *context) const;
+    Module *Compile(const string &source, LLVMContext *context) const;
 
     void KeepTemporaries(bool keep)
     {
         keep_temporaries_ = keep;
     }
 
-    void SetLogStream(std::ostream *log)
+    void SetLogStream(ostream *log)
     {
         assert(log && "passed ostream is NULL");
         log_stream_ = log;
@@ -80,7 +80,7 @@ private:
     OwningPtr<CompilerInstance> compiler_;
     bool keep_temporaries_;
     bool debug_mode_;
-    std::ostream *log_stream_;
+    ostream *log_stream_;
 };
 
-#endif // COMPILER_HPP
+#endif // SPARSEX_INTERNALS_COMPILER_HPP

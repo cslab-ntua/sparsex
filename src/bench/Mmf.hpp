@@ -1,5 +1,5 @@
 /*
- * mmf.hpp --  Matrix Market Format routines
+ * Mmf.hpp --  Matrix Market Format routines
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -10,8 +10,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef MMF_H__
-#define MMF_H__
+#ifndef MMF_HPP
+#define MMF_HPP
 
 #include <iostream>
 #include <fstream>
@@ -55,9 +55,9 @@ struct CooElemSorter {
         }
 };
 
-bool DoRead(ifstream &in, std::vector<string> &arguments);
+bool DoRead(ifstream &in, vector<string> &arguments);
 template<typename IndexType, typename ValueType>
-void ParseElement(std::vector<string> &arguments, IndexType &y, IndexType &x, 
+void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x, 
                   ValueType &v);
 
 template<typename IndexType, typename ValueType>
@@ -132,7 +132,7 @@ public:
              CooElemSorter<IndexType, ValueType>());
     }
 
-    /*void Print(std::ostream &os) const
+    /*void Print(ostream &os) const
     {
         os << "Elements of Matrix" << endl;
         os << "------------------" << endl;
@@ -178,7 +178,7 @@ private:
     ifstream in;
     bool symmetric_, col_wise_, zero_based_, reordered_;
     int file_mode_;     // 0 for MMF files, 1 for regular files
-    std::vector<CooElem<IndexType, ValueType> > matrix_;
+    vector<CooElem<IndexType, ValueType> > matrix_;
 
     enum MmfInfo {
         Banner,
@@ -197,8 +197,8 @@ private:
 
     static boost::unordered_map<MmfInfo, const string> names_;
 
-    void ParseMmfHeaderLine(std::vector<string> &arguments);
-    void ParseMmfSizeLine(std::vector<string> &arguments); 
+    void ParseMmfHeaderLine(vector<string> &arguments);
+    void ParseMmfSizeLine(vector<string> &arguments); 
     void DoLoadMmfMatrix();
     bool GetNext(IndexType &y, IndexType &x, ValueType &val);
 
@@ -333,7 +333,7 @@ MMF<IndexType, ValueType>::MMF(const char* filename)
 //        LOG_ERROR("MMF file error.");
         exit(1);
     }
-    std::vector<string> arguments;
+    vector<string> arguments;
 
     DoRead(in, arguments);
     ParseMmfHeaderLine(arguments);
@@ -345,7 +345,7 @@ MMF<IndexType, ValueType>::MMF(const char* filename)
 }
 
 template<typename IndexType, typename ValueType>
-void MMF<IndexType, ValueType>::ParseMmfHeaderLine(std::vector<string> &arguments)
+void MMF<IndexType, ValueType>::ParseMmfHeaderLine(vector<string> &arguments)
 {
     // Check if header line exists
     if (arguments[0] != names_[Banner]) {
@@ -402,7 +402,7 @@ void MMF<IndexType, ValueType>::ParseMmfHeaderLine(std::vector<string> &argument
 }
 
 template<typename IndexType, typename ValueType>
-void MMF<IndexType, ValueType>::ParseMmfSizeLine(std::vector<string> &arguments)
+void MMF<IndexType, ValueType>::ParseMmfSizeLine(vector<string> &arguments)
 {
     bool ignore_comments = false;
 
@@ -412,7 +412,7 @@ void MMF<IndexType, ValueType>::ParseMmfSizeLine(std::vector<string> &arguments)
 
     if (!file_mode_ || ignore_comments) {
         while (in.peek() == '%') {
-            in.ignore(numeric_limits<std::streamsize>::max(), '\n');
+            in.ignore(numeric_limits<streamsize>::max(), '\n');
         }
         if (!DoRead(in, arguments)) {
 //            LOG_ERROR("size line error in MMF file.");
@@ -460,7 +460,7 @@ void MMF<IndexType, ValueType>::DoLoadMmfMatrix()
 template<typename IndexType, typename ValueType>
 bool MMF<IndexType, ValueType>::GetNext(IndexType &y, IndexType &x, ValueType &v)
 {
-    std::vector<string> arguments;
+    vector<string> arguments;
 
     if (!DoRead(in, arguments)) {
         return false;
@@ -482,13 +482,13 @@ void MMF<IndexType, ValueType>::InitStream()
     in.clear();
     in.seekg(0, ios::beg);
     while (in.peek() == '%') {
-        in.ignore(numeric_limits<std::streamsize>::max(), '\n');
+        in.ignore(numeric_limits<streamsize>::max(), '\n');
     }
-    in.ignore(numeric_limits<std::streamsize>::max(), '\n');
+    in.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 // Returns false at EOF
-bool DoRead(ifstream &in, std::vector<string> &arguments)
+bool DoRead(ifstream &in, vector<string> &arguments)
 {
     string buff;
 
@@ -510,7 +510,7 @@ bool DoRead(ifstream &in, std::vector<string> &arguments)
 }
 
 template<typename IndexType, typename ValueType>
-void ParseElement(std::vector<string> &arguments, IndexType &y, IndexType &x, 
+void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x, 
                   ValueType &v)
 {
     if (arguments.size() == 3) {
@@ -523,6 +523,6 @@ void ParseElement(std::vector<string> &arguments, IndexType &y, IndexType &x,
     }
 }
 
-#endif  // MMF_H__
+#endif  // MMF_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

@@ -8,8 +8,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef RUNTIME_HPP
-#define RUNTIME_HPP
+
+#ifndef SPARSEX_INTERNALS_RUNTIME_HPP
+#define SPARSEX_INTERNALS_RUNTIME_HPP
 
 #include "sparsex/internals/CsxManager.hpp"
 #include "sparsex/internals/Jit.hpp"
@@ -31,8 +32,11 @@ using boost::bimaps::tags::tagged;
 
 namespace csx {
 
+// Forward declarations
 template<typename PartitionType>
 class SparseInternal;
+template<typename I, typename V>
+class EncodingManager;
 
 /* Runtime configuration class */
 class RuntimeConfiguration
@@ -41,6 +45,7 @@ public:
     enum Property {
         RtNrThreads,
         RtCpuAffinity,
+        PreprocHeuristic,
         PreprocXform,
         PreprocMethod,
         PreprocNrSamples,
@@ -67,23 +72,43 @@ public:
 
     RuntimeConfiguration &LoadFromEnv();
 
+    template<typename I, typename V>
+    void CheckProperties();
+
     template<typename Target>
     Target GetProperty(const Property &key) const
     {
         PropertyMap::const_iterator iter = property_map_.find(key);
         if (iter == property_map_.end()) {
-            LOG_ERROR << "key " << key << " not found\n";
+            LOG_ERROR << "property \"" << key << "\" not found\n";
             exit(1);
         }
-        return boost::lexical_cast<Target, string>(iter->second);
+
+        Target ret;
+        try {
+            ret = boost::lexical_cast<Target, string>(iter->second);
+        } catch (const boost::bad_lexical_cast &e) {
+            MnemonicMap::left_const_iterator i = mnemonic_map_.left.find(key);
+            LOG_ERROR << "invalid value \"" << iter->second 
+                      << "\" while setting property \"" << i->second
+                      << "\"\n";
+            exit(1);
+        }
+        return ret;
     }
 
     void SetProperty(const Property &key, const string &value)
     {
+        if (key == PreprocHeuristic) {
+            PreprocessingHeuristic::CheckNameValidity(value);
+        } else if (key == PreprocMethod) {
+            PreprocessingMethod::CheckNameValidity(value);
+        }
+
         try {
             property_map_.at(key) = value;
         } catch (const std::out_of_range& oor) {
-            LOG_WARNING << "key doesn't exist, so option will not be set\n";
+            LOG_WARNING << "property doesn't exist, so option will not be set\n";
         }
     }
 
@@ -93,7 +118,7 @@ public:
             mnemonic_map_.by<Mnemonic>().find(key);
 
         if (iter == mnemonic_map_.right.end()) {
-            LOG_ERROR << "mnemonic not found\n";
+            LOG_ERROR << "mnemonic \"" << key << "\" not found\n";
             exit(1);
         }
 
@@ -142,6 +167,22 @@ PreprocessingMethod RuntimeConfiguration::GetProperty(const Property &key) const
     PropertyMap::const_iterator iter = property_map_.find(key);
     PreprocessingMethod ret(iter->second);
     return ret;
+}
+
+template<>
+PreprocessingHeuristic RuntimeConfiguration::GetProperty(const Property &key) const
+{
+    PropertyMap::const_iterator iter = property_map_.find(key);
+    PreprocessingHeuristic ret(iter->second);
+    return ret;
+}
+
+template<typename I, typename V>
+void RuntimeConfiguration::CheckProperties()
+{
+    // Every module should test its parameters here
+    EncodingManager<I, V>::CheckParams(*this);
+    // TODO: RuntimeContext test
 }
 
 /* Singleton class holding runtime information */
@@ -293,4 +334,4 @@ SetData(SparseInternal<InternalType> *spi, spm_mt_t *spm_mt)
 
 }   // end of namespace csx
 
-#endif // RUNTIME_H__
+#endif // SPARSEX_INTERNALS_RUNTIME_HPP

@@ -8,6 +8,9 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
+#ifndef SPARSEX_TIMING_H
+#define SPARSEX_TIMING_H
+
 #include <sys/time.h>
 
 struct timer {
@@ -69,3 +72,5 @@ static inline double spx_timer_get_secs(spx_timer_t *t)
 {
     return (t->elapsed_time.tv_sec + t->elapsed_time.tv_usec / (double) 1000000);
 }
+
+#endif /* SPARSEX_TIMING_H */

@@ -9,8 +9,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef NUMA_UTIL_H
-#define NUMA_UTIL_H
+#ifndef SPARSEX_INTERNALS_NUMA_UTIL_H
+#define SPARSEX_INTERNALS_NUMA_UTIL_H
 
 #include "sparsex/internals/cdecl.h"
 
@@ -41,4 +41,4 @@ void print_alloc_status(const char *data_descr, int err);
 
 END_C_DECLS
 
-#endif  /* NUMA_UTIL_H */
+#endif  /* SPARSEX_INTERNALS_NUMA_UTIL_H */

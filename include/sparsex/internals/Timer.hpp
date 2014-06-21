@@ -8,11 +8,14 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef TIMER_HPP
-#define TIMER_HPP
 
-#include <sys/time.h>
+#ifndef SPARSEX_INTERNALS_TIMER_HPP
+#define SPARSEX_INTERNALS_TIMER_HPP
+
 #include <string>
+#include <sys/time.h>
+
+using namespace std;
 
 namespace timing {
 
@@ -28,7 +31,7 @@ public:
         Clear();
     }
 
-    Timer(std::string desc)
+    Timer(string desc)
         : description_(desc), 
           elapsed_time_(), 
           timestamp_()  
@@ -37,7 +40,7 @@ public:
     }
 
     Timer(const char *desc, const char *desc2)
-        : description_((std::string) desc), 
+        : description_((string) desc), 
           elapsed_time_(), 
           timestamp_()
     {
@@ -54,25 +57,25 @@ public:
 
     void SetDescription(const char *desc)
     {
-        description_ = (std::string) desc;
+        description_ = (string) desc;
     }
 
-    void SetDescription(std::string desc)
+    void SetDescription(string desc)
     {
         description_ = desc;
     }
 
-    std::string GetDescription()
+    string GetDescription()
     {
         return description_;
     }
 
 private:
-    std::string description_;
+    string description_;
     struct timeval elapsed_time_;
     struct timeval timestamp_;
 };
 
 } // end of namespace timing
 
-#endif //TIMER_HPP
+#endif // SPARSEX_INTERNALS_TIMER_HPP

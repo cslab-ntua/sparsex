@@ -8,11 +8,13 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef TIMER_H__
-#define TIMER_H__
+#ifndef TIMER_HPP
+#define TIMER_HPP
 
 #include <sys/time.h>
 #include <string>
+
+using namespace std;
 
 class Timer
 {
@@ -26,7 +28,7 @@ public:
         Clear();
     }
 
-    Timer(std::string desc)
+    Timer(string desc)
         : description_(desc), 
           elapsed_time_(), 
           timestamp_()  
@@ -35,7 +37,7 @@ public:
     }
 
     Timer(const char *desc, const char *desc2)
-        : description_((std::string) desc), 
+        : description_((string) desc), 
           elapsed_time_(), 
           timestamp_()
     {
@@ -52,23 +54,23 @@ public:
 
     void SetDescription(const char *desc)
     {
-        description_ = (std::string) desc;
+        description_ = (string) desc;
     }
 
-    void SetDescription(std::string desc)
+    void SetDescription(string desc)
     {
         description_ = desc;
     }
 
-    std::string GetDescription()
+    string GetDescription()
     {
         return description_;
     }
 
 private:
-    std::string description_;
+    string description_;
     struct timeval elapsed_time_;
     struct timeval timestamp_;
 };
 
-#endif //TIMER_H__
+#endif //TIMER_HPP

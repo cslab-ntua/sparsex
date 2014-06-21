@@ -1,5 +1,5 @@
 /**
- * \file mat_vec.h -- \brief Sparse matrix routines.
+ * \file matvec.h -- \brief Sparse matrix routines.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPARSEX_MAT_VEC_H
-#define SPARSEX_MAT_VEC_H
+
+#ifndef SPARSEX_MATVEC_H
+#define SPARSEX_MATVEC_H
 
 #include <sparsex/common.h>
 
@@ -129,7 +130,7 @@ spx_index_t spx_mat_get_nnz(const spx_matrix_t *A);
 /**
  *  Returns information on the partitioning of the matrix.
  */
-spx_partition_t *spx_mat_get_parts(spx_matrix_t *A);
+spx_partition_t *spx_mat_get_partition(spx_matrix_t *A);
 
 /**
  *  Returns the permutation applied to the matrix.
@@ -195,7 +196,7 @@ spx_error_t spx_matvec_kernel(spx_scalar_t alpha, const spx_matrix_t *A,
  *  @param[in,out] y        the output vector.
  *  @return                 an error code.
  */
-spx_error_t spx_csr_matvec_kernel(spx_matrix_t *A, 
+spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A, 
                                   spx_index_t nr_rows, spx_index_t nr_cols,
                                   spx_index_t *rowptr, spx_index_t *colind, 
                                   spx_value_t *values,
@@ -255,14 +256,7 @@ void spx_options_set_from_env();
  *  @param[in] p            a partitioning handle.
  *  @return                 a valid vector object.
  */
-/* spx_vector_t *spx_vec_create(unsigned long size, spx_partition_t *p); */
-spx_vector_t *vec_create(unsigned long size, void *p);
-spx_vector_t *vec_create_numa(unsigned long size, spx_partition_t *p);
-#if SPX_USE_NUMA
-#   define spx_vec_create vec_create_numa
-#else
-#   define spx_vec_create vec_create
-#endif
+spx_vector_t *spx_vec_create(unsigned long size, spx_partition_t *p);
 
 /**
  *  Creates and returns a valid vector object, whose values are mapped to a
@@ -273,15 +267,8 @@ spx_vector_t *vec_create_numa(unsigned long size, spx_partition_t *p);
  *  @param[in] p            a partitioning handle.
  *  @return                 a valid vector object.
  */
-spx_vector_t *vec_create_from_buff(spx_value_t *buff, unsigned long size,
-                                   void *p, spx_copymode_t mode);
-spx_vector_t *vec_create_from_buff_numa(spx_value_t *buff, unsigned long size,
-                                        spx_partition_t *p, spx_copymode_t mode);
-#if SPX_USE_NUMA
-#   define spx_vec_create_from_buff vec_create_from_buff_numa
-#else
-#   define spx_vec_create_from_buff vec_create_from_buff
-#endif
+spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, unsigned long size,
+                                       spx_partition_t *p, spx_copymode_t mode);
 
 /**
  *  Creates and returns a valid vector object, whose values are randomly filled.
@@ -290,13 +277,7 @@ spx_vector_t *vec_create_from_buff_numa(spx_value_t *buff, unsigned long size,
  *  @param[in] p            a partitioning handle.
  *  @return                 a valid vector object.
  */
-spx_vector_t *vec_create_random(unsigned long size, void *p);
-spx_vector_t *vec_create_random_numa(unsigned long size, spx_partition_t *p);
-#if SPX_USE_NUMA
-#   define spx_vec_create_random vec_create_random_numa
-#else
-#   define spx_vec_create_random vec_create_random
-#endif
+spx_vector_t *spx_vec_create_random(unsigned long size, spx_partition_t *p);
 
 /**
  *  Initializes the vector object \a v with \a val.
@@ -502,6 +483,6 @@ void spx_vec_print(const spx_vector_t *v);
  */
 void spx_vec_destroy(spx_vector_t *v);
 
-#endif // SPARSEX_MAT_VEC_H
+#endif  /* SPARSEX_MATVEC_H */
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

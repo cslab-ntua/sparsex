@@ -8,8 +8,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef TYPES_HPP
-#define TYPES_HPP
+
+#ifndef SPARSEX_INTERNALS_TYPES_HPP
+#define SPARSEX_INTERNALS_TYPES_HPP
 
 #include "sparsex/types.h"
 
@@ -18,4 +19,4 @@
 // Index type should be promoted to unsigned internally
 typedef boost::make_unsigned<spx_index_t>::type uindex_t;
 
-#endif  // TYPES_HPP
+#endif  // SPARSEX_INTERNALS_TYPES_HPP

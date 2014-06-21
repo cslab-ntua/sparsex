@@ -1,5 +1,5 @@
 /*
- * poski_module.cpp --  The SpMV kernel with pOSKI.
+ * PoskiModule.cpp --  The SpMV kernel with pOSKI.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,7 +8,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "poski_module.hpp"
+#include "PoskiModule.hpp"
+
 #include <algorithm>
 #include <vector>
 
@@ -48,7 +49,7 @@ void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
     double pt = t.ElapsedTime();
 
     /* 4. SpMV benchmarking phase */
-    std::vector<double> mt(OUTER_LOOPS);
+    vector<double> mt(OUTER_LOOPS);
     for (unsigned int i = 0; i < OUTER_LOOPS; i++) {
         t.Clear();
         t.Start();

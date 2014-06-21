@@ -9,7 +9,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "timer.hpp"
+#include "Timer.hpp"
+
 #include <stdlib.h>
 #include <iostream>
 

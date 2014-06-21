@@ -7,14 +7,14 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSX_SPM_DRAW__
-#define CSX_SPM_DRAW__
+#ifndef SPARSEX_INTERNALS_DRAW_H
+#define SPARSEX_INTERNALS_DRAW_H
 
 #include "SparsePartition.h"
 
 void Draw(csx::SparsePartition &spm, const char *filename, int row_start=0, int row_end=0,
           const int width=600, const int height=600);
 
-#endif /* CSX_SPM_DRAW__ */
+#endif /* SPARSEX_INTERNALS_DRAW_H */
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

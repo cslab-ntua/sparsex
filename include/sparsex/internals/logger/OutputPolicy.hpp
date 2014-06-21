@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef OUTPUT_POLICY_HPP
-#define OUTPUT_POLICY_HPP
+
+#ifndef SPARSEX_INTERNALS_LOGGER_OUTPUT_POLICY_HPP
+#define SPARSEX_INTERNALS_LOGGER_OUTPUT_POLICY_HPP
 
 #include <iostream>
 #include <sstream>
@@ -69,6 +70,6 @@ private:
 
 typedef boost::function<void (ostringstream&)> OutputHandler;
 
-} // end of namespace logging
+}   // end of namespace logging
 
-#endif  // OUTPUT_POLICY_HPP
+#endif  // SPARSEX_INTERNALS_LOGGER_OUTPUT_POLICY_HPP

@@ -9,8 +9,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSX_BENCH_HPP
-#define CSX_BENCH_HPP
+
+#ifndef SPARSEX_INTERNALS_CSX_BENCH_HPP
+#define SPARSEX_INTERNALS_CSX_BENCH_HPP
 
 #include "sparsex/internals/Affinity.hpp"
 #include "sparsex/internals/Csr.hpp"
@@ -155,4 +156,4 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
 	(*rowptr)[row_i++] = val_i;
 }
 
-#endif // CSX_BENCH_HPP
+#endif // SPARSEX_INTERNALS_CSX_BENCH_HPP

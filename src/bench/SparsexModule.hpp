@@ -1,5 +1,5 @@
 /*
- * sparsex_module.hpp --  The SpMV kernel implemented with SparseX.
+ * SparsexModule.hpp --  The SpMV kernel implemented with SparseX.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,8 +7,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPARSEX_MODULE_H__
-#define SPARSEX_MODULE_H__
+#ifndef SPARSEX_MODULE_HPP
+#define SPARSEX_MODULE_HPP
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,12 +20,12 @@ extern "C" {
 }
 #endif
 
-#include "timer.hpp"
+#include "Timer.hpp"
 #include <iostream>
 
 using namespace std;
 
-extern std::string MATRIX; 
+extern string MATRIX; 
 extern unsigned int OUTER_LOOPS;
 extern unsigned long LOOPS;
 extern unsigned int NR_THREADS;
@@ -35,4 +35,4 @@ extern Timer t;
 void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
                   int nnz, double *x, double *y);
 
-#endif  // SPARSEX_MODULE_H__
+#endif  // SPARSEX_MODULE_HPP

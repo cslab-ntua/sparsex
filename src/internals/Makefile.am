@@ -49,6 +49,7 @@ libsparseximpl_la_LIBADD = \
 	$(BOOST_SERIALIZATION_LIB) \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_THREAD_LIB) \
+	$(CLANG_LIBS) \
 	$(LLVM_LIBS)
 
 if USE_LIB_SUFFIX

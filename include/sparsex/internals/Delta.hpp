@@ -8,8 +8,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef DELTA_HPP
-#define DELTA_HPP
+
+#ifndef SPARSEX_INTERNALS_DELTA_HPP
+#define SPARSEX_INTERNALS_DELTA_HPP
 
 #include <cstdint>
 
@@ -39,4 +40,4 @@ size_t GetDeltaSize(size_t val)
 
 } // end csx namespace
 
-#endif // DELTA_HPP
+#endif // SPARSEX_INTERNALS_DELTA_HPP

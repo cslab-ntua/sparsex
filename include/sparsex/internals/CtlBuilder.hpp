@@ -7,8 +7,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CTL_BUILDER_HPP
-#define CTL_BUILDER_HPP
+#ifndef SPARSEX_INTERNALS_CTL_BUILDER_HPP
+#define SPARSEX_INTERNALS_CTL_BUILDER_HPP
 
 #include "sparsex/internals/Allocators.hpp"
 #include "sparsex/internals/DynamicArray.hpp"
@@ -51,4 +51,4 @@ private:
     CtlDynamicArray ctl_da_;
 };
 
-#endif  // CTL_BUILDER_HPP
+#endif  // SPARSEX_INTERNALS_CTL_BUILDER_HPP

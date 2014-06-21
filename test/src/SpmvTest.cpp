@@ -5,6 +5,8 @@
 
 #include <cfloat>
 
+using namespace std;
+
 static const char *program_name;
 
 static double CalcImbalance(void *arg)
@@ -36,7 +38,7 @@ static double CalcImbalance(void *arg)
     return (max_time - min_time) / min_time;
 }
 
-void PrintUsage(std::ostream &os)
+void PrintUsage(ostream &os)
 {
     os << "Usage: " << program_name
        << " [-s] <mmf_file> ...\n"
@@ -51,7 +53,7 @@ int main(int argc, char **argv)
 
     // AlwaysUseConsole();
     // UseConsole(Debug);
-    DisableInfo();
+    // DisableInfo();
 
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
@@ -65,39 +67,39 @@ int main(int argc, char **argv)
             config.SetProperty(RuntimeConfiguration::MatrixSymmetric, "true");
             break;
         case 'h':
-            PrintUsage(std::cerr);
+            PrintUsage(cerr);
             exit(0);
         default:
-            PrintUsage(std::cerr);
+            PrintUsage(cerr);
             exit(1);
         }
     }
     
     int remargc = argc - optind; // remaining arguments
     if (remargc < 1) {
-        PrintUsage(std::cerr);
+        PrintUsage(cerr);
         exit(1);
     }
     argv = &argv[optind];
 
-    SparseMatrix<MMF<unsigned int, double> > matrix(argv[0]);
+    SparseMatrix<MMF<int, double> > matrix(argv[0]);
     // matrix.Reorder();
 
     for (int i = 0; i < remargc; i++) {
-        std::cout << "=== BEGIN BENCHMARK ===" << std::endl;
-        std::cout << "Creating CSX...\n";
+        cout << "=== BEGIN BENCHMARK ===" << endl;
+        cout << "Creating CSX...\n";
         spm_mt = matrix.CreateCsx();
         CheckLoop<unsigned int, double>(spm_mt, argv[0]);
-        std::cout << "Running 128 SpMV loops...\n";
+        cout << "Running 128 SpMV loops...\n";
         BenchLoop<double>(spm_mt, argv[0]);
         // double imbalance = CalcImbalance(spm_mt);
-        // std::cout << "Load imbalance: " << 100*imbalance << "%\n";
-        // std::cout << "Dumping Csx to binary file...\n";
+        // cout << "Load imbalance: " << 100*imbalance << "%\n";
+        // cout << "Dumping Csx to binary file...\n";
         // matrix.Save("csx_file");
-        std::cout << "Convert to internal repr.: " << internal_time << std::endl;
-        std::cout << "Convert to CSX: " << csx_time << std::endl;
-        // std::cout << "Dump to binary file: " << dump_time << std::endl;
-        std::cout << "==== END BENCHMARK ====" << std::endl;
+        cout << "Convert to internal repr.: " << internal_time << endl;
+        cout << "Convert to CSX: " << csx_time << endl;
+        // cout << "Dump to binary file: " << dump_time << endl;
+        cout << "==== END BENCHMARK ====" << endl;
         matrix.Destroy();
     }
 

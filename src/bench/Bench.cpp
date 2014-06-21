@@ -1,5 +1,5 @@
 /*
- * bench.cpp --  Benchmarking interface.
+ * Bench.cpp --  Benchmarking interface.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,8 +8,9 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "bench.hpp"
-#include "mmf.hpp"
+#include "Bench.hpp"
+#include "Mmf.hpp"
+
 #include <cassert>
 #include <libgen.h>
 
@@ -17,7 +18,7 @@ using namespace std;
 using namespace bench;
 
 /* Global variables */
-std::string MATRIX;
+string MATRIX;
 unsigned int OUTER_LOOPS = 5;   /**< Number of SpMV iterations */
 unsigned long LOOPS = 128;      /**< Number of repeats */
 unsigned int NR_THREADS = 1;    /**< Number of threads for a multithreaded
@@ -220,8 +221,8 @@ static int vec_compare(const double *v1, const double *v2, size_t size)
 {
 	for (size_t i = 0; i < size; i++) {
 		if (elems_neq(v1[i], v2[i])) {
-            std::cout << "element " << i << " differs: "<< v1[i] << " != "
-                      << v2[i] << std::endl;
+            cout << "element " << i << " differs: "<< v1[i] << " != "
+                 << v2[i] << endl;
 			return -1;
 		}
 	}

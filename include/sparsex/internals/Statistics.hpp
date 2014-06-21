@@ -8,8 +8,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef STATISTICS_HPP
-#define STATISTICS_HPP
+#ifndef SPARSEX_INTERNALS_STATISTICS_HPP
+#define SPARSEX_INTERNALS_STATISTICS_HPP
 
 #include "sparsex/internals/Encodings.hpp"
 #include <boost/format.hpp>
@@ -24,7 +24,6 @@ using namespace std;
 
 namespace csx
 {
-
 
 /**
  *  @brief Statistics data collected by CSX.
@@ -852,4 +851,4 @@ private:
 
 }   // end of csx namespace
 
-#endif  // STATISTICS_HPP
+#endif  // SPARSEX_INTERNALS_STATISTICS_HPP

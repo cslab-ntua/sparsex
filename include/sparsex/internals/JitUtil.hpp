@@ -8,8 +8,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef JIT_UTIL_HPP
-#define JIT_UTIL_HPP
+#ifndef SPARSEX_INTERNALS_JIT_UTIL_HPP
+#define SPARSEX_INTERNALS_JIT_UTIL_HPP
 
 #include <iostream>
 #include <sstream>
@@ -17,21 +17,23 @@
 #include <cstdio>
 #include <cstdlib>
 
-std::string SourceFromFile(const char *filename);
+using namespace std;
 
-std::string SourceFromFile(const std::string &filename)
+string SourceFromFile(const char *filename);
+
+string SourceFromFile(const string &filename)
 {
     return SourceFromFile(filename.c_str());
 }
 
-void SourceToFile(const char *filename, const std::string &source);
+void SourceToFile(const char *filename, const string &source);
 
-void SourceToFile(const std::string &filename, const std::string &source)
+void SourceToFile(const string &filename, const string &source)
 {
     SourceToFile(filename.c_str(), source);
 }
 
-const char *UniqueFilename(std::string &tmpl);
+const char *UniqueFilename(string &tmpl);
 
 void RemoveFile(const char *path)
 {
@@ -42,22 +44,22 @@ void RemoveFile(const char *path)
 }
 
 template<typename T>
-std::string Stringify(const T& t)
+string Stringify(const T& t)
 {
-    std::stringstream ss;
+    stringstream ss;
     ss << t;
     return ss.str();
 }
 
-std::string Tabify(int num)
+string Tabify(int num)
 {
-    std::stringstream ss;
+    stringstream ss;
     
     for (int i = 0; i < num; i++)
         ss << "\t";
     
     return ss.str();
 }
-#endif  // JIT_UTIL_HPP
+#endif  // SPARSEX_INTERNALS_JIT_UTIL_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

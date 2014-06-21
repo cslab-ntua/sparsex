@@ -1,5 +1,5 @@
 /*
- * bench.hpp --  Benchmarking interface.
+ * Bench.hpp --  Benchmarking interface.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,10 +7,10 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef BENCH_H__
-#define BENCH_H__
+#ifndef BENCH_HPP
+#define BENCH_HPP
 
-#include "bench_util.hpp"
+#include "BenchUtil.hpp"
 
 using namespace bench;
 
@@ -47,4 +47,4 @@ void Bench_Matrix(const char *mmf_file, const char *library,
 
 void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file);
 
-#endif  // BENCH_H__
+#endif  // BENCH_HPP

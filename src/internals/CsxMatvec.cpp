@@ -37,12 +37,12 @@ void do_mv_sym_thread(void *args)
 	int id = spm_thread->id;
     int *sense = spm_thread->sense;
 
-    spx_vec_init_from_map(temp, 0, spm_thread->map);
+    VecInitFromMap(temp, 0, spm_thread->map);
     centralized_barrier(sense, nr_threads);
     fn(spm_thread->spm, spm_thread->x, spm_thread->y, temp[id], ALPHA);
     centralized_barrier(sense, nr_threads);
     /* Switch Reduction Phase */
-    spx_vec_add_from_map(spm_thread->y, temp, spm_thread->y, spm_thread->map);
+    VecAddFromMap(spm_thread->y, temp, spm_thread->y, spm_thread->map);
 }
 
 void do_kernel_thread(void *args)
@@ -54,7 +54,7 @@ void do_kernel_thread(void *args)
     int end = start + spm_thread->nr_rows;
 
 	if (BETA != 1)
-        spx_vec_scale_part(spm_thread->y, spm_thread->y, BETA, start, end);
+        VecScalePart(spm_thread->y, spm_thread->y, BETA, start, end);
 	fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA);
 }
 
@@ -68,14 +68,14 @@ void do_kernel_sym_thread(void *args)
 	int id = spm_thread->id;
     int *sense = spm_thread->sense;
 
-    spx_vec_init_from_map(temp, 0, spm_thread->map);
+    VecInitFromMap(temp, 0, spm_thread->map);
     centralized_barrier(sense, nr_threads);
 	if (BETA != 1)
-        spx_vec_scale_part(spm_thread->y, spm_thread->y, BETA, start, end);
+        VecScalePart(spm_thread->y, spm_thread->y, BETA, start, end);
     fn(spm_thread->spm, spm_thread->x, spm_thread->y, temp[id], ALPHA);
     centralized_barrier(sense, nr_threads);
     /* Switch Reduction Phase */
-    spx_vec_add_from_map(spm_thread->y, temp, spm_thread->y, spm_thread->map);
+    VecAddFromMap(spm_thread->y, temp, spm_thread->y, spm_thread->map);
 }
 
 void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,

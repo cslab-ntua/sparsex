@@ -10,8 +10,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPM_MT_HPP
-#define SPM_MT_HPP
+
+#ifndef SPARSEX_INTERNALS_SPM_MT_HPP
+#define SPARSEX_INTERNALS_SPM_MT_HPP
 
 #include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Map.hpp"
@@ -51,4 +52,4 @@ struct spm_mt {
 
 typedef struct spm_mt spm_mt_t;
 
-#endif /* SPM_MT_HPP */
+#endif // SPARSEX_INTERNALS_SPM_MT_HPP

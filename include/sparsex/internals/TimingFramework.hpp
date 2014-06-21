@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef TIMING_FRAMEWORK_HPP
-#define TIMING_FRAMEWORK_HPP
+
+#ifndef SPARSEX_INTERNALS_TIMING_FRAMEWORK_HPP
+#define SPARSEX_INTERNALS_TIMING_FRAMEWORK_HPP
 
 #include "sparsex/internals/Timer.hpp"
 #include <boost/unordered_map.hpp>
@@ -57,4 +58,4 @@ private:
 
 } // end of namespace timing
 
-#endif // TIMING_FRAMEWORK_HPP
+#endif  // SPARSEX_INTERNALS_TIMING_FRAMEWORK_HPP

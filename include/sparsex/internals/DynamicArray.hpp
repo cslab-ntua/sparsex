@@ -8,8 +8,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef DYNAMIC_ARRAY_HPP
-#define DYNAMIC_ARRAY_HPP
+
+#ifndef SPARSEX_INTERNALS_DYNAMIC_ARRAY_HPP
+#define SPARSEX_INTERNALS_DYNAMIC_ARRAY_HPP
 
 #include "sparsex/internals/Allocators.hpp"
 
@@ -154,4 +155,4 @@ ostream &operator<<(ostream& os, const DynamicArray<T> &da)
     return os;
 }
 
-#endif  // DYNAMIC_ARRAY_HPP
+#endif  // SPARSEX_INTERNALS_DYNAMIC_ARRAY_HPP

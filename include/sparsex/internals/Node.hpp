@@ -9,8 +9,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef NODE_HPP
-#define NODE_HPP
+
+#ifndef SPARSEX_INTERNALS_NODE_HPP
+#define SPARSEX_INTERNALS_NODE_HPP
 
 #include "sparsex/internals/Encodings.hpp"
 
@@ -45,11 +46,11 @@ public:
      *  @param type   type which is inserted in the end.
      *  @param deltas deltas corresponding to type inserted.
      */
-    Node MakeChild(Encoding::Type type, std::set<uint64_t> deltas);
+    Node MakeChild(Encoding::Type type, set<uint64_t> deltas);
 
 private:
     uint32_t depth_;
-    std::map<Encoding::Type, std::set<uint64_t> > deltas_path_;
+    std::map<Encoding::Type, set<uint64_t> > deltas_path_;
     Encoding::Type *type_path_;
     Encoding::Type *type_ignore_;
     template<typename IndexType, typename ValueType> friend class EncodingManager;
@@ -57,4 +58,4 @@ private:
 
 } // end of namespace csx
 
-#endif  // NODE_HPP
+#endif  // SPARSEX_INTERNALS_NODE_HPP

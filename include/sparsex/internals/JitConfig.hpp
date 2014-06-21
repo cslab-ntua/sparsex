@@ -8,10 +8,12 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef JIT_CONFIG_HPP
-#define JIT_CONFIG_HPP
+#ifndef SPARSEX_INTERNALS_JIT_CONFIG_HPP
+#define SPARSEX_INTERNALS_JIT_CONFIG_HPP
 
 #include <sparsex/internals/Config.hpp>
+
+using namespace std;
 
 #ifndef CSX_TEMPLATE
 #   define CSX_TEMPLATE SPX_MULT_TEMPLATE_DIR "/csx_spmv_tmpl.c"
@@ -85,25 +87,25 @@
 #   define BLOCK_COL_SYM_TEMPLATE SPX_MULT_TEMPLATE_DIR "/block_col_sym_tmpl.c"
 #endif
 
-const std::string CsxTemplateSource = CSX_TEMPLATE;
-const std::string CsxSymTemplateSource = CSX_SYM_TEMPLATE;
-const std::string DeltaTemplateSource = DELTA_TEMPLATE;
-const std::string HorizTemplateSource = HORIZ_TEMPLATE;
-const std::string VertTemplateSource = VERT_TEMPLATE;
-const std::string DiagTemplateSource = DIAG_TEMPLATE;
-const std::string RDiagTemplateSource = RDIAG_TEMPLATE;
-const std::string BlockRowTemplateSource = BLOCK_ROW_TEMPLATE;
-const std::string BlockRowOneTemplateSource = BLOCK_ROW_ONE_TEMPLATE;
-const std::string BlockColTemplateSource = BLOCK_COL_TEMPLATE;
-const std::string BlockColOneTemplateSource = BLOCK_COL_ONE_TEMPLATE;
-const std::string DeltaSymTemplateSource = DELTA_SYM_TEMPLATE;
-const std::string HorizSymTemplateSource = HORIZ_SYM_TEMPLATE;
-const std::string VertSymTemplateSource = VERT_SYM_TEMPLATE;
-const std::string DiagSymTemplateSource = DIAG_SYM_TEMPLATE;
-const std::string RDiagSymTemplateSource = RDIAG_SYM_TEMPLATE;
-const std::string BlockRowSymTemplateSource = BLOCK_ROW_SYM_TEMPLATE;
-const std::string BlockColSymTemplateSource = BLOCK_COL_SYM_TEMPLATE;
+const string CsxTemplateSource = CSX_TEMPLATE;
+const string CsxSymTemplateSource = CSX_SYM_TEMPLATE;
+const string DeltaTemplateSource = DELTA_TEMPLATE;
+const string HorizTemplateSource = HORIZ_TEMPLATE;
+const string VertTemplateSource = VERT_TEMPLATE;
+const string DiagTemplateSource = DIAG_TEMPLATE;
+const string RDiagTemplateSource = RDIAG_TEMPLATE;
+const string BlockRowTemplateSource = BLOCK_ROW_TEMPLATE;
+const string BlockRowOneTemplateSource = BLOCK_ROW_ONE_TEMPLATE;
+const string BlockColTemplateSource = BLOCK_COL_TEMPLATE;
+const string BlockColOneTemplateSource = BLOCK_COL_ONE_TEMPLATE;
+const string DeltaSymTemplateSource = DELTA_SYM_TEMPLATE;
+const string HorizSymTemplateSource = HORIZ_SYM_TEMPLATE;
+const string VertSymTemplateSource = VERT_SYM_TEMPLATE;
+const string DiagSymTemplateSource = DIAG_SYM_TEMPLATE;
+const string RDiagSymTemplateSource = RDIAG_SYM_TEMPLATE;
+const string BlockRowSymTemplateSource = BLOCK_ROW_SYM_TEMPLATE;
+const string BlockColSymTemplateSource = BLOCK_COL_SYM_TEMPLATE;
 
-#endif // JIT_CONFIG_HPP
+#endif // SPARSEX_INTERNALS_JIT_CONFIG_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

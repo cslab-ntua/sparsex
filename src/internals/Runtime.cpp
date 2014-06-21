@@ -24,20 +24,6 @@ using namespace boost;
 
 namespace csx {
 
-static std::map<string, int> XformIndex = boost::assign::map_list_of
-    ("none", 0)
-    ("h", 1)
-    ("v", 2)
-    ("d", 3)
-    ("ad", 4)
-    ("br", 5)
-    ("bc", 6)
-    ("all", 7);
-
-// const int XformBlockRowIdx = XformIndex["br"];
-// const int XformBlockColIdx = XformIndex["bc"];
-// const int XformBlockAllIdx = XformIndex["all"];
-
 /**
  *  Load default CSX runtime properties
  */
@@ -46,11 +32,16 @@ RuntimeConfiguration::PropertyMap RuntimeConfiguration::DefaultProperties()
     return boost::assign::map_list_of
         (RtNrThreads, "1")
         (RtCpuAffinity, "0")
+#ifdef SPM_NUMA
+        (PreprocHeuristic, "cost")
+#else
+        (PreprocHeuristic, "ratio")
+#endif
         (PreprocXform, "none")
         (PreprocMethod, "none")
         (PreprocNrSamples, "10")
         (PreprocSamplingPortion, "0.01")
-        (PreprocWindowSize, "0")    // change to sth more meaningful
+        (PreprocWindowSize, "0")
         (MatrixSymmetric, "false")
         (MatrixSplitBlocks, "true")
         (MatrixOneDimBlocks, "false")
@@ -70,6 +61,8 @@ void RuntimeConfiguration::InitPropertyMnemonics()
                                        "spx.rt.nr_threads"));
     mnemonic_map_.insert(mnemonic_pair(RtCpuAffinity, 
                                        "spx.rt.cpu_affinity"));
+    mnemonic_map_.insert(mnemonic_pair(PreprocHeuristic, 
+                                       "spx.preproc.heuristic"));
     mnemonic_map_.insert(mnemonic_pair(PreprocXform, 
                                        "spx.preproc.xform"));
     mnemonic_map_.insert(mnemonic_pair(PreprocMethod, 
@@ -78,6 +71,8 @@ void RuntimeConfiguration::InitPropertyMnemonics()
                                        "spx.preproc.sampling.nr_samples"));
     mnemonic_map_.insert(mnemonic_pair(PreprocSamplingPortion,
                                        "spx.preproc.sampling.portion"));
+    mnemonic_map_.insert(mnemonic_pair(PreprocWindowSize,
+                                       "spx.preproc.sampling.window_size"));
     mnemonic_map_.insert(mnemonic_pair(MatrixSymmetric,
                                        "spx.matrix.symmetric"));
     mnemonic_map_.insert(mnemonic_pair(MatrixSplitBlocks, 
@@ -100,14 +95,17 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
     }
 
     const char *xform_conf_str = getenv("XFORM_CONF");
-    if (xform_conf_str)
+    if (xform_conf_str) {
         SetProperty(RuntimeConfiguration::PreprocXform, string(xform_conf_str));
+    }
 
     const char *wsize_str = getenv("WINDOW_SIZE");
     if (wsize_str) {
+        // Automatically enable sampling
+        SetProperty(RuntimeConfiguration::PreprocMethod, "window");
         SetProperty(RuntimeConfiguration::PreprocWindowSize, string(wsize_str));
     } else {
-        // cout << "Window size: Not set\n";
+        LOG_INFO << "Window size: Not set\n";
     }
 
     const char *samples_str = getenv("SAMPLES");
@@ -117,7 +115,7 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         SetProperty(RuntimeConfiguration::PreprocNrSamples,
                     string(samples_str));
     } else {
-        // cout << "Number of samples: Not set\n";
+        LOG_INFO << "Number of samples: Not set\n";
     }
 
     const char *sampling_portion_str = getenv("SAMPLING_PORTION");
@@ -147,13 +145,13 @@ vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
     }
     
     // Printing
-    // cout << "MT_CONF=";
-    // for (size_t i = 0; i < affinity.size(); ++i) {
-    //     if (i != 0)
-    //         cout << ",";
-    //     cout << affinity[i];
-    // }
-    // cout << "\n";
+    LOG_INFO << "MT_CONF=";
+    for (size_t i = 0; i < affinity.size(); ++i) {
+        if (i != 0)
+            LOG_INFO << ",";
+        LOG_INFO << affinity[i];
+    }
+    LOG_INFO << "\n";
 
     return affinity;
 }

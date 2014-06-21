@@ -19,7 +19,7 @@ using namespace std;
 class MyClass
 {
 public:
-    MyClass(std::size_t a, std::size_t b)
+    MyClass(size_t a, size_t b)
         : a_(a), b_(b)
     {}
 
@@ -29,7 +29,7 @@ public:
 
     ~MyClass() {}
 private:
-    std::size_t a_, b_;
+    size_t a_, b_;
 };
 
 int main(void)
@@ -48,7 +48,7 @@ int main(void)
     }
 
     timer.Pause();
-    std::cout << "C++ dynamic array impl.: " << timer.ElapsedTime() << " s\n";
+    cout << "C++ dynamic array impl.: " << timer.ElapsedTime() << " s\n";
     timer.Stop();
 
     timer.Start();
@@ -58,7 +58,7 @@ int main(void)
     }
 
     timer.Pause();
-    std::cout << "Vector impl.: " << timer.ElapsedTime() << " s\n";
+    cout << "Vector impl.: " << timer.ElapsedTime() << " s\n";
     timer.Stop();
 
     StdAllocator &alloc = StdAllocator::GetInstance();
@@ -69,7 +69,7 @@ int main(void)
         array[i] = i;
 
     timer.Pause();
-    std::cout << "Normal array: " << timer.ElapsedTime() << " s\n";
+    cout << "Normal array: " << timer.ElapsedTime() << " s\n";
     alloc.Destroy(array, array_size);
     return 0;
 }

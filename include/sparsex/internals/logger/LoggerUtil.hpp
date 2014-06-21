@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LOGGER_UTIL_HPP
-#define LOGGER_UTIL_HPP
+
+#ifndef SPARSEX_INTERNALS_LOGGER_LOGGER_UTIL_HPP
+#define SPARSEX_INTERNALS_LOGGER_LOGGER_UTIL_HPP
 
 #include "../cdecl.h"
 
@@ -27,5 +28,5 @@ void log_warning(const char *msg);
 
 END_C_DECLS
 
-#endif // LOGGER_UTIL_HPP
+#endif  // SPARSEX_INTERNALS_LOGGER_LOGGER_UTIL_HPP
 
