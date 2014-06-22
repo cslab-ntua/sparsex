@@ -461,10 +461,24 @@ void CsxManager<IndexType, ValueType>::UpdateRowSpan(
     case Encoding::AntiDiagonal:
         span = (size - 1) * delta;
         break;
-    case Encoding::BlockRowMin ... Encoding::BlockRowMax:
+    case Encoding::BlockRow1:
+    case Encoding::BlockRow2:
+    case Encoding::BlockRow3:
+    case Encoding::BlockRow4:
+    case Encoding::BlockRow5:
+    case Encoding::BlockRow6:
+    case Encoding::BlockRow7:
+    case Encoding::BlockRow8:
         span = type - Encoding::BlockRowMin;
         break;
-    case Encoding::BlockColMin ... Encoding::BlockColMax:
+    case Encoding::BlockCol1:
+    case Encoding::BlockCol2:
+    case Encoding::BlockCol3:
+    case Encoding::BlockCol4:
+    case Encoding::BlockCol5:
+    case Encoding::BlockCol6:
+    case Encoding::BlockCol7:
+    case Encoding::BlockCol8:
         span = size / e.GetBlockAlignment() - 1;
         break;
     default:

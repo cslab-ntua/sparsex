@@ -49,13 +49,13 @@ int GetOptionOuterLoops()
 static void do_spmv_thread(spm_mt_thread_t *thread, boost::barrier &cur_barrier)
 {
 	setaffinity_oncpu(thread->cpu);
-	spmv_double_fn_t *spmv_mt_fn = (spmv_double_fn_t *) thread->spmv_fn;
+	spmv_fn_t spmv_mt_fn = thread->spmv_fn;
     Timer timer_thr("Thread time");
 
 	for (size_t i = 0; i < nr_loops; i++) {
 		cur_barrier.wait();
         timer_thr.Start();
-		spmv_mt_fn(thread->spm, x, y, 1);
+		spmv_mt_fn(thread->spm, x, y, 1, NULL);
         timer_thr.Pause();
 		cur_barrier.wait();
 	}
@@ -68,7 +68,7 @@ static void do_spmv_thread_main_swap(spm_mt_thread_t *thread,
                                      boost::barrier &cur_barrier)
 {
 	setaffinity_oncpu(thread->cpu);
-	spmv_double_fn_t *spmv_mt_fn = (spmv_double_fn_t *) thread->spmv_fn;
+	spmv_fn_t spmv_mt_fn = thread->spmv_fn;
     Timer timer_total("Total time");
     Timer timer_thr("Thread time");
 
@@ -96,8 +96,7 @@ static void do_spmv_thread_sym(spm_mt_thread_t *thread,
                                boost::barrier &cur_barrier)
 {
 	setaffinity_oncpu(thread->cpu);
-	spmv_double_sym_fn_t *spmv_mt_sym_fn = 
-        (spmv_double_sym_fn_t *) thread->spmv_fn;
+	spmv_fn_t spmv_mt_sym_fn = thread->spmv_fn;
 	int id = thread->id;
     Timer timer_thr("Thread time");
 	// Switch Reduction Phase.
@@ -113,7 +112,7 @@ static void do_spmv_thread_sym(spm_mt_thread_t *thread,
 		spx_vec_init_from_map(tmp, 0, thread->map);
 		cur_barrier.wait();
         timer_thr.Start();
-		spmv_mt_sym_fn(thread->spm, x, y, tmp[id], 1);
+		spmv_mt_sym_fn(thread->spm, x, y, 1, tmp[id]);
         timer_thr.Pause();
 		cur_barrier.wait();
 		spx_vec_add_from_map(y, tmp, y, thread->map);

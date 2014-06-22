@@ -104,13 +104,13 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
         if (!spm_mt->symmetric) {
             secs = spmv_bench_mt(spm_mt, loops_nr, nrows, ncols);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-            printf("m:%s f:%s s:%lu pt:%lf t:%lf r:%lf\n", "csx",
+            printf("m:%s f:%s s:%lu pt:%f t:%f r:%f\n", "csx",
                    basename(mmf_name), CsxSize<ValueType>(spm_mt), csx_time,
                    secs, flops);
         } else {
             secs = spmv_bench_sym_mt(spm_mt, loops_nr, nrows, ncols);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
-            printf("m:%s f:%s ms:%lu s:%lu pt:%lf t:%lf r:%lf\n", "csx-sym",
+            printf("m:%s f:%s ms:%lu s:%lu pt:%f t:%f r:%f\n", "csx-sym",
                    basename(mmf_name), MapSize(spm_mt),
                    CsxSymSize<ValueType>(spm_mt), csx_time, secs, flops);
         }

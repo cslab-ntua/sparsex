@@ -52,7 +52,7 @@ public:
     typedef enum {
         SPLIT_BY_ROWS = 0,  /* Split by rows (each window has the same number of
                                rows) */
-        SPLIT_BY_NNZ,       /* Split by nonzeros (each window has almost the
+        SPLIT_BY_NNZ        /* Split by nonzeros (each window has almost the
                                same number of nonzero elements) */
     } split_alg_t;
     

@@ -25,7 +25,7 @@ enum alloc_type {
 	ALLOC_STD = 1,
 	ALLOC_NUMA,
 	ALLOC_MMAP,
-	ALLOC_OTHER,
+	ALLOC_OTHER
 };
 
 enum copy_mode {
@@ -328,8 +328,9 @@ int spx_vec_compare(const vector_t *v1, const vector_t *v2)
 	
 	for (unsigned long i=0; i<v1->size; i++) {
 		if (elems_neq(v1->elements[i], v2->elements[i])) {
-			fprintf(stderr, "element %ld differs: %10.20lf != %10.20lf\n", i,
-			        (spx_value_t) v1->elements[i], (spx_value_t) v2->elements[i]);
+			fprintf(stderr, "element %ld differs: %10.20f != %10.20f\n", i,
+			        (spx_value_t) v1->elements[i],
+                    (spx_value_t) v2->elements[i]);
 			return -1;
 		}
 	}

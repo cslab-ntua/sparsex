@@ -50,7 +50,7 @@ static void deref(void *ptr)
 ${spmv_func_definitions}
 
 void spm_csx32_double_sym_multiply(void *spm, vector_t *in, vector_t *out,
-                                   vector_t *temp, double scale_f)
+                                   double scale_f, vector_t *temp)
 {
 	csx_double_sym_t *csx_sym = (csx_double_sym_t *) spm;
 	csx_double_t *csx = csx_sym->lower_matrix;

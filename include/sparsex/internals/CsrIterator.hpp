@@ -96,7 +96,7 @@ CSR_iterator<SortIter, PermIter>
 get_CSR_iterator(SortIter si, PermIter pi) 
 { 
     return CSR_iterator<SortIter, PermIter>(si, pi); 
-};
+}
 
 template <typename SortIter, typename PermIter> 
 struct CSR_Comp : public std::binary_function<

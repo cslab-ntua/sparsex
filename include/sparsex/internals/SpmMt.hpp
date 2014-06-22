@@ -16,19 +16,20 @@
 #include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Map.hpp"
 #include "sparsex/internals/Vector.hpp"
+#include "sparsex/internals/SpmvMethod.hpp"
 
 #include <stdbool.h>
 #include <stdint.h>
 
 struct spm_mt_thread {
 	void *spm;
-	void *spmv_fn;
+	spmv_fn_t spmv_fn;
 	unsigned int cpu;
 	unsigned int id;
 	int node;
-	uint64_t row_start;
-	uint64_t end;
-	uint64_t nr_rows;
+	size_t row_start;
+	size_t end;
+	size_t nr_rows;
 	// uint64_t *col_map;
 	map_t *map;
 	struct vec *x, *y;

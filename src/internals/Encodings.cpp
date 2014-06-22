@@ -64,7 +64,7 @@ std::map<string, Encoding::Type> Encoding::InitInverseNameMap()
 
 std::map<string, Encoding::Type> Encoding::rev_names_ = InitInverseNameMap();
 
-const void Encoding::GetTypes(vector<Type> &types) const
+void Encoding::GetTypes(vector<Type> &types) const
 {
     switch (type_)
     {

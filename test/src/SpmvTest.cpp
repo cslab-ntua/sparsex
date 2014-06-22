@@ -7,6 +7,8 @@
 
 static const char *program_name;
 
+static double CalcImbalance(void *arg) __attribute__ ((unused));
+
 static double CalcImbalance(void *arg)
 {
     spm_mt_t *spm_mt = (spm_mt_t *) arg;
@@ -18,7 +20,7 @@ static double CalcImbalance(void *arg)
     for (i = 0; i < spm_mt->nr_threads; ++i) {
         spm_mt_thread_t *spm = &(spm_mt->spm_threads[i]);
         double thread_time = spm->secs;
-        printf("thread %zd: %f\n", i, thread_time);
+        printf("thread %lu: %f\n", i, thread_time);
         total_time += thread_time;
         if (thread_time > max_time) {
             max_time = thread_time;
@@ -30,7 +32,7 @@ static double CalcImbalance(void *arg)
     }
 
     double ideal_time = total_time / spm_mt->nr_threads;
-    printf("Worst thread: %zd\n", worst);
+    printf("Worst thread: %lu\n", worst);
     printf("Expected perf. improvement: %.2f %%\n",
            100*(max_time / ideal_time - 1));
     return (max_time - min_time) / min_time;
@@ -49,9 +51,11 @@ int main(int argc, char **argv)
     char c;
     spm_mt_t *spm_mt;
 
-    // AlwaysUseConsole();
-    // UseConsole(Debug);
+#if SPX_DEBUG
+    AlwaysUseConsole();
+#else
     DisableInfo();
+#endif
 
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();

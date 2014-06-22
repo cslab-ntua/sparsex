@@ -54,7 +54,7 @@ public:
         MatrixMaxUnitSize,
         MatrixMinCoverage,
         LogFilename,
-        LogLevel,
+        LogLevel
     };
     
     struct Mnemonic {};

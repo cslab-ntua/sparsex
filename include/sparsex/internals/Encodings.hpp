@@ -51,7 +51,7 @@ public:
         BlockRows,
         BlockCols,
         All,
-        __EndOfGroups__,
+        __EndOfGroups__
     };
 
     typedef pair<Type, size_t> Instantiation;
@@ -112,7 +112,7 @@ public:
         return ret;
     }
 
-    const void GetTypes(vector<Type> &types) const;
+    void GetTypes(vector<Type> &types) const;
 
     static const Type Max = __EndOfTypes__;
     static const Type BlockRowMin = BlockRow1;
@@ -208,7 +208,7 @@ public:
     enum Type {
         None,
         FixedWindow,
-        FixedPortion,
+        FixedPortion
     };
 
     PreprocessingMethod(Type meth)

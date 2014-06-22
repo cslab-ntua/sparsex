@@ -30,7 +30,8 @@ static SpmvFn GetSpmvFn(library type);
 static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
                      double **values, int *nrows, int *ncols, int *nnz);
 static inline int elems_neq(double a, double b);
-static int vec_compare(const double *v1, const double *v2, size_t size);
+static int vec_compare(const double *v1, const double *v2, size_t size)
+    __attribute__ ((unused));
 
 void Bench_Directory(const char *directory, const char *library,
                      const char *stats_file)

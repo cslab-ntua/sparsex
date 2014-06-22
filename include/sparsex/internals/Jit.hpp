@@ -18,6 +18,7 @@
 #include "sparsex/internals/Element.hpp"
 #include "sparsex/internals/JitConfig.hpp"
 #include "sparsex/internals/JitUtil.hpp"
+#include "sparsex/internals/SpmvMethod.hpp"
 #include "sparsex/internals/TemplateText.hpp"
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
@@ -118,7 +119,7 @@ public:
     }
 
     void GenCode(std::ostream &log);
-    void *GetSpmvFn() const;
+    spmv_fn_t GetSpmvFn() const;
 
 private:
     // Compile C99 source code into an LLVM module
@@ -179,7 +180,7 @@ CsxJit<IndexType, ValueType>::CsxJit(CsxManager<IndexType, ValueType> *csxmg,
     compiler_ = new ClangCompiler();
     compiler_->AddHeaderSearchPath(SPX_JIT_INCLUDE);
     //compiler_->SetDebugMode(true);
-};
+}
 
 template<typename IndexType, typename ValueType>
 CsxJit<IndexType, ValueType>::CsxJit(csx_t<ValueType> *csx,
@@ -200,7 +201,7 @@ CsxJit<IndexType, ValueType>::CsxJit(csx_t<ValueType> *csx,
     compiler_ = new ClangCompiler();
     compiler_->AddHeaderSearchPath(SPX_JIT_INCLUDE);
     // compiler_->SetDebugMode(true);
-};
+}
 
 template<typename IndexType, typename ValueType>
 TemplateText *CsxJit<IndexType, ValueType>::GetMultTemplate(Encoding::Type type)
@@ -229,7 +230,14 @@ TemplateText *CsxJit<IndexType, ValueType>::GetMultTemplate(Encoding::Type type)
         mult_templates_[type] =
             new TemplateText(SourceFromFile(RDiagTemplateSource));
         break;
-    case Encoding::BlockRow1 ... Encoding::BlockRowMax:
+    case Encoding::BlockRow1:
+    case Encoding::BlockRow2:
+    case Encoding::BlockRow3:
+    case Encoding::BlockRow4:
+    case Encoding::BlockRow5:
+    case Encoding::BlockRow6:
+    case Encoding::BlockRow7:
+    case Encoding::BlockRow8:
         // Set the same template for all block row patterns
         mult_templates_[Encoding::BlockRow1] =
             new TemplateText(SourceFromFile(BlockRowOneTemplateSource));
@@ -238,7 +246,14 @@ TemplateText *CsxJit<IndexType, ValueType>::GetMultTemplate(Encoding::Type type)
             mult_templates_[t] =
                 new TemplateText(SourceFromFile(BlockRowTemplateSource));
         break;
-    case Encoding::BlockCol1 ... Encoding::BlockColMax:
+    case Encoding::BlockCol1:
+    case Encoding::BlockCol2:
+    case Encoding::BlockCol3:
+    case Encoding::BlockCol4:
+    case Encoding::BlockCol5:
+    case Encoding::BlockCol6:
+    case Encoding::BlockCol7:
+    case Encoding::BlockCol8:
         // Set the same template for all block row patterns
         mult_templates_[Encoding::BlockCol1] =
             new TemplateText(SourceFromFile(BlockColOneTemplateSource));
@@ -256,7 +271,8 @@ exit:
 }
 
 template<typename IndexType, typename ValueType>
-TemplateText *CsxJit<IndexType, ValueType>::GetSymMultTemplate(Encoding::Type type)
+TemplateText *CsxJit<IndexType, ValueType>::GetSymMultTemplate(
+    Encoding::Type type)
 {
     if (mult_templates_.count(type))
         goto exit;
@@ -282,14 +298,28 @@ TemplateText *CsxJit<IndexType, ValueType>::GetSymMultTemplate(Encoding::Type ty
         mult_templates_[type] =
             new TemplateText(SourceFromFile(RDiagSymTemplateSource));
         break;
-    case Encoding::BlockRow1 ... Encoding::BlockRowMax:
+    case Encoding::BlockRow1:
+    case Encoding::BlockRow2:
+    case Encoding::BlockRow3:
+    case Encoding::BlockRow4:
+    case Encoding::BlockRow5:
+    case Encoding::BlockRow6:
+    case Encoding::BlockRow7:
+    case Encoding::BlockRow8:
         // Set the same template for all block row patterns
         for (Encoding::Type t = Encoding::BlockRow1;
              t <= Encoding::BlockRowMax; ++t)
             mult_templates_[t] =
                 new TemplateText(SourceFromFile(BlockRowSymTemplateSource));
         break;
-    case Encoding::BlockCol1 ... Encoding::BlockColMax:
+    case Encoding::BlockCol1:
+    case Encoding::BlockCol2:
+    case Encoding::BlockCol3:
+    case Encoding::BlockCol4:
+    case Encoding::BlockCol5:
+    case Encoding::BlockCol6:
+    case Encoding::BlockCol7:
+    case Encoding::BlockCol8:
         // Set the same template for all block row patterns
         for (Encoding::Type t = Encoding::BlockCol1;
              t <= Encoding::BlockColMax; ++t)
@@ -513,7 +543,14 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                     patt_code = DoGenLinearSymCase(type, delta);
                 patt_func_entry = "rdiag" + Stringify(delta) + "_case";
                 break;
-            case Encoding::BlockRowMin ... Encoding::BlockRowMax:
+            case Encoding::BlockRow1:
+            case Encoding::BlockRow2:
+            case Encoding::BlockRow3:
+            case Encoding::BlockRow4:
+            case Encoding::BlockRow5:
+            case Encoding::BlockRow6:
+            case Encoding::BlockRow7:
+            case Encoding::BlockRow8:
                 r = e.GetBlockAlignment();
                 c = delta;
                 log << "type:" << e.GetFullName()
@@ -527,7 +564,14 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 patt_func_entry = "block_row_" + Stringify(r) + "x" +
                     Stringify(c) + "_case";
                 break;
-            case Encoding::BlockColMin ... Encoding::BlockColMax:
+            case Encoding::BlockCol1:
+            case Encoding::BlockCol2:
+            case Encoding::BlockCol3:
+            case Encoding::BlockCol4:
+            case Encoding::BlockCol5:
+            case Encoding::BlockCol6:
+            case Encoding::BlockCol7:
+            case Encoding::BlockCol8:
                 r = delta;
                 c = e.GetBlockAlignment();
                 log << "type:" << e.GetFullName()
@@ -597,7 +641,14 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                     patt_code = DoGenLinearSymCase(type, delta);
                 patt_func_entry = "rdiag" + Stringify(delta) + "_case";
                 break;
-            case Encoding::BlockRowMin ... Encoding::BlockRowMax:
+            case Encoding::BlockRow1:
+            case Encoding::BlockRow2:
+            case Encoding::BlockRow3:
+            case Encoding::BlockRow4:
+            case Encoding::BlockRow5:
+            case Encoding::BlockRow6:
+            case Encoding::BlockRow7:
+            case Encoding::BlockRow8:
                 r = e.GetBlockAlignment();
                 c = delta;
                 if (!symmetric_)
@@ -607,7 +658,14 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 patt_func_entry = "block_row_" + Stringify(r) + "x" +
                     Stringify(c) + "_case";
                 break;
-            case Encoding::BlockColMin ... Encoding::BlockColMax:
+            case Encoding::BlockCol1:
+            case Encoding::BlockCol2:
+            case Encoding::BlockCol3:
+            case Encoding::BlockCol4:
+            case Encoding::BlockCol5:
+            case Encoding::BlockCol6:
+            case Encoding::BlockCol7:
+            case Encoding::BlockCol8:
                 r = delta;
                 c = e.GetBlockAlignment();
                 if (!symmetric_)
@@ -730,7 +788,7 @@ void CsxJit<IndexType, ValueType>::DoOptimizeModule()
 }
 
 template<typename IndexType, typename ValueType>
-void *CsxJit<IndexType, ValueType>::GetSpmvFn() const
+spmv_fn_t CsxJit<IndexType, ValueType>::GetSpmvFn() const
 {
     Function *llvm_fn;
     
@@ -740,7 +798,12 @@ void *CsxJit<IndexType, ValueType>::GetSpmvFn() const
     else
         llvm_fn = module_->getFunction("spm_csx32_double_sym_multiply");
     assert(llvm_fn);
-    return engine_->GetPointerToFunction(llvm_fn);
+
+    //
+    // ISO C++ forbids conversion from void * to function pointers; so we cast
+    // first to word size (unsigned long) and then to the function pointer
+    // 
+    return (spmv_fn_t) ((unsigned long) engine_->GetPointerToFunction(llvm_fn));
 }
 
 } // end csx namespace

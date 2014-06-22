@@ -257,12 +257,26 @@ bool SearchValue(void *spm, IndexType row, IndexType col, ValueType& value,
                                    true))
                     return true;
                 break;
-            case Encoding::BlockRowMin ... Encoding::BlockRowMax:
+            case Encoding::BlockRow1:
+            case Encoding::BlockRow2:
+            case Encoding::BlockRow3:
+            case Encoding::BlockRow4:
+            case Encoding::BlockRow5:
+            case Encoding::BlockRow6:
+            case Encoding::BlockRow7:
+            case Encoding::BlockRow8:
                 if (SearchBlock(&v_ptr, delta, size, type, col, row, ucol,
                                 current_row, value, rows_checked, true, mode))
                     return true;
                 break;
-            case Encoding::BlockColMin ... Encoding::BlockColMax:
+            case Encoding::BlockCol1:
+            case Encoding::BlockCol2:
+            case Encoding::BlockCol3:
+            case Encoding::BlockCol4:
+            case Encoding::BlockCol5:
+            case Encoding::BlockCol6:
+            case Encoding::BlockCol7:
+            case Encoding::BlockCol8:
                 if (SearchBlock(&v_ptr, delta, size, type, col, row, ucol,
                                 current_row, value, rows_checked, false, mode))
                     return true;
@@ -270,13 +284,13 @@ bool SearchValue(void *spm, IndexType row, IndexType col, ValueType& value,
             default:
                 assert(0 && "unknown pattern type");
             }
-        } while(ctl_ptr < ctl_end);
+        } while (ctl_ptr < ctl_end);
 
         if ((size_t) current_row == csx->row_start)
             return false;
         rows_checked++;
         current_row--;
-    } while((size_t) current_row >= csx->row_start);
+    } while ((size_t) current_row >= csx->row_start);
 
     return false;
 }

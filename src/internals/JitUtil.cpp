@@ -13,12 +13,15 @@
 #include <fstream>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include <unistd.h>
 
-std::string SourceFromFile(const char *filename)
+using namespace std;
+
+string SourceFromFile(const char *filename)
 {
-    std::ifstream ifs(filename);
-    std::string ret;
+    ifstream ifs(filename);
+    string ret;
     for(;;) {
         char c = ifs.get();
         if (!ifs.good())
@@ -30,16 +33,18 @@ std::string SourceFromFile(const char *filename)
     return ret;
 }
 
-void SourceToFile(const char *filename, const std::string &source)
+void SourceToFile(const char *filename, const string &source)
 {
-    std::ofstream ofs(filename);
+    ofstream ofs(filename);
     ofs << source;
     ofs.close();
 }
 
-const char *UniqueFilename(std::string &tmpl)
+const char *UniqueFilename(string &tmpl)
 {
-    char local_tmpl[tmpl.size()+1];
+    // Cannot play with C++ strings here, since mkstemp() alters is char *
+    // argument
+    char *local_tmpl = new char[tmpl.size()+1];
     int fd;
 
     tmpl.copy(local_tmpl, tmpl.size());
@@ -55,6 +60,7 @@ const char *UniqueFilename(std::string &tmpl)
     // FIXME: an implementation with boost iostreams would be more portable
     close(fd);
     tmpl.assign(local_tmpl);
+    delete local_tmpl;
     return tmpl.c_str();
 }
 

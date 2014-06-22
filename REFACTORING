@@ -49,6 +49,7 @@
 * Segfault when TemplateText placeholders are empty/not found. Print error and
   inform about installation.
 * [ 50%] Use SPX_ prefix in macros, e.g., DEBUG_MODE -> SPX_DEBUG
+* DisableInfo() is counter-intuitive (why not EnableXXX()??)
 
 Requirements for StatsCollection
 * [DONE] Scale stats

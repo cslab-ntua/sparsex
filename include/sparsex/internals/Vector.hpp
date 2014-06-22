@@ -13,7 +13,6 @@
 
 #include "sparsex/internals/Map.hpp"
 #include "sparsex/internals/numa_util.h"
-#include "sparsex/internals/SpmMt.hpp"
 #include "sparsex/types.h"
 
 BEGIN_C_DECLS

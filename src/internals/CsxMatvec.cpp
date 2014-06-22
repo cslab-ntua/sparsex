@@ -24,22 +24,22 @@ void do_mv_thread(void *args)
 {
 	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
 	setaffinity_oncpu(spm_thread->cpu);
-	spmv_double_fn_t *fn = (spmv_double_fn_t *) spm_thread->spmv_fn;
+	spmv_fn_t fn = spm_thread->spmv_fn;
 
-	fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA);
+	fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA, NULL);
 }
 
 void do_mv_sym_thread(void *args)
 {
 	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
 	setaffinity_oncpu(spm_thread->cpu);
-	spmv_double_sym_fn_t *fn = (spmv_double_sym_fn_t *) spm_thread->spmv_fn;
+	spmv_fn_t fn = spm_thread->spmv_fn;
 	int id = spm_thread->id;
     int *sense = spm_thread->sense;
 
     spx_vec_init_from_map(temp, 0, spm_thread->map);
     centralized_barrier(sense, nr_threads);
-    fn(spm_thread->spm, spm_thread->x, spm_thread->y, temp[id], ALPHA);
+    fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA, temp[id]);
     centralized_barrier(sense, nr_threads);
     /* Switch Reduction Phase */
     spx_vec_add_from_map(spm_thread->y, temp, spm_thread->y, spm_thread->map);
@@ -49,20 +49,20 @@ void do_kernel_thread(void *args)
 {
 	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
 	setaffinity_oncpu(spm_thread->cpu);
-	spmv_double_fn_t *fn = (spmv_double_fn_t *) spm_thread->spmv_fn;
+	spmv_fn_t fn = spm_thread->spmv_fn;
     int start = spm_thread->row_start;
     int end = start + spm_thread->nr_rows;
 
 	if (BETA != 1)
         spx_vec_scale_part(spm_thread->y, spm_thread->y, BETA, start, end);
-	fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA);
+	fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA, NULL);
 }
 
 void do_kernel_sym_thread(void *args)
 {
 	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
 	setaffinity_oncpu(spm_thread->cpu);
-	spmv_double_sym_fn_t *fn = (spmv_double_sym_fn_t *) spm_thread->spmv_fn;
+	spmv_fn_t fn = spm_thread->spmv_fn;
     int start = spm_thread->row_start;
     int end = start + spm_thread->nr_rows;
 	int id = spm_thread->id;
@@ -72,7 +72,7 @@ void do_kernel_sym_thread(void *args)
     centralized_barrier(sense, nr_threads);
 	if (BETA != 1)
         spx_vec_scale_part(spm_thread->y, spm_thread->y, BETA, start, end);
-    fn(spm_thread->spm, spm_thread->x, spm_thread->y, temp[id], ALPHA);
+    fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA, temp[id]);
     centralized_barrier(sense, nr_threads);
     /* Switch Reduction Phase */
     spx_vec_add_from_map(spm_thread->y, temp, spm_thread->y, spm_thread->map);

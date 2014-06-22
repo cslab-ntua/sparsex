@@ -58,7 +58,7 @@ static void fix_interleaving(size_t nr_parts, size_t *parts, int *nodes)
 {
     size_t i;
 	int nr_nodes = numa_num_configured_nodes();
-    int pagesize = numa_pagesize();
+    size_t pagesize = numa_pagesize();
     size_t *node_scores = calloc(nr_nodes, sizeof(*node_scores));
     if (!node_scores) {
         perror("malloc");
@@ -145,7 +145,7 @@ static void fix_interleaving(size_t nr_parts, size_t *parts, int *nodes)
 void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts, int *nodes)
 {
 	size_t i;
-	void *ret = NULL;
+	char *ret = NULL;
 
 	/* sanity check */
 	if (numa_available() < 0) {
@@ -155,7 +155,7 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts, int *nodes)
 
 	ret = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
 	           0, 0);
-	if (ret == (void *) -1) {
+	if (ret == (char *) -1) {
 		ret = NULL;
 		goto exit;
 	}
@@ -165,7 +165,7 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts, int *nodes)
 	// Fix the interleaving and bind parts to specific nodes
 	fix_interleaving(nr_parts, parts, nodes);
 
-	void *curr_part = ret;
+	char *curr_part = ret;
 	for (i = 0; i < nr_parts; i++) {
         if (!parts[i])
             continue;
@@ -204,7 +204,7 @@ void free_interleaved(void *addr, size_t length)
 
 int check_region(void *addr, size_t size, int node)
 {
-	void *misplaced_start;
+	char *misplaced_start;
 	int pagesize;
 	size_t i;
 	int misplaced_node;
@@ -213,7 +213,7 @@ int check_region(void *addr, size_t size, int node)
 	pagesize = numa_pagesize();
 	misplaced_start = NULL;
 	misplaced_node = -1;
-	void *aligned_addr = ALIGN_ADDR(addr, pagesize);
+	char *aligned_addr = ALIGN_ADDR(addr, pagesize);
 	for (i = 0; i < size; i += pagesize) {
 		int page_node;
 		if (get_mempolicy(&page_node, 0, 0, aligned_addr + i,
@@ -268,7 +268,7 @@ int check_interleaved(void *addr, const size_t *parts, size_t nr_parts,
 		if (check_region(addr, parts[i], nodes[i]))
 			err = 1;
 
-		addr += parts[i];
+		addr = ((char *) addr) + parts[i];
 	}
 
 	return err;
