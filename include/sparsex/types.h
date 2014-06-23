@@ -7,6 +7,7 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
 #ifndef SPARSEX_TYPES_H
 #define SPARSEX_TYPES_H
 
@@ -36,4 +37,4 @@
 #   define spx_scalar_t double
 #endif
 
-#endif // SPARSEX_MATTYPE_H
+#endif /* SPARSEX_MATTYPE_H */

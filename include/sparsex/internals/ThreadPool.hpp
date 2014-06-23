@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef THREAD_POOL_HPP
-#define THREAD_POOL_HPP
+
+#ifndef SPARSEX_INTERNALS_THREAD_POOL_HPP
+#define SPARSEX_INTERNALS_THREAD_POOL_HPP
 
 #include "sparsex/internals/CsxMatvec.hpp"
 #include "sparsex/internals/Barrier.hpp"
@@ -109,4 +110,4 @@ private:
     ThreadPool& operator=(ThreadPool const&);
 };
 
-#endif  // THREAD_POOL_HPP
+#endif  // SPARSEX_INTERNALS_THREAD_POOL_HPP

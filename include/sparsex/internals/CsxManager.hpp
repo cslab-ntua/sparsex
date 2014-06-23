@@ -9,8 +9,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSX_MANAGER_HPP
-#define CSX_MANAGER_HPP
+
+#ifndef SPARSEX_INTERNALS_CSX_MANAGER_HPP
+#define SPARSEX_INTERNALS_CSX_MANAGER_HPP
 
 #include "sparsex/internals/Allocators.hpp"
 #include "sparsex/internals/Config.hpp"
@@ -128,6 +129,7 @@ public:
 
 private:
     void AddMappings(long *map);
+
     /**
      *  Transform a row of the matrix into CSX form.
      *
@@ -155,7 +157,7 @@ private:
      *
      *  @param xs vector with the columns of elements.
      */
-    void AddXs(std::vector<IndexType> &xs);
+    void AddXs(vector<IndexType> &xs);
 
     /**
      *  Set all the flags of pattern info for elements that adhere to a type of
@@ -168,7 +170,7 @@ private:
     /**
      *  @param xs  elements found before pattern.
      */
-    void PreparePat(std::vector<IndexType> &xs,
+    void PreparePat(vector<IndexType> &xs,
                     const Element<IndexType, ValueType> &elem);
 
     /**
@@ -444,8 +446,8 @@ void CsxManager<IndexType, ValueType>::AddMappings(long *map)
 }
 
 template<typename IndexType, typename ValueType>
-void CsxManager<IndexType, ValueType>::UpdateRowSpan(
-    const Element<IndexType, ValueType> &elem)
+void CsxManager<IndexType, ValueType>::
+UpdateRowSpan(const Element<IndexType, ValueType> &elem)
 {
     assert(elem.IsPattern());
     const Encoding::Instantiation &inst = elem.GetInstantiation();
@@ -501,7 +503,7 @@ DoRow(typename SparsePartition<IndexType, ValueType>::iterator &rbegin,
       typename SparsePartition<IndexType, ValueType>::iterator &rend,
       IndexType row)
 {
-    std::vector<IndexType> xs;
+    vector<IndexType> xs;
 
     span_ = 0;
     last_col_ = 1;
@@ -516,8 +518,7 @@ DoRow(typename SparsePartition<IndexType, ValueType>::iterator &rbegin,
             assert(xs.size() == 0);
             AddPattern(*ri);
             const ValueType *elem_vals = &(*ri).GetValues();
-            std::copy(elem_vals, elem_vals + (*ri).GetSize(),
-                      values_ + values_idx_);
+            copy(elem_vals, elem_vals + (*ri).GetSize(), values_ + values_idx_);
             values_idx_ += (*ri).GetSize();
             continue;
         }
@@ -546,7 +547,7 @@ void CsxManager<IndexType, ValueType>::
 DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
          typename SparsePartition<IndexType, ValueType>::iterator &rend)
 {
-    std::vector<IndexType> xs;
+    vector<IndexType> xs;
     typename SparsePartition<IndexType, ValueType>::iterator &ri = rstart;
     span_ = 0;
 
@@ -561,8 +562,7 @@ DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
             assert(xs.size() == 0);
             AddPattern(*ri);
             const ValueType *elem_vals = &(*ri).GetValues();
-            std::copy(elem_vals, elem_vals + (*ri).GetSize(),
-                      values_ + values_idx_);
+            copy(elem_vals, elem_vals + (*ri).GetSize(), values_ + values_idx_);
             values_idx_ += (*ri).GetSize();
             continue;
         }
@@ -590,8 +590,7 @@ DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
             assert(xs.size() == 0);
             AddPattern(*ri);
             const ValueType *elem_vals = &(*ri).GetValues();
-            std::copy(elem_vals, elem_vals + (*ri).GetSize(),
-                      values_ + values_idx_);
+            copy(elem_vals, elem_vals + (*ri).GetSize(), values_ + values_idx_);
             values_idx_ += (*ri).GetSize();
             continue;
         }
@@ -630,9 +629,9 @@ CsxManager<IndexType, ValueType>::UpdateNewRow()
 }
 
 template<typename IndexType, typename ValueType>
-void CsxManager<IndexType, ValueType>::AddXs(std::vector<IndexType> &xs)
+void CsxManager<IndexType, ValueType>::AddXs(vector<IndexType> &xs)
 {
-    typename std::vector<IndexType>::iterator vi;
+    typename vector<IndexType>::iterator vi;
 
     size_t xs_size = xs.size();
     IndexType last_col = xs[xs_size-1];
@@ -646,8 +645,8 @@ void CsxManager<IndexType, ValueType>::AddXs(std::vector<IndexType> &xs)
     IndexType max = 0;
     if (xs_size > 1) {
         vi = xs.begin();
-        std::advance(vi, 1);
-        max = *(std::max_element(vi, xs.end()));
+        advance(vi, 1);
+        max = *(max_element(vi, xs.end()));
     }
 
     size_t delta_bytes = GetDeltaSize(max);
@@ -704,8 +703,7 @@ AddPattern(const Element<IndexType, ValueType> &elem)
 
 template<typename IndexType, typename ValueType>
 void CsxManager<IndexType, ValueType>::
-PreparePat(std::vector<IndexType> &xs,
-           const Element<IndexType, ValueType> &elem)
+PreparePat(vector<IndexType> &xs, const Element<IndexType, ValueType> &elem)
 {
     if (xs.size() != 0)
         AddXs(xs);
@@ -713,6 +711,6 @@ PreparePat(std::vector<IndexType> &xs,
 
 } // end of csx namespace
 
-#endif  // CSX_MANAGER_HPP
+#endif  // SPARSEX_INTERNALS_CSX_MANAGER_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

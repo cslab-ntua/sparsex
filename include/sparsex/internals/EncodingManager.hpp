@@ -9,8 +9,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef ENCODING_MANAGER_HPP
-#define ENCODING_MANAGER_HPP
+
+#ifndef SPARSEX_INTERNALS_ENCODING_MANAGER_HPP
+#define SPARSEX_INTERNALS_ENCODING_MANAGER_HPP
 
 #include "sparsex/internals/Delta.hpp"
 #include "sparsex/internals/Element.hpp"
@@ -46,6 +47,8 @@ template<typename IndexType, typename ValueType>
 class EncodingManager
 {
 public:    
+    static void CheckParams(RuntimeConfiguration &config);
+
     /**
      *  Algorithm for spliting the input matrix into sorting windows.
      */
@@ -57,7 +60,7 @@ public:
     } split_alg_t;
     
     typedef typename std::vector<IndexType>::iterator sort_split_iterator;
-    
+
     EncodingManager(SparsePartition<IndexType, ValueType> *spm,
                     RuntimeConfiguration &config);
     ~EncodingManager() {
@@ -344,10 +347,12 @@ private:
     size_t max_limit_;
     double min_perc_;
     bool sampling_enabled_;
-    uint64_t sort_window_size_;
+    bool minimize_cost_;
+    size_t sort_window_size_;
     PreprocessingMethod preproc_method_;
+    PreprocessingHeuristic preproc_heur_;
     double sampling_portion_;
-    uint64_t samples_max_;
+    size_t samples_max_;
     bool symmetric_;
     bool split_blocks_;
     bool onedim_blocks_;
@@ -453,6 +458,42 @@ RLEncode(T input)
  * Implementation of class EncodingManager
  */
 template<typename IndexType, typename ValueType>
+void EncodingManager<IndexType, ValueType>::
+CheckParams(RuntimeConfiguration &config)
+{
+    PreprocessingMethod method = config.GetProperty<PreprocessingMethod>(
+        RuntimeConfiguration::PreprocMethod);
+
+    if (method.GetType() == PreprocessingMethod::FixedPortion) {
+        double sampling_portion = config.GetProperty<double>(
+            RuntimeConfiguration::PreprocSamplingPortion);
+        size_t samples_max = config.GetProperty<size_t>(
+            RuntimeConfiguration::PreprocNrSamples);
+        if (samples_max <= 0) {
+            LOG_ERROR << "invalid number of samples\n";
+            exit(1);
+        }
+        if (sampling_portion <= 0 || sampling_portion > 1) {
+            LOG_ERROR << "invalid sampling portion\n";
+            exit(1);
+        }
+    } else if (method.GetType() == PreprocessingMethod::FixedWindow) {
+        size_t sort_window_size = config.GetProperty<size_t>(
+            RuntimeConfiguration::PreprocWindowSize);
+        size_t samples_max = config.GetProperty<size_t>(
+            RuntimeConfiguration::PreprocNrSamples);
+        if (samples_max <= 0) {
+            LOG_ERROR << "invalid number of samples\n";
+            exit(1);
+        }
+        if (sort_window_size <= 0) {
+            LOG_ERROR << "invalid window size\n";
+            exit(1);
+        }
+    }
+}
+
+template<typename IndexType, typename ValueType>
 EncodingManager<IndexType, ValueType>::
 EncodingManager(SparsePartition<IndexType, ValueType> *spm,
                 RuntimeConfiguration &config)
@@ -468,6 +509,8 @@ EncodingManager(SparsePartition<IndexType, ValueType> *spm,
                                 RuntimeConfiguration::PreprocWindowSize)),
           preproc_method_(config_.GetProperty<PreprocessingMethod>(
                               RuntimeConfiguration::PreprocMethod)),
+          preproc_heur_(config_.GetProperty<PreprocessingHeuristic>(
+                            RuntimeConfiguration::PreprocHeuristic)),
           sampling_portion_(config_.GetProperty<double>(
                                 RuntimeConfiguration::PreprocSamplingPortion)),
           samples_max_(config_.GetProperty<size_t>(
@@ -494,11 +537,14 @@ EncodingManager(SparsePartition<IndexType, ValueType> *spm,
     } else {
         sampling_enabled_ = true;
         assert(samples_max_ > 0 && "invalid samples number");
-        assert(sampling_portion_ > 0 && sampling_portion_ <= 1 &&
-               "invalid sampling portion");
         if (preproc_method_.GetType() == PreprocessingMethod::FixedPortion) {
+            assert(sampling_portion_ > 0 && sampling_portion_ <= 1 &&
+                   "invalid sampling portion");
             sort_window_size_ =
                 sampling_portion_*spm_->GetNrNonzeros() / samples_max_;
+        } else if (preproc_method_.GetType() ==
+                   PreprocessingMethod::FixedWindow) {
+            assert(sort_window_size_ > 0 && "invalid window size");
         }
 
         ComputeSortSplits();
@@ -506,6 +552,12 @@ EncodingManager(SparsePartition<IndexType, ValueType> *spm,
             samples_max_ = sort_splits_.size();
 
         SelectSplits();
+    }
+
+    if (preproc_heur_.GetType() == PreprocessingHeuristic::MinCost) {
+        minimize_cost_ = true;
+    } else {
+        minimize_cost_ = false;
     }
 }
     
@@ -650,10 +702,11 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
         stats.ManipulateStats(cfilter);
 
     } else {
-#ifdef SPM_HEUR_NEW
-        // first generate stats for the delta type
-        GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1, stats);
-#endif
+        if (minimize_cost_) {
+            // first generate stats for the delta type
+            GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1, stats);
+        }
+
         for (Encoding::Type t = Encoding::Horizontal; t < Encoding::Max; ++t) {
             if (xforms_ignore_[t])
                 continue;
@@ -673,12 +726,10 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
             CoverageFilter cfilter(spm_->GetNrNonzeros(), min_perc_,
                                    encoded_inst_);
             stats.ManipulateStats(cfilter);
-            // // std::cout << "after"<< t<<" " <<__FUNCTION__<<std::endl;
             // stats_[t] = GenerateStats(0, spm_->GetRowptrSize() - 1);
             // sp = &stats_[t];
             // if (block_align && split_blocks_)
             //     CorrectBlockStats(sp, block_align);
-            // // std::cout << "ok1"<< __FUNCTION__<<std::endl;
 
             // for (iter = sp->begin(); iter != sp->end(); ) {
             //     tmp = iter++;
@@ -692,9 +743,9 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
             //     else
             //         deltas_to_encode_[t].insert(tmp->first);
             // }
-#ifdef SPM_HEUR_NEW
-            GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1, stats);
-#endif
+                if (minimize_cost_)
+                    GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1,
+                                       stats);
         }
     }
 }
@@ -728,22 +779,22 @@ unsigned long EncodingManager<IndexType, ValueType>::GetTypeScore(
     size_t nr_patterns = sdata.GetPatterns();
     size_t score;
 
-#ifdef SPM_HEUR_NEW
-    size_t nr_deltas = encoded_stats_.GetGlobalStats().GetDeltas() +
-        sdata.GetDeltas();
+    if (minimize_cost_) {
+        size_t nr_deltas = encoded_stats_.GetGlobalStats().GetDeltas() +
+            sdata.GetDeltas();
+        size_t nr_switches;
+        if (type == Encoding::None)
+            nr_switches = nr_patterns;
+        else
+            nr_switches = nr_patterns + nr_deltas;
+        if (nr_encoded < nr_patterns + nr_switches)
+            score = 0;
+        else
+            score = nr_encoded - nr_patterns - nr_switches;
+    } else {
+        score = nr_encoded - nr_patterns;
+    }
 
-    size_t nr_switches;
-    if (type == Encoding::None)
-        nr_switches = nr_patterns;
-    else
-        nr_switches = nr_patterns + nr_deltas;
-    if (nr_encoded < nr_patterns + nr_switches)
-        score = 0;
-    else
-        score = nr_encoded - nr_patterns - nr_switches;
-#else
-    score = nr_encoded - nr_patterns;
-#endif
     return score;
 }
 
@@ -1210,8 +1261,6 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
     bool last_rle_patt = false; // turn on for encoded units
     typename std::vector<Element<IndexType, ValueType> *>::iterator ei =
         elems.begin();
-    typename std::vector<Element<IndexType, ValueType> *>::iterator ee =
-        elems.end();
 
     FOREACH(RLE<IndexType> &rle, rles) {
 #if SPX_USE_NUMA
@@ -1246,7 +1295,7 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
             // Mark the elements of the pattern and its start
             (*ei)->GetMarker().Mark(PatternMarker::PatternStart);
             for (size_t i = 0; i < real_nnz - rem_nnz; ++i) {
-                assert(ei < ee);
+                assert(ei < elems.end());
                 (*ei)->GetMarker().Mark(PatternMarker::InPattern);
                 ++ei;
             }
@@ -1282,8 +1331,6 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
     IndexType unit_start = 0;
     typename std::vector<Element<IndexType, ValueType>*>::iterator ei =
         elems.begin();
-    typename std::vector<Element<IndexType, ValueType>*>::iterator ee =
-        elems.end();
 
     FOREACH (RLE<IndexType> &rle, rles) {
         unit_start += rle.val;
@@ -1324,7 +1371,7 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
                 // Mark the elements
                 (*ei)->GetMarker().Mark(PatternMarker::PatternStart);
                 for (size_t i = 0; i < nr_elem; ++i) {
-                    assert(ei < ee);
+                    assert(ei < elems.end());
                     if (i < patt_nnz)
                         (*ei)->GetMarker().Mark(PatternMarker::InPattern);
                     ++ei;
@@ -1473,6 +1520,6 @@ void EncodingManager<IndexType, ValueType>::DoCheckSortByNNZ()
 
 } // end of csx namespace
 
-#endif  // ENCODING_MANAGER_HPP
+#endif  // SPARSEX_INTERNALS_ENCODING_MANAGER_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

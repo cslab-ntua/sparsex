@@ -9,8 +9,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSX_BUILD_HPP
-#define CSX_BUILD_HPP
+
+#ifndef SPARSEX_INTERNALS_CSX_BUILD_HPP
+#define SPARSEX_INTERNALS_CSX_BUILD_HPP
 
 #include "sparsex/internals/Affinity.hpp"
 #include "sparsex/internals/Config.hpp"
@@ -30,6 +31,7 @@
 #include <boost/make_shared.hpp>
 
 using namespace csx;
+using namespace std;
 
 double csx_create_time, encode_time;
 
@@ -61,7 +63,7 @@ spm_mt_t *PrepareSpmMt();
  *  Routine responsible for the Just-In-Time Compilation.
  */
 template<typename InternalType>
-void Compile(spm_mt_t *spm_mt, std::vector<ThreadContext<InternalType> > &data, 
+void Compile(spm_mt_t *spm_mt, vector<ThreadContext<InternalType> > &data, 
              size_t nr_threads, bool symmetric);
 
 /**
@@ -93,7 +95,7 @@ spm_mt_t *BuildCsxSym(SparseInternal<SparsePartitionSym<IndexType,
                                                         ValueType> > *spms);
 
 template<typename InternalType>
-void Compile(spm_mt_t *spm_mt, std::vector<ThreadContext<InternalType> > &data, 
+void Compile(spm_mt_t *spm_mt, vector<ThreadContext<InternalType> > &data, 
              size_t nr_threads, bool symmetric)
 {
     typedef typename InternalType::idx_t IndexType;
@@ -271,8 +273,8 @@ void DoBuild(SparseInternal<SparsePartition<IndexType, ValueType> > *spms,
     size_t nr_threads = rt_context.GetNrThreads();
 
     // Setup thread context
-    std::vector<ThreadContext<SparsePartition
-                              <IndexType, ValueType> > > mt_context(nr_threads);
+    vector<ThreadContext<SparsePartition
+                         <IndexType, ValueType> > > mt_context(nr_threads);
     for (size_t i = 0; i < nr_threads; i++) {
         mt_context[i].SetId(i);
         mt_context[i].SetCpu(rt_context.GetAffinity(i));
@@ -281,7 +283,7 @@ void DoBuild(SparseInternal<SparsePartition<IndexType, ValueType> > *spms,
     }
 
     // Start preprocessing
-    std::vector<boost::shared_ptr<boost::thread> > threads(nr_threads - 1);
+    vector<boost::shared_ptr<boost::thread> > threads(nr_threads - 1);
     for (size_t i = 0; i < nr_threads - 1; ++i) {
         threads[i] = boost::make_shared<boost::thread>(
             PreprocessThread<IndexType, ValueType>, 
@@ -323,8 +325,8 @@ void DoBuildSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms_
     size_t nr_threads = rt_context.GetNrThreads();
 
     // Setup thread context
-    std::vector<ThreadContext<SparsePartitionSym
-                              <IndexType, ValueType> > > mt_context(nr_threads);
+    vector<ThreadContext<SparsePartitionSym
+                         <IndexType, ValueType> > > mt_context(nr_threads);
     for (size_t i = 0; i < nr_threads; i++) {
         mt_context[i].SetId(i);
         mt_context[i].SetCpu(rt_context.GetAffinity(i));
@@ -333,7 +335,7 @@ void DoBuildSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms_
     }
 
     // Start preprocessing
-    std::vector<boost::shared_ptr<boost::thread> > threads(nr_threads - 1);
+    vector<boost::shared_ptr<boost::thread> > threads(nr_threads - 1);
     for (size_t i = 0; i < nr_threads - 1; ++i) {
         threads[i] = boost::make_shared<boost::thread>(
             PreprocessThreadSym<IndexType, ValueType>, 
@@ -429,12 +431,12 @@ void MakeMap(spm_mt_t *spm_mt,
     /*
     for (unsigned int i = 0; i < ncpus; i++) {
         for (unsigned int j = 0; j < n; j++)
-            std::cout << initial_map[i][j] << " ";
-        std::cout << std::endl;
+            cout << initial_map[i][j] << " ";
+        cout << endl;
     }
     for (unsigned int i = 0; i < n; i++)
-        std::cout << count[i] << " ";
-    std::cout << std::endl;
+        cout << count[i] << " ";
+    cout << endl;
     */
     
     ///> Make map.
@@ -533,12 +535,12 @@ void MakeMap(spm_mt_t *spm_mt,
     // for (unsigned int i = 0; i < ncpus; i++) {
     //     spm_thread = spm_mt->spm_threads + i;
     //     map = spm_thread->map;
-    //     std::cout << "Thread " << i << std::endl;
+    //     cout << "Thread " << i << endl;
     //     for (unsigned int j = 0; j < map->length; j++) {
-    //         std::cout << "(" << map->cpus[j] << ", " << map->elems_pos[j]
-    //                   << ")" << std::endl;
+    //         cout << "(" << map->cpus[j] << ", " << map->elems_pos[j]
+    //                   << ")" << endl;
     //     }
-    //     std::cout << std::endl;
+    //     cout << endl;
     // }
     
     
@@ -550,6 +552,6 @@ void MakeMap(spm_mt_t *spm_mt,
     delete[] count;
 }    
 
-#endif // CSX_BUILD_HPP
+#endif // SPARSEX_INTERNALS_CSX_BUILD_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef RCM_HPP
-#define RCM_HPP
+
+#ifndef SPARSEX_INTERNALS_RCM_HPP
+#define SPARSEX_INTERNALS_RCM_HPP
 
 #include "sparsex/internals/Csr.hpp"
 #include "sparsex/internals/CsrIterator.hpp"
@@ -312,12 +313,12 @@ void ReorderMat_CSR(CSR<IndexType, ValueType>& mat, const vector<size_t>& perm,
     for (size_t i = 0; i < mat.GetNrRows(); i++) {
         row_start = mat.rowptr_[i] - !mat.IsZeroBased();
         length = mat.rowptr_[i+1] - mat.rowptr_[i];
-        std::sort(get_CSR_iterator<IndexType*, ValueType*>
-                  (&mat.colind_[row_start], &mat.values_[row_start]), 
-                  get_CSR_iterator<IndexType*, ValueType*>
-                  (&mat.colind_[row_start] + length,
-                   &mat.values_[row_start] + length), 
-                  CSR_Comp<IndexType*, ValueType*>());
+        sort(get_CSR_iterator<IndexType*, ValueType*>
+             (&mat.colind_[row_start], &mat.values_[row_start]), 
+             get_CSR_iterator<IndexType*, ValueType*>
+             (&mat.colind_[row_start] + length,
+              &mat.values_[row_start] + length), 
+             CSR_Comp<IndexType*, ValueType*>());
     }
     mat.SetReordered(inv_perm);
     //assert(inv_perm.capacity() == 0);
@@ -369,4 +370,4 @@ SparseInternal<SparsePartition<IndexType, ValueType> >*LoadCSR_RCM_mt(IndexType 
     return spi;
 }
 
-#endif // RCM_HPP
+#endif // SPARSEX_INTERNALS_RCM_HPP

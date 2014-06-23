@@ -8,8 +8,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef XFORM_HPP
-#define XFORM_HPP
+#ifndef SPARSEX_INTERNALS_XFORM_HPP
+#define SPARSEX_INTERNALS_XFORM_HPP
 
 #include "sparsex/internals/Element.hpp"
 #include "sparsex/internals/Encodings.hpp"
@@ -431,4 +431,4 @@ typename TransformFn<IndexType>::type GetXformFn(Encoding::Type from,
 
 }   // end of csx namespace
 
-#endif  // XFORM_HPP
+#endif  // SPARSEX_INTERNALS_XFORM_HPP

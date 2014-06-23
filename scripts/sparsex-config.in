@@ -78,11 +78,11 @@ until [ -z $1 ]; do
         "--cxxflags")
             out_string="$out_string @AX_PKG_CPPFLAGS@ @CPPFLAGS@ @AX_PKG_CXXFLAGS@ @CXXFLAGS@" ;;
         "--ldflags")
-            out_string="$out_string -L@libdir@ -lsparsex -lsparseximpl @CLANG_LIBS@ @LLVM_LIBS@" ;;
+            out_string="$out_string -L@libdir@ -lsparsex @CLANG_LIBS@ @LLVM_LIBS@" ;;
         "--ldflags-searchpath")
             out_string="$out_string -L@libdir@" ;;
         "--ldflags-libsonly")
-            out_string="$out_string -lsparsex -lsparseximpl @CLANG_LIBS@ @LLVM_LIBS@" ;;
+            out_string="$out_string -lsparsex @CLANG_LIBS@ @LLVM_LIBS@" ;;
         "--prefix")
             out_string="$out_string @prefix@" ;;
         "--exec-prefix")

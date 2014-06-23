@@ -27,20 +27,5 @@ libsparsex_la_SOURCES = \
 	error.c \
 	matvec.c
 
-libsparsex_la_LIBADD = \
-	-lsparseximpl
-#	$(top_builddir)/src/internals/.libs/libsparseximpl.la
-
-if USE_LIB_SUFFIX
-libsparsex_la_LDFLAGS = $(AM_LDFLAGS) -release $(ax_lib_suffix)
-
-install-exec-hook:
-	cd $(DESTDIR)$(libdir) && \
-mv -f libsparsex.a libsparsex-$(ax_lib_suffix).a && \
-$(LN_S) libsparsex-$(ax_lib_suffix).a libsparsex.a
-
-uninstall-hook:
-	rm -f $(DESTDIR)$(libdir)/libsparsex-$(ax_lib_suffix).a
-else
+libsparsex_la_LIBADD = -lsparseximpl
 libsparsex_la_LDFLAGS = $(AM_LDFLAGS)
-endif

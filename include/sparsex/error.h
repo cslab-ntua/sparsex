@@ -7,6 +7,7 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
 #ifndef SPARSEX_ERROR_H
 #define SPARSEX_ERROR_H
 
@@ -103,4 +104,4 @@ spx_errhandler_t spx_err_get_handler();
  */
 void spx_err_set_handler(spx_errhandler_t new_handler);
 
-#endif // SPARSEX_ERROR_H
+#endif /* SPARSEX_ERROR_H */

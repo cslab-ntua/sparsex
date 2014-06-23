@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
+ * Copyright (C) 2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -85,6 +86,15 @@ void Encoding::GetTypes(vector<Type> &types) const
     }
 }
 
+void Encoding::CheckNameValidity(const string &name)
+{
+    std::map<string, Type>::const_iterator i = rev_names_.find(name);
+    if (i == rev_names_.end()) {
+        LOG_ERROR << "substructure type \"" << name << "\" not valid\n";
+        exit(1);
+    }
+}
+
 EncodingSequence::EncodingSequence(const string &seq_str)
     : explicit_(false)
 {
@@ -96,6 +106,9 @@ EncodingSequence::EncodingSequence(const string &seq_str)
     vector<size_t> deltas;
     while (regex_search(s_start, s_end, match, xform_syntax)) {
         string xform_str(match[1].first, match[1].second);
+        // Check first if xform_str is valid
+        Encoding::CheckNameValidity(xform_str);
+
         string deltas_str(match[4].first, match[4].second);
         s_start = match[0].second;
 
@@ -113,7 +126,6 @@ EncodingSequence::EncodingSequence(const string &seq_str)
         deltas.clear();
     }
 }
-
 
 void EncodingSequence::Print(ostream &out) const
 {
@@ -137,6 +149,28 @@ void EncodingSequence::Print(ostream &out) const
     }
 }
 
-bimap<PreprocessingMethod::Type, string> PreprocessingMethod::method_names_;
+bimap<PreprocessingMethod::Type, string> PreprocessingMethod::method_names_ = 
+    PreprocessingMethod::InitMethodNames();
+
+bimap<PreprocessingHeuristic::Type, string> PreprocessingHeuristic::heur_names_ =
+    PreprocessingHeuristic::InitHeuristicNames();
+
+void PreprocessingMethod::CheckNameValidity(const string &name)
+{
+    NameMap::right_const_iterator i = method_names_.right.find(name);
+    if (i == method_names_.right.end()) {
+        LOG_ERROR << "sampling method \"" << name << "\" not valid\n";
+        exit(1);
+    }
+}
+
+void PreprocessingHeuristic::CheckNameValidity(const string &name)
+{
+    NameMap::right_const_iterator i = heur_names_.right.find(name);
+    if (i == heur_names_.right.end()) {
+        LOG_ERROR << "compression heuristic \"" << name << "\" not valid\n";
+        exit(1);
+    }
+}
 
 } // end of namespace csx

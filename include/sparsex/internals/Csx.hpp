@@ -10,8 +10,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSX_HPP
-#define CSX_HPP
+
+#ifndef SPARSEX_INTERNALS_CSX_HPP
+#define SPARSEX_INTERNALS_CSX_HPP
 
 #include "sparsex/internals/CtlUtil.hpp"
 
@@ -59,6 +60,6 @@ struct csx_sym_t {
 
 #endif
 
-#endif  // CSX_HPP
+#endif  // SPARSEX_INTERNALS_CSX_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

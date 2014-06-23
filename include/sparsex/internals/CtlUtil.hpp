@@ -1,5 +1,5 @@
 /*
- * Ctl_ll.hpp -- Definitions and utilities for the ctl byte array of CSX.
+ * CtlUtil.hpp -- Definitions and utilities for the ctl byte array of CSX.
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -8,8 +8,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CTL_UTIL_HPP
-#define CTL_UTIL_HPP
+
+#ifndef SPARSEX_INTERNALS_CTL_UTIL_HPP
+#define SPARSEX_INTERNALS_CTL_UTIL_HPP
 
 #include "sparsex/internals/cdecl.h"
 #include <assert.h>
@@ -126,6 +127,6 @@ end:
 
 END_C_DECLS
 
-#endif // CTL_UTIL_HPP
+#endif // SPARSEX_INTERNALS_CTL_UTIL_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

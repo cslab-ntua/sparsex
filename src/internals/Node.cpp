@@ -13,6 +13,7 @@
 #include "sparsex/internals/Node.hpp"
 
 using namespace csx;
+using namespace std;
 
 Node::Node(uint32_t depth)
   : depth_(depth)
@@ -27,31 +28,31 @@ void Node::PrintNode()
 {
     for (uint32_t i = 0; i < depth_; ++i) {
         if (i != 0)
-            std::cout << ",";
+            cout << ",";
             
-        std::cout << type_path_[i];
+        cout << type_path_[i];
     }
 
-    std::cout << std::endl;
+    cout << endl;
     for (uint32_t i = 0; i < depth_; ++i) {
         Encoding::Type temp_type = type_path_[i];
-        std::set<uint64_t>::iterator it = deltas_path_[temp_type].begin();
+        set<uint64_t>::iterator it = deltas_path_[temp_type].begin();
 
         if (i != 0)
-            std::cout << ",";
+            cout << ",";
             
-        std::cout << "{";
+        cout << "{";
         for (uint32_t i = 1;
              i < static_cast<uint32_t>(deltas_path_[temp_type].size());
              ++i) {
-            std::cout << *it << ",";
+            cout << *it << ",";
             ++it;
         }
 
-        std::cout << *it << "}";
+        cout << *it << "}";
     }
 
-    std::cout << std::endl;
+    cout << endl;
 }
 
 void Node::Ignore(Encoding::Type type)
@@ -65,7 +66,7 @@ void Node::Ignore(Encoding::Type type)
     type_ignore_[i] = type;
 }
 
-Node Node::MakeChild(Encoding::Type type, std::set<uint64_t> deltas)
+Node Node::MakeChild(Encoding::Type type, set<uint64_t> deltas)
 {
     Node new_node = Node(depth_ + 1);
 

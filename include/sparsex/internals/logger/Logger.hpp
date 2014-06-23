@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef LOGGER_HPP
-#define LOGGER_HPP
+
+#ifndef SPARSEX_INTERNALS_LOGGER_LOGGER_HPP
+#define SPARSEX_INTERNALS_LOGGER_LOGGER_HPP
 
 #include "OutputPolicy.hpp"
 
@@ -156,4 +157,4 @@ void UseFile(Level level, const char *log_file);
 #   define LOG_DEBUG Logger<None>()
 #endif
 
-#endif // LOGGER_HPP
+#endif // SPARSEX_INTERNALS_LOGGER_LOGGER_HPP

@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef ALLOCATORS_HPP
-#define ALLOCATORS_HPP
+
+#ifndef SPARSEX_INTERNALS_ALLOCATORS_HPP
+#define SPARSEX_INTERNALS_ALLOCATORS_HPP
 
 #include "sparsex/internals/numa_util.h"
 #include <cassert>
@@ -390,4 +391,4 @@ bool operator!=(const reallocator<T> &,
     return false;
 }
 
-#endif  // ALLOCATORS_HPP
+#endif  // SPARSEX_INTERNALS_ALLOCATORS_HPP

@@ -25,11 +25,12 @@
 #include <fstream>
 
 using namespace boost;
+using namespace std;
 
 ClangCompiler::ClangCompiler()
     : invocation_(new CompilerInvocation()),
       compiler_(new CompilerInstance()), keep_temporaries_(false),
-      debug_mode_(false), log_stream_(&std::cerr)
+      debug_mode_(false), log_stream_(&cerr)
 {
     // Set-up the clang compiler
     TextDiagnosticPrinter *diag_client =
@@ -59,11 +60,11 @@ ClangCompiler::ClangCompiler()
     SetCodeGenOptions();
 }
 
-Module *ClangCompiler::Compile(const std::string &source,
+Module *ClangCompiler::Compile(const string &source,
                                LLVMContext *context) const
 {
     // write the source to a temporary file and invoke the compiler
-    std::string temp_tmpl = ".tmp_XXXXXX";
+    string temp_tmpl = ".tmp_XXXXXX";
     const char *tmpfile = UniqueFilename(temp_tmpl);
     //const char *tmpfile = "temp.c";
 
@@ -71,7 +72,7 @@ Module *ClangCompiler::Compile(const std::string &source,
 
     FrontendOptions &opts = invocation_->getFrontendOpts();
     opts.Inputs.clear();    // clear any old inputs
-    opts.Inputs.push_back(std::make_pair(IK_C, tmpfile));
+    opts.Inputs.push_back(make_pair(IK_C, tmpfile));
 
 //    compiler_->setInvocation(invocation_.get());
     compiler_->setInvocation(invocation_);

@@ -114,7 +114,7 @@ AX_CHECK_CXXFLAGS([-Woverloaded-virtual])
 
 case "$ax_build_mode" in
     "debug")
-        # undefine DEBUG; LLVM doesn't want it
+        # undefine NDEBUG; LLVM doesn't want it
         ax_pkg_cppflags="-UNDEBUG -DSPX_DEBUG=1"
         ax_pkg_cxxflags="-g -O0 -std=c++0x -pedantic -Wall -Woverloaded-virtual"
         ax_pkg_cflags="-g -O0 -std=c99 -pedantic -Wall" ;;

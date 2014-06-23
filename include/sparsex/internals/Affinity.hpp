@@ -8,8 +8,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef AFFINITY_HPP
-#define AFFINITY_HPP
+
+#ifndef SPARSEX_INTERNALS_AFFINITY_HPP
+#define SPARSEX_INTERNALS_AFFINITY_HPP
 
 #include "sparsex/internals/logger/Logger.hpp"
 
@@ -19,4 +20,4 @@
 void setaffinity_oncpu(unsigned int cpu);
 int get_cpu_count();
 
-#endif /* AFFINITY_HPP */
+#endif // SPARSEX_INTERNALS_AFFINITY_HPP

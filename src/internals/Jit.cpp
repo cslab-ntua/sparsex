@@ -13,6 +13,7 @@
 
 using namespace llvm;
 using namespace csx;
+using namespace std;
 
 CsxExecutionEngine &csx::CsxJitInit(void)
 {
@@ -23,11 +24,11 @@ CsxExecutionEngine &csx::CsxJitInit(void)
 void CsxExecutionEngine::AddModule(Module *mod)
 {
     if (!llvm_engine_) {
-        std::string errmsg;
+        string errmsg;
         llvm_engine_ = ExecutionEngine::createJIT(mod, &errmsg);
         if (!llvm_engine_) {
-            std::cerr << "failed to create LLVM execution engine: "
-                      << errmsg << "\n";
+            cerr << "failed to create LLVM execution engine: "
+                 << errmsg << "\n";
             exit(1);
         }
     } else {

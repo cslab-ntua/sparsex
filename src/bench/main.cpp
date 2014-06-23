@@ -1,4 +1,4 @@
-#include "bench.hpp"
+#include "Bench.hpp"
 #include <cstring>
 #include <getopt.h>
 

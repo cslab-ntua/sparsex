@@ -49,18 +49,7 @@ libsparseximpl_la_LIBADD = \
 	$(BOOST_SERIALIZATION_LIB) \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_THREAD_LIB) \
+	$(CLANG_LIBS) \
 	$(LLVM_LIBS)
 
-if USE_LIB_SUFFIX
-libsparseximpl_la_LDFLAGS = $(AM_LDFLAGS) -release $(ax_lib_suffix)
-
-install-exec-hook:
-	cd $(DESTDIR)$(libdir) && \
-mv -f libsparseximpl.a libsparseximpl-$(ax_lib_suffix).a && \
-$(LN_S) libsparseximpl-$(ax_lib_suffix).a libsparseximpl.a
-
-uninstall-hook:
-	rm -f $(DESTDIR)$(libdir)/libsparseximpl-$(ax_lib_suffix).a
-else
 libsparseximpl_la_LDFLAGS = $(AM_LDFLAGS)
-endif

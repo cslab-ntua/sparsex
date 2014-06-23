@@ -9,8 +9,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef JIT_HPP
-#define JIT_HPP
+
+#ifndef SPARSEX_INTERNALS_JIT_HPP
+#define SPARSEX_INTERNALS_JIT_HPP
 
 #include "sparsex/internals/Compiler.hpp"
 #include "sparsex/internals/CsxManager.hpp"
@@ -36,12 +37,12 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
-
 #include <iostream>
 #include <sstream>
 #include <cassert>
 
 using namespace llvm;
+using namespace std;
 
 namespace csx {
 
@@ -113,39 +114,36 @@ public:
 
         // FIXME: this is a leak; but if the following is uncommented LLVM
         // crashes at runtime
-
         // if (context_)
         //     delete context_;
     }
 
-    void GenCode(std::ostream &log);
+    void GenCode(ostream &log);
     spmv_fn_t GetSpmvFn() const;
 
 private:
     // Compile C99 source code into an LLVM module
-    Module *DoCompile(const std::string &source) const;
+    Module *DoCompile(const string &source) const;
 
     //
     // Obsolete -- all code optimizations are handled by ClangCompiler
     // 
     void DoOptimizeModule();
 
-    void DoNewRowHook(std::map<std::string, std::string> &hooks,
-                      std::ostream &log) const;
-    void DoSpmvFnHook(std::map<std::string, std::string> &hooks,
-                      std::ostream &log);
+    void DoNewRowHook(std::map<string, string> &hooks, ostream &log) const;
+    void DoSpmvFnHook(std::map<string, string> &hooks, ostream &log);
 
     //
     //  Code generation functions for each pattern type
     // 
-    std::string DoGenDeltaCase(int delta_bits);
-    std::string DoGenLinearCase(Encoding::Type type, int delta);
-    std::string DoGenBlockCase(Encoding::Type type, int r, int c);
+    string DoGenDeltaCase(int delta_bits);
+    string DoGenLinearCase(Encoding::Type type, int delta);
+    string DoGenBlockCase(Encoding::Type type, int r, int c);
     TemplateText *GetMultTemplate(Encoding::Type type);
     
-    std::string DoGenDeltaSymCase(int delta_bits);
-    std::string DoGenLinearSymCase(Encoding::Type type, int delta);
-    std::string DoGenBlockSymCase(Encoding::Type type, int r, int c);
+    string DoGenDeltaSymCase(int delta_bits);
+    string DoGenLinearSymCase(Encoding::Type type, int delta);
+    string DoGenBlockSymCase(Encoding::Type type, int r, int c);
     TemplateText *GetSymMultTemplate(Encoding::Type type);
 
     CsxManager<IndexType, ValueType> *csxmg_;
@@ -335,10 +333,10 @@ exit:
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenDeltaCase(int delta_bits)
+string CsxJit<IndexType, ValueType>::DoGenDeltaCase(int delta_bits)
 {
     TemplateText *tmpl = GetMultTemplate(Encoding::None);
-    std::map<std::string, std::string> subst_map;
+    std::map<string, string> subst_map;
     subst_map["bits"] = Stringify(delta_bits);
 #ifdef PTR_ALIGN
     int delta_bytes = delta_bits / 8;
@@ -352,31 +350,31 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaCase(int delta_bits)
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenLinearCase(Encoding::Type type,
+string CsxJit<IndexType, ValueType>::DoGenLinearCase(Encoding::Type type,
                                                           int delta)
 {
     TemplateText *tmpl = GetMultTemplate(type);
-    std::map<std::string, std::string> subst_map;
+    std::map<string, string> subst_map;
     subst_map["delta"] = Stringify(delta);
     return tmpl->Substitute(subst_map);
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenBlockCase(Encoding::Type type,
+string CsxJit<IndexType, ValueType>::DoGenBlockCase(Encoding::Type type,
                                                          int r, int c)
 {
     TemplateText *tmpl = GetMultTemplate(type);
-    std::map<std::string, std::string> subst_map;
+    std::map<string, string> subst_map;
     subst_map["r"] = Stringify(r);
     subst_map["c"] = Stringify(c);
     return tmpl->Substitute(subst_map);
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenDeltaSymCase(int delta_bits)
+string CsxJit<IndexType, ValueType>::DoGenDeltaSymCase(int delta_bits)
 {
     TemplateText *tmpl = GetSymMultTemplate(Encoding::None);
-    std::map<std::string, std::string> subst_map;
+    std::map<string, string> subst_map;
     subst_map["bits"] = Stringify(delta_bits);
 #ifdef PTR_ALIGN
     int delta_bytes = delta_bits / 8;
@@ -390,21 +388,21 @@ std::string CsxJit<IndexType, ValueType>::DoGenDeltaSymCase(int delta_bits)
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenLinearSymCase(Encoding::Type type,
+string CsxJit<IndexType, ValueType>::DoGenLinearSymCase(Encoding::Type type,
                                                              int delta)
 {
     TemplateText *tmpl = GetSymMultTemplate(type);
-    std::map<std::string, std::string> subst_map;
+    std::map<string, string> subst_map;
     subst_map["delta"] = Stringify(delta);
     return tmpl->Substitute(subst_map);
 }
 
 template<typename IndexType, typename ValueType>
-std::string CsxJit<IndexType, ValueType>::DoGenBlockSymCase(Encoding::Type type,
+string CsxJit<IndexType, ValueType>::DoGenBlockSymCase(Encoding::Type type,
                                                             int r, int c)
 {
     TemplateText *tmpl = GetSymMultTemplate(type);
-    std::map<std::string, std::string> subst_map;
+    std::map<string, string> subst_map;
     subst_map["r"] = Stringify(r);
     subst_map["c"] = Stringify(c);
     return tmpl->Substitute(subst_map);
@@ -412,7 +410,7 @@ std::string CsxJit<IndexType, ValueType>::DoGenBlockSymCase(Encoding::Type type,
 
 template<typename IndexType, typename ValueType>
 void CsxJit<IndexType, ValueType>::
-DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
+DoNewRowHook(std::map<string, string> &hooks, ostream &log) const
 {
     if (!symmetric_) {
         if (row_jumps_) {
@@ -470,9 +468,9 @@ DoNewRowHook(std::map<std::string, std::string> &hooks, std::ostream &log) const
 
 template<typename IndexType, typename ValueType>
 void CsxJit<IndexType, ValueType>::
-DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
+DoSpmvFnHook(std::map<string, string> &hooks, ostream &log)
 {
-    std::map<long, std::string> func_entries;
+    std::map<long, string> func_entries;
 
     if (csxmg_) {
         typename CsxManager<IndexType, ValueType>::PatMap::iterator i_patt;
@@ -482,7 +480,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
         IndexType delta, r, c;
     
         for (; i_patt != i_patt_end; ++i_patt) {
-            std::string patt_code, patt_func_entry;
+            string patt_code, patt_func_entry;
             long patt_id = i_patt->second.flag;
             Encoding::Type type =
                 static_cast<Encoding::Type>(i_patt->first / PatternIdOffset);
@@ -496,7 +494,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                        delta == 64);
                 log << "type:" << e.GetFullName() << " size:" << delta
                     << " npatterns:" << i_patt->second.npatterns
-                    << " nnz:" << i_patt->second.nr << std::endl;
+                    << " nnz:" << i_patt->second.nr << endl;
                 if (!symmetric_)
                     patt_code = DoGenDeltaCase(delta);
                 else
@@ -506,7 +504,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
             case Encoding::Horizontal:
                 log << "type:" << e.GetFullName() << " delta:" << delta
                     << " npatterns:" << i_patt->second.npatterns
-                    << " nnz:" << i_patt->second.nr << std::endl;
+                    << " nnz:" << i_patt->second.nr << endl;
                 if (!symmetric_)
                     patt_code = DoGenLinearCase(type, delta);
                 else
@@ -516,7 +514,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
             case Encoding::Vertical:
                 log << "type:" << e.GetFullName() << " delta:" << delta
                     << " npatterns:" << i_patt->second.npatterns
-                    << " nnz:" << i_patt->second.nr << std::endl;
+                    << " nnz:" << i_patt->second.nr << endl;
                 if (!symmetric_)
                     patt_code = DoGenLinearCase(type, delta);
                 else
@@ -526,7 +524,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
             case Encoding::Diagonal:
                 log << "type:" << e.GetFullName() << " delta:" << delta
                     << " npatterns:" << i_patt->second.npatterns
-                    << " nnz:" << i_patt->second.nr << std::endl;
+                    << " nnz:" << i_patt->second.nr << endl;
                 if (!symmetric_)
                     patt_code = DoGenLinearCase(type, delta);
                 else
@@ -536,7 +534,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
             case Encoding::AntiDiagonal:
                 log << "type:" << e.GetFullName() << " delta:" << delta
                     << " npatterns:" << i_patt->second.npatterns
-                    << " nnz:" << i_patt->second.nr << std::endl;
+                    << " nnz:" << i_patt->second.nr << endl;
                 if (!symmetric_)
                     patt_code = DoGenLinearCase(type, delta);
                 else
@@ -556,7 +554,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 log << "type:" << e.GetFullName()
                     << " dim:" << r << "x" << c
                     << " npatterns:" << i_patt->second.npatterns
-                    << " nnz:" << i_patt->second.nr << std::endl;
+                    << " nnz:" << i_patt->second.nr << endl;
                 if (!symmetric_)
                     patt_code = DoGenBlockCase(type, r, c);
                 else
@@ -577,7 +575,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
                 log << "type:" << e.GetFullName()
                     << " dim:" << r << "x" << c
                     << " npatterns:" << i_patt->second.npatterns
-                    << " nnz:" << i_patt->second.nr << std::endl;
+                    << " nnz:" << i_patt->second.nr << endl;
                 if (!symmetric_)
                     patt_code = DoGenBlockCase(type, r, c);
                 else
@@ -599,7 +597,7 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
             Encoding::Type type =
                 static_cast<Encoding::Type>(csx_->id_map[i] / PatternIdOffset);
             delta = csx_->id_map[i] % PatternIdOffset;
-            std::string patt_code, patt_func_entry;
+            string patt_code, patt_func_entry;
             Encoding e(type);
             switch (e.GetType()) {
             case Encoding::None:
@@ -685,10 +683,8 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
 	}           
 
     // Add function table entries in the correct order
-    std::map<long, std::string>::const_iterator i_fentry =
-        func_entries.begin();
-    std::map<long, std::string>::const_iterator fentries_end =
-        func_entries.end();
+    std::map<long, string>::const_iterator i_fentry = func_entries.begin();
+    std::map<long, string>::const_iterator fentries_end = func_entries.end();
 
     if (func_entries.size() == 1) {
         // Don't switch, just call the pattern-specific mult. routine
@@ -729,9 +725,9 @@ DoSpmvFnHook(std::map<std::string, std::string> &hooks, std::ostream &log)
 }
 
 template<typename IndexType, typename ValueType>
-void CsxJit<IndexType, ValueType>::GenCode(std::ostream &log)
+void CsxJit<IndexType, ValueType>::GenCode(ostream &log)
 {
-    std::map<std::string, std::string> hooks;
+    std::map<string, string> hooks;
     
     hooks["header_prefix"] = SPX_JIT_INCLUDE;
     if (!symmetric_) {
@@ -765,7 +761,7 @@ void CsxJit<IndexType, ValueType>::GenCode(std::ostream &log)
 }
 
 template<typename IndexType, typename ValueType>
-Module *CsxJit<IndexType, ValueType>::DoCompile(const std::string &source) const
+Module *CsxJit<IndexType, ValueType>::DoCompile(const string &source) const
 {
     if (compiler_->DebugMode())
         compiler_->KeepTemporaries(true);
@@ -808,6 +804,6 @@ spmv_fn_t CsxJit<IndexType, ValueType>::GetSpmvFn() const
 
 } // end csx namespace
 
-#endif // JIT_HPP
+#endif // SPARSEX_INTERNALS_JIT_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

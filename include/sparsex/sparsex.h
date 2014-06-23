@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPARSEX_H
-#define SPARSEX_H
+
+#ifndef SPARSEX_SPARSEX_H
+#define SPARSEX_SPARSEX_H
 
 #include <sparsex/common.h>
 #include <sparsex/error.h>
@@ -16,4 +17,4 @@
 #include <sparsex/timing.h>
 #include <sparsex/types.h>
 
-#endif  // SPARSEX_H
+#endif  /* SPARSEX_SPARSEX_H */

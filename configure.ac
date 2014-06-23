@@ -167,7 +167,6 @@ AX_PACKAGE_INIT
 SPX_MULT_TEMPLATE_DIR="`pwd`/$srcdir/src/templates"
 SPX_JIT_INCLUDE="`pwd`/$srcdir/include"
 
-AM_CONDITIONAL([USE_LIB_SUFFIX], [test ! -z $ax_lib_suffix])
 AM_CONDITIONAL([SPX_BUILD_BENCH], [ test x"$enable_bench" = x"yes" ])
 AC_SUBST([ax_lib_suffix])
 AC_SUBST([AX_PKG_CPPFLAGS])

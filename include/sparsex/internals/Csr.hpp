@@ -9,8 +9,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSR_HPP
-#define CSR_HPP
+
+#ifndef SPARSEX_INTERNALS_CSR_HPP
+#define SPARSEX_INTERNALS_CSR_HPP
 
 #include "sparsex/internals/Element.hpp"
 #include <inttypes.h>
@@ -105,7 +106,7 @@ public:
     void SetReordered(vector<size_t> &inv_perm)
     {
         reordered_ = true;
-        std::swap(permutation_, inv_perm);
+        swap(permutation_, inv_perm);
     }
 
     // Element iterator
@@ -127,43 +128,11 @@ public:
             return iterator(this, nr_nzeros_);
     }
 
-    void Print(std::ostream &os)
-    {
-        if (!reordered_) {
-            os << "Number of rows: " << nr_rows_ << std::endl
-               << "Number of cols: " << nr_cols_ << std::endl
-               << "Number of nonzeros: " << nr_nzeros_ << std::endl;
-
-            os << "Dump of rowptr: " << std::endl;
-            os << "[ ";
-            for (size_t i = 0; i <= nr_rows_; ++i)
-                os << rowptr_[i] << " ";
-            os << " ]" << std::endl;
-
-            os << "Dump of colind: " << std::endl;
-            os << "[ ";
-            for (size_t i = 0; i < nr_nzeros_; ++i)
-                os << colind_[i] << " ";
-            os << " ]" << std::endl;
-        
-            os << "Dump of values: " << std::endl;
-            os << "[ ";
-            for (size_t i = 0; i < nr_nzeros_; ++i)
-                os << values_[i] << " ";
-            os << " ]";
-        } else {
-            iterator iter = begin();
-            iterator iter_end = end();
-            
-            os << "Elements of Matrix" << endl;
-            os << "------------------" << endl;
-            for (; iter != iter_end; ++iter)
-                os << *iter << "\n";
-        }
-    }
-
     ValueType GetValue(IndexType row, IndexType col) const;
     bool SetValue(IndexType row, IndexType col, ValueType new_val);
+
+    template<typename I, typename V>
+    friend ostream &operator<<(ostream &, const CSR<I, V> &);
 
     IndexType *rowptr_;
     IndexType *colind_;
@@ -179,7 +148,7 @@ private:
  * Returns the value of the corresponding element (0 if element doesn't exist)
  * Indexes row/col are assumed to be 1-based.
  */
-// FIXME: do binary search on column
+// TODO: do binary search on column
 template<typename IndexType, typename ValueType>
 ValueType CSR<IndexType, ValueType>::GetValue(IndexType row, IndexType col) const
 {
@@ -197,7 +166,7 @@ ValueType CSR<IndexType, ValueType>::GetValue(IndexType row, IndexType col) cons
  * Indexes row/col are assumed to be 1-based.
  * Returns true on success, or false on error. 
  */
-// FIXME: do binary search on column
+// TODO: do binary search on column
 template<typename IndexType, typename ValueType>
 bool CSR<IndexType, ValueType>::SetValue(IndexType row, IndexType col,
                                          ValueType new_val)
@@ -214,10 +183,40 @@ bool CSR<IndexType, ValueType>::SetValue(IndexType row, IndexType col,
 }
 
 template<typename IndexType, typename ValueType>
-std::ostream &operator<<(std::ostream &os,
-                         const CSR<IndexType, ValueType> &mat)
+ostream &operator<<(ostream &os, const CSR<IndexType, ValueType> &mat)
 {
-    mat.Print(os);
+    if (!mat.reordered_) {
+        os << "Number of rows: " << mat.nr_rows_ << endl
+           << "Number of cols: " << mat.nr_cols_ << endl
+           << "Number of nonzeros: " << mat.nr_nzeros_ << endl;
+
+        os << "Dump of rowptr: " << endl;
+        os << "[ ";
+        for (size_t i = 0; i <= mat.nr_rows_; ++i)
+            os << mat.rowptr_[i] << " ";
+        os << " ]" << endl;
+
+        os << "Dump of colind: " << endl;
+        os << "[ ";
+        for (size_t i = 0; i < mat.nr_nzeros_; ++i)
+            os << mat.colind_[i] << " ";
+        os << " ]" << endl;
+        
+        os << "Dump of values: " << endl;
+        os << "[ ";
+        for (size_t i = 0; i < mat.nr_nzeros_; ++i)
+            os << mat.values_[i] << " ";
+        os << " ]";
+    } else {
+        typename CSR<IndexType, ValueType>::iterator iter = mat.begin();
+        typename CSR<IndexType, ValueType>::iterator iter_end = mat.end();
+            
+        os << "Elements of Matrix" << endl;
+        os << "------------------" << endl;
+        for (; iter != iter_end; ++iter)
+            os << *iter << "\n";
+    }
+
     return os;
 }
 
@@ -356,6 +355,6 @@ private:
 
 } // namespace csx
 
-#endif  // CSR_HPP
+#endif  // SPARSEX_INTERNALS_CSR_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

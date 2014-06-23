@@ -8,8 +8,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef ELEMENT_HPP
-#define ELEMENT_HPP
+#ifndef SPARSEX_INTERNALS_ELEMENT_HPP
+#define SPARSEX_INTERNALS_ELEMENT_HPP
 
 #include "sparsex/internals/Encodings.hpp"
 #include "sparsex/internals/Utility.hpp"
@@ -661,4 +661,4 @@ size_t GetLastCol(const Element<IndexType, ValueType> &elem,
 
 }   // end of csx namespace
 
-#endif  // ELEMENT_HPP
+#endif  // SPARSEX_INTERNALS_ELEMENT_HPP

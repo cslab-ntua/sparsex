@@ -3,24 +3,24 @@
 * [DONE] Revisit statistics collecting mechanism
   -- Stats structure, element markers (new heur)
 * Revisit pattern-id assigning mechanism
-* Revisit namespace csx (should become sparsex, probably)
-* Eliminate unused/dead code, incl. commented out code
-* [ 50%] Clean up thgoud code
+* [] Revisit namespace csx (should become sparsex, probably)
+* [] Eliminate unused/dead code, incl. commented out code
+* [50%] Clean up thgoud code
 * Revisit SparsePartition building, especially SetElems()
 * [DONE] Remove the emacs directive from header files
-* Heuristic selection could be an spx option
+* [DONE] Heuristic selection could be an spx option
 * Consider making SparsePartition::iterator a const iterator
-* Treat zero-sized windows
-* Block alignment -> fixed dim vs. variable dim
-* Cbegin() -> cbegin()
-* Revisit PreparePat()'s arguments
-* Check FIXME tags
-* Remove std:: prefixes where possible
+* [] Treat zero-sized windows
+* [] Block alignment -> fixed dim vs. variable dim
+* [] Cbegin() -> cbegin()
+* [] Revisit PreparePat()'s arguments
+* [] Check FIXME tags
+* [DONE] Remove std:: prefixes where possible
 * Revise iterators (Mmf, Csr, SparsePartition)
 * Consider zero-based indexing for Element
 * [DONE] Clean the interfaces, one- or zero-based, decide! -> core library uses
          one-base indexing everywhere, api provides both
-* Replace Print() methods with friend operator<<()'s
+* [DONE] Replace Print() methods with friend operator<<()'s
 * Consider implementing operator->() in iterators
 * [DONE] Gather all general utilities (iceil, gcd, check_iterator) in a single
   file
@@ -28,28 +28,29 @@
 * Unsigned to signed conversions
 * [DONE] Remove `inline' keyword and move member function definitions inside the class
   (SparseMatrix.hpp)
-* Xs -> Cols
+* [] Xs -> Cols
 * [DONE] Rethink element marking mechanism
 * valgrind check / memory leaks
 * [DONE] DEBUG_MODE compilation macro
 * Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
 * Remove default arguments or document precisely
 * [DONE] Fix Diag <-> AntiDiag conversions
-* Use auto variables instead of heap allocated if their scope is limited inside
+* [] Use auto variables instead of heap allocated if their scope is limited inside
   a function
 * Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
 * Code replication
-* max_rowptr_size_ is never used.
+* [DONE] max_rowptr_size_ is never used.
 * Use -Wextra? Lots of warnings of unused function parameters
 * Eliminate all -Wall warnings (debug version)
 * When _GLIBCXX_DEBUG is defined, error in debug mode compilation
-* Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion defines in
+* [DONE] Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion defines in
   header files
 * [DONE] Staged SPX_JIT_INCLUDE/SPX_MULT_TEMPLATE_DIR should use absolute paths
 * Segfault when TemplateText placeholders are empty/not found. Print error and
   inform about installation.
 * [ 50%] Use SPX_ prefix in macros, e.g., DEBUG_MODE -> SPX_DEBUG
 * DisableInfo() is counter-intuitive (why not EnableXXX()??)
+* Update README
 
 Requirements for StatsCollection
 * [DONE] Scale stats

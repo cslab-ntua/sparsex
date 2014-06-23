@@ -17,6 +17,8 @@
 #include "sparsex/internals/SparseMatrix.hpp"
 #include "sparsex/internals/ThreadPool.hpp"
 
+using namespace std;
+
 /**
  *  Wrapper routines.
  */
@@ -46,12 +48,12 @@ void *ReorderCSR(void *matrix, spx_index_t **permutation)
 {
     SparseMatrix<CSR<spx_index_t, spx_value_t> > *mat = 
         (SparseMatrix<CSR<spx_index_t, spx_value_t> > *) matrix;
-    std::vector<size_t> perm;
+    vector<size_t> perm;
 
     mat->Reorder(perm);
     if (!perm.empty()) {
         *permutation = new spx_index_t[mat->GetNrRows()];
-        std::copy(perm.begin(), perm.end(), *permutation);
+        copy(perm.begin(), perm.end(), *permutation);
     }
 
     return (void *) mat;
@@ -61,12 +63,12 @@ void *ReorderMMF(void *matrix, spx_index_t **permutation)
 {
     SparseMatrix<MMF<spx_index_t, spx_value_t> > *mat = 
         (SparseMatrix<MMF<spx_index_t, spx_value_t> > *) matrix;
-    std::vector<size_t> perm;
+    vector<size_t> perm;
 
     mat->Reorder(perm);
     if (!perm.empty()) {
         *permutation = new spx_index_t[mat->GetNrRows()];
-        std::copy(perm.begin(), perm.end(), *permutation);
+        copy(perm.begin(), perm.end(), *permutation);
     }
 
     return (void *) mat;
@@ -74,11 +76,14 @@ void *ReorderMMF(void *matrix, spx_index_t **permutation)
 
 void *TuneCSR(void *matrix, int *symmetric)
 {
-    SparseMatrix<CSR<spx_index_t, spx_value_t> > *mat = 
-        (SparseMatrix<CSR<spx_index_t, spx_value_t> > *) matrix;
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
+    config.CheckProperties<spx_index_t, spx_value_t>();
+
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
     rt_context.SetRuntimeContext(config);
+
+    SparseMatrix<CSR<spx_index_t, spx_value_t> > *mat = 
+        (SparseMatrix<CSR<spx_index_t, spx_value_t> > *) matrix;
 
     spm_mt_t *spm_mt = mat->CreateCsx();
     if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
@@ -96,11 +101,14 @@ void *TuneCSR(void *matrix, int *symmetric)
 
 void *TuneMMF(void *matrix, int *symmetric)
 {
-    SparseMatrix<MMF<spx_index_t, spx_value_t> > *mat = 
-        (SparseMatrix<MMF<spx_index_t, spx_value_t> > *) matrix;
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
+    config.CheckProperties<spx_index_t, spx_value_t>();
+
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
     rt_context.SetRuntimeContext(config);
+
+    SparseMatrix<MMF<spx_index_t, spx_value_t> > *mat = 
+        (SparseMatrix<MMF<spx_index_t, spx_value_t> > *) matrix;
 
     spm_mt_t *spm_mt = mat->CreateCsx();
     if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {

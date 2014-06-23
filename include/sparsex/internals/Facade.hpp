@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef FACADE_HPP
-#define FACADE_HPP
+
+#ifndef SPARSEX_INTERNALS_FACADE_HPP
+#define SPARSEX_INTERNALS_FACADE_HPP
 
 #include "sparsex/internals/cdecl.h"
 #include "sparsex/types.h"
@@ -40,4 +41,4 @@ void GetNodes(int *nodes);
 
 END_C_DECLS
 
-#endif // FACADE_HPP
+#endif // SPARSEX_INTERNALS_FACADE_HPP

@@ -7,6 +7,7 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
 #ifndef SPARSEX_COMMON_H
 #define SPARSEX_COMMON_H
 
@@ -147,4 +148,4 @@ void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
 void free_internal(void *ptr, const char *sourcefile, unsigned long lineno,
                    const char *function);
 
-#endif // SPARSEX_COMMON_H
+#endif /* SPARSEX_COMMON_H */

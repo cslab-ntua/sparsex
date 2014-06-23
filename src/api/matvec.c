@@ -290,7 +290,7 @@ spx_matrix_t *spx_mat_tune(spx_input_t *input, ...)
         }
 #else
         for (i = 1; i < nr_threads; i++)
-            spm_mt->local_buffers[i] = vec_create(tuned->nrows, NULL);
+            spm_mt->local_buffers[i] = VecCreate(tuned->nrows);
 #endif
     }
 
@@ -439,7 +439,7 @@ spx_index_t spx_mat_get_nnz(const spx_matrix_t *A)
     return  A->nnz;
 }
 
-spx_partition_t *spx_mat_get_parts(spx_matrix_t *A)
+spx_partition_t *spx_mat_get_partition(spx_matrix_t *A)
 {
 #ifdef SPM_NUMA
     spm_mt_t *spm_mt = (spm_mt_t *) A->csx;
@@ -467,7 +467,7 @@ spx_perm_t *spx_mat_get_perm(const spx_matrix_t *A)
     return A->permutation;
 }
 
-spx_error_t spx_csr_matvec_kernel(spx_matrix_t *A, 
+spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A, 
                                   spx_index_t nrows, spx_index_t ncols,
                                   spx_index_t *rowptr, spx_index_t *colind, 
                                   spx_value_t *values,
@@ -664,17 +664,23 @@ void spx_options_set_from_env()
     SetPropertiesFromEnv();
 }
 
-spx_vector_t *vec_create_numa(unsigned long size, spx_partition_t *p)
+spx_vector_t *spx_vec_create(unsigned long size, spx_partition_t *p)
 {
-	spx_vector_t *v = vec_create_interleaved(size, p->parts, p->nr_partitions,
-                                             p->nodes);
+    spx_vector_t *v = INVALID_VEC;
+#if SPX_USE_NUMA
+	v = vec_create_interleaved(size, p->parts, p->nr_partitions, p->nodes);
+#else
+    v = VecCreate(size);
+#endif
 	return v;
 }
 
-spx_vector_t *vec_create_from_buff_numa(spx_value_t *buff, unsigned long size,
-                                        spx_partition_t *p, spx_copymode_t mode)
+spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, unsigned long size,
+                                       spx_partition_t *p, spx_copymode_t mode)
 {
-    spx_vector_t *v = vec_create_numa(size, p);
+    spx_vector_t *v = INVALID_VEC;
+#if SPX_USE_NUMA
+    v = vec_create_numa(size, p);
     unsigned int i;
     for (i = 0; i < size; i++)
         v->elements[i] = buff[i];
@@ -684,27 +690,49 @@ spx_vector_t *vec_create_from_buff_numa(spx_value_t *buff, unsigned long size,
     else if (mode == OP_COPY)
         v->ptr_buff = NULL;
 
-#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+#   if defined (SPM_NUMA) && defined (NUMA_CHECKS)
     print_alloc_status("vector", check_interleaved(v->elements, p->parts,
                                                    p->nr_partitions,
                                                    p->nodes));
+#   endif
+#else
+    v = VecCreateFromBuff(buff, size, mode);
 #endif
-
     return v;
 }
 
-spx_vector_t *vec_create_random_numa(unsigned long size, spx_partition_t *p)
+spx_vector_t *spx_vec_create_random(unsigned long size, spx_partition_t *p)
 {
-    spx_vector_t *v = vec_create_numa(size, p);
+    spx_vector_t *v = INVALID_VEC;
+#if SPX_USE_NUMA
+    v = vec_create_numa(size, p);
     spx_vec_init_rand_range(v, (double) -0.01, (double) 0.1);
 
-#if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+#   if defined (SPM_NUMA) && defined (NUMA_CHECKS)
     print_alloc_status("vector", check_interleaved(v->elements, p->parts,
                                                    p->nr_partitions,
                                                    p->nodes));
+#   endif
+#else
+    v = VecCreateRandom(size);
 #endif
-
     return v;
+}
+
+void spx_vec_init(spx_vector_t *v, spx_value_t val)
+{
+    VecInit(v, val);
+}
+
+void spx_vec_init_part(spx_vector_t *v, spx_value_t val, spx_index_t start,
+                       spx_index_t end)
+{
+    VecInitPart(v, val, start, end);
+}
+
+void spx_vec_init_rand_range(spx_vector_t *v, spx_value_t max, spx_value_t min)
+{
+    VecInitRandRange(v, max, min);
 }
 
 spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val)
@@ -715,9 +743,62 @@ spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val)
         return SPX_FAILURE;
     }
 
-    vec_set_entry(v, idx, val);
+    VecSetEntry(v, idx, val);
 
     return SPX_SUCCESS;
+}
+
+void spx_vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num)
+{
+    VecScale(v1, v2, num);
+}
+
+void spx_vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3, 
+                       spx_scalar_t num)
+{
+    VecScaleAdd(v1, v2, v3, num);
+}
+
+void spx_vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
+                            spx_scalar_t num, spx_index_t start,
+                            spx_index_t end)
+{
+    VecScaleAddPart(v1, v2, v3, num, start, end);
+}
+
+void spx_vec_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3)
+{
+    VecAdd(v1, v2, v3);
+}
+
+void spx_vec_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
+                      spx_index_t start, spx_index_t end)
+{
+    VecAddPart(v1, v2, v3, start, end);
+}
+
+void spx_vec_sub(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3)
+{
+    VecSub(v1, v2, v3);
+}
+
+void spx_vec_sub_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
+                      spx_index_t start, spx_index_t end)
+{
+    VecSubPart(v1, v2, v3, start, end);
+}
+
+spx_value_t spx_vec_mul(const spx_vector_t *v1, const spx_vector_t *v2)
+{
+    spx_value_t value = VecMult(v1, v2);
+    return value;
+}
+
+spx_value_t spx_vec_mul_part(const spx_vector_t *v1, const spx_vector_t *v2,
+                             spx_index_t start, spx_index_t end)
+{
+    spx_value_t value = VecMultPart(v1, v2, start, end);
+    return value;
 }
 
 spx_error_t spx_vec_reorder(spx_vector_t *v, spx_perm_t *p)
@@ -730,7 +811,7 @@ spx_error_t spx_vec_reorder(spx_vector_t *v, spx_perm_t *p)
         return SPX_FAILURE;
     }
 
-    permuted_v = vec_create(v->size, NULL);
+    permuted_v = VecCreate(v->size);
     for (i = 0; i < v->size; i++) {
         permuted_v->elements[p[i]] = v->elements[i];
     }
@@ -751,13 +832,13 @@ spx_error_t spx_vec_inv_reorder(spx_vector_t *v, spx_perm_t *p)
     unsigned long i;
     spx_vector_t *permuted_v = NULL;
 
-    //check v1 v2 dimensions
+    //check v1 p dimensions
     if (p == INVALID_PERM) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid permutation");
         return SPX_FAILURE;
     }
 
-    permuted_v = vec_create(v->size, NULL);
+    permuted_v = VecCreate(v->size);
     for (i = 0; i < v->size; i++) {
         permuted_v->elements[i] = v->elements[p[i]];
     }
@@ -771,4 +852,24 @@ spx_error_t spx_vec_inv_reorder(spx_vector_t *v, spx_perm_t *p)
     permuted_v = NULL;
 #endif
     return SPX_SUCCESS;
+}
+
+void spx_vec_copy(const spx_vector_t *v1, spx_vector_t *v2)
+{
+    VecCopy(v1, v2);
+}
+
+int spx_vec_compare(const spx_vector_t *v1, const spx_vector_t *v2)
+{
+    return VecCompare(v1, v2);
+}
+
+void spx_vec_print(const spx_vector_t *v)
+{
+    VecPrint(v);
+}
+
+void spx_vec_destroy(spx_vector_t *v)
+{
+    VecDestroy(v);
 }

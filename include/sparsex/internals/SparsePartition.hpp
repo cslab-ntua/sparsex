@@ -10,8 +10,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPARSE_PARTITION_HPP
-#define SPARSE_PARTITION_HPP
+
+#ifndef SPARSEX_INTERNALS_SPARSE_PARTITION_HPP
+#define SPARSEX_INTERNALS_SPARSE_PARTITION_HPP
 
 #include "sparsex/internals/Allocators.hpp"
 #include "sparsex/internals/Config.hpp"
@@ -178,9 +179,12 @@ public:
     /**
      *  Printing methods.
      */
-    void Print(std::ostream &out = std::cout);
-    void PrintRows(std::ostream &out = std::cout);
-    void PrintStats(std::ostream &out = std::cout);
+    void Print(ostream &out = cout);
+    void PrintRows(ostream &out = cout);
+    void PrintStats(ostream &out = cout);
+
+    template<typename I, typename V>
+    friend ostream &operator<<(ostream &, const SparsePartition<I, V> &);
 
     IndexType FindNewRowptrSize(Encoding::Type t);
 
@@ -218,7 +222,7 @@ public:
      *  @return       the selected window.
      *  @see ExtractWindow()
      */
-    SparsePartition *GetWindow(IndexType rs, size_t length);
+    SparsePartition *GetWindow(IndexType rs, IndexType length);
 
     /**
      *  Puts a (possibly processed) window of the matrix back to this matrix.
@@ -245,13 +249,10 @@ private:
     Element<IndexType, ValueType> *elems_;
     size_t elems_size_;
     IndexType *rowptr_;
-    size_t rowptr_size_;
+    IndexType rowptr_size_;
     IndexType row_start_;    /* Row of the original matrix, where this
-                               sub-matrix starts. */
+                                sub-matrix starts. */
     bool elems_mapped_;
-
-    // Maximum possible rowptr_size after transformations.
-    size_t max_rowptr_size_;
     size_t nr_deltas_;
     MemoryAllocator &alloc_;
 };
@@ -496,7 +497,7 @@ public:
                        IndexType first_row, size_t limit,
                        SparsePartitionSym::Builder &spm_sym_bld);
                       
-    void PrintDiagElems(std::ostream &out = std::cout);
+    void PrintDiagElems(ostream &out = cout);
 };
 
 template<typename IndexType, typename ValueType>
@@ -585,16 +586,16 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row,
 template<typename IndexType, typename ValueType>
 void SparsePartition<IndexType, ValueType>::Print(std::ostream &out)
 {
-    SparsePartition::iterator p_start = begin(0);
-    SparsePartition::iterator p_end = end(GetRowptrSize() - 1);
-    for (SparsePartition::iterator p = p_start; p != p_end; ++p)
+    iterator p_start = begin(0);
+    iterator p_end = end(GetRowptrSize() - 2);
+    for (auto p = p_start; p != p_end; ++p)
         out << " " << (*p);
 
     out << endl;
 }
 
 template<typename IndexType, typename ValueType>
-void SparsePartition<IndexType, ValueType>::PrintRows(std::ostream &out) {
+void SparsePartition<IndexType, ValueType>::PrintRows(ostream &out) {
     cout << "Row Ptr: ";
     for (size_t i = 0; i < rowptr_size_; i++)
         cout << rowptr_[i] << " ";
@@ -603,7 +604,7 @@ void SparsePartition<IndexType, ValueType>::PrintRows(std::ostream &out) {
 
 // FIXME
 template<typename IndexType, typename ValueType>
-void SparsePartition<IndexType, ValueType>::PrintStats(std::ostream& out)
+void SparsePartition<IndexType, ValueType>::PrintStats(ostream& out)
 {
     IndexType nr_rows_with_patterns;
     IndexType nr_patterns, nr_patterns_before;
@@ -765,7 +766,7 @@ Transform(Encoding::Type t, IndexType rs, IndexType re)
 
 template<typename IndexType, typename ValueType>
 SparsePartition<IndexType, ValueType> *SparsePartition<IndexType, ValueType>::
-GetWindow(IndexType rs, size_t length)
+GetWindow(IndexType rs, IndexType length)
 {
     if (rs + length > rowptr_size_ - 1)
         length = rowptr_size_ - rs - 1;
@@ -784,7 +785,6 @@ GetWindow(IndexType rs, size_t length)
 
     ret->type_ = type_;
     ret->elems_mapped_ = true;
-    ret->max_rowptr_size_ = 0;  // FIXME: should we set it to sth more concrete?
     Element<IndexType, ValueType> *ps = &elems_[es];
     ret->SetElems(ps, &elems_[ee], rs + 1, 0, ret->nr_nzeros_, length);
 
@@ -851,6 +851,14 @@ PutWindow(const SparsePartition<IndexType, ValueType> *window)
                 TransformElement(e, make_pair(e.GetRow() + rs, e.GetCol()));
         }
     }
+}
+
+template<typename IndexType, typename ValueType>
+ostream &operator<<(ostream &os, const SparsePartition<IndexType,
+                                                       ValueType> &mat)
+{
+    mat.Print(os);
+    return os;
 }
 
 /*
@@ -935,15 +943,15 @@ SparsePartition<IndexType, ValueType>::iterator::iterator(
     : sp_(sp)
 {
     IndexType *rp = sp_->rowptr_;
-    IndexType rp_size = sp_->rowptr_size_;
     
-    assert(r_idx < rp_size);
+    assert(r_idx < sp_->rowptr_size_);
 
     row_idx_ = r_idx;
-    if (end)
+    if (end) {
         elem_idx_ = rp[r_idx+1];
-    else
+    } else {
         elem_idx_ = rp[r_idx];
+    }
 }
 
 template<typename IndexType, typename ValueType>
@@ -1091,13 +1099,13 @@ void SparsePartitionSym<IndexType, ValueType>::MergeMatrix()
 }
 
 template<typename IndexType, typename ValueType>
-void SparsePartitionSym<IndexType, ValueType>::PrintDiagElems(std::ostream &out)
+void SparsePartitionSym<IndexType, ValueType>::PrintDiagElems(ostream &out)
 {
     IndexType row_start = lower_matrix_->GetRowStart();
     
     for (size_t i = 0; i < diagonal_size_; i++)
-        std::cout << row_start + i + 1 << " " << row_start + i + 1 << " "
-                  << diagonal_[i] << " cnt:" << i << std::endl;
+        cout << row_start + i + 1 << " " << row_start + i + 1 << " "
+                  << diagonal_[i] << " cnt:" << i << endl;
 }
 
 template<typename IndexType, typename ValueType>
@@ -1193,6 +1201,6 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row,
 
 }   // end of namespace csx
 
-#endif  // SPARSE_PARTITION_HPP
+#endif  // SPARSEX_INTERNALS_SPARSE_PARTITION_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

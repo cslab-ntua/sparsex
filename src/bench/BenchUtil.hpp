@@ -1,5 +1,5 @@
 /*
- * bench_util.hpp --  Benchmarking utilities.
+ * BenchUtil.hpp --  Benchmarking utilities.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,16 +7,16 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef BENCH_UTIL_H__
-#define BENCH_UTIL_H__
+#ifndef BENCH_UTIL_HPP
+#define BENCH_UTIL_HPP
 
 #ifdef POSKI
-#   include "poski_module.hpp"
+#   include "PoskiModule.hpp"
 #endif
 #ifdef MKL
-#   include "mkl_module.hpp"
+#   include "MklModule.hpp"
 #endif
-#include "sparsex_module.hpp"
+#include "SparsexModule.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -102,10 +102,9 @@ private:
     {
         return name[0] == '.' 
             && (name[1] == '\0' || (name[1] == '.' && name[2] == '\0'));
-        //return std::strcmp(name, ".") == 0 || strcmp(name, "..") == 0;
     }
 };
 
 } // end of namespace bench
 
-#endif  // BENCH_UTIL_H__
+#endif  // BENCH_UTIL_HPP

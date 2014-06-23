@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef MAP_HPP
-#define MAP_HPP
+
+#ifndef SPARSEX_INTERNALS_MAP_HPP
+#define SPARSEX_INTERNALS_MAP_HPP
 
 ///> The definition of map used for symmetric sparse matrices.
 typedef struct map {
@@ -17,4 +18,4 @@ typedef struct map {
     unsigned int *elems_pos;
 } map_t;
 
-#endif /* MAP_HPP */
+#endif /* SPARSEX_INTERNALS_MAP_HPP */

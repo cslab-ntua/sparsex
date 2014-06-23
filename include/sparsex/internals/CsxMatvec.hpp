@@ -8,8 +8,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSX_MATVEC_HPP
-#define CSX_MATVEC_HPP
+
+#ifndef SPARSEX_INTERNALS_CSX_MATVEC_HPP
+#define SPARSEX_INTERNALS_CSX_MATVEC_HPP
 
 #include "sparsex/internals/SpmMt.hpp"
 #include "sparsex/internals/SpmvMethod.hpp"
@@ -45,4 +46,4 @@ void do_mv_sym_thread(void *args);
 void do_kernel_thread(void *params);
 void do_kernel_sym_thread(void *args);
 
-#endif // CSX_MATVEC_HPP
+#endif // SPARSEX_INTERNALS_CSX_MATVEC_HPP

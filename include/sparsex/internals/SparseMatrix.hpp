@@ -2,14 +2,15 @@
  * SparseMatrix.hpp --  Generic representation of a sparse matrix - policy-based
  *                      design.
  *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014  Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef SPARSE_MATRIX_HPP
-#define SPARSE_MATRIX_HPP
+
+#ifndef SPARSEX_INTERNALS_SPARSE_MATRIX_HPP
+#define SPARSEX_INTERNALS_SPARSE_MATRIX_HPP
 
 #include "sparsex/internals/Csr.hpp"
 #include "sparsex/internals/CsxBuild.hpp"
@@ -23,6 +24,10 @@
 #include "sparsex/internals/Types.hpp"
 
 #include <boost/interprocess/detail/move.hpp>
+#include <boost/utility/enable_if.hpp>
+#include <boost/static_assert.hpp>
+
+using namespace std;
 
 double internal_time, csx_time, dump_time;
  
@@ -35,23 +40,22 @@ struct matrix_traits {
 };
 
 /**
- *  Helper structs that generate a compile time error if SparseMatrix
- *  class is instantiated with something other than the defined template
- *  specialization, i.e., an integral and a floating point type.
+ *  Helper struct that generates a compile time error if SparseMatrix
+ *  class is instantiated with something other than the allowed types,
+ *  i.e., an integral and a floating point type.
  */
-template<bool integral, bool floating>
-void valid_instantiation();
-
-template<>
-void valid_instantiation<true, true>() {}
+template<typename T1, typename T2>
+void valid_instantiation(
+    typename boost::enable_if<boost::is_integral<T1> >::type *dummy1 = 0,
+    typename boost::enable_if<boost::is_floating_point<T2> >::type *dummy2 = 0)
+{}
 
 template<typename index_type, typename value_type>
 struct allow_instantiation
 {
     allow_instantiation()
     {
-        valid_instantiation<std::is_integral<index_type>::value,
-                            std::is_floating_point<value_type>::value>();
+        valid_instantiation<index_type, value_type>();
     }
 };
 
@@ -69,6 +73,12 @@ class SparseMatrix : public InputPolicy
 public:
     typedef typename internal::matrix_traits<InputPolicy>::idx_t idx_t;
     typedef typename internal::matrix_traits<InputPolicy>::val_t val_t;
+    // BOOST_STATIC_ASSERT_MSG(boost::is_integral<idx_t>::value,
+    //                         "The SparseMatrix class cannot be instantiatied "
+    //                         "with a non-integral index type");
+    // BOOST_STATIC_ASSERT_MSG(boost::is_floating_point<val_t>::value,
+    //                         "The SparseMatrix class cannot be instantiatied "
+    //                         "with a non-floating point value type");
 
     // CSR-specific constructor
     SparseMatrix(idx_t *rowptr, idx_t *colind, val_t *values,
@@ -185,7 +195,7 @@ public:
 
 private:
     spm_mt_t *csx_;
-    internal::allow_instantiation<idx_t, val_t> instantiation;
+    internal::allow_instantiation<idx_t, val_t> instance;
 
 private:
     spm_mt_t *CreateCsx(internal::Sym<true>)
@@ -196,8 +206,8 @@ private:
 
         // Converting to internal representation
         timer.Start();
-        spi = SparseInternal<SparsePartitionSym<idx_t, val_t> >::
-            DoLoadMatrixSym(*this, rt_context.GetNrThreads());
+        spi = SparseInternal<SparsePartitionSym<idx_t, val_t> >::DoLoadMatrixSym
+            (*this, rt_context.GetNrThreads());
         timer.Pause();
         internal_time = timer.ElapsedTime();
 
@@ -241,6 +251,6 @@ private:
     }
 };
 
-#endif // SPARSE_MATRIX_HPP
+#endif // SPARSEX_INTERNALS_SPARSE_MATRIX_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

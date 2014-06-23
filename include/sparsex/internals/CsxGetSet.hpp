@@ -7,8 +7,9 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef CSX_GET_SET_HPP
-#define CSX_GET_SET_HPP
+
+#ifndef SPARSEX_INTERNALS_CSX_GET_SET_HPP
+#define SPARSEX_INTERNALS_CSX_GET_SET_HPP
 
 #include "sparsex/internals/Config.hpp"
 #include "sparsex/internals/Csx.hpp"
@@ -518,4 +519,4 @@ bool SearchBlock(ValueType **v_ptr, uint8_t delta, uint8_t size,
     return false;
 }
 
-#endif  // CSX_GET_SET_HPP
+#endif  // SPARSEX_INTERNALS_CSX_GET_SET_HPP

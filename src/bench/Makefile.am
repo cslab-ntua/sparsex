@@ -24,24 +24,21 @@ AM_LDFLAGS	= \
 noinst_PROGRAMS = bench_spmv
 
 bench_spmv_SOURCES = \
-	bench.cpp \
+	Bench.cpp \
 	main.cpp \
-	timer.cpp \
-	sparsex_module.cpp
+	Timer.cpp \
+	SparsexModule.cpp
 
 if SPX_BUILD_BENCH_MKL
-bench_spmv_SOURCES += mkl_module.cpp
+bench_spmv_SOURCES += MklModule.cpp
 endif
 
 if SPX_BUILD_BENCH_POSKI
-bench_spmv_SOURCES += poski_module.cpp
+bench_spmv_SOURCES += PoskiModule.cpp
 endif
 
-# FIXME: libsparseximpl should not be necessary
-# This is due to the spx_vector_* dependencies which are only defined in impl.
 bench_spmv_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
-	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
 	$(CLANG_LIBS) \
 	$(LLVM_LIBS)
 

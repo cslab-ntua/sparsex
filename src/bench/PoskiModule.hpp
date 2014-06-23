@@ -1,5 +1,5 @@
 /*
- * poski_module.hpp --  The SpMV kernel with pOSKI.
+ * PoskiModule.hpp --  The SpMV kernel with pOSKI.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -7,8 +7,8 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#ifndef POSKI_MODULE_H__
-#define POSKI_MODULE_H__
+#ifndef POSKI_MODULE_HPP
+#define POSKI_MODULE_HPP
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,12 +20,12 @@ extern "C" {
 }
 #endif
 
-#include "timer.hpp"
+#include "Timer.hpp"
 #include <iostream>
 
 using namespace std;
 
-extern std::string MATRIX; 
+extern string MATRIX; 
 extern unsigned int OUTER_LOOPS;
 extern unsigned long LOOPS;
 extern unsigned int NR_THREADS;
@@ -35,5 +35,5 @@ extern Timer t;
 void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
                 int nnz, double *x, double *y);
 
-#endif  // POSKI_MODULE_H__
+#endif  // POSKI_MODULE_HPP
 

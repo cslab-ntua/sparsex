@@ -1,5 +1,5 @@
 /*
- * mkl_module.cpp --  The SpMV kernel with Intel MKL.
+ * MklModule.cpp --  The SpMV kernel with Intel MKL.
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,7 +8,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "mkl_module.hpp"
+#include "MklModule.hpp"
+
 #include <algorithm>
 #include <vector>
 #include <sched.h>
@@ -35,16 +36,15 @@ void mkl_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
         pointerB[i] = rowptr[i];
         pointerE[i] = rowptr[i+1];
     }
-    mkl_set_num_threads(NR_THREADS);
-    
+    mkl_set_num_threads(NR_THREADS);                                                                                                                                                                                              
     /* 2. SpMV benchmarking phase */
-    std::vector<double> mt(OUTER_LOOPS);
+    vector<double> mt(OUTER_LOOPS);
     for (unsigned int i = 0; i < OUTER_LOOPS; i++) {
         t.Clear();
         t.Start();
         for (unsigned long int j = 0; j < LOOPS; j++) {
             mkl_dcsrmv(&transa, &nrows, &ncols, &ALPHA, matdescra, values,
-                       colind, pointerB, pointerE, x, &BETA, y);
+                       colind, pointerB, pointerE, x, &BETA, y);            
         }
         t.Pause();
         mt[i] = t.ElapsedTime();
