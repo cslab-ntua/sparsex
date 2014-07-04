@@ -106,7 +106,9 @@ static void mat_free_struct(spx_matrix_t *A)
     spx_free(A);
 }
 
-#ifdef SPM_NUMA
+
+#if SPX_USE_NUMA
+
 /**
  *  \brief Allocates a partition structure.
  */
@@ -133,7 +135,8 @@ static void part_free_struct(spx_partition_t *p)
 
     spx_free(p);
 }
-#endif
+
+#endif  // SPX_USE_NUMA
 
 spx_input_t *spx_input_load_csr(spx_index_t *rowptr, spx_index_t *colind, 
                                 spx_value_t *values, spx_index_t nrows, 
@@ -283,7 +286,7 @@ spx_matrix_t *spx_mat_tune(spx_input_t *input, ...)
             (spx_vector_t **) malloc(nr_threads*sizeof(spx_vector_t *));
 
         unsigned int i;
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         for (i = 1; i < nr_threads; i++) {
             int node = spm_mt->spm_threads[i].node;
             spm_mt->local_buffers[i] = vec_create_onnode(tuned->nrows, node);
@@ -441,7 +444,7 @@ spx_index_t spx_mat_get_nnz(const spx_matrix_t *A)
 
 spx_partition_t *spx_mat_get_partition(spx_matrix_t *A)
 {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     spm_mt_t *spm_mt = (spm_mt_t *) A->csx;
     spx_partition_t *ret = INVALID_PART;
     part_alloc_struct(&ret);
@@ -452,7 +455,7 @@ spx_partition_t *spx_mat_get_partition(spx_matrix_t *A)
     unsigned int i;
 	for (i = 0; i < spm_mt->nr_threads; i++) {
 		spm_mt_thread_t *spm = spm_mt->spm_threads + i;
-		ret->parts[i] = spm->nr_rows * sizeof(double);
+		ret->parts[i] = spm->nr_rows * sizeof(spx_value_t);
 		ret->nodes[i] = spm->node;
 	}
 
@@ -471,8 +474,8 @@ spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A,
                                   spx_index_t nrows, spx_index_t ncols,
                                   spx_index_t *rowptr, spx_index_t *colind, 
                                   spx_value_t *values,
-                                  spx_scalar_t alpha, spx_vector_t *x, 
-                                  spx_scalar_t beta, spx_vector_t *y)
+                                  spx_value_t alpha, spx_vector_t *x, 
+                                  spx_value_t beta, spx_vector_t *y)
 {
     /* Check validity of input arguments */
     if (!x) {
@@ -516,7 +519,7 @@ spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A,
     return SPX_SUCCESS;
 }
 
-spx_error_t spx_matvec_mult(spx_scalar_t alpha, const spx_matrix_t *A, 
+spx_error_t spx_matvec_mult(spx_value_t alpha, const spx_matrix_t *A, 
                             spx_vector_t *x, spx_vector_t *y)
 {
     /* Check validity of input arguments */
@@ -551,8 +554,8 @@ spx_error_t spx_matvec_mult(spx_scalar_t alpha, const spx_matrix_t *A,
     return SPX_SUCCESS;
 }
 
-spx_error_t spx_matvec_kernel(spx_scalar_t alpha, const spx_matrix_t *A, 
-                              spx_vector_t *x, spx_scalar_t beta,
+spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A, 
+                              spx_vector_t *x, spx_value_t beta,
                               spx_vector_t *y)
 {
     /* Check validity of input arguments */
@@ -604,7 +607,7 @@ spx_error_t spx_mat_destroy(spx_matrix_t *A)
 spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows, 
                                    unsigned int nr_threads)
 {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
 	// Compute the matrix splits.
 	size_t nnz_per_split = (rowptr[nr_rows] - 1) / nr_threads;
 	size_t curr_nnz = 0;
@@ -641,7 +644,7 @@ spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows,
 
 spx_error_t spx_partition_destroy(spx_partition_t *p)
 {
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     /* Check validity of input argument */
     if (!p) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
@@ -690,7 +693,7 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, unsigned long size,
     else if (mode == OP_COPY)
         v->ptr_buff = NULL;
 
-#   if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+#   if SPX_USE_NUMA && NUMA_CHECKS
     print_alloc_status("vector", check_interleaved(v->elements, p->parts,
                                                    p->nr_partitions,
                                                    p->nodes));
@@ -701,14 +704,14 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, unsigned long size,
     return v;
 }
 
-spx_vector_t *spx_vec_create_random(unsigned long size, spx_partition_t *p)
+spx_vector_t *spx_vec_create_random(size_t size, spx_partition_t *p)
 {
     spx_vector_t *v = INVALID_VEC;
 #if SPX_USE_NUMA
     v = vec_create_numa(size, p);
-    spx_vec_init_rand_range(v, (double) -0.01, (double) 0.1);
+    spx_vec_init_rand_range(v, (spx_value_t) -0.01, (spx_value_t) 0.1);
 
-#   if defined (SPM_NUMA) && defined (NUMA_CHECKS)
+#   if SPX_USE_NUMA && NUMA_CHECKS
     print_alloc_status("vector", check_interleaved(v->elements, p->parts,
                                                    p->nr_partitions,
                                                    p->nodes));
@@ -748,20 +751,20 @@ spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val)
     return SPX_SUCCESS;
 }
 
-void spx_vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num)
+void spx_vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_value_t num)
 {
     VecScale(v1, v2, num);
 }
 
 void spx_vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3, 
-                       spx_scalar_t num)
+                       spx_value_t num)
 {
     VecScaleAdd(v1, v2, v3, num);
 }
 
-void spx_vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
-                            spx_scalar_t num, spx_index_t start,
-                            spx_index_t end)
+void spx_vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2,
+                            spx_vector_t *v3, spx_value_t num,
+                            spx_index_t start, spx_index_t end)
 {
     VecScaleAddPart(v1, v2, v3, num, start, end);
 }
@@ -816,7 +819,7 @@ spx_error_t spx_vec_reorder(spx_vector_t *v, spx_perm_t *p)
         permuted_v->elements[p[i]] = v->elements[i];
     }
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     spx_vec_copy(permuted_v, v);
     spx_vec_destroy(permuted_v);
 #else
@@ -843,7 +846,7 @@ spx_error_t spx_vec_inv_reorder(spx_vector_t *v, spx_perm_t *p)
         permuted_v->elements[i] = v->elements[p[i]];
     }
 
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
     spx_vec_copy(permuted_v, v);
     spx_vec_destroy(permuted_v);
 #else

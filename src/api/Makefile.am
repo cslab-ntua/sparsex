@@ -14,7 +14,6 @@ ACLOCAL_AMFLAGS = -I m4check
 AM_CPPFLAGS = \
 	-I$(top_builddir)/include \
 	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src/bench \
 	$(AX_CPPFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
 AM_LDFLAGS	= \
@@ -28,4 +27,3 @@ libsparsex_la_SOURCES = \
 	matvec.c
 
 libsparsex_la_LIBADD = -lsparseximpl
-libsparsex_la_LDFLAGS = $(AM_LDFLAGS)

@@ -27,7 +27,7 @@
  *
  *  @param spm_mt  the sparse matrix in CSX format.
  */
-template<typename ValueType>
+template<typename IndexType, typename ValueType>
 uint64_t CsxSize(void *spm_mt);
 
 /**
@@ -35,7 +35,7 @@ uint64_t CsxSize(void *spm_mt);
  *
  *  @param spm_mt  the sparse matrix in CSX-Sym format.
  */
-template<typename ValueType>
+template<typename IndexType, typename ValueType>
 uint64_t CsxSymSize(void *spm_mt);
 
 
@@ -45,41 +45,40 @@ uint64_t CsxSymSize(void *spm_mt);
  *  @param spm_mt  the complete multithreaded CSX-Sym matrix.
  *  @return        the size of the map.
  */
-uint64_t MapSize(void *spm);
+size_t MapSize(void *spm);
 
 /**
  *  Deallocation of CSX or CSX-Sym sparse matrix.
  *  
  *  @param spm_mt the (multithreaded) CSX or CSX-Sym sparse matrix.
  */
-template<typename ValueType>
+template<typename IndexType, typename ValueType>
 void PutSpmMt(spm_mt_t *spm_mt);
 
 ///> Deletes all the fields of CSX format.
-template<typename ValueType>
-void DestroyCsx(csx_t<ValueType> *csx);
+template<typename IndexType, typename ValueType>
+void DestroyCsx(CsxMatrix<IndexType, ValueType> *csx);
 
 ///> Deletes all the fields of CSX-Sym format.
-template<typename ValueType>
-void DestroyCsxSym(csx_sym_t<ValueType> *csx_sym);
+template<typename IndexType, typename ValueType>
+void DestroyCsxSym(CsxSymMatrix<IndexType, ValueType> *csx_sym);
 
 
 /* Function definitions */
-template<typename ValueType>
-uint64_t CsxSize(void *spm_mt)
+template<typename IndexType, typename ValueType>
+size_t CsxSize(void *spm_mt)
 {
-    return (uint64_t) CsxSize<ValueType>((spm_mt_t *) spm_mt);
+    return CsxSize<IndexType, ValueType>((spm_mt_t *) spm_mt);
 }
 
-template<typename ValueType>
-unsigned long CsxSize(spm_mt_t *spm_mt)
+template<typename IndexType, typename ValueType>
+size_t CsxSize(spm_mt_t *spm_mt)
 {
-    unsigned long ret;
-
-    ret = 0;
-    for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
+    size_t ret = 0;
+    for (size_t i = 0; i < spm_mt->nr_threads; ++i) {
         spm_mt_thread_t *t = spm_mt->spm_threads + i;
-        csx_t<ValueType> *csx = (csx_t<ValueType> *)t->spm;
+        CsxMatrix<IndexType, ValueType> *csx =
+            (CsxMatrix<IndexType, ValueType> *) t->spm;
         
         ret += csx->nnz * sizeof(ValueType);
         ret += csx->ctl_size;
@@ -88,22 +87,23 @@ unsigned long CsxSize(spm_mt_t *spm_mt)
     return ret;
 }
 
-template<typename ValueType>
-uint64_t CsxSymSize(void *spm_mt)
+template<typename IndexType, typename ValueType>
+size_t CsxSymSize(void *spm_mt)
 {
-    return (uint64_t) CsxSymSize<ValueType>((spm_mt_t *) spm_mt);
+    return CsxSymSize<IndexType, ValueType>((spm_mt_t *) spm_mt);
 }
 
-template<typename ValueType>
-unsigned long CsxSymSize(spm_mt_t *spm_mt)
+template<typename IndexType, typename ValueType>
+size_t CsxSymSize(spm_mt_t *spm_mt)
 {
-    unsigned long ret;
+    size_t ret;
 
     ret = 0;
-    for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
+    for (size_t i = 0; i < spm_mt->nr_threads; i++) {
         spm_mt_thread_t *t = spm_mt->spm_threads + i;
-        csx_sym_t<ValueType> *csx_sym = (csx_sym_t<ValueType> *)t->spm;
-        csx_t<ValueType> *csx = csx_sym->lower_matrix;
+        CsxSymMatrix<IndexType, ValueType> *csx_sym =
+            (CsxSymMatrix<IndexType, ValueType> *)t->spm;
+        CsxMatrix<IndexType, ValueType> *csx = csx_sym->lower_matrix;
 
         ret += (csx->nnz + csx->nrows) * sizeof(ValueType);
         ret += csx->ctl_size;
@@ -112,20 +112,39 @@ unsigned long CsxSymSize(spm_mt_t *spm_mt)
     return ret;
 }    
 
-template<typename ValueType>
+template<typename IndexType, typename ValueType>
+size_t CsxSymMapSize(void *spm)
+{
+    spm_mt_t *spm_mt = (spm_mt_t *) spm;
+    spm_mt_thread_t *spm_thread;
+    size_t size = 0;
+    
+    for (size_t i = 0; i < spm_mt->nr_threads; i++) {
+        spm_thread = spm_mt->spm_threads + i;
+        size += spm_thread->map->length * sizeof(IndexType);
+        size += spm_thread->map->length * sizeof(IndexType);
+        size += spm_thread->map->length * sizeof(ValueType);
+    }
+    
+    return size;
+}
+
+template<typename IndexType, typename ValueType>
 void PutSpmMt(spm_mt_t *spm_mt)
 {
 #if SPX_USE_NUMA
         if (spm_mt->interleaved) {
             size_t total_ctl_size = 0, total_nnz = 0;
-            csx_t<ValueType> *csx = 0;
+            CsxMatrix<IndexType, ValueType> *csx = 0;
             for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
                 if (spm_mt->symmetric) {
-                    csx_sym_t<ValueType> *csx_sym =
-                        (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;           
+                    CsxSymMatrix<IndexType, ValueType> *csx_sym =
+                        (CsxSymMatrix<IndexType, ValueType> *)
+                        spm_mt->spm_threads[i].spm;           
                     csx = csx_sym->lower_matrix;
                 } else {
-                    csx = (csx_t<ValueType> *) spm_mt->spm_threads[i].spm;
+                    csx = (CsxMatrix<IndexType, ValueType> *)
+                        spm_mt->spm_threads[i].spm;
                 }
 
                 total_nnz += csx->nnz;
@@ -138,11 +157,11 @@ void PutSpmMt(spm_mt_t *spm_mt)
 
             NumaAllocator &alloc = NumaAllocator::GetInstance();
             if (spm_mt->symmetric) {
-                csx_sym_t<ValueType> *csx_sym =
-                    (csx_sym_t<ValueType> *) spm_mt->spm_threads[0].spm;
+                CsxSymMatrix<ValueType> *csx_sym =
+                    (CsxSymMatrix<ValueType> *) spm_mt->spm_threads[0].spm;
                 csx = csx_sym->lower_matrix;
             } else {
-                csx = (csx_t<ValueType> *) spm_mt->spm_threads[0].spm;
+                csx = (CsxMatrix<ValueType> *) spm_mt->spm_threads[0].spm;
             }
 
             alloc.Destroy(csx->ctl, total_ctl_size);
@@ -152,14 +171,14 @@ void PutSpmMt(spm_mt_t *spm_mt)
 
     if (!spm_mt->symmetric) {
         for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
-            csx_t<ValueType> *csx = (csx_t<ValueType> *)
-                spm_mt->spm_threads[i].spm;
+            CsxMatrix<IndexType, ValueType> *csx =
+                (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].spm;
             DestroyCsx(csx);
         }
     } else {
         for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
-            csx_sym_t<ValueType> *csx_sym =
-                (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;           
+            CsxSymMatrix<IndexType, ValueType> *csx_sym =
+                (CsxSymMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].spm;
             DestroyCsxSym(csx_sym);
 #if SPX_USE_NUMA
             NumaAllocator &alloc = NumaAllocator::GetInstance();
@@ -184,8 +203,8 @@ void PutSpmMt(spm_mt_t *spm_mt)
     delete spm_mt;
 }
 
-template<typename ValueType>
-static void DestroyCsx(csx_t<ValueType> *csx)
+template<typename IndexType, typename ValueType>
+static void DestroyCsx(CsxMatrix<IndexType, ValueType> *csx)
 {
 #if SPX_USE_NUMA
     NumaAllocator &alloc = NumaAllocator::GetInstance();
@@ -204,8 +223,8 @@ static void DestroyCsx(csx_t<ValueType> *csx)
 #endif
 }
 
-template<typename ValueType>
-static void DestroyCsxSym(csx_sym_t<ValueType> *csx_sym)
+template<typename IndexType, typename ValueType>
+static void DestroyCsxSym(CsxSymMatrix<IndexType, ValueType> *csx_sym)
 {
 #if SPX_USE_NUMA
     uint64_t diag_size = csx_sym->lower_matrix->nrows;

@@ -14,6 +14,8 @@
 
 #include <cstdint>
 
+using namespace std;
+
 namespace csx {
 
 typedef union {
@@ -23,7 +25,7 @@ typedef union {
     uint64_t d64;
 } DeltaType;
 
-size_t GetDeltaSize(size_t val)
+inline size_t GetDeltaSize(size_t val)
 {
     DeltaType du;
     if ( (du.d8 = val) == val)

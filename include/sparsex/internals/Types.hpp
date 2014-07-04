@@ -17,6 +17,6 @@
 #include <boost/type_traits.hpp>
 
 // Index type should be promoted to unsigned internally
-typedef boost::make_unsigned<spx_index_t>::type uindex_t;
+typedef boost::make_unsigned<spx_index_t>::type spx_uindex_t;
 
 #endif  // SPARSEX_INTERNALS_TYPES_HPP

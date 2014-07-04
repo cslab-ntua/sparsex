@@ -14,13 +14,14 @@
 #include <vector>
 
 /* SpMV kernel implemented with SparseX */
-void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
-                  int nnz, double *x, double *y)
+void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
+                  spx_index_t nrows, spx_index_t ncols, spx_index_t nnz,
+                  spx_value_t *x, spx_value_t *y)
 {
     spx_init();
     /* 1. Matrix loading phase */
-    spx_input_t *input = spx_input_load_csr(rowptr, colind, values, nrows, ncols,
-                                            INDEXING_ZERO_BASED);
+    spx_input_t *input = spx_input_load_csr(
+        rowptr, colind, values, nrows, ncols, INDEXING_ZERO_BASED);
 
     /* 2. Tuning phase */
     // spx_options_set_from_env();
@@ -36,7 +37,7 @@ void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols
     t.Start();
     spx_matrix_t *A = spx_mat_tune(input);
     t.Pause();
-    double pt = t.ElapsedTime();
+    spx_value_t pt = t.ElapsedTime();
 
     /* 3. Vector loading */
     spx_partition_t *parts = spx_mat_get_partition(A);

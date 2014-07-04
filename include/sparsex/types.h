@@ -1,8 +1,11 @@
 /**
- * \file types.h -- Available indexing and value types.
+ * \file types.h
  *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
+ * \brief Available indexing and value types.
+ *
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2014, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -11,30 +14,18 @@
 #ifndef SPARSEX_TYPES_H
 #define SPARSEX_TYPES_H
 
-#include <inttypes.h>
+#include <sparsex/config.h>
 
-#ifdef USE_UNSIGNED_INDICES
-#   undef spx_index_t
-#   define spx_index_t uint32_t
-#endif
-
-#ifdef USE_64BIT_INDICES
-#   undef spx_index_t
-#   define spx_index_t uint64_t
-#endif
-
-#ifndef spx_index_t
-#   define spx_index_t int
-#endif
-
-#ifdef USE_SINGLE_PRECISION
-#   define spx_value_t float
+#ifdef SPX_INDEX_TYPE
+typedef SPX_INDEX_TYPE spx_index_t;
 #else
-#   define spx_value_t double
+typedef int spx_index_t;
 #endif
 
-#ifndef spx_scalar_t
-#   define spx_scalar_t double
+#ifdef SPX_VALUE_TYPE
+typedef SPX_VALUE_TYPE spx_value_t;
+#else
+typedef double spx_value_t;
 #endif
 
-#endif /* SPARSEX_MATTYPE_H */
+#endif /* SPARSEX_TYPES_H */

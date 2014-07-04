@@ -23,15 +23,17 @@ unsigned int OUTER_LOOPS = 5;   /**< Number of SpMV iterations */
 unsigned long LOOPS = 128;      /**< Number of repeats */
 unsigned int NR_THREADS = 1;    /**< Number of threads for a multithreaded
                                    execution */
-double ALPHA = 1.32, BETA = 0.48;     /**< Scalar parameters of the SpMV kernel
+spx_value_t ALPHA = 1.32, BETA = 0.48;     /**< Scalar parameters of the SpMV kernel
                                         (y->APLHA*A*x + BETA*y) */
 Timer t;                        /**< Timer for benchmarking */
 
 static SpmvFn GetSpmvFn(library type);
-static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
-                     double **values, int *nrows, int *ncols, int *nnz);
-static inline int elems_neq(double a, double b);
-static int vec_compare(const double *v1, const double *v2, size_t size)
+static void MMFtoCSR(const char *filename,
+                     spx_index_t **rowptr, spx_index_t **colind,
+                     spx_value_t **values,
+                     spx_index_t *nrows, spx_index_t *ncols, spx_index_t *nnz);
+static inline int elems_neq(spx_value_t a, spx_value_t b);
+static int vec_compare(const spx_value_t *v1, const spx_value_t *v2, size_t size)
     __attribute__ ((unused));
 
 void Bench_Directory(const char *directory, const char *library,
@@ -53,21 +55,21 @@ void Bench_Matrix(const char *filename, const char *library,
     cout << " COMPUTING SPMV PRODUCT WITH MATRIX: " << MATRIX << endl;
 
     SpmvFn  fn;
-    int     *rowptr, *colind;
-    double  *values;
-    int     nrows, ncols, nnz;
+    spx_index_t *rowptr, *colind;
+    spx_value_t *values;
+    spx_index_t nrows, ncols, nnz;
 
     MMFtoCSR(filename, &rowptr, &colind, &values, &nrows, &ncols, &nnz);
 
-	double *x = (double *) malloc(sizeof(double) * ncols);
-	double *y = (double *) malloc(sizeof(double) * nrows);
+	spx_value_t *x = (spx_value_t *) malloc(sizeof(spx_value_t) * ncols);
+	spx_value_t *y = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
 #if defined(MKL) || defined(POSKI)
-	double *y_cmp = (double *) malloc(sizeof(double) * nrows);
+	spx_value_t *y_cmp = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
 #endif
-    double val = 0, max = 1, min = -1;
+    spx_value_t val = 0, max = 1, min = -1;
  
-    for (int i = 0; i < nrows; i++) {
-		val = ((double) (rand()+i) / ((double) RAND_MAX + 1));
+    for (spx_index_t i = 0; i < nrows; i++) {
+		val = ((spx_value_t) (rand()+i) / ((spx_value_t) RAND_MAX + 1));
 		x[i] = min + val*(max-min);
 		y[i] = max + val*(min-max);
 #if defined(MKL) || defined(POSKI)
@@ -107,6 +109,7 @@ void Bench_Matrix(const char *filename, const char *library,
         } else {
             cerr << "Library doesn't exist." << endl;
         }
+
         fn(rowptr, colind, values, nrows, ncols, nnz, x, y);            
     }
 
@@ -127,14 +130,14 @@ void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file)
     cout << " COMPUTING SPMV PRODUCT WITH MATRIX: " 
          << basename(const_cast<char *>(mmf_file)) << endl;
 
-    int     *rowptr, *colind;
-    double  *values;
-    int     nrows, ncols, nnz;
+    spx_index_t *rowptr, *colind;
+    spx_value_t *values;
+    spx_index_t nrows, ncols, nnz;
 
     MMFtoCSR(mmf_file, &rowptr, &colind, &values, &nrows, &ncols, &nnz);
 
-	double *x = (double *) malloc(sizeof(double) * ncols);
-	double *y = (double *) malloc(sizeof(double) * nrows);
+	spx_value_t *x = (spx_value_t *) malloc(sizeof(spx_value_t) * ncols);
+	spx_value_t *y = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
     for (int i = 0; i < nrows; i++) {
         x[i] = 1;
         y[i] = 2;
@@ -176,21 +179,23 @@ static SpmvFn GetSpmvFn(library type)
     return ret;
 }
 
-static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
-                     double **values, int *nrows, int *ncols, int *nnz)
+static void MMFtoCSR(const char *filename,
+                     spx_index_t **rowptr, spx_index_t **colind,
+                     spx_value_t **values,
+                     spx_index_t *nrows, spx_index_t *ncols, spx_index_t *nnz)
 {
-    MMF<int, double> mmf(filename);
+    MMF<spx_index_t, spx_value_t> mmf(filename);
     *nrows = mmf.GetNrRows(); *ncols = mmf.GetNrCols();
     *nnz = mmf.GetNrNonzeros();
-	*values = (double *) malloc(sizeof(double) * mmf.GetNrNonzeros());
-	*colind = (int *) malloc(sizeof(int) * mmf.GetNrNonzeros());
-	*rowptr = (int *) malloc(sizeof(int) * (mmf.GetNrRows() + 1));
+	*values = (spx_value_t *) malloc(sizeof(spx_value_t) * mmf.GetNrNonzeros());
+	*colind = (spx_index_t *) malloc(sizeof(**colind) * mmf.GetNrNonzeros());
+	*rowptr = (spx_index_t *) malloc(sizeof(**rowptr) * (mmf.GetNrRows() + 1));
 
-    MMF<int, double>::iterator iter = mmf.begin();
-    MMF<int, double>::iterator iter_end = mmf.end();   
-    int row_i = 0, val_i = 0, row_prev = 0;
-    int row, col;
-    double val;
+    MMF<spx_index_t, spx_value_t>::iterator iter = mmf.begin();
+    MMF<spx_index_t, spx_value_t>::iterator iter_end = mmf.end();   
+    spx_index_t row_i = 0, val_i = 0, row_prev = 0;
+    spx_index_t row, col;
+    spx_value_t val;
 
 	(*rowptr)[row_i++] = val_i;
     for (;iter != iter_end; ++iter) {
@@ -199,7 +204,7 @@ static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
         val = (*iter).val;
 		assert(row >= row_prev);
 		if (row != row_prev) {
-			for (int i = 0; i < row - row_prev; i++) {
+			for (spx_index_t i = 0; i < row - row_prev; i++) {
 				(*rowptr)[row_i++] = val_i;
             }
 			row_prev = row;
@@ -211,14 +216,15 @@ static void MMFtoCSR(const char *filename, int **rowptr, int **colind,
 	(*rowptr)[row_i++] = val_i;
 }
 
-static inline int elems_neq(double a, double b)
+static inline int elems_neq(spx_value_t a, spx_value_t b)
 {
-	if (fabs((double) (a - b) / (double) a)  > 1.e-7)
+	if (fabs((spx_value_t) (a - b) / (spx_value_t) a)  > 1.e-7)
 		return 1;
 	return 0;
 }
 
-static int vec_compare(const double *v1, const double *v2, size_t size)
+static int vec_compare(const spx_value_t *v1,
+                       const spx_value_t *v2, size_t size)
 {
 	for (size_t i = 0; i < size; i++) {
 		if (elems_neq(v1[i], v2[i])) {

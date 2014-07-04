@@ -11,11 +11,11 @@
 #define CDECL_H
 
 #ifdef __cplusplus
-#   define BEGIN_C_DECLS    extern "C" {
-#   define END_C_DECLS      }
+#   define SPX_BEGIN_C_DECLS__    extern "C" {
+#   define SPX_END_C_DECLS__      }
 #else
-#   define BEGIN_C_DECLS    /* nothing */
-#   define END_C_DECLS      /* nothing */
+#   define SPX_BEGIN_C_DECLS__    /* nothing */
+#   define SPX_END_C_DECLS__      /* nothing */
 #endif  // __cplusplus
 
 #endif  // CDECL_H

@@ -83,13 +83,6 @@ private:
     LoggingHandler &operator=(const LoggingHandler &); // Do not implement
 };
 
-boost::unordered_map<Level, string> LoggingHandler::names_ =
-    boost::assign::map_list_of 
-    (Error, "[ERROR]: ")
-    (Warning, "[WARNING]: ")
-    (Info, "[INFO]: ")
-    (Debug, "[DEBUG]: ");
-
 /* Proper logging with this class is based on the fact that:
    - Temporary objects are destroyed as the last step in evaluating the 
      full-expression that (lexically) contains the point where they were 

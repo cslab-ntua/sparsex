@@ -100,7 +100,7 @@ public:
     CsxJit(CsxManager<IndexType, ValueType> *csxmg, CsxExecutionEngine *engine,
            unsigned int tid = 0, bool symmetric = false);
 
-    CsxJit(csx_t<ValueType> *csx, CsxExecutionEngine *engine,
+    CsxJit(CsxMatrix<IndexType, ValueType> *csx, CsxExecutionEngine *engine,
            unsigned int tid, bool symmetric, 
            bool full_column_indices, bool row_jumps);
 
@@ -154,7 +154,7 @@ private:
     unsigned int thread_id_;
     std::map<Encoding::Type, TemplateText *> mult_templates_;
     bool symmetric_, full_column_indices_, row_jumps_;
-    csx_t<ValueType> *csx_;
+    CsxMatrix<IndexType, ValueType> *csx_;
 };
 
 
@@ -176,12 +176,13 @@ CsxJit<IndexType, ValueType>::CsxJit(CsxManager<IndexType, ValueType> *csxmg,
 {
     context_ = new LLVMContext();
     compiler_ = new ClangCompiler();
-    compiler_->AddHeaderSearchPath(SPX_JIT_INCLUDE);
-    //compiler_->SetDebugMode(true);
+    compiler_->AddIncludeSearchPath(SPX_JIT_INCLUDE,
+                                    ClangCompiler::IncludePathUser);
+    // compiler_->SetDebugMode(true);
 }
 
 template<typename IndexType, typename ValueType>
-CsxJit<IndexType, ValueType>::CsxJit(csx_t<ValueType> *csx,
+CsxJit<IndexType, ValueType>::CsxJit(CsxMatrix<IndexType, ValueType> *csx,
                                      CsxExecutionEngine *engine,
                                      unsigned int tid, bool symmetric,
                                      bool full_column_indices,
@@ -197,7 +198,8 @@ CsxJit<IndexType, ValueType>::CsxJit(csx_t<ValueType> *csx,
 {
     context_ = new LLVMContext();
     compiler_ = new ClangCompiler();
-    compiler_->AddHeaderSearchPath(SPX_JIT_INCLUDE);
+    compiler_->AddIncludeSearchPath(SPX_JIT_INCLUDE,
+                                    ClangCompiler::IncludePathUser);
     // compiler_->SetDebugMode(true);
 }
 
@@ -729,7 +731,6 @@ void CsxJit<IndexType, ValueType>::GenCode(ostream &log)
 {
     std::map<string, string> hooks;
     
-    hooks["header_prefix"] = SPX_JIT_INCLUDE;
     if (!symmetric_) {
         // Load the template source
         TemplateText source_tmpl(SourceFromFile(CsxTemplateSource));
@@ -790,9 +791,9 @@ spmv_fn_t CsxJit<IndexType, ValueType>::GetSpmvFn() const
     
     engine_->AddModule(module_);
     if (!symmetric_)
-        llvm_fn = module_->getFunction("spm_csx32_double_multiply");
+        llvm_fn = module_->getFunction("spm_csx_multiply");
     else
-        llvm_fn = module_->getFunction("spm_csx32_double_sym_multiply");
+        llvm_fn = module_->getFunction("spm_csx_sym_multiply");
     assert(llvm_fn);
 
     //

@@ -16,6 +16,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	$(AX_CPPFLAGS)
 
+AM_CFLAGS = $(AX_CFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
 AM_LDFLAGS  = $(AX_LDFLAGS)
 
@@ -25,21 +26,21 @@ libsparseximpl_la_SOURCES = \
 	Affinity.cpp \
 	Barrier.cpp \
 	Compiler.cpp \
-	CsxBench.cpp \
 	CsxBuild.cpp \
 	CsxMatvec.cpp \
-	CsxUtil.cpp \
 	CtlBuilder.cpp \
 	Encodings.cpp \
 	Facade.cpp \
 	Jit.cpp \
 	JitUtil.cpp \
+	Mmf.cpp \
 	Node.cpp \
 	Runtime.cpp \
 	Statistics.cpp \
 	TemplateText.cpp \
 	ThreadPool.cpp \
 	Timer.cpp \
+	TimerCollection.cpp \
 	Vector.cpp \
 	logger/Logger.cpp \
 	logger/OutputPolicy.cpp
@@ -51,5 +52,3 @@ libsparseximpl_la_LIBADD = \
 	$(BOOST_THREAD_LIB) \
 	$(CLANG_LIBS) \
 	$(LLVM_LIBS)
-
-libsparseximpl_la_LDFLAGS = $(AM_LDFLAGS)

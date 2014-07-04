@@ -20,10 +20,22 @@ AM_LDFLAGS	= \
 	-L$(top_builddir)/src/internals/.libs \
 	$(AX_LDFLAGS)
 
-check_PROGRAMS = test_spmv
+check_PROGRAMS = test_spmv test_element
 
-test_spmv_SOURCES = SpmvTest.cpp
+test_spmv_SOURCES = \
+	CsxBench.cpp \
+	SpmvTest.cpp
 test_spmv_LDADD = \
+	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
+	$(CLANG_LIBS) \
+	$(LLVM_LIBS) \
+	$(BOOST_REGEX_LIB) \
+	$(BOOST_SERIALIZATION_LIB) \
+	$(BOOST_SYSTEM_LIB) \
+	$(BOOST_THREAD_LIB)
+
+test_element_SOURCES = ElementTest.cpp
+test_element_LDADD = \
 	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
 	$(CLANG_LIBS) \
 	$(LLVM_LIBS) \

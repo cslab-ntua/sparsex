@@ -13,12 +13,9 @@
 #define SPARSEX_INTERNALS_NUMA_UTIL_H
 
 #include "sparsex/internals/cdecl.h"
-
-BEGIN_C_DECLS
-
-#include <numa.h>
 #include <stddef.h>
 
+SPX_BEGIN_C_DECLS__
 /*
  *  Custom interleaved allocation.
  *
@@ -39,6 +36,6 @@ int check_interleaved(void *addr, const size_t *parts,
 int check_region(void *addr, size_t size, int node);
 void print_alloc_status(const char *data_descr, int err);
 
-END_C_DECLS
+SPX_END_C_DECLS__
 
 #endif  /* SPARSEX_INTERNALS_NUMA_UTIL_H */

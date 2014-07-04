@@ -20,28 +20,12 @@
 using namespace std;
 
 string SourceFromFile(const char *filename);
-
-string SourceFromFile(const string &filename)
-{
-    return SourceFromFile(filename.c_str());
-}
-
+string SourceFromFile(const string &filename);
 void SourceToFile(const char *filename, const string &source);
-
-void SourceToFile(const string &filename, const string &source)
-{
-    SourceToFile(filename.c_str(), source);
-}
-
+void SourceToFile(const string &filename, const string &source);
 const char *UniqueFilename(string &tmpl);
-
-void RemoveFile(const char *path)
-{
-    if (remove(path) < 0) {
-        perror("RemoveFile()");
-        exit(1);
-    }
-}
+void RemoveFile(const char *path);
+string Tabify(int num);
 
 template<typename T>
 string Stringify(const T& t)
@@ -51,15 +35,6 @@ string Stringify(const T& t)
     return ss.str();
 }
 
-string Tabify(int num)
-{
-    stringstream ss;
-    
-    for (int i = 0; i < num; i++)
-        ss << "\t";
-    
-    return ss.str();
-}
 #endif  // SPARSEX_INTERNALS_JIT_UTIL_HPP
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

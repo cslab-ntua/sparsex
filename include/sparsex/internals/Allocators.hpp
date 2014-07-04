@@ -12,6 +12,7 @@
 #define SPARSEX_INTERNALS_ALLOCATORS_HPP
 
 #include "sparsex/internals/numa_util.h"
+#include <numa.h>
 #include <cassert>
 #include <cstdlib>
 #include <exception>
@@ -213,81 +214,83 @@ private:
 
 
 // Override new/delete operators using our allocators
-void *operator new(size_t size, MemoryAllocator &alloc)
+inline void *operator new(size_t size, MemoryAllocator &alloc)
 {
     return alloc.Allocate(size);
 }
 
-void *operator new[](size_t size, MemoryAllocator &alloc)
+inline void *operator new[](size_t size, MemoryAllocator &alloc)
 {
     return alloc.Allocate(size);
 }
 
-void *operator new(size_t size, MemoryAllocator &alloc,
+inline void *operator new(size_t size, MemoryAllocator &alloc,
                    const nothrow_t &)
 {
     return alloc.Allocate(size, nothrow);
 }
 
-void *operator new[](size_t size, MemoryAllocator &alloc,
+inline void *operator new[](size_t size, MemoryAllocator &alloc,
                      const nothrow_t &)
 {
     return alloc.Allocate(size, nothrow);
 }
 
 // Provide new operators for NUMA-specific allocations
-void *operator new(size_t size, NumaAllocator &alloc, int node)
+inline void *operator new(size_t size, NumaAllocator &alloc, int node)
 {
     return alloc.AllocateOnNode(size, node);
 }
 
-void *operator new(size_t size, NumaAllocator &alloc, int node,
-                   const nothrow_t &)
+inline void *operator new(size_t size, NumaAllocator &alloc, int node,
+                          const nothrow_t &)
 {
     return alloc.AllocateOnNode(size, node, nothrow);
 }
 
-void *operator new[](size_t size, NumaAllocator &alloc, int node)
+inline void *operator new[](size_t size, NumaAllocator &alloc, int node)
 {
     return alloc.AllocateOnNode(size, node);
 }
 
-void *operator new[](size_t size, NumaAllocator &alloc, int node,
-                     const nothrow_t &)
+inline void *operator new[](size_t size, NumaAllocator &alloc, int node,
+                            const nothrow_t &)
 {
     return alloc.AllocateOnNode(size, node, nothrow);
 }
 
-void *operator new(size_t size, NumaAllocator &alloc,
-                   vector<size_t> parts, vector<int> nodes)
+inline void *operator new(size_t size, NumaAllocator &alloc,
+                          vector<size_t> parts, vector<int> nodes)
 {
     return alloc.AllocateInterleaved(size, parts, nodes);
 }
 
-void *operator new(size_t size, NumaAllocator &alloc,
-                   vector<size_t> parts, vector<int> nodes, const nothrow_t &)
+inline void *operator new(size_t size, NumaAllocator &alloc,
+                          vector<size_t> parts, vector<int> nodes,
+                          const nothrow_t &)
 {
     return alloc.AllocateInterleaved(size, parts, nodes, nothrow);
 }
 
-void *operator new[](size_t size, NumaAllocator &alloc,
-                     vector<size_t> parts, vector<int> nodes)
+inline void *operator new[](size_t size, NumaAllocator &alloc,
+                            vector<size_t> parts, vector<int> nodes)
 {
     return alloc.AllocateInterleaved(size, parts, nodes);
 }
 
-void *operator new[](size_t size, NumaAllocator &alloc,
-                     vector<size_t> parts, vector<int> nodes, const nothrow_t &)
+inline void *operator new[](size_t size, NumaAllocator &alloc,
+                            vector<size_t> parts, vector<int> nodes,
+                            const nothrow_t &)
 {
     return alloc.AllocateInterleaved(size, parts, nodes, nothrow);
 }
 
-void operator delete(void *p, MemoryAllocator &alloc)
+inline void operator delete(void *p, MemoryAllocator &alloc)
 {
     return alloc.Deallocate(p);
 }
 
-void operator delete[](void *p, MemoryAllocator &alloc)
+inline void operator delete[](void *p, MemoryAllocator &alloc)
 {
     return alloc.Deallocate(p);
 }

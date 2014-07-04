@@ -1,8 +1,8 @@
-static inline double delta${bits}_case(uint8_t **ctl, uint8_t size,
-                                       double **values, double **x_curr,
-                                       double **y_curr, double scale_f)
+static inline spx_value_t delta${bits}_case(
+    uint8_t **ctl, uint8_t size, spx_value_t **values,
+    spx_value_t **x_curr, spx_value_t **y_curr, spx_value_t scale_f)
 {
-	register double yr;
+	register spx_value_t yr;
 
 	${align_ctl}
 	yr = (**x_curr) * (**values);

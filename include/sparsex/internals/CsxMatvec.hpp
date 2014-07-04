@@ -28,18 +28,18 @@
 #include <vector>
 #endif
 
-BEGIN_C_DECLS
+SPX_BEGIN_C_DECLS__
 
-void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha, 
+void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
                 vector_t *y);
-void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
+void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
                     vector_t *y);
-void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha, 
-                  vector_t *y, spx_scalar_t beta);
-void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
-                      vector_t *y, spx_scalar_t beta);
+void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
+                  vector_t *y, spx_value_t beta);
+void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
+                      vector_t *y, spx_value_t beta);
 
-END_C_DECLS
+SPX_END_C_DECLS__
 
 void do_mv_thread(void *args);
 void do_mv_sym_thread(void *args);

@@ -16,8 +16,9 @@
 #include <stdio.h>
 
 /* SpMV kernel implemented with Intel MKL */
-void mkl_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
-              int nnz, double *x, double *y)
+void mkl_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
+              spx_index_t nrows, spx_index_t ncols, spx_index_t nnz,
+              spx_value_t *x, spx_value_t *y)
 {
     /* 1. Matrix loading phase */
     MKL_INT *pointerB, *pointerE;
@@ -39,10 +40,10 @@ void mkl_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
     mkl_set_num_threads(NR_THREADS);                                                                                                                                                                                              
     /* 2. SpMV benchmarking phase */
     vector<double> mt(OUTER_LOOPS);
-    for (unsigned int i = 0; i < OUTER_LOOPS; i++) {
+    for (size_t i = 0; i < OUTER_LOOPS; i++) {
         t.Clear();
         t.Start();
-        for (unsigned long int j = 0; j < LOOPS; j++) {
+        for (size_t j = 0; j < LOOPS; j++) {
             mkl_dcsrmv(&transa, &nrows, &ncols, &ALPHA, matdescra, values,
                        colind, pointerB, pointerE, x, &BETA, y);            
         }

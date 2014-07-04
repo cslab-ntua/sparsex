@@ -163,7 +163,7 @@ private:
     size_t nr_deltas_;
 };
 
-ostream &operator<<(ostream &out, const StatsData &data)
+inline ostream &operator<<(ostream &out, const StatsData &data)
 {
     out << boost::format("[nz:%u, p:%u, d:%u]") %
         data.nr_encoded_ % data.nr_patterns_ % data.nr_deltas_;

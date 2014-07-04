@@ -77,6 +77,19 @@ Type `configure --help' for more information.])
         fi
     ], [enable_bench=no])
 
+dnl --with-index/--with-value options
+AC_ARG_WITH([index],
+    [AS_HELP_STRING([--with-index@<:@=TYPE@:>@],
+        [Compile SparseX with indices of type `TYPE'. `TYPE' must be a valid C integral type.])],
+    [SPX_INDEX_TYPE="$with_index"],
+    [SPX_INDEX_TYPE="int"])
+
+AC_ARG_WITH([value],
+    [AS_HELP_STRING([--with-value@<:@=TYPE@:>@],
+        [Compile SparseX with indices of type `TYPE'. `TYPE' must be a valid C floating poing type.])],
+    [SPX_VALUE_TYPE="$with_value"],
+    [SPX_VALUE_TYPE="double"])
+
 dnl Check for programs
 AC_PROG_INSTALL
 AC_PROG_SED
@@ -164,9 +177,6 @@ AX_LDFLAGS="$AX_LDFLAGS $AX_PKG_LDFLAGS"
 dnl Initialize variables for package
 AX_PACKAGE_INIT
 
-SPX_MULT_TEMPLATE_DIR="`pwd`/$srcdir/src/templates"
-SPX_JIT_INCLUDE="`pwd`/$srcdir/include"
-
 AM_CONDITIONAL([SPX_BUILD_BENCH], [ test x"$enable_bench" = x"yes" ])
 AC_SUBST([ax_lib_suffix])
 AC_SUBST([AX_PKG_CPPFLAGS])
@@ -181,13 +191,14 @@ AC_SUBST([BOOST_REGEX_LIB])
 AC_SUBST([BOOST_SERIALIZATION_LIB])
 AC_SUBST([BOOST_SYSTEM_LIB])
 AC_SUBST([BOOST_THREAD_LIB])
-AC_SUBST([SPX_MULT_TEMPLATE_DIR])
-AC_SUBST([SPX_JIT_INCLUDE])
 AC_SUBST([SPX_USE_NUMA])
+AC_SUBST([SPX_INDEX_TYPE])
+AC_SUBST([SPX_VALUE_TYPE])
 
 AC_CONFIG_FILES([
         Makefile
         include/Makefile
+        include/sparsex/config.h
         include/sparsex/internals/Config.hpp
         scripts/Makefile
         src/Makefile

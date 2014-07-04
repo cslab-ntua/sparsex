@@ -32,7 +32,7 @@ RuntimeConfiguration::PropertyMap RuntimeConfiguration::DefaultProperties()
     return boost::assign::map_list_of
         (RtNrThreads, "1")
         (RtCpuAffinity, "0")
-#ifdef SPM_NUMA
+#if SPX_USE_NUMA
         (PreprocHeuristic, "cost")
 #else
         (PreprocHeuristic, "ratio")

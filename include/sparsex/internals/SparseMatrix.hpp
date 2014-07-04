@@ -20,17 +20,17 @@
 #include "sparsex/internals/Mmf.hpp"
 #include "sparsex/internals/Rcm.hpp"
 #include "sparsex/internals/SparseInternal.hpp"
-#include "sparsex/internals/Timer.hpp"
+#include "sparsex/internals/TimerCollection.hpp"
 #include "sparsex/internals/Types.hpp"
 
 #include <boost/interprocess/detail/move.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/static_assert.hpp>
 
+#include <ostream>
+
 using namespace std;
 
-double internal_time, csx_time, dump_time;
- 
 namespace internal {
 
 template<class MatrixType>
@@ -89,12 +89,18 @@ public:
                       boost::interprocess::forward<idx_t>(nr_rows),
                       boost::interprocess::forward<idx_t>(nr_cols),
                       boost::interprocess::forward<bool>(zero_based)),
-          csx_(0) {}
+          csx_(0)
+    {
+        DoCreateTimers();
+    }
 
     // MMF-specific constructor
     SparseMatrix(const char *filename)
         : InputPolicy(boost::interprocess::forward<const char*>(filename)),
-          csx_(0) {}
+          csx_(0)
+    {
+        DoCreateTimers();
+    }
 
     ~SparseMatrix()
     {
@@ -115,9 +121,9 @@ public:
         try {
             if (config.GetProperty<bool>
                 (RuntimeConfiguration::MatrixSymmetric)) {
-                spm = CreateCsx(internal::Sym<true>());
+                spm = DoCreateCsx(internal::Sym<true>());
             } else {
-                spm = CreateCsx(internal::Sym<false>());
+                spm = DoCreateCsx(internal::Sym<false>());
             }
         } catch (std::exception &e) {
             LOG_ERROR << e.what() << "\n";
@@ -183,22 +189,17 @@ public:
             timer.Start();
             SaveCsx<idx_t, val_t>(csx_, filename, NULL);
             timer.Pause();
-            dump_time = timer.ElapsedTime();
         }
     }
 
     void Destroy()
     {
-        PutSpmMt<val_t>(csx_);
+        PutSpmMt<idx_t, val_t>(csx_);
         csx_ = 0;
     }
 
 private:
-    spm_mt_t *csx_;
-    internal::allow_instantiation<idx_t, val_t> instance;
-
-private:
-    spm_mt_t *CreateCsx(internal::Sym<true>)
+    spm_mt_t *DoCreateCsx(internal::Sym<true>)
     {
         RuntimeContext& rt_context = RuntimeContext::GetInstance();
         SparseInternal<SparsePartitionSym<idx_t, val_t> > *spi;
@@ -209,14 +210,12 @@ private:
         spi = SparseInternal<SparsePartitionSym<idx_t, val_t> >::DoLoadMatrixSym
             (*this, rt_context.GetNrThreads());
         timer.Pause();
-        internal_time = timer.ElapsedTime();
 
         // Converting to CSX
         timer.Clear();
         timer.Start();
         csx_ = BuildCsxSym<idx_t, val_t>(spi);
         timer.Pause();
-        csx_time = timer.ElapsedTime();
 
         // Clenaup
         delete spi;
@@ -225,30 +224,38 @@ private:
         return csx_;
     }
 
-    spm_mt_t *CreateCsx(internal::Sym<false>)
+    spm_mt_t *DoCreateCsx(internal::Sym<false>)
     {
         RuntimeContext& rt_context = RuntimeContext::GetInstance();
         SparseInternal<SparsePartition<idx_t, val_t> > *spi;
         timing::Timer timer;
 
         // Converting to internal representation
-        timer.Start();
+        timers_.StartTimer("load");
         spi = SparseInternal<SparsePartition<idx_t, val_t> >::
             DoLoadMatrix(*this, rt_context.GetNrThreads());
-        timer.Pause();
-        internal_time = timer.ElapsedTime();
+        timers_.PauseTimer("load");
 
         // Converting to CSX
-        timer.Clear();
-        timer.Start();
+        timers_.StartTimer("preproc");
         csx_ = BuildCsx<idx_t, val_t>(spi);
-        timer.Pause();
-        csx_time = timer.ElapsedTime();
+        timers_.PauseTimer("preproc");
+        timers_.PrintAllTimers(cout);
 
         // Clenaup
         delete spi;
         return csx_;
     }
+    
+    void DoCreateTimers()
+    {
+        timers_.CreateTimer("load", "Load matrix");
+        timers_.CreateTimer("preproc", "Preprocessing");
+    }
+
+    spm_mt_t *csx_;
+    internal::allow_instantiation<idx_t, val_t> instance;
+    timing::TimerCollection timers_;
 };
 
 #endif // SPARSEX_INTERNALS_SPARSE_MATRIX_HPP

@@ -62,8 +62,8 @@ template<typename IndexType, typename ValueType>
 void SaveCsx(void *spm, const char *filename, IndexType *permutation)
 {
     spm_mt_t *spm_mt = (spm_mt_t *) spm;
-    csx_t<ValueType> *csx = 0;
-    csx_sym_t<ValueType> *csx_sym = 0;
+    CsxMatrix<IndexType, ValueType> *csx = 0;
+    CsxSymMatrix<IndexType, ValueType> *csx_sym = 0;
     ofstream file;
     bool reordered = false;
 
@@ -87,21 +87,26 @@ void SaveCsx(void *spm, const char *filename, IndexType *permutation)
                 & spm_mt->spm_threads[i].node;
 #if SPX_USE_NUMA
             if (spm_mt->symmetric) {
-                csx_sym = (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;
-                csx = (csx_t<ValueType> *) csx_sym->lower_matrix;
+                csx_sym = (CsxSymMatrix<IndexType, ValueType> *)
+                    spm_mt->spm_threads[i].spm;
+                csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
             } else {
-                csx = (csx_t<ValueType> *) spm_mt->spm_threads[i].spm;
+                csx = (CsxMatrix<IndexType, ValueType> *)
+                    spm_mt->spm_threads[i].spm;
             }
+
             oa << csx->nnz & csx->ctl_size;
 #endif
         }
 
         for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
             if (spm_mt->symmetric) {
-                csx_sym = (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;
-                csx = (csx_t<ValueType> *) csx_sym->lower_matrix;
+                csx_sym = (CsxSymMatrix<IndexType, ValueType> *)
+                    spm_mt->spm_threads[i].spm;
+                csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
             } else {
-                csx = (csx_t<ValueType> *) spm_mt->spm_threads[i].spm;
+                csx =
+                    (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].spm;
             }
 
             oa << csx->nnz & csx->ncols & csx->nrows & csx->ctl_size
@@ -145,8 +150,8 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
     bool symmetric, reordered, full_column_indices = false;
     ifstream file;
     spm_mt_t *spm_mt = 0;
-    csx_sym_t<ValueType> *csx_sym = 0;
-    csx_t<ValueType> *csx = 0;
+    CsxSymMatrix<IndexType, ValueType> *csx_sym = 0;
+    CsxMatrix<IndexType, ValueType> *csx = 0;
 
 #if SPX_USE_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
@@ -221,12 +226,13 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
         for (unsigned int i = 0; i < nr_threads; i++) {
 #if SPX_USE_NUMA
             if (symmetric)
-                csx_sym = new (numa_alloc, node) csx_sym_t<ValueType>;
-            csx = new (numa_alloc, node) csx_t<ValueType>;
+                csx_sym =
+                    new (numa_alloc, node) CsxSymMatrix<IndexType, ValueType>;
+            csx = new (numa_alloc, node) CsxMatrix<IndexType, ValueType>;
 #else
             if (symmetric)
-                csx_sym = new csx_sym_t<ValueType>;
-            csx = new csx_t<ValueType>;
+                csx_sym = new CsxSymMatrix<IndexType, ValueType>;
+            csx = new CsxMatrix<IndexType, ValueType>;
 #endif
             ia >> csx->nnz & csx->ncols & csx->nrows & csx->ctl_size &
                 csx->row_start;
@@ -291,10 +297,12 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
             new CsxJit<IndexType, ValueType>*[nr_threads];
         for (size_t i = 0; i < nr_threads; ++i) {
             if (symmetric) {
-                csx_sym = (csx_sym_t<ValueType> *) spm_mt->spm_threads[i].spm;
-                csx = (csx_t<ValueType> *) csx_sym->lower_matrix;
+                csx_sym = (CsxSymMatrix<IndexType, ValueType> *)
+                    spm_mt->spm_threads[i].spm;
+                csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
             } else { 
-                csx = (csx_t<ValueType> *) spm_mt->spm_threads[i].spm;
+                csx = (CsxMatrix<IndexType, ValueType> *)
+                    spm_mt->spm_threads[i].spm;
             }
             bool row_jumps = csx->row_jumps != 0;
             Jits[i] = new CsxJit<IndexType, ValueType>(csx, &engine,

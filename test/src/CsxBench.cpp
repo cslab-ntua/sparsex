@@ -12,7 +12,7 @@
  */
 
 #include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/CsxBench.hpp"
+#include "CsxBench.hpp"
 
 static vector_t *x = NULL;
 static vector_t *y = NULL;
@@ -80,7 +80,7 @@ static void do_spmv_thread_main_swap(spm_mt_thread_t *thread,
 	for (size_t i = 0; i < nr_loops; i++) {
 		cur_barrier.wait();
         timer_thr.Start();
-		spmv_mt_fn(thread->spm, x, y, 1);
+		spmv_mt_fn(thread->spm, x, y, 1, NULL);
         timer_thr.Pause();
 		cur_barrier.wait();
 		SWAP(x, y);
@@ -127,8 +127,7 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
                                          boost::barrier &cur_barrier)
 {
 	setaffinity_oncpu(thread->cpu);
-	spmv_double_sym_fn_t *spmv_mt_sym_fn = 
-        (spmv_double_sym_fn_t *) thread->spmv_fn;
+	spmv_fn_t spmv_mt_sym_fn = thread->spmv_fn;
     
     Timer timer_thr("Thread time");
     Timer timer_total("Total time");
@@ -147,7 +146,7 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 		VecInitFromMap(tmp, 0, thread->map);
 		cur_barrier.wait();
         timer_thr.Start();
-		spmv_mt_sym_fn(thread->spm, x, y, y, 1);
+		spmv_mt_sym_fn(thread->spm, x, y, 1, y);
         timer_thr.Pause();
 		cur_barrier.wait();
 		// Switch Reduction Phase
@@ -163,18 +162,18 @@ static void do_spmv_thread_sym_main_swap(spm_mt_thread_t *thread,
 }
 #endif
 
-static void csr_spmv(csx::CSR<uindex_t, spx_value_t> *spm, 
+static void csr_spmv(csx::CSR<spx_uindex_t, spx_value_t> *spm, 
                      vector_t *in, vector_t *out)
 {
 	spx_value_t *x = in->elements;
 	spx_value_t *y = out->elements;
 	spx_value_t *values = spm->values_;
-	uindex_t *row_ptr = spm->rowptr_;
-	uindex_t *col_ind = spm->colind_;
-	const uindex_t row_start = 0;
-	const uindex_t row_end = spm->GetNrRows();
+	spx_uindex_t *row_ptr = spm->rowptr_;
+	spx_uindex_t *col_ind = spm->colind_;
+	const spx_uindex_t row_start = 0;
+	const spx_uindex_t row_end = spm->GetNrRows();
 	register spx_value_t yr;
-	uindex_t i,j;
+	spx_uindex_t i,j;
 
 	for (i = row_start; i < row_end; i++) {
 		yr = (spx_value_t) 0;
@@ -287,7 +286,7 @@ float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 	return secs;
 }
 
-void spmv_check_mt(csx::CSR<uindex_t, spx_value_t> *csr, spm_mt_t *spm_mt,
+void spmv_check_mt(csx::CSR<spx_uindex_t, spx_value_t> *csr, spm_mt_t *spm_mt,
                    size_t loops, size_t nr_rows, size_t nr_cols)
 {
 	vector_t *y_tmp;
@@ -511,8 +510,9 @@ float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t nr_rows,
 	return secs;
 }
 
-void spmv_check_sym_mt(csx::CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
-                       size_t loops, size_t nr_rows, size_t nr_cols)
+void spmv_check_sym_mt(csx::CSR<spx_uindex_t, spx_value_t> *spm,
+                       spm_mt_t *spm_mt, size_t loops,
+                       size_t nr_rows, size_t nr_cols)
 {
 	vector_t *y_tmp;
 

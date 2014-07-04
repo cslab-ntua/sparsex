@@ -30,7 +30,7 @@ namespace csx {
  *
  *  Marking elements can be useful when collecting statistics for the different
  *  encodings of the sparse matrix. For example, you can mark elements in order
- *  to treat the differently when generating or processing statistics. In order
+ *  to treat them differently when generating or processing statistics. In order
  *  to keep the generic element's implementation as simple as possible, we
  *  introduce the notion of markers. Every element is associated with a marker,
  *  which we can use it to mark it. A marker can accommodate more than a single
@@ -294,13 +294,18 @@ public:
     Element(Element<IndexType, ValueType> &&other)
         : row_(other.row_),
           col_(other.col_),
-          vals_(other.vals_),       // steal the values from the rvalue
           size_(other.size_),
           inst_(other.inst_),
           marker_(other.marker_)    // steal the marker from the rvalue
 
     {
-        other.vals_ = 0;
+        if (size_ == 1) {
+            val_ = other.val_;
+        } else {
+            vals_ = other.vals_;
+            other.vals_ = 0;
+        }
+
         other.marker_ = 0;
     }
 
@@ -563,7 +568,10 @@ void swap(Element<IndexType, ValueType> &a, Element<IndexType, ValueType> &b)
     using std::swap;
     swap(a.row_, b.row_);
     swap(a.col_, b.col_);
-    swap(a.val_, b.val_);
+    if (sizeof(a.vals_) >= sizeof(a.val_))
+        swap(a.vals_, b.vals_);
+    else
+        swap(a.val_, b.val_);
     swap(a.size_, b.size_);
     swap(a.inst_, b.inst_);
     swap(a.marker_, b.marker_);
@@ -605,7 +613,7 @@ const static unsigned long PatternIdOffset = 10000;
  *  @param delta_size   byte count of delta unit
  *  @return the pattern id of the delta unit
  */
-unsigned long GetPatternId(size_t delta_size)
+inline unsigned long GetPatternId(size_t delta_size)
 {
     return (delta_size << 3) + DeltaIdOffset;
 }

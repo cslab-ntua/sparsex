@@ -37,11 +37,11 @@ extern double csx_time;
 int GetOptionOuterLoops();
 float spmv_bench_mt(spm_mt_t *spm_mt, size_t loops, size_t rows_nr,
                     size_t cols_nr);
-void spmv_check_mt(CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
+void spmv_check_mt(CSR<spx_uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
                    size_t loops, size_t rows_nr, size_t cols_nr);
 float spmv_bench_sym_mt(spm_mt_t *spm_mt, size_t loops, size_t rows_nr,
                         size_t cols_nr);
-void spmv_check_sym_mt(CSR<uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
+void spmv_check_sym_mt(CSR<spx_uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
                        size_t loops, size_t rows_nr, size_t cols_nr);
 
 /**
@@ -91,7 +91,7 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     delete csr;
 }
 
-template<typename ValueType>
+template<typename IndexType, typename ValueType>
 void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
 {
     uint64_t nrows, ncols, nnz;
@@ -101,19 +101,23 @@ void BenchLoop(spm_mt_t *spm_mt, char *mmf_name)
     ReadMmfSizeLine(mmf_name, nrows, ncols, nnz);
     int nr_outer_loops = GetOptionOuterLoops();
     
+    double csx_time = 0;    // FIXME: preprocessing time no more available here
     for (int i = 0; i < nr_outer_loops; ++i) {
         if (!spm_mt->symmetric) {
             secs = spmv_bench_mt(spm_mt, loops_nr, nrows, ncols);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
             printf("m:%s f:%s s:%lu pt:%f t:%f r:%f\n", "csx",
-                   basename(mmf_name), CsxSize<ValueType>(spm_mt), csx_time,
+                   basename(mmf_name),
+                   CsxSize<IndexType, ValueType>(spm_mt), csx_time,
                    secs, flops);
         } else {
             secs = spmv_bench_sym_mt(spm_mt, loops_nr, nrows, ncols);
             flops = (double)(loops_nr*nnz*2)/((double)1000*1000*secs);
             printf("m:%s f:%s ms:%lu s:%lu pt:%f t:%f r:%f\n", "csx-sym",
-                   basename(mmf_name), MapSize(spm_mt),
-                   CsxSymSize<ValueType>(spm_mt), csx_time, secs, flops);
+                   basename(mmf_name),
+                   CsxSymMapSize<IndexType, ValueType>(spm_mt),
+                   CsxSymSize<IndexType, ValueType>(spm_mt),
+                   csx_time, secs, flops);
         }
     }
 }

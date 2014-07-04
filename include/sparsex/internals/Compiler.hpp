@@ -26,6 +26,11 @@ using namespace std;
 class ClangCompiler
 {
 public:
+    enum Options {
+        IncludePathSystem,
+        IncludePathUser
+    };
+
     ClangCompiler();
 
     ~ClangCompiler() {
@@ -33,7 +38,8 @@ public:
         // delete() corruption; the invocation will be released from our dtor
         //compiler_->takeInvocation();
 
-        /* Just let CompilerInvocation object be released through CompilerInstance */
+        // Just let CompilerInvocation object be released through
+        // CompilerInstance
     };
 
     Module *Compile(const string &source, LLVMContext *context) const;
@@ -60,22 +66,21 @@ public:
         SetCodeGenOptions();
     }
 
-    void AddHeaderSearchPath(const char *path)
-    {
-        HeaderSearchOptions &header_search =
-            invocation_->getHeaderSearchOpts();
+    void AddIncludeSearchPath(const string &inc_path, Options type);
+    // {
+    //     HeaderSearchOptions &header_search =
+    //         invocation_->getHeaderSearchOpts();
 
-        // Add path both as a quoted and angled include
-        header_search.AddPath(path, frontend::Quoted,
-                              true /* user supplied */, false, false);
-        header_search.AddPath(path, frontend::Angled,
-                              true /* user supplied */, false, false);
-    }
+    //     // Add path both as a quoted and angled include
+    //     header_search.AddPath(path, frontend::Quoted,
+    //                           true /* user supplied */, false, false);
+    //     header_search.AddPath(path, frontend::Angled,
+    //                           true /* user supplied */, false, false);
+    // }
 
 private:
     // Set up the code generation options depending on debug mode
     void SetCodeGenOptions();
-    void SetHeaderSearchOptions(const string &);
     CompilerInvocation *invocation_;
     OwningPtr<CompilerInstance> compiler_;
     bool keep_temporaries_;

@@ -12,11 +12,6 @@
 #ifndef SPARSEX_INTERNALS_AFFINITY_HPP
 #define SPARSEX_INTERNALS_AFFINITY_HPP
 
-#include "sparsex/internals/logger/Logger.hpp"
-
-#include <stdlib.h>
-#include <sched.h>
-
 void setaffinity_oncpu(unsigned int cpu);
 int get_cpu_count();
 

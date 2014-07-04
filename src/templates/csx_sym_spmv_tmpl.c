@@ -3,20 +3,19 @@
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
+ * Copyright (C) 2014, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+#include <sparsex/types.h>
+#include <sparsex/internals/CtlUtil.hpp>
+#include <sparsex/internals/Vector.hpp>
+#include <sparsex/internals/Csx.hpp>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <assert.h>
-
-#include  "${header_prefix}/csx/CtlUtil.hpp"
-
-#define ELEM_TYPE double
-#include "${header_prefix}/csx/Vector.hpp"
-#include "${header_prefix}/csx/Csx.hpp"
 
 #define CSX_SPMV_FN_MAX CTL_PATTERNS_MAX
 
@@ -33,10 +32,10 @@ static void align_ptr(uint8_t **ctl, int align)
 #pragma GCC diagnostic pop
 
 #ifdef CSX_DEBUG
-static void ctl_print(uint8_t *ctl, uint64_t start, uint64_t end,
+static void ctl_print(uint8_t *ctl, spx_index_t start, spx_index_t end,
                       const char *descr)
 {
-	for (uint64_t i = start; i < end; i++)
+	for (spx_index_t i = start; i < end; i++)
 		printf("%s: ctl[%ld] = %d\n", descr, i, ctl[i]);
 }
 
@@ -49,25 +48,24 @@ static void deref(void *ptr)
 
 ${spmv_func_definitions}
 
-void spm_csx32_double_sym_multiply(void *spm, vector_t *in, vector_t *out,
-                                   double scale_f, vector_t *temp)
+void spm_csx_sym_multiply(void *spm, vector_t *in, vector_t *out,
+                          spx_value_t scale_f, vector_t *temp)
 {
-	csx_double_sym_t *csx_sym = (csx_double_sym_t *) spm;
-	csx_double_t *csx = csx_sym->lower_matrix;
-	double *x = in->elements;
-	double *y = out->elements;
-	double *tmp = temp->elements;
-	double *v = csx->values;
-	double *dv = csx_sym->dvalues;
-	uint64_t x_indx = 0;
-	uint64_t y_indx = csx->row_start;
-	uint64_t y_end = csx->row_start + csx->nrows;
-	register double yr = 0;
+	csx_sym_matrix_t *csx_sym = (csx_sym_matrix_t *) spm;
+	csx_matrix_t *csx = csx_sym->lower_matrix;
+	spx_value_t *x = in->elements;
+	spx_value_t *y = out->elements;
+	spx_value_t *tmp = temp->elements;
+	spx_value_t *v = csx->values;
+	spx_value_t *dv = csx_sym->dvalues;
+	spx_index_t x_indx = 0;
+	spx_index_t y_indx = csx->row_start;
+	spx_index_t y_end = csx->row_start + csx->nrows;
+	register spx_value_t yr = 0;
 	uint8_t *ctl = csx->ctl;
 	uint8_t *ctl_end = ctl + csx->ctl_size;
 	uint8_t flags, size, patt_id;
-	uint64_t i;
-	double *cur = tmp;
+	spx_value_t *cur = tmp;
 
 	do {
 		flags = *ctl++;
@@ -91,7 +89,7 @@ void spm_csx32_double_sym_multiply(void *spm, vector_t *in, vector_t *out,
 	
 	y[y_indx] += yr;
 	
-	for (i = y_indx; i < y_end; i++) {
+	for (spx_index_t i = y_indx; i < y_end; i++) {
 		y[i] += x[i] * (*dv) * scale_f;
 		dv++;
 	}

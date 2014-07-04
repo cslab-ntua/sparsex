@@ -97,14 +97,14 @@ public:
      *  @return          a handle to the newly created CSX matrix or to CSX-Sym
      *                   lower triangle half part of the matrix.
      */
-    csx_t<ValueType> *MakeCsx(bool symmetric);
+    CsxMatrix<IndexType, ValueType> *MakeCsx(bool symmetric);
     
     /**
      *  Transform the matrix owned by this manager into CSX form.
      *
      *  @return a handle to the newly created CSX-Sym matrix.
      */
-    csx_sym_t<ValueType> *MakeCsxSym();
+    CsxSymMatrix<IndexType, ValueType> *MakeCsxSym();
 
     /**
      *  Checks whether row jumps exist in the matrix to be encoded in CSX
@@ -252,11 +252,12 @@ uint8_t CsxManager<IndexType, ValueType>::GetFlag(unsigned long pattern_id,
 }
 
 template<typename IndexType, typename ValueType>
-csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
+CsxSymMatrix<IndexType, ValueType> *
+CsxManager<IndexType, ValueType>::MakeCsxSym()
 {
-    csx_sym_t<ValueType> *csx;
-    double *diagonal = spm_sym_->GetDiagonal();
-    uint64_t diagonal_size = spm_sym_->GetDiagonalSize();
+    CsxSymMatrix<IndexType, ValueType> *csx;
+    ValueType *diagonal = spm_sym_->GetDiagonal();
+    IndexType diagonal_size = spm_sym_->GetDiagonalSize();
 #if SPX_USE_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
 #endif
@@ -276,14 +277,14 @@ csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
         exit(1);
     }
 
-    csx = new (numa_alloc, node) csx_sym_t<ValueType>;
+    csx = new (numa_alloc, node) CsxSymMatrix<IndexType, ValueType>;
     csx->dvalues = new (numa_alloc, node) ValueType[diagonal_size];
 #else  
-    csx = new csx_sym_t<ValueType>;
+    csx = new CsxSymMatrix<IndexType, ValueType>;
     csx->dvalues = new ValueType[diagonal_size];
 #endif
 
-    for (uint64_t i = 0; i < diagonal_size; i++)
+    for (IndexType i = 0; i < diagonal_size; i++)
         csx->dvalues[i] = diagonal[i];
 
     csx->lower_matrix = MakeCsx(true);
@@ -291,9 +292,10 @@ csx_sym_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsxSym()
 }
 
 template<typename IndexType, typename ValueType>
-csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
+CsxMatrix<IndexType, ValueType> *
+CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
 {
-    csx_t<ValueType> *csx;
+    CsxMatrix<IndexType, ValueType> *csx;
 
 #if SPX_USE_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
@@ -309,11 +311,11 @@ csx_t<ValueType> *CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
         exit(1);
     }
 
-    csx = new (numa_alloc, node) csx_t<ValueType>;
+    csx = new (numa_alloc, node) CsxMatrix<IndexType, ValueType>;
     values_ = new (numa_alloc, node) ValueType[spm_->GetNrNonzeros()];
     rows_info_ = new (numa_alloc, node) row_info_t[spm_->GetNrRows()];
 #else    
-    csx = new csx_t<ValueType>;
+    csx = new CsxMatrix<IndexType, ValueType>;
     values_ = new ValueType[spm_->GetNrNonzeros()];
     rows_info_ = new row_info_t[spm_->GetNrRows()];
 #endif  // SPX_USE_NUMA

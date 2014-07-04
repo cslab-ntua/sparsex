@@ -33,11 +33,29 @@ string SourceFromFile(const char *filename)
     return ret;
 }
 
+string SourceFromFile(const string &filename)
+{
+    return SourceFromFile(filename.c_str());
+}
+
 void SourceToFile(const char *filename, const string &source)
 {
     ofstream ofs(filename);
     ofs << source;
     ofs.close();
+}
+
+void SourceToFile(const string &filename, const string &source)
+{
+    SourceToFile(filename.c_str(), source);
+}
+
+void RemoveFile(const char *path)
+{
+    if (remove(path) < 0) {
+        perror("RemoveFile()");
+        exit(1);
+    }
 }
 
 const char *UniqueFilename(string &tmpl)
@@ -60,8 +78,18 @@ const char *UniqueFilename(string &tmpl)
     // FIXME: an implementation with boost iostreams would be more portable
     close(fd);
     tmpl.assign(local_tmpl);
-    delete local_tmpl;
+    delete[] local_tmpl;
     return tmpl.c_str();
+}
+
+string Tabify(int num)
+{
+    stringstream ss;
+    
+    for (int i = 0; i < num; i++)
+        ss << "\t";
+    
+    return ss.str();
 }
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

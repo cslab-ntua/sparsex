@@ -29,21 +29,21 @@ int main()
     int row = 3;
     int col = 5;
     int delta = 2;
-    vector<double> vals;
+    vector<float> vals;
     for (size_t i = 0; i < RleSize; ++i)
         vals.push_back(5 + 2*i);
 
-    //double *bogus = 0;
-    Element<int, double> elem(row, col, vals.begin(), RleSize,
+    //float *bogus = 0;
+    Element<int, float> elem(row, col, vals.begin(), RleSize,
                               make_pair(Encoding::Horizontal, delta));
-    Element<int, double> new_elem = elem;
+    Element<int, float> new_elem = elem;
     cout << elem << "\n";
     cout << new_elem << " (copied)\n";
     cout << GetPatternId(elem) << " (patt id)\n";
     assert(elem.IsPattern());
 
     // Test append in place
-    boost::container::vector<Element<int, double> > elems;
+    boost::container::vector<Element<int, float> > elems;
     elems.emplace_back(row, col, vals.begin(), RleSize,
                        make_pair(Encoding::Horizontal, delta));
     cout << elems.back() << " (emplaced) \n";
@@ -54,16 +54,16 @@ int main()
     typename TransformFn<int>::type rev_xform_fn =
         GetXformFn<int>(Encoding::Diagonal, Encoding::Horizontal);
 
-    Element<int, double> xformed =
+    Element<int, float> xformed =
         TransformElement(elem, xform_fn(elem.GetCoordinates(), 10, 10));
     cout << xformed << " (xformed)\n";
 
-    Element<int, double> xformed_back =
+    Element<int, float> xformed_back =
         TransformElement(xformed,
                          rev_xform_fn(xformed.GetCoordinates(), 10, 10));
     assert(xformed_back == elem);
 
-    Element<int, double> single(1, 1, 4.3);
+    Element<int, float> single(1, 1, 4.3);
     cout << single << " (single)\n";
     xformed.GetMarker().Mark(PatternMarker::InPattern |
                              PatternMarker::PatternStart);
@@ -73,13 +73,13 @@ int main()
          << " (marked?) \n";
 
     // Test insertion in dynamic array
-    DynamicArray<Element<int, double> > da;
+    DynamicArray<Element<int, float> > da;
     da.Append(elem);
     da.Append(new_elem);
     da.Append(xformed);
     da.Append(xformed_back);
     da.Append(single);
-    Element<int, double> *da_elems = da.TakeElems();
+    Element<int, float> *da_elems = da.TakeElems();
     da.GetAllocator().destroy(da_elems, da.GetSize());
     da.GetAllocator().deallocate(da_elems, da.GetSize());
 

@@ -13,6 +13,13 @@
 
 namespace logging {
 
+boost::unordered_map<Level, string> LoggingHandler::names_ =
+    boost::assign::map_list_of 
+    (Error, "[ERROR]: ")
+    (Warning, "[WARNING]: ")
+    (Info, "[INFO]: ")
+    (Debug, "[DEBUG]: ");
+
 LoggingHandler::LoggingHandler()
 {
     sinks_[Null] = boost::ref(NullPolicy::GetInstance());

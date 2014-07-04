@@ -14,47 +14,58 @@
 #ifndef SPARSEX_INTERNALS_CSX_HPP
 #define SPARSEX_INTERNALS_CSX_HPP
 
-#include "sparsex/internals/CtlUtil.hpp"
+#include <sparsex/types.h>
+#include <sparsex/internals/CtlUtil.hpp>
 
 ///< CSX matrix format
 typedef struct {
-    unsigned long rowptr;    /* rowptr is the index in csx->ctl of
+    spx_index_t rowptr;    /* rowptr is the index in csx->ctl of
                                 the first element of row i */
-    unsigned long valptr;    /* valptr is the index in csx->values of
+    spx_index_t valptr;    /* valptr is the index in csx->values of
                                 the first element of row i */
-    unsigned long span;
+    spx_index_t span;
 } row_info_t;
 
 typedef struct {
-    unsigned long nnz, ncols, nrows, ctl_size, row_start;
-    uint8_t row_jumps;
-    double *values;
+    spx_value_t *values;
+    spx_index_t nnz;
+    spx_index_t ncols;
+    spx_index_t nrows;
+    spx_index_t ctl_size;
+    spx_index_t row_start;
     uint8_t *ctl;
+    uint8_t row_jumps;
     long id_map[CTL_PATTERNS_MAX];
     row_info_t *rows_info; 
-} csx_double_t;
+} csx_matrix_t;
 
 typedef struct {
-    csx_double_t *lower_matrix;
-    double *dvalues;
-} csx_double_sym_t;
+    csx_matrix_t *lower_matrix;
+    spx_value_t *dvalues;
+} csx_sym_matrix_t;
 
 #ifdef __cplusplus
 // C++ only
 
-template<typename ValueType>
-struct csx_t {
-    unsigned long nnz, ncols, nrows, ctl_size, row_start;
-    uint8_t row_jumps;
+// FIXME: members of CsxMatrix MUST have the same order with csx_matrix_t
+//        This is error-prone with explicit casts between the two types
+template<typename IndexType, typename ValueType>
+struct CsxMatrix {
     ValueType *values;
+    IndexType nnz;
+    IndexType ncols;
+    IndexType nrows;
+    IndexType ctl_size;
+    IndexType row_start;
     uint8_t *ctl;
+    uint8_t row_jumps;
     long id_map[CTL_PATTERNS_MAX];
     row_info_t *rows_info;
 };
 
-template<typename ValueType>
-struct csx_sym_t {
-    csx_t<ValueType> *lower_matrix;
+template<typename IndexType, typename ValueType>
+struct CsxSymMatrix {
+    CsxMatrix<IndexType, ValueType> *lower_matrix;
     ValueType *dvalues;
 };
 

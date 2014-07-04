@@ -151,7 +151,7 @@ private:
 // Special conversions
 // Support `true' and `false' in boolean conversions
 template<>
-bool RuntimeConfiguration::GetProperty(const Property &key) const
+inline bool RuntimeConfiguration::GetProperty(const Property &key) const
 {
     PropertyMap::const_iterator iter = property_map_.find(key);
     assert(iter != property_map_.end());
@@ -162,7 +162,8 @@ bool RuntimeConfiguration::GetProperty(const Property &key) const
 }
 
 template<>
-PreprocessingMethod RuntimeConfiguration::GetProperty(const Property &key) const
+inline PreprocessingMethod RuntimeConfiguration::GetProperty(
+    const Property &key) const
 {
     PropertyMap::const_iterator iter = property_map_.find(key);
     PreprocessingMethod ret(iter->second);
@@ -170,7 +171,8 @@ PreprocessingMethod RuntimeConfiguration::GetProperty(const Property &key) const
 }
 
 template<>
-PreprocessingHeuristic RuntimeConfiguration::GetProperty(const Property &key) const
+inline PreprocessingHeuristic RuntimeConfiguration::GetProperty(
+    const Property &key) const
 {
     PropertyMap::const_iterator iter = property_map_.find(key);
     PreprocessingHeuristic ret(iter->second);

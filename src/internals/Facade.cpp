@@ -144,15 +144,17 @@ void SaveTuned(void *matrix, const char *filename, spx_index_t *permutation)
     SaveCsx<spx_index_t, spx_value_t>(spm_mt, filename, permutation);
 }
 
-void *LoadTuned(const char *filename, spx_index_t *nr_rows, spx_index_t *nr_cols,
+void *LoadTuned(const char *filename,
+                spx_index_t *nr_rows, spx_index_t *nr_cols,
                 spx_index_t *nnz, spx_index_t **permutation)
 {
     spm_mt_t *spm_mt = 0;
-    csx_t<spx_value_t> *csx = 0;
+    CsxMatrix<spx_index_t, spx_value_t> *csx = 0;
 
     spm_mt = RestoreCsx<spx_index_t, spx_value_t>(filename, permutation);
 	for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
-        csx = (csx_t<spx_value_t> *) spm_mt->spm_threads[i].spm;
+        csx =
+            (CsxMatrix<spx_index_t, spx_value_t> *) spm_mt->spm_threads[i].spm;
         *nr_rows += csx->nrows;
         *nnz += csx->nnz;
     }
@@ -180,7 +182,7 @@ int SetValue(void *matrix, spx_index_t row, spx_index_t col, spx_value_t value)
 void DestroyCsx(void *matrix)
 {
     spm_mt_t *spm_mt = (spm_mt_t *) matrix;
-    PutSpmMt<spx_value_t>(spm_mt);
+    PutSpmMt<spx_index_t, spx_value_t>(spm_mt);
 }
 
 void SetPropertyByMnemonic(const char *key, const char *value)

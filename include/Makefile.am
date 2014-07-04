@@ -26,7 +26,6 @@ nobase_include_HEADERS = \
 	sparsex/internals/Compiler.hpp \
 	sparsex/internals/Csr.hpp \
 	sparsex/internals/CsrIterator.hpp \
-	sparsex/internals/CsxBench.hpp \
 	sparsex/internals/CsxBuild.hpp \
 	sparsex/internals/CsxGetSet.hpp \
 	sparsex/internals/Csx.hpp \
@@ -59,7 +58,7 @@ nobase_include_HEADERS = \
 	sparsex/internals/TemplateText.hpp \
 	sparsex/internals/ThreadPool.hpp \
 	sparsex/internals/Timer.hpp \
-	sparsex/internals/TimingFramework.hpp \
+	sparsex/internals/TimerCollection.hpp \
 	sparsex/internals/Types.hpp \
 	sparsex/internals/Utility.hpp \
 	sparsex/internals/Vector.hpp \
@@ -73,7 +72,9 @@ install-data-local:
 	$(SED) -e "/.*#define SPX_JIT_INCLUDE/ s/\".*\"/\"`echo $(includedir) | $(SED) -e 's/\//\\\\\//g'`\"/g; /.*#define SPX_MULT_TEMPLATE_DIR/ s/\".*\"/\"`echo $(datarootdir) | $(SED) -e 's/\//\\\\\//g'`\/templates\"/g" sparsex/internals/Config.hpp > sparsex/internals/Config.hpp.install; \
 test -e $(includedir)/sparsex/internals || \
 $(MKDIR_P) $(includedir)/sparsex/internals; \
-$(install_data) sparsex/internals/Config.hpp.install $(includedir)/sparsex/internals/Config.hpp
+$(install_data) sparsex/internals/Config.hpp.install $(includedir)/sparsex/internals/Config.hpp; \
+$(install_data) sparsex/config.h $(includedir)/sparsex/config.h
 
 uninstall-local:
+	$(RM) $(includedir)/sparsex/config.h
 	$(RM) $(includedir)/sparsex/internals/Config.hpp

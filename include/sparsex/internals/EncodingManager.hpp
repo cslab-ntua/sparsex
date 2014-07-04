@@ -19,7 +19,7 @@
 #include "sparsex/internals/Runtime.hpp"
 #include "sparsex/internals/SparsePartition.hpp"
 #include "sparsex/internals/Statistics.hpp"
-#include "sparsex/internals/TimingFramework.hpp"
+#include "sparsex/internals/TimerCollection.hpp"
 #include "sparsex/internals/Node.hpp"
 #include "sparsex/internals/logger/Logger.hpp"
 
@@ -363,7 +363,7 @@ private:
     StatsCollection<StatsData> encoded_stats_; // stats for the *encoded* types
     set<Encoding::Instantiation> encoded_inst_;
     std::bitset<Encoding::Max> xforms_ignore_;
-    timing::TimingFramework tf_;
+    timing::TimerCollection tc_;
 };
 
 /* Helper functions */
@@ -522,10 +522,10 @@ EncodingManager(SparsePartition<IndexType, ValueType> *spm,
           split_type_(SPLIT_BY_NNZ)
 {
     // Enable timers
-    tf_.CreateTimer("Total", "Total time");
-    tf_.CreateTimer("Stats", "Statistics time");
-    tf_.CreateTimer("Encode", "Encoding time");
-    tf_.CreateTimer("Alloc", "Allocations time");
+    tc_.CreateTimer("Total", "Total time");
+    tc_.CreateTimer("Stats", "Statistics time");
+    tc_.CreateTimer("Encode", "Encoding time");
+    tc_.CreateTimer("Alloc", "Allocations time");
 
     // Ignore all encodings by default
     IgnoreAll();
@@ -821,10 +821,10 @@ void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
         EncodeRow(rbegin, rend, new_row);
         size_t nr_size = new_row.size();
         if (nr_size > 0) {
-            tf_.StartTimer("Alloc");
+            tc_.StartTimer("Alloc");
             for (size_t i = 0; i < nr_size; ++i)
                 SpmBld->AppendElem(new_row[i]);
-            tf_.PauseTimer("Alloc");
+            tc_.PauseTimer("Alloc");
         }
 
         new_row.clear();
@@ -848,18 +848,18 @@ void EncodingManager<IndexType, ValueType>::EncodeAll(std::ostringstream &os)
     size_t cnt = 0;
     
     encoded_stats_.Clear();
-    tf_.StartTimer("Total");
+    tc_.StartTimer("Total");
     for (;;) {
         StatsCollection<StatsData> type_stats;
-        tf_.StartTimer("Stats");
+        tc_.StartTimer("Stats");
         GenAllStats(type_stats);
-        tf_.PauseTimer("Stats");
+        tc_.PauseTimer("Stats");
         os << type_stats << "\n";
         type = ChooseType(type_stats);
         if (type == Encoding::None)
             break;
 
-        tf_.StartTimer("Encode");
+        tc_.StartTimer("Encode");
         Encoding e(type);
         os << "Encode to " << e << "\n";
         
@@ -867,11 +867,11 @@ void EncodingManager<IndexType, ValueType>::EncodeAll(std::ostringstream &os)
         Encode(type);
 
         enc_seq[cnt++] = type;
-        tf_.PauseTimer("Encode");
+        tc_.PauseTimer("Encode");
     }
 
     spm_->Transform(Encoding::Horizontal);
-    tf_.PauseTimer("Total");
+    tc_.PauseTimer("Total");
 
     os << "Encoding sequence: ";
     if (!cnt) {
@@ -888,7 +888,7 @@ void EncodingManager<IndexType, ValueType>::EncodeAll(std::ostringstream &os)
     }
 
     os << "\n";
-    tf_.PrintAllStats(os);
+    tc_.PrintAllTimers(os);
 }
 
 template<typename IndexType, typename ValueType>

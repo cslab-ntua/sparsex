@@ -29,10 +29,12 @@ extern string MATRIX;
 extern unsigned int OUTER_LOOPS;
 extern unsigned long LOOPS;
 extern unsigned int NR_THREADS;
-extern double ALPHA, BETA;
+extern spx_value_t ALPHA, BETA;
 extern Timer t;
 
-void sparsex_spmv(int *rowptr, int *colind, double *values, int nrows, int ncols,
-                  int nnz, double *x, double *y);
+void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind,
+                  spx_value_t *values, spx_index_t nrows,
+                  spx_index_t ncols, spx_index_t nnz,
+                  spx_value_t *x, spx_value_t *y);
 
 #endif  // SPARSEX_MODULE_HPP

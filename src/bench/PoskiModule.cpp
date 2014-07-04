@@ -14,8 +14,9 @@
 #include <vector>
 
 /* SpMV kernel implemented with pOSKI */
-void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
-                int nnz, double *x, double *y)
+void poski_spmv(spx_index_t *Aptr, spx_index_t *Aind, spx_value_t *Aval,
+                spx_index_t nrows, spx_index_t ncols, spx_index_t nnz,
+                spx_value_t *x, spx_value_t *y)
 {
     poski_Init();
 
@@ -50,10 +51,10 @@ void poski_spmv(int *Aptr, int *Aind, double *Aval, int nrows, int ncols,
 
     /* 4. SpMV benchmarking phase */
     vector<double> mt(OUTER_LOOPS);
-    for (unsigned int i = 0; i < OUTER_LOOPS; i++) {
+    for (size_t i = 0; i < OUTER_LOOPS; i++) {
         t.Clear();
         t.Start();
-        for (unsigned long int j = 0; j < LOOPS; j++) {
+        for (size_t  j = 0; j < LOOPS; j++) {
             poski_MatMult(A_tunable, OP_NORMAL, ALPHA, x_view, BETA, y_view);
         }
         t.Pause();

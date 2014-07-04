@@ -18,7 +18,7 @@ AM_CPPFLAGS = \
 	$(AX_CPPFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
 AM_LDFLAGS	= \
-	-L$(top_builddir)/src/internals/.libs \
+	-L$(top_builddir)/src/api/.libs \
 	$(AX_LDFLAGS)
 
 noinst_PROGRAMS = bench_spmv

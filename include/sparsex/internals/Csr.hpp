@@ -25,7 +25,7 @@ namespace csx {
 /**
  *  CSR wrapper.
  */ 
-template<typename IndexType = int, typename ValueType = double>
+template<typename IndexType, typename ValueType>
 class CSR
 {
 public:

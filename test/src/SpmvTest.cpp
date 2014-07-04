@@ -1,8 +1,9 @@
-#include "sparsex/internals/CsxBench.hpp"
+#include "sparsex/types.h"
 #include "sparsex/internals/logger/LoggerUtil.hpp"
 #include "sparsex/internals/SparseMatrix.hpp"
 #include "sparsex/internals/Types.hpp"
 
+#include "CsxBench.hpp"
 #include <cfloat>
 
 using namespace std;
@@ -86,22 +87,22 @@ int main(int argc, char **argv)
     }
     argv = &argv[optind];
 
-    SparseMatrix<MMF<int, double> > matrix(argv[0]);
+    SparseMatrix<MMF<spx_uindex_t, spx_value_t> > matrix(argv[0]);
     // matrix.Reorder();
 
     for (int i = 0; i < remargc; i++) {
         cout << "=== BEGIN BENCHMARK ===" << endl;
         cout << "Creating CSX...\n";
         spm_mt = matrix.CreateCsx();
-        CheckLoop<unsigned int, double>(spm_mt, argv[0]);
+        CheckLoop<spx_uindex_t, spx_value_t>(spm_mt, argv[0]);
         cout << "Running 128 SpMV loops...\n";
-        BenchLoop<double>(spm_mt, argv[0]);
+        BenchLoop<spx_uindex_t, spx_value_t>(spm_mt, argv[0]);
         // double imbalance = CalcImbalance(spm_mt);
         // cout << "Load imbalance: " << 100*imbalance << "%\n";
         // cout << "Dumping Csx to binary file...\n";
         // matrix.Save("csx_file");
-        cout << "Convert to internal repr.: " << internal_time << endl;
-        cout << "Convert to CSX: " << csx_time << endl;
+        // cout << "Convert to internal repr.: " << internal_time << endl;
+        // cout << "Convert to CSX: " << csx_time << endl;
         // cout << "Dump to binary file: " << dump_time << endl;
         cout << "==== END BENCHMARK ====" << endl;
         matrix.Destroy();

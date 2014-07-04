@@ -149,7 +149,7 @@ spx_perm_t *spx_mat_get_perm(const spx_matrix_t *A);
  *  @param[in,out] y        the output vector.
  *  @return                 an error code.
  */
-spx_error_t spx_matvec_mult(spx_scalar_t alpha, const spx_matrix_t *A,
+spx_error_t spx_matvec_mult(spx_value_t alpha, const spx_matrix_t *A,
                             spx_vector_t *x, spx_vector_t *y);
 
 /**
@@ -165,8 +165,8 @@ spx_error_t spx_matvec_mult(spx_scalar_t alpha, const spx_matrix_t *A,
  *  @param[in,out] y        the output vector.
  *  @return                 an error code.
  */
-spx_error_t spx_matvec_kernel(spx_scalar_t alpha, const spx_matrix_t *A,
-                              spx_vector_t *x, spx_scalar_t beta, spx_vector_t *y);
+spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
+                              spx_vector_t *x, spx_value_t beta, spx_vector_t *y);
 
 /**
  *  This routines performs a matrix-vector multiplication of the following form:
@@ -200,8 +200,8 @@ spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A,
                                   spx_index_t nr_rows, spx_index_t nr_cols,
                                   spx_index_t *rowptr, spx_index_t *colind, 
                                   spx_value_t *values,
-                                  spx_scalar_t alpha, spx_vector_t *x, 
-                                  spx_scalar_t beta, spx_vector_t *y);
+                                  spx_value_t alpha, spx_vector_t *x, 
+                                  spx_value_t beta, spx_vector_t *y);
 
 /**
  *  This routine releases any memory internally used by the tuned matrix
@@ -329,7 +329,7 @@ spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val)
  *  @param[in] v2           a valid vector object.
  *  @param[in] num          the constant by which to scale \a v1.
  */
-void spx_vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num);
+void spx_vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_value_t num);
 
 /**
  *  Scales the input vector \a v2 by a constant value \a num, adds the
@@ -342,7 +342,7 @@ void spx_vec_scale(spx_vector_t *v1, spx_vector_t *v2, spx_scalar_t num);
  *  @param[in] num          the scalar by which to scale \a v1.
  */
 void spx_vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3, 
-                       spx_scalar_t num);
+                       spx_value_t num);
 
 /**
  *  \a v3[\a start...\a end) <-- \a v1[\a start...\a end) 
@@ -355,9 +355,9 @@ void spx_vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
  *  @param[in] start        starting index.
  *  @param[in] end          ending index.
  */
-void spx_vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
-                            spx_scalar_t num, spx_index_t start,
-                            spx_index_t end);
+void spx_vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2,
+                            spx_vector_t *v3, spx_value_t num,
+                            spx_index_t start, spx_index_t end);
 
 /**
  *  Adds the input vectors \a v1 and \a v2 and places the result in \a v3.

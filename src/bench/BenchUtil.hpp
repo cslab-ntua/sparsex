@@ -34,8 +34,9 @@ enum library {
     pOSKI
 };
 
-typedef boost::function<void (int*, int*, double*, int, int, int,
-                              double*, double*)> SpmvFn;
+typedef boost::function<void (spx_index_t*, spx_index_t*, spx_value_t*,
+                              spx_index_t, spx_index_t, spx_index_t,
+                              spx_value_t*, spx_value_t*)> SpmvFn;
 
 class DirectoryIterator
 {

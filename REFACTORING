@@ -35,22 +35,28 @@
 * Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
 * Remove default arguments or document precisely
 * [DONE] Fix Diag <-> AntiDiag conversions
-* [] Use auto variables instead of heap allocated if their scope is limited inside
-  a function
+* [] Use auto variables instead of heap allocated if their scope is limited
+  inside a function
 * Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
 * Code replication
 * [DONE] max_rowptr_size_ is never used.
-* Use -Wextra? Lots of warnings of unused function parameters
-* Eliminate all -Wall warnings (debug version)
+* [DONE] Use -Wextra? Lots of warnings of unused function parameters
+* [DONE] Eliminate all -Wall warnings (debug version)
 * When _GLIBCXX_DEBUG is defined, error in debug mode compilation
-* [DONE] Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion defines in
-  header files
+* [DONE] Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion
+  defines in header files
 * [DONE] Staged SPX_JIT_INCLUDE/SPX_MULT_TEMPLATE_DIR should use absolute paths
-* Segfault when TemplateText placeholders are empty/not found. Print error and
-  inform about installation.
+* [ 50%] Segfault when TemplateText placeholders are empty/not found. Print
+  error and inform about installation.
 * [ 50%] Use SPX_ prefix in macros, e.g., DEBUG_MODE -> SPX_DEBUG
 * DisableInfo() is counter-intuitive (why not EnableXXX()??)
 * Update README
+* vector should become proper C++
+* (Re)move unnecessary includes from header files
+* Add copyright headers to all source files
+* Fix warnings when compiling with -DDISABLE_POOL
+* Always leave space after and of code block and next statement
+* Treat timings output and all info not yet passed through the logger somehow
 
 Requirements for StatsCollection
 * [DONE] Scale stats

@@ -33,8 +33,6 @@
 using namespace csx;
 using namespace std;
 
-double csx_create_time, encode_time;
-
 /**
  *  Routine responsible for making a map for the symmetric representation of
  *  sparse matrices.
@@ -121,7 +119,8 @@ void Compile(spm_mt_t *spm_mt, vector<ThreadContext<InternalType> > &data,
 }
 
 template<typename IndexType, typename ValueType>
-void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &data)
+void PreprocessThread(
+    ThreadContext<SparsePartition<IndexType, ValueType> > &data)
 {
     RuntimeConfiguration &rtconfig = RuntimeConfiguration::GetInstance();
     timing::Timer timer;
@@ -154,19 +153,17 @@ void PreprocessThread(ThreadContext<SparsePartition<IndexType, ValueType> > &dat
         DrleMg->RemoveIgnore(encseq);
         DrleMg->EncodeAll(data.GetBuffer());
     }
-    timer.Pause();
-    encode_time = timer.ElapsedTime();
+    timer.Pause();  // encoding time
 
     timer.Clear();
     timer.Start();
-    // DrleMg->MakeEncodeTree();
-    // csx_t<ValueType> *csx = data.GetCsxManager()->MakeCsx(false);
-    csx_t<ValueType> *csx = data.GetCsxManager()->MakeCsx(false);
-    timer.Pause();
-    csx_create_time = timer.ElapsedTime();
+    CsxMatrix<IndexType, ValueType> *csx = data.GetCsxManager()->MakeCsx(false);
+    timer.Pause();  // csx creation time
     data.GetSpmEncoded()->spm = csx;
     data.GetSpmEncoded()->nr_rows = csx->nrows;
     data.GetSpmEncoded()->row_start = csx->row_start;
+    assert(csx->ctl);
+    assert(((csx_matrix_t *)data.GetSpmEncoded()->spm)->ctl);
 
 #if SPX_USE_NUMA && NUMA_CHECKS
     int alloc_err = 0;
@@ -229,7 +226,8 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType>
 
     data.GetSpm()->MergeMatrix();
 
-    csx_sym_t<ValueType> *csx = data.GetCsxManager()->MakeCsxSym();
+    CsxSymMatrix<IndexType, ValueType> *csx =
+        data.GetCsxManager()->MakeCsxSym();
     data.GetSpmEncoded()->spm = csx;
     data.GetSpmEncoded()->row_start = csx->lower_matrix->row_start;
     data.GetSpmEncoded()->nr_rows = csx->lower_matrix->nrows;
@@ -289,11 +287,13 @@ void DoBuild(SparseInternal<SparsePartition<IndexType, ValueType> > *spms,
             PreprocessThread<IndexType, ValueType>, 
             boost::ref(mt_context[i + 1]));
     }
+
     // Let main thread do some work
     PreprocessThread<IndexType, ValueType>(mt_context[0]);
     for (size_t i = 0; i < nr_threads - 1; ++i) {
         threads[i]->join();
     }
+
 
     // CSX JIT compilation
     Compile<SparsePartition<IndexType, ValueType> >(
@@ -312,7 +312,6 @@ spm_mt_t *BuildCsx(SparseInternal<SparsePartition<IndexType, ValueType> > *spms)
     // Initialization of the multithreaded sparse matrix representation
     spm_mt = PrepareSpmMt();
     DoBuild(spms, spm_mt);
-
     return spm_mt;
 }
 

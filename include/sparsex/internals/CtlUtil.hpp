@@ -16,7 +16,7 @@
 #include <assert.h>
 #include <inttypes.h>
 
-BEGIN_C_DECLS
+SPX_BEGIN_C_DECLS__
 
 /*
  * Bit functions
@@ -100,7 +100,7 @@ static inline uint64_t u64_get(uint8_t **ctl)
     return ret;
 }
 
-uint64_t ul_get(uint8_t **ctl)
+static inline uint64_t ul_get(uint8_t **ctl)
 {
     unsigned long ret;
     unsigned shift = 7;
@@ -125,7 +125,7 @@ end:
     return ret;
 }
 
-END_C_DECLS
+SPX_END_C_DECLS__
 
 #endif // SPARSEX_INTERNALS_CTL_UTIL_HPP
 

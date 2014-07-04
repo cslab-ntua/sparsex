@@ -31,7 +31,7 @@ typedef struct input spx_input_t;
 /**
  *  \brief The vector handle type.
  */
-typedef struct vec spx_vector_t;
+typedef struct vector_struct spx_vector_t;
 
 /**
  *  \brief Partitioning object.
@@ -53,11 +53,11 @@ typedef int spx_property_t;
  */
 typedef int spx_copymode_t;
 
-#define INVALID_INPUT ((spx_input_t *) NULL)
-#define INVALID_MAT ((spx_matrix_t *) NULL)
-#define INVALID_VEC ((spx_vector_t *) NULL)
-#define INVALID_PART ((spx_partition_t *) NULL)
-#define INVALID_PERM ((spx_perm_t *) NULL)
+#define INVALID_INPUT   ((spx_input_t *) NULL)
+#define INVALID_MAT     ((spx_matrix_t *) NULL)
+#define INVALID_VEC     ((spx_vector_t *) NULL)
+#define INVALID_PART    ((spx_partition_t *) NULL)
+#define INVALID_PERM    ((spx_perm_t *) NULL)
 
 #define OP_REORDER          42
 #define OP_SHARE            43

@@ -11,8 +11,8 @@
 #ifndef SPARSEX_INTERNALS_CONFIG_HPP
 #define SPARSEX_INTERNALS_CONFIG_HPP
 
-#define SPX_JIT_INCLUDE         "@SPX_JIT_INCLUDE@"
-#define SPX_MULT_TEMPLATE_DIR   "@SPX_MULT_TEMPLATE_DIR@"
+#define SPX_JIT_INCLUDE         "@abs_top_srcdir@/include:@abs_top_builddir@/include"
+#define SPX_MULT_TEMPLATE_DIR   "@abs_top_srcdir@/src/templates"
 #define SPX_USE_NUMA            @SPX_USE_NUMA@
 #define CLANG_INC_SEARCH_PATH   "@CLANG_INC_SEARCH_PATH@"
 

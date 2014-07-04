@@ -1,14 +1,14 @@
-static inline double block_col_${r}x${c}_case(uint8_t **ctl, uint8_t size,
-                                              double **values, double **x_curr,
-                                              double **y_curr, double scale_f)
+static inline spx_value_t block_col_${r}x${c}_case(
+    uint8_t **ctl, uint8_t size, spx_value_t **values,
+    spx_value_t **x_curr, spx_value_t **y_curr, spx_value_t scale_f)
 {
-	register double *y_curr_ = *y_curr;
-	register double *x_curr_ = *x_curr;
+	register spx_value_t *y_curr_ = *y_curr;
+	register spx_value_t *x_curr_ = *x_curr;
 
-	for (uint64_t i = 0; i < ${r}; i++) {
-		register double yr = 0;
+	for (spx_index_t i = 0; i < ${r}; i++) {
+		register spx_value_t yr = 0;
 		
-		for (uint64_t j = 0; j < ${c}; j++) {
+		for (spx_index_t j = 0; j < ${c}; j++) {
 			yr += x_curr_[j] * (**values);
 			(*values)++;
 		}

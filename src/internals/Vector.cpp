@@ -276,7 +276,7 @@ spx_value_t VecMultPart(const vector_t *v1, const vector_t *v2,
 	return ret;
 }
 
-void VecScale(vector_t *v1, vector_t *v2, spx_scalar_t num)
+void VecScale(vector_t *v1, vector_t *v2, spx_value_t num)
 {
 	assert(v1->size == v2->size && "incompatible vector sizes");
 
@@ -284,7 +284,7 @@ void VecScale(vector_t *v1, vector_t *v2, spx_scalar_t num)
 		v2->elements[i] = num * v1->elements[i];
 }
 
-void VecScalePart(vector_t *v1, vector_t *v2, spx_scalar_t num,
+void VecScalePart(vector_t *v1, vector_t *v2, spx_value_t num,
                   spx_index_t start, spx_index_t end)
 {
 	assert(v1->size == v2->size &&  "vectors have incompatible sizes");
@@ -293,7 +293,7 @@ void VecScalePart(vector_t *v1, vector_t *v2, spx_scalar_t num,
 		v2->elements[i] = num * v1->elements[i];
 }
 
-void VecScaleAdd(vector_t *v1, vector_t *v2, vector_t *v3, spx_scalar_t num)
+void VecScaleAdd(vector_t *v1, vector_t *v2, vector_t *v3, spx_value_t num)
 {
 	assert(v1->size == v2->size && v1->size == v3->size &&
 	       "vectors for scale have incompatible sizes");
@@ -303,7 +303,7 @@ void VecScaleAdd(vector_t *v1, vector_t *v2, vector_t *v3, spx_scalar_t num)
 }
 
 void VecScaleAddPart(vector_t *v1, vector_t *v2, vector_t *v3,
-                     spx_scalar_t num, spx_index_t start, spx_index_t end)
+                     spx_value_t num, spx_index_t start, spx_index_t end)
 {
 	assert(v1->size == v2->size && v1->size == v3->size &&
 	       "vectors for scale add have incompatible  sizes");

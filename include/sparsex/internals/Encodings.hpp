@@ -132,20 +132,20 @@ private:
     static std::map<string, Type> rev_names_;
 };
 
-ostream &operator<<(ostream &out, Encoding &enc)
+inline ostream &operator<<(ostream &out, Encoding &enc)
 {
     out << enc.GetFullName();
     return out;
 }
 
-Encoding::Type &operator++(Encoding::Type &type)
+inline Encoding::Type &operator++(Encoding::Type &type)
 {
     assert(type < Encoding::Max);
     type = static_cast<Encoding::Type>(type+1);
     return type;
 }
 
-Encoding::Type operator++(Encoding::Type &type, int)
+inline Encoding::Type operator++(Encoding::Type &type, int)
 {
     assert(type < Encoding::Max);
     Encoding::Type orig = type;
@@ -201,7 +201,7 @@ private:
     bool explicit_;
 };
 
-ostream &operator<<(ostream &out, EncodingSequence &encseq)
+inline ostream &operator<<(ostream &out, EncodingSequence &encseq)
 {
     encseq.Print(out);
     return out;
@@ -264,7 +264,7 @@ private:
     }
 };
 
-ostream &operator<<(ostream &out, PreprocessingMethod &meth)
+inline ostream &operator<<(ostream &out, PreprocessingMethod &meth)
 {
     out << meth.GetName();
     return out;
@@ -324,7 +324,7 @@ private:
     }
 };
 
-ostream &operator<<(ostream &out, PreprocessingHeuristic &heur)
+inline ostream &operator<<(ostream &out, PreprocessingHeuristic &heur)
 {
     out << heur.GetName();
     return out;

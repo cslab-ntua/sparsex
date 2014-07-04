@@ -1,5 +1,5 @@
 #
-# Makefile.am -- 
+# Makefile.am -- CSX multiplication templates
 #
 # Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
 # Copyright (C) 2014, Vasileios Karakasis
@@ -18,7 +18,6 @@ dist_templates_DATA = \
 	block_row_one_tmpl.c \
 	block_row_sym_tmpl.c \
 	block_row_tmpl.c \
-	csx_llvm_tmpl.c \
 	csx_spmv_tmpl.c \
 	csx_sym_spmv_tmpl.c \
 	delta_sym_tmpl.c \

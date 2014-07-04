@@ -48,7 +48,7 @@ ClangCompiler::ClangCompiler()
     invocation_->setLangDefaults(IK_C, LangStandard::lang_c99);
 
     // Setup the include path
-    SetHeaderSearchOptions(CLANG_INC_SEARCH_PATH);
+    AddIncludeSearchPath(CLANG_INC_SEARCH_PATH, IncludePathSystem);
 
     // Setup diagnostic options
     DiagnosticOptions &diag_options = invocation_->getDiagnosticOpts();
@@ -99,8 +99,16 @@ Module *ClangCompiler::Compile(const string &source,
     return llvm_codegen->takeModule();
 }
 
-void ClangCompiler::SetHeaderSearchOptions(const string &inc_path)
+void ClangCompiler::AddIncludeSearchPath(const string &inc_path,
+                                         Options type)
 {
+    bool is_user_path = true;
+    frontend::IncludeDirGroup inc_group = frontend::Angled;
+    if (type == IncludePathSystem) {
+        is_user_path = false;
+        inc_group = frontend::System;
+    }
+
     HeaderSearchOptions &header_search =
         invocation_->getHeaderSearchOpts();
 
@@ -109,8 +117,8 @@ void ClangCompiler::SetHeaderSearchOptions(const string &inc_path)
     tokenizer<char_separator<char> >::iterator tok_iter;
     for (tok_iter = path_tokens.begin();
          tok_iter != path_tokens.end(); ++tok_iter)
-        header_search.AddPath(*tok_iter, frontend::System,
-                              false, false, false);
+        header_search.AddPath(*tok_iter, inc_group,
+                              is_user_path, false, false);
 }
 
 
@@ -132,7 +140,7 @@ void ClangCompiler::SetCodeGenOptions()
 
     PreprocessorOptions &preproc_options = invocation_->getPreprocessorOpts();
     if (debug_mode_) {
-        preproc_options.addMacroDef("CSX_DEBUG");
+        preproc_options.addMacroDef("SPX_DEBUG");
     } else {
         preproc_options.addMacroDef("NDEBUG");
     }

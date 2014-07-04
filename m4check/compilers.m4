@@ -126,6 +126,4 @@ case "$ax_build_mode" in
         AC_MSG_ERROR(
             [@<:@BUG@:>@ should not have entered here: m4_location]) ;;
 esac
-
-ax_pkg_ldflags="-Wl,--allow-multiple-definition"
 ])

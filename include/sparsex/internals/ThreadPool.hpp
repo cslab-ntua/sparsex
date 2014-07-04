@@ -18,6 +18,8 @@
 #include <boost/thread/thread.hpp>
 #include <vector>
 
+using namespace std;
+
 enum Op {
     IDLE = -1,
     SPMV_MULT,

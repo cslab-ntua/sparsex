@@ -10,6 +10,10 @@
  */
 
 #include "sparsex/internals/Affinity.hpp"
+#include "sparsex/internals/logger/Logger.hpp"
+
+#include <stdlib.h>
+#include <sched.h>
 
 void setaffinity_oncpu(unsigned int cpu)
 {

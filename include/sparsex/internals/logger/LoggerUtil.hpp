@@ -13,7 +13,7 @@
 
 #include "../cdecl.h"
 
-BEGIN_C_DECLS
+SPX_BEGIN_C_DECLS__
 
 void DisableLogging();
 void DisableError();
@@ -26,7 +26,7 @@ void AlwaysUseFile(const char *log_file);
 void log_error(const char *msg);
 void log_warning(const char *msg);
 
-END_C_DECLS
+SPX_END_C_DECLS__
 
 #endif  // SPARSEX_INTERNALS_LOGGER_LOGGER_UTIL_HPP
 

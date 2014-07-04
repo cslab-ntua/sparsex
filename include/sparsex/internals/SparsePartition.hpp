@@ -658,7 +658,7 @@ void SparsePartition<IndexType, ValueType>::PrintStats(ostream& out)
             --nr_rows_with_patterns;
     }
 
-    int nr_encoded_types = 0;
+    size_t nr_encoded_types = 0;
     for (Encoding::Type t = Encoding::Horizontal; t < Encoding::Max; ++t)
         if (nr_xform_patterns[t]) {
             ++nr_encoded_types;
@@ -709,7 +709,7 @@ Transform(Encoding::Type t, IndexType rs, IndexType re)
     typename TransformFn<IndexType>::type xform_fn =
         GetXformFn<IndexType>(type_, t);
     iterator p0 = begin(rs);
-    iterator pe = end(re); 
+    iterator pe = end(re);
 
     elems.reserve(elems_size_);
     for (iterator p = p0; p != pe; ++p) {
@@ -725,7 +725,7 @@ Transform(Encoding::Type t, IndexType rs, IndexType re)
          (t == Encoding::Horizontal || e.IsBlockRow())) ||
         ((type_ == Encoding::Vertical || e_.IsBlockCol()) &&
          (t == Encoding::Vertical || e.IsBlockCol()))) {
-        int old_block_align, new_block_align, k;
+        IndexType old_block_align, new_block_align, k;
 
         if (type_ == Encoding::Horizontal || type_ == Encoding::Vertical)
             old_block_align = 1;
@@ -847,8 +847,9 @@ PutWindow(const SparsePartition<IndexType, ValueType> *window)
         // Adjust element rows if putting window back to an horizontal matrix
         for (size_t i = 0; i < window->elems_size_; ++i) {
             Element<IndexType, ValueType> &e = window->elems_[i];
-            window->elems_[i] =
-                TransformElement(e, make_pair(e.GetRow() + rs, e.GetCol()));
+            window->elems_[i] = TransformElement(
+                e, make_pair(static_cast<IndexType>(e.GetRow() + rs),
+                             e.GetCol()));
         }
     }
 }

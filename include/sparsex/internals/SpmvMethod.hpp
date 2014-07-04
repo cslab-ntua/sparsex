@@ -15,9 +15,6 @@
 #include "sparsex/internals/Vector.hpp"
 
 typedef void (*spmv_fn_t)(void *matrix, vector_t *in, vector_t *out,
-                          spx_scalar_t scale_f, vector_t *local_buff);
-// typedef void (*spmv_sym_fn_t)(void *matrix, vector_t *in,
-//                               vector_t *out, vector_t *temp, 
-//                               spx_scalar_t scale_f);
+                          spx_value_t scale_f, vector_t *local_buff);
 
 #endif  // SPARSEX_INTERNALS_SPMV_METHOD_H

@@ -80,8 +80,8 @@ void do_kernel_sym_thread(void *args)
     VecAddFromMap(spm_thread->y, temp, spm_thread->y, spm_thread->map);
 }
 
-void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
-                  vector_t *y, spx_scalar_t beta)
+void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
+                  vector_t *y, spx_value_t beta)
 {
     ALPHA = alpha; BETA = beta;
     nr_threads = spm_mt->nr_threads;
@@ -113,8 +113,8 @@ void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
 #endif
 }
 
-void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha, 
-                      vector_t *y, spx_scalar_t beta)
+void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
+                      vector_t *y, spx_value_t beta)
 {
     ALPHA = alpha; BETA = beta;
 	nr_threads = spm_mt->nr_threads;
@@ -152,7 +152,7 @@ void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
 #endif
 }
 
-void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
+void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
                 vector_t *y)
 {
     ALPHA = alpha;
@@ -185,7 +185,7 @@ void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha,
 #endif
 }
 
-void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_scalar_t alpha, 
+void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
                     vector_t *y)
 {
     ALPHA = alpha;

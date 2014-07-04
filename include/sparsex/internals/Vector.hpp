@@ -16,15 +16,17 @@
 #include "sparsex/internals/numa_util.h"
 #include "sparsex/types.h"
 
-BEGIN_C_DECLS
+SPX_BEGIN_C_DECLS__
 
-typedef struct vec {
+struct vector_struct {
     spx_value_t *elements;
     spx_value_t *ptr_buff;
     size_t size;
     int alloc_type;
     int copy_mode;
-} vector_t;
+};
+
+typedef struct vector_struct vector_t;
 
 vector_t *VecCreate(size_t size);
 vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, int mode);
@@ -49,16 +51,16 @@ void VecSubPart(vector_t *v1, vector_t *v2, vector_t *v3, spx_index_t start,
 spx_value_t VecMult(const vector_t *v1, const vector_t *v2);
 spx_value_t VecMultPart(const vector_t *v1, const vector_t *v2,
                         spx_index_t start, spx_index_t end);
-void VecScale(vector_t *v1, vector_t *v2, spx_scalar_t num);
-void VecScalePart(vector_t *v1, vector_t *v2, spx_scalar_t num,
+void VecScale(vector_t *v1, vector_t *v2, spx_value_t num);
+void VecScalePart(vector_t *v1, vector_t *v2, spx_value_t num,
                   spx_index_t start, spx_index_t end);
-void VecScaleAdd(vector_t *v1, vector_t *v2, vector_t *v3, spx_scalar_t num);
-void VecScaleAddPart(vector_t *v1, vector_t *v2, vector_t *v3, spx_scalar_t num,
+void VecScaleAdd(vector_t *v1, vector_t *v2, vector_t *v3, spx_value_t num);
+void VecScaleAddPart(vector_t *v1, vector_t *v2, vector_t *v3, spx_value_t num,
                      spx_index_t start, spx_index_t end);
 void VecCopy(const vector_t *v1, vector_t *v2);
 int VecCompare(const vector_t *v1, const vector_t *v2);
 void VecPrint(const vector_t *v);
 
-END_C_DECLS
+SPX_END_C_DECLS__
 
 #endif  // SPARSEX_INTERNALS_VECTOR_HPP

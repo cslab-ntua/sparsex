@@ -9,8 +9,9 @@
  */
 
 #include "sparsex/internals/ThreadPool.hpp"
+#include "sparsex/internals/logger/Logger.hpp"
 
-ThreadPool::~ThreadPool() 
+ThreadPool::~ThreadPool()
 {
     work_done_.store(true);
     centralized_barrier(GetSense(), size_ + 1);

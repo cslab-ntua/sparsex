@@ -33,8 +33,8 @@ struct spm_mt_thread {
 	size_t nr_rows;
 	// uint64_t *col_map;
 	map_t *map;
-	struct vec *x, *y;
-	uint64_t size_assigned;
+	vector_t *x, *y;
+	size_t size_assigned;
 	double secs;
 	void *data;
     int *sense;
@@ -48,7 +48,7 @@ struct spm_mt {
 #if SPX_USE_NUMA
     bool interleaved;
 #endif
-    struct vec **local_buffers;
+    vector_t **local_buffers;
 };
 
 typedef struct spm_mt spm_mt_t;

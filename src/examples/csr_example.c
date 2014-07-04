@@ -14,10 +14,9 @@ int main(int argc, char **argv)
     /* Create random x and y vectors */
 	spx_value_t *x = (spx_value_t *) malloc(sizeof(spx_value_t) * ncols);
 	spx_value_t *y = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
-    double val = 0, max = 1, min = -1;
-    int i;
-    for (i = 0; i < nrows; i++) {
-		val = ((double) (rand()+i) / ((double) RAND_MAX + 1));
+    spx_value_t val = 0, max = 1, min = -1;
+    for (size_t i = 0; i < nrows; i++) {
+		val = ((spx_value_t) (rand()+i) / ((spx_value_t) RAND_MAX + 1));
 		x[i] = min + val*(max-min);
 		y[i] = max + val*(min-max);
     }
@@ -40,7 +39,7 @@ int main(int argc, char **argv)
     spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts);
 
     /* Run the SpMV kernel */
-    spx_scalar_t alpha = 0.8, beta = 0.42;
+    spx_value_t alpha = 0.8, beta = 0.42;
     spx_matvec_mult(alpha, A, x_view, beta, y_view);
 
     printf("Result: ");

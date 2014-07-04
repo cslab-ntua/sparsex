@@ -15,14 +15,15 @@
 using namespace bench;
 
 /* 
- *  Browse all the matrices available in the specified directory and solve
- *  the SpMV kernel with the specified #library or with all available libraries
- *  (SparseX, Intel MKL, pOSKI) if #library is not specified. The results of each
- *  solve are printed in the standard output and optionally in the provided
+ *  Browse all the matrices available in the specified directory and solve the
+ *  SpMV kernel with the specified #library or with all available libraries
+ *  (SparseX, Intel MKL, pOSKI) if #library is not specified. The results of
+ *  each solve are printed in the standard output and optionally in the provided
  *  #stats_file.
  *
  *  @param[in] directory    the directory of the MMF files. 
- *  @param[in] library      the library to be used for computing the SpMV kernel.
+ *  @param[in] library      the library to be used for computing the SpMV
+ *                          kernel.
  *  @param[in] stats_file   an optional file for outputting benchmark results.
  *  @param[in] loops        the numbers of SpMV iterations.
  *  @param[in] outer_loops  the number of repeats of the benchmark.
