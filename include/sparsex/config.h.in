@@ -1,0 +1,17 @@
+/*
+ * config.h -- SparseX API configuration
+ *
+ * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2014, Vasileios Karakasis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+#ifndef SPARSEX_CONFIG_H
+#define SPARSEX_CONFIG_H
+
+#define SPX_INDEX_TYPE  @SPX_INDEX_TYPE@
+#define SPX_VALUE_TYPE  @SPX_VALUE_TYPE@
+
+#endif  // SPARSEX_CONFIG_H
