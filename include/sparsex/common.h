@@ -1,5 +1,7 @@
 /**
- * \file common.h -- \brief Common library utilities and definitions.
+ * \file common.h
+ *
+ * \brief Common library utilities and definitions
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -13,8 +15,8 @@
 
 #include <sparsex/error.h>
 #include <sparsex/types.h>
-#include "sparsex/internals/logger/LoggerUtil.hpp"
-#include "sparsex/internals/Vector.hpp"
+#include <sparsex/internals/logger/LoggerUtil.hpp>
+#include <sparsex/internals/Vector.hpp>
 
 #include <stdlib.h>
 
@@ -84,43 +86,98 @@ int check_vec_dim(const spx_vector_t *x, unsigned long dim)
 }
 
 /**
- *  \brief Logging utilities.
+ *  Disables logging in SparseX.
  */
-static inline
-void spx_log_disable_all()
-{
-    DisableLogging();
-}
+void spx_log_disable_all();
 
-static inline
-void spx_log_disable_error()
-{
-    DisableError();
-}
+/**
+ *  Activates logging of the Error level on stderr.
+ */
+void spx_log_error_console();
 
-static inline
-void spx_log_disable_warning()
-{
-    DisableWarning();
-}
+/**
+ *  Activates logging of the Warning level on stderr.
+ */
+void spx_log_warning_console();
 
-static inline
-void spx_log_disable_info()
-{
-    DisableInfo();
-}
+/**
+ *  Activates logging of the Info level on stderr.
+ */
+void spx_log_info_console();
 
-static inline
-void spx_log_enable_all_console()
-{
-    AlwaysUseConsole();
-}
+/**
+ *  Activates logging of the Verbose level on stderr.
+ */
+void spx_log_verbose_console();
 
-static inline
-void spx_log_enable_all_file(const char *file)
-{
-    AlwaysUseFile(file);
-}
+/**
+ *  Activates logging of the Debug level on stderr.
+ */
+void spx_log_debug_console();
+
+/**
+ *  Activates logging of the Error level on a file.
+ *  The file name must be previously provided through
+ *  the spx_log_set_file() routine. If not, a default
+ *  "sparsex.log" file will be created. 
+ */
+void spx_log_error_file();
+
+/**
+ *  Activates logging of the Warning level on a file.
+ *  The file name must be previously provided through
+ *  the spx_log_set_file() routine. If not, a default
+ *  "sparsex.log" file will be created. 
+ */
+void spx_log_warning_file();
+
+/**
+ *  Activates logging of the Info level on a file.
+ *  The file name must be previously provided through
+ *  the spx_log_set_file() routine. If not, a default
+ *  "sparsex.log" file will be created. 
+ */
+void spx_log_info_file();
+
+/**
+ *  Activates logging of the Verbose level on a file.
+ *  The file name must be previously provided through
+ *  the spx_log_set_file() routine. If not, a default
+ *  "sparsex.log" file will be created. 
+ */
+void spx_log_verbose_file();
+
+/**
+ *  Activates logging of the Debug level on a file.
+ *  The file name must be previously provided through
+ *  the spx_log_set_file() routine. If not, a default
+ *  "sparsex.log" file will be created. 
+ */
+void spx_log_debug_file();
+
+/**
+ *  Activates all logging levels and redirects output to stderr.
+ */
+void spx_log_all_console();
+
+/**
+ *  Activates all logging levels and redirects output to a file.
+ *  The file name must be previously provided through the
+ *  spx_log_set_file() routine. If not, a default
+ *  "sparsex.log" file will be created. If the file already
+ *  exists it will be overwritten.
+ *
+ *  @param[in] file            a filename.
+ */
+void spx_log_all_file(const char *file);
+
+/**
+ *  Sets the file that will be used when logging is redirected
+ *  to a file. If the file already exists it will be overwritten.
+ *
+ *  @param[in] file            a filename.
+ */
+void spx_log_set_file(const char *file);
 
 /**
  *  \brief Library initialization routine.

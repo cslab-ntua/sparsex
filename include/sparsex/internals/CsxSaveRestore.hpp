@@ -1,5 +1,7 @@
 /*
- * CsxSaveRestore.hpp -- Saving/Restoring Csx to/from archive.
+ * \file CsxSaveRestore.hpp
+ *
+ * \breif Saving/Restoring Csx to/from binary archive.
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013,      Athena Elafrou
@@ -11,15 +13,15 @@
 #ifndef SPARSEX_INTERNALS_CSX_SAVE_RESTORE_HPP
 #define SPARSEX_INTERNALS_CSX_SAVE_RESTORE_HPP
 
-#include "sparsex/internals/Affinity.hpp"
-#include "sparsex/internals/Allocators.hpp"
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/Csx.hpp"
-#include "sparsex/internals/Jit.hpp"
-#include "sparsex/internals/logger/Logger.hpp"
+#include <sparsex/internals/Affinity.hpp>
+#include <sparsex/internals/Allocators.hpp>
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/Csx.hpp>
+#include <sparsex/internals/Jit.hpp>
+#include <sparsex/internals/logger/Logger.hpp>
 
 #if SPX_USE_NUMA
-#   include "sparsex/internals/numa_util.h"
+#   include <sparsex/internals/numa_util.h>
 #   include <numa.h>
 #endif
 
@@ -31,6 +33,8 @@
 #include <fstream>
 
 using namespace std;
+using namespace sparsex::jit;
+using namespace sparsex::runtime;
 
 // Non-intrusive version
 namespace boost { 
@@ -55,8 +59,11 @@ inline void serialize(Archive &ar, row_info_t &row_info,
     boost::serialization::split_free(ar, row_info, version);
 }
 
-}   // end of namespace serialization
-}   // end of namespace boost
+} // end of namespace serialization
+} // end of namespace boost
+
+namespace sparsex {
+namespace csx {
 
 template<typename IndexType, typename ValueType>
 void SaveCsx(void *spm, const char *filename, IndexType *permutation)
@@ -321,14 +328,13 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
         delete[] Jits;
 
 #if SPX_USE_NUMA
-#if NUMA_CHECKS
         int alloc_err = check_interleaved(ctl_interleaved, ctl_parts,
                                           nr_threads, ctl_nodes);
         print_alloc_status("ctl_interleaved", alloc_err);
         alloc_err = check_interleaved(values_interleaved, val_parts, nr_threads,
-				      val_nodes);
+                                      val_nodes);
         print_alloc_status("values_interleaved", alloc_err);
-#endif  // NUMA_CHECKS
+
         free(val_parts);
         free(ctl_parts);
         free(val_nodes);
@@ -347,5 +353,8 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
 
     return spm_mt;
 }
+
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_CSX_SAVE_RESTORE_HPP

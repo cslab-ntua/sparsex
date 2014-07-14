@@ -1,5 +1,7 @@
 /*
- * Allocators.hpp -- Custom memory allocation
+ * \file Allocators.hpp
+ *
+ * \brief Custom memory allocation
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
@@ -11,7 +13,7 @@
 #ifndef SPARSEX_INTERNALS_ALLOCATORS_HPP
 #define SPARSEX_INTERNALS_ALLOCATORS_HPP
 
-#include "sparsex/internals/numa_util.h"
+#include <sparsex/internals/numa_util.h>
 #include <numa.h>
 #include <cassert>
 #include <cstdlib>

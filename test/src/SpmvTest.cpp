@@ -1,7 +1,7 @@
-#include "sparsex/types.h"
-#include "sparsex/internals/logger/LoggerUtil.hpp"
-#include "sparsex/internals/SparseMatrix.hpp"
-#include "sparsex/internals/Types.hpp"
+#include <sparsex/types.h>
+#include <sparsex/internals/logger/Logger.hpp>
+#include <sparsex/internals/SparseMatrix.hpp>
+#include <sparsex/internals/Types.hpp>
 
 #include "CsxBench.hpp"
 #include <cfloat>
@@ -55,10 +55,9 @@ int main(int argc, char **argv)
     spm_mt_t *spm_mt;
 
 #if SPX_DEBUG
-    AlwaysUseConsole();
-#else
-    DisableInfo();
+    EnableConsole(Debug);
 #endif
+    EnableConsole(Info);
 
     RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();

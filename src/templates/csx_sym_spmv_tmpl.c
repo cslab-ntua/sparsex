@@ -1,5 +1,7 @@
 /*
- * csx_spmv_tmpl.c -- The CSX-Sym multiplication template
+ * csx_sym_spmv_tmpl.c
+ *
+ * \brief The CSX-Sym multiplication template
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
@@ -31,7 +33,7 @@ static void align_ptr(uint8_t **ctl, int align)
 }
 #pragma GCC diagnostic pop
 
-#ifdef CSX_DEBUG
+#if SPX_DEBUG
 static void ctl_print(uint8_t *ctl, spx_index_t start, spx_index_t end,
                       const char *descr)
 {
@@ -49,18 +51,19 @@ static void deref(void *ptr)
 ${spmv_func_definitions}
 
 void spm_csx_sym_multiply(void *spm, vector_t *in, vector_t *out,
-                          spx_value_t scale_f, vector_t *temp)
+                          spx_value_t scale_f, vector_t *local_out)
 {
 	csx_sym_matrix_t *csx_sym = (csx_sym_matrix_t *) spm;
 	csx_matrix_t *csx = csx_sym->lower_matrix;
 	spx_value_t *x = in->elements;
 	spx_value_t *y = out->elements;
-	spx_value_t *tmp = temp->elements;
+	spx_value_t *tmp = local_out->elements;
 	spx_value_t *v = csx->values;
 	spx_value_t *dv = csx_sym->dvalues;
 	spx_index_t x_indx = 0;
 	spx_index_t y_indx = csx->row_start;
 	spx_index_t y_end = csx->row_start + csx->nrows;
+    spx_index_t i;
 	register spx_value_t yr = 0;
 	uint8_t *ctl = csx->ctl;
 	uint8_t *ctl_end = ctl + csx->ctl_size;

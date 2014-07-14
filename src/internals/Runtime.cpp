@@ -1,5 +1,7 @@
 /*
- * Runtime.cpp -- Front-end utilities for runtime configuration
+ * \file Runtime.cpp
+ *
+ * \brief Front-end utilities for runtime configuration
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2013, Vasileios Karakasis
@@ -11,8 +13,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/Runtime.hpp"
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/Runtime.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
@@ -22,7 +24,8 @@
 using namespace std;
 using namespace boost;
 
-namespace csx {
+namespace sparsex {
+namespace runtime {
 
 /**
  *  Load default CSX runtime properties
@@ -104,8 +107,6 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         // Automatically enable sampling
         SetProperty(RuntimeConfiguration::PreprocMethod, "window");
         SetProperty(RuntimeConfiguration::PreprocWindowSize, string(wsize_str));
-    } else {
-        LOG_INFO << "Window size: Not set\n";
     }
 
     const char *samples_str = getenv("SAMPLES");
@@ -114,8 +115,6 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         SetProperty(RuntimeConfiguration::PreprocMethod, "portion");
         SetProperty(RuntimeConfiguration::PreprocNrSamples,
                     string(samples_str));
-    } else {
-        LOG_INFO << "Number of samples: Not set\n";
     }
 
     const char *sampling_portion_str = getenv("SAMPLING_PORTION");
@@ -124,17 +123,14 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         SetProperty(RuntimeConfiguration::PreprocMethod, "portion");
         SetProperty(RuntimeConfiguration::PreprocSamplingPortion,
                     string(sampling_portion_str));
-    } else {
-        LOG_INFO << "Sampling is disabled\n";
     }
-    
+
     return *this;
 }
 
 vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
 {
     vector<string> mt_split;
-
     boost::split(mt_split, str, boost::algorithm::is_any_of(","),
                  boost::algorithm::token_compress_on);
 
@@ -144,16 +140,25 @@ vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
         affinity.push_back(boost::lexical_cast<size_t, string>(mt_split[i]));
     }
     
-    // Printing
-    LOG_INFO << "MT_CONF=";
+    return affinity;
+}
+
+void RuntimeContext::CheckParams(const RuntimeConfiguration &conf)
+{
+    vector<size_t> affinity;
+    affinity = ParseOptionMT(
+        conf.GetProperty<string>(RuntimeConfiguration::RtCpuAffinity), affinity);
+
+    LOG_INFO << "Number of threads: " << affinity.size() << "\n";
+    stringstream os;
+    os << "Thread affinity: {";
     for (size_t i = 0; i < affinity.size(); ++i) {
         if (i != 0)
-            LOG_INFO << ",";
-        LOG_INFO << affinity[i];
+            os << ",";
+        os << affinity[i];
     }
-    LOG_INFO << "\n";
-
-    return affinity;
+    os << "}\n";
+    LOG_INFO << os.str();
 }
 
 void RuntimeContext::SetRuntimeContext(const RuntimeConfiguration &conf)
@@ -164,4 +169,5 @@ void RuntimeContext::SetRuntimeContext(const RuntimeConfiguration &conf)
                       cpu_affinity_);
 }
 
-} // end of namespace csx
+} // end of namespace runtime
+} // end of namespace sparsex

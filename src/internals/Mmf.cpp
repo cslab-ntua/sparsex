@@ -1,5 +1,7 @@
 /*
- * Mmf.cpp -- Matrix Market Format routines
+ * \file Mmf.cpp
+ *
+ * \brief Matrix Market Format utilities
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Vasileios Karakasis
@@ -8,9 +10,10 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Mmf.hpp"
+#include <sparsex/internals/Mmf.hpp>
 
-namespace csx {
+namespace sparsex {
+namespace io {
 
 // For testing purposes
 void ReadMmfSizeLine(const char *mmf_file, size_t &nr_rows, size_t &nr_cols,
@@ -65,4 +68,5 @@ bool DoRead(ifstream &in, vector<string> &arguments)
     return true;
 }
 
-} // end of namespace csx
+} // end of namespace io
+} // end of namespace sparsex

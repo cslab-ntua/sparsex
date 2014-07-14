@@ -1,5 +1,7 @@
 /*
- * CsxMatvec.hpp -- Multithreaded kernel y <-- alpha*A*x + beta*y
+ * \file CsxKernels.hpp
+ *
+ * \brief Multithreaded SpMV kernels
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011-2012, Vasileios Karakasis
@@ -9,23 +11,26 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#ifndef SPARSEX_INTERNALS_CSX_MATVEC_HPP
-#define SPARSEX_INTERNALS_CSX_MATVEC_HPP
+#ifndef SPARSEX_INTERNALS_CSX_KERNELS_HPP
+#define SPARSEX_INTERNALS_CSX_KERNELS_HPP
 
-#include "sparsex/internals/SpmMt.hpp"
-#include "sparsex/internals/SpmvMethod.hpp"
-#include "sparsex/internals/Vector.hpp"
+#include <sparsex/internals/SpmMt.hpp>
+#include <sparsex/internals/Vector.hpp>
 
 #ifdef __cplusplus
 
-#include "sparsex/internals/Affinity.hpp"
-#include "sparsex/internals/Barrier.hpp"
+#include <sparsex/internals/Affinity.hpp>
+#include <sparsex/internals/CsxSpmv.hpp>
 
-#ifdef DISABLE_POOL
+#if SPX_DISABLE_POOL
 #   include <boost/thread/barrier.hpp>
+#   include <boost/thread/thread.hpp>
+#   include <vector>
+#else
+#   include <sparsex/internals/Barrier.hpp>
+#   include <sparsex/internals/ThreadPool.hpp>
 #endif
-#include <boost/thread/thread.hpp>
-#include <vector>
+
 #endif
 
 SPX_BEGIN_C_DECLS__
@@ -41,9 +46,4 @@ void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 
 SPX_END_C_DECLS__
 
-void do_mv_thread(void *args);
-void do_mv_sym_thread(void *args);
-void do_kernel_thread(void *params);
-void do_kernel_sym_thread(void *args);
-
-#endif // SPARSEX_INTERNALS_CSX_MATVEC_HPP
+#endif // SPARSEX_INTERNALS_CSX_KERNELS_HPP

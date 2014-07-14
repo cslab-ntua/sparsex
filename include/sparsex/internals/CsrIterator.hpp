@@ -1,7 +1,9 @@
 /*
- * CsrIterator.hpp -- An iterator that simultaneously iterates through two
- *                    arrays. Based on iterator_facade by boost, compliant
- *                    with std::sort.
+ * \file CsrIterator.hpp
+ *
+ * \brief An iterator that simultaneously iterates through two arrays
+ * 
+ * Based on iterator_facade by boost, compliant with std::sort.
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2012-2013, Athena Elafrou
@@ -21,6 +23,9 @@
 #include <boost/tuple/tuple.hpp>
 
 using namespace std;
+
+namespace sparsex {
+namespace io {
 
 template <typename SortIter, typename PermIter> 
 struct CSR_iterator_traits
@@ -112,5 +117,8 @@ struct CSR_Comp : public std::binary_function<
         return (boost::get<0>(t1) < boost::get<0>(t2)); 
     } 
 };
+
+} // end of namespace io
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_CSR_ITERATOR_HPP

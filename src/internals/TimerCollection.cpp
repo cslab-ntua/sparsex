@@ -13,13 +13,13 @@
 
 #include <sparsex/internals/TimerCollection.hpp>
 
+namespace sparsex {
 namespace timing {
 
 void TimerCollection::PrintAllTimers(ostream &os) const
 {
     boost::unordered_map<const char *, Timer>::const_iterator it;
 
-    os << "=== TIMING STATISTICS ===\n";
     for (it = timers_.cbegin(); it != timers_.cend(); ++it) {
         Timer tm = it->second;
         double t = tm.ElapsedTime();
@@ -28,3 +28,4 @@ void TimerCollection::PrintAllTimers(ostream &os) const
 }
 
 } // end of namespace timing
+} // end of namespace sparsex

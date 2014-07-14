@@ -1,5 +1,7 @@
 /*
- * Node.cpp -- Node class implementation.
+ * \file Node.cpp
+ *
+ * \brief Node class implementation
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -10,10 +12,12 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Node.hpp"
+#include <sparsex/internals/Node.hpp>
 
-using namespace csx;
 using namespace std;
+
+namespace sparsex {
+namespace csx {
 
 Node::Node(uint32_t depth)
   : depth_(depth)
@@ -83,5 +87,8 @@ Node Node::MakeChild(Encoding::Type type, set<uint64_t> deltas)
     new_node.deltas_path_[type] = deltas;
     return new_node;
 }
+
+} // end of namespace csx
+} // end of namespace sparsex
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

@@ -1,5 +1,5 @@
 /*
- * SpmMt.hpp
+ * \file SpmMt.hpp
  *
  * Copyright (C) 2007-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -14,11 +14,10 @@
 #ifndef SPARSEX_INTERNALS_SPM_MT_HPP
 #define SPARSEX_INTERNALS_SPM_MT_HPP
 
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/Map.hpp"
-#include "sparsex/internals/Vector.hpp"
-#include "sparsex/internals/SpmvMethod.hpp"
-
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/Map.hpp>
+#include <sparsex/internals/Vector.hpp>
+#include <sparsex/internals/SpmvMethod.hpp>
 #include <stdbool.h>
 #include <stdint.h>
 

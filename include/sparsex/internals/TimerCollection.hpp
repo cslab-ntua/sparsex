@@ -20,6 +20,7 @@
 
 using namespace std;
 
+namespace sparsex {
 namespace timing {
 
 class TimerCollection
@@ -51,5 +52,6 @@ private:
 };
 
 } // end of namespace timing
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_TIMING_FRAMEWORK_HPP

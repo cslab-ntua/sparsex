@@ -9,7 +9,6 @@
  */
 
 #include "SparsexModule.hpp"
-
 #include <algorithm>
 #include <vector>
 
@@ -24,7 +23,6 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
         rowptr, colind, values, nrows, ncols, INDEXING_ZERO_BASED);
 
     /* 2. Tuning phase */
-    // spx_options_set_from_env();
     spx_option_set("spx.rt.nr_threads", "2");
     spx_option_set("spx.rt.cpu_affinity", "0,1");
     spx_option_set("spx.preproc.xform", "all");
@@ -32,10 +30,9 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
     spx_option_set("spx.preproc.sampling.nr_samples", "48");
     spx_option_set("spx.preproc.sampling.portion", "0.01");
     // spx_option_set("spx.matrix.symmetric", "true");
-
     t.Clear();
     t.Start();
-    spx_matrix_t *A = spx_mat_tune(input);
+    spx_matrix_t *A = spx_mat_tune(input);//, OP_REORDER);
     t.Pause();
     spx_value_t pt = t.ElapsedTime();
 
@@ -43,6 +40,11 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
     spx_partition_t *parts = spx_mat_get_partition(A);
     spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts, OP_SHARE);
     spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts, OP_SHARE);
+
+    /* Reorder vectors */
+    // spx_perm_t *p = spx_mat_get_perm(A);
+    // spx_vec_reorder(x_view, p);
+    // spx_vec_reorder(y_view, p);
 
     /* 4. SpMV benchmarking phase */
     vector<double> mt(OUTER_LOOPS);
@@ -65,6 +67,10 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
          << " mt(median): " << mt_median
          << " flops: " << flops << endl;
     
+    /* Restore original ordering of resulting vector */
+    // spx_vec_inv_reorder(y_view, p);
+    // spx_vec_inv_reorder(x_view, p);
+
     /* 5. Cleanup */
     spx_input_destroy(input);
     spx_mat_destroy(A);

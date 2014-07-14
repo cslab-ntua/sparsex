@@ -1,5 +1,7 @@
 /*
- * Statistics.hpp -- SparseX statistics collection framework
+ * \file Statistics.hpp
+ *
+ * \brief SparseX statistics collection framework
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Vasileios Karakasis
@@ -11,7 +13,7 @@
 #ifndef SPARSEX_INTERNALS_STATISTICS_HPP
 #define SPARSEX_INTERNALS_STATISTICS_HPP
 
-#include "sparsex/internals/Encodings.hpp"
+#include <sparsex/internals/Encodings.hpp>
 #include <boost/format.hpp>
 #include <cassert>
 #include <iterator>
@@ -22,8 +24,8 @@
 
 using namespace std;
 
-namespace csx
-{
+namespace sparsex {
+namespace csx {
 
 /**
  *  @brief Statistics data collected by CSX.
@@ -194,7 +196,7 @@ class StatsManipulator;
  *  constructor.
  *
  *  Every time new statistics data is added to the collection, the intermediate
- *  nodes and their associated data are created of updated accordingly.
+ *  nodes and their associated data are created or updated accordingly.
  *
  *  Although iteration of the stored statistics data is supported, direct access
  *  to the internals of StatsCollection is not permitted whatsoever. However,
@@ -849,6 +851,7 @@ private:
     typename StatsCollection<T>::TypeStats::const_iterator curr_;
 };
 
-}   // end of csx namespace
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_STATISTICS_HPP

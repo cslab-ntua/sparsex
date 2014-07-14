@@ -1,5 +1,7 @@
 /*
- * Utility.hpp --  Several utility functions
+ * \file Utility.hpp
+ *
+ * \brief Several generic utility functions
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Vasileios Karakasis
@@ -11,17 +13,12 @@
 #ifndef SPARSEX_INTERNALS_UTILITY_HPP
 #define SPARSEX_INTERNALS_UTILITY_HPP
 
-#include <ostream>
-#include <iomanip>
-#include <inttypes.h>
-#include <map>
-#include <stdint.h>
-#include <boost/function.hpp>
 #include <boost/type_traits.hpp>
 
 using namespace std;
 
-namespace csx {
+namespace sparsex {
+namespace utilities {
 
 template<bool property>
 struct math_impl
@@ -113,7 +110,8 @@ struct iterator_checker<true>
     }
 };
 
-}   // namespace csx
+} // end of namespace utilities
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_UTILITY_HPP
 

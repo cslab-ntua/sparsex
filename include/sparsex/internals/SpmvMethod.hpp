@@ -1,5 +1,7 @@
 /*
- * SpmvMethod.hpp -- SpMV function types.
+ * \file SpmvMethod.hpp
+ *
+ * \brief SpMV function types
  *
  * Copyright (C) 2007-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -12,7 +14,7 @@
 #ifndef SPARSEX_INTERNALS_SPMV_METHOD_H
 #define SPARSEX_INTERNALS_SPMV_METHOD_H
 
-#include "sparsex/internals/Vector.hpp"
+#include <sparsex/internals/Vector.hpp>
 
 typedef void (*spmv_fn_t)(void *matrix, vector_t *in, vector_t *out,
                           spx_value_t scale_f, vector_t *local_buff);

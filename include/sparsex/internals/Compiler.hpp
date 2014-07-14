@@ -1,6 +1,8 @@
 /*
- * Compiler.hpp -- Wrapper of a Clang compiler instance. Responsible for
- *                 generating LLVM IR code from C99 source.
+ * \file Compiler.hpp
+ *
+ * \brief Wrapper of a Clang compiler instance. Responsible for generating LLVM
+ * \brief IR code from C99 source
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
@@ -22,6 +24,9 @@
 using namespace clang;
 using namespace llvm;
 using namespace std;
+
+namespace sparsex {
+namespace jit {
 
 class ClangCompiler
 {
@@ -87,5 +92,8 @@ private:
     bool debug_mode_;
     ostream *log_stream_;
 };
+
+} // end of namespace jit
+} // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_COMPILER_HPP

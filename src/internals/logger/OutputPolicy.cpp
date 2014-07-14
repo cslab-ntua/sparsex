@@ -1,5 +1,7 @@
 /*
- * OutputPolicy.cpp --  Output policies for logging.
+ * \file OutputPolicy.cpp
+ *
+ * \brief Output policies for logging
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,8 +10,9 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/logger/OutputPolicy.hpp"
+#include <sparsex/internals/logger/OutputPolicy.hpp>
 
+namespace sparsex {
 namespace logging {
 
 void StdPolicy::operator()(const buffer_type &buffer)
@@ -59,4 +62,5 @@ void FilePolicy::operator()(const buffer_type &buffer)
     }
 }
 
-}
+} // end of namespace logging
+} // end of namespace sparsex

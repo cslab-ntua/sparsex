@@ -29,9 +29,10 @@ nobase_include_HEADERS = \
 	sparsex/internals/CsxBuild.hpp \
 	sparsex/internals/CsxGetSet.hpp \
 	sparsex/internals/Csx.hpp \
+	sparsex/internals/CsxKernels.hpp \
 	sparsex/internals/CsxManager.hpp \
-	sparsex/internals/CsxMatvec.hpp \
 	sparsex/internals/CsxSaveRestore.hpp \
+	sparsex/internals/CsxSpmv.hpp \
 	sparsex/internals/CsxUtil.hpp \
 	sparsex/internals/CtlBuilder.hpp \
 	sparsex/internals/CtlUtil.hpp \

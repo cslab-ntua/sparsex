@@ -1,5 +1,7 @@
 /*
- * Timer.cpp -- Timing framework
+ * \file Timer.cpp
+ *
+ * \brief Timing utilities
  *
  * Copyright (C) 2010-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2010-2012, Vasileios Karakasis
@@ -9,13 +11,13 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Timer.hpp"
-
+#include <sparsex/internals/Timer.hpp>
 #include <stdlib.h>
 #include <iostream>
 
 using namespace std;
 
+namespace sparsex {
 namespace timing {
 
 void Timer::Start()
@@ -59,3 +61,4 @@ double Timer::ElapsedTime()
 }
 
 } // end of namespace timing
+} // end of namespace sparsex

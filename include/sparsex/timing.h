@@ -1,5 +1,7 @@
 /**
- * \file timing.h -- \brief Timing routines.
+ * \file timing.h
+ *
+ * \brief Timing routines
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -22,7 +24,7 @@ typedef struct timer spx_timer_t;
 /**
  *  Initialises a timer object.
  *
- *  @param[in] t       timer to be initialized.
+ *  @param[in] t       timer object to be initialized.
  */
 static inline void spx_timer_clear(spx_timer_t *t)
 {
@@ -33,7 +35,7 @@ static inline void spx_timer_clear(spx_timer_t *t)
 /**
  *  Starts a timer object.
  *
- *  @param[in] t       timer to be launched.
+ *  @param[in] t       timer object to be launched.
  */
 static inline void spx_timer_start(spx_timer_t *t)
 {
@@ -46,7 +48,7 @@ static inline void spx_timer_start(spx_timer_t *t)
 /**
  *  Pauses a timer object.
  *
- *  @param[in] t       timer to be paused.
+ *  @param[in] t       timer object to be paused.
  */
 static inline void spx_timer_pause(spx_timer_t *t)
 {
@@ -65,7 +67,7 @@ static inline void spx_timer_pause(spx_timer_t *t)
 /**
  *  Returns the elapsed time in seconds.
  *
- *  @param[in] t        timer.
+ *  @param[in] t        a timer object.
  *  @return             elapsed seconds.
  */
 static inline double spx_timer_get_secs(spx_timer_t *t)

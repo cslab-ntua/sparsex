@@ -1,4 +1,4 @@
-#include "sparsex.h"
+#include <sparsex/sparsex.h>
 
 int main(int argc, char **argv)
 {
@@ -15,7 +15,8 @@ int main(int argc, char **argv)
 	spx_value_t *x = (spx_value_t *) malloc(sizeof(spx_value_t) * ncols);
 	spx_value_t *y = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
     spx_value_t val = 0, max = 1, min = -1;
-    for (size_t i = 0; i < nrows; i++) {
+    size_t i;
+    for (i = 0; i < nrows; i++) {
 		val = ((spx_value_t) (rand()+i) / ((spx_value_t) RAND_MAX + 1));
 		x[i] = min + val*(max-min);
 		y[i] = max + val*(min-max);
@@ -34,16 +35,16 @@ int main(int argc, char **argv)
     spx_matrix_t *A = spx_mat_tune(input);
 
     /* Create x and y vector views */
-    spx_partition_t *parts = spx_mat_get_parts(A);
-    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts);
-    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts);
+    spx_partition_t *parts = spx_mat_get_partition(A);
+    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts, OP_SHARE);
+    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts, OP_SHARE);
 
     /* Run the SpMV kernel */
     spx_value_t alpha = 0.8, beta = 0.42;
-    spx_matvec_mult(alpha, A, x_view, beta, y_view);
+    spx_matvec_kernel(alpha, A, x_view, beta, y_view);
 
-    printf("Result: ");
-    spx_vec_print(y_view);
+    /* printf("Result: "); */
+    /* spx_vec_print(y_view); */
 
     /* Cleanup */
     spx_input_destroy(input);

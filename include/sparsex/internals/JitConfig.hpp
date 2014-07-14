@@ -1,5 +1,7 @@
 /*
- * JitConfig.hpp -- JIT global configuration options.
+ * \file JitConfig.hpp
+ *
+ * \brief JIT global configuration options
  *
  * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011-2014, Vasileios Karakasis

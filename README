@@ -55,8 +55,8 @@ release in February, 2011. A summary of the changes follows:
 ==========================================
 
 * A fairly recent Linux OS
-* LLVM >= 2.9 and Clang
-* Boost Regex Library >= 1.48
+* LLVM >= 3.0 and Clang
+* Boost Library >= 1.48 (regex, serialization, system, thread)
 * numactl library >= 2.0.7
 * Cairo library (optionally)
 

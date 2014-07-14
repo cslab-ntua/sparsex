@@ -1,7 +1,7 @@
 /**
  * \file types.h
  *
- * \brief Available indexing and value types.
+ * \brief Available indexing and value types
  *
  * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou

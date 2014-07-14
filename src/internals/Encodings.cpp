@@ -1,5 +1,7 @@
 /*
- * Encodings.cpp -- All about encoding types
+ * \file Encodings.cpp
+ *
+ * \brief All about encoding types
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
@@ -9,8 +11,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Encodings.hpp"
-
+#include <sparsex/internals/Encodings.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
@@ -19,6 +20,7 @@
 using namespace std;
 using namespace boost;
 
+namespace sparsex {
 namespace csx {
 
 std::map<Encoding::Type, pair<string, string> >
@@ -90,7 +92,7 @@ void Encoding::CheckNameValidity(const string &name)
 {
     std::map<string, Type>::const_iterator i = rev_names_.find(name);
     if (i == rev_names_.end()) {
-        LOG_ERROR << "substructure type \"" << name << "\" not valid\n";
+        // LOG_ERROR << "substructure type \"" << name << "\" not valid\n";
         exit(1);
     }
 }
@@ -174,3 +176,4 @@ void PreprocessingHeuristic::CheckNameValidity(const string &name)
 }
 
 } // end of namespace csx
+} // end of namespace sparsex

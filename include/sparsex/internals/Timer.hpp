@@ -1,5 +1,7 @@
 /*
- * Timer.hpp -- Timing framework
+ * \file Timer.hpp
+ *
+ * \brief Timing utilities
  *
  * Copyright (C) 2012-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2010-2012, Vasileios Karakasis
@@ -17,6 +19,7 @@
 
 using namespace std;
 
+namespace sparsex {
 namespace timing {
 
 class Timer
@@ -77,5 +80,6 @@ private:
 };
 
 } // end of namespace timing
+} // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_TIMER_HPP

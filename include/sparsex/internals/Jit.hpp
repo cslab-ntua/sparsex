@@ -1,5 +1,7 @@
 /*
- * Jit.hpp- Just In Time compilation routines.
+ * \file Jit.hpp
+ *
+ * \brief Just In Time compilation routines
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -13,15 +15,14 @@
 #ifndef SPARSEX_INTERNALS_JIT_HPP
 #define SPARSEX_INTERNALS_JIT_HPP
 
-#include "sparsex/internals/Compiler.hpp"
-#include "sparsex/internals/CsxManager.hpp"
-#include "sparsex/internals/Encodings.hpp"
-#include "sparsex/internals/Element.hpp"
-#include "sparsex/internals/JitConfig.hpp"
-#include "sparsex/internals/JitUtil.hpp"
-#include "sparsex/internals/SpmvMethod.hpp"
-#include "sparsex/internals/TemplateText.hpp"
-
+#include <sparsex/internals/Compiler.hpp>
+#include <sparsex/internals/CsxManager.hpp>
+#include <sparsex/internals/Encodings.hpp>
+#include <sparsex/internals/Element.hpp>
+#include <sparsex/internals/JitConfig.hpp>
+#include <sparsex/internals/JitUtil.hpp>
+#include <sparsex/internals/SpmvMethod.hpp>
+#include <sparsex/internals/TemplateText.hpp>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/Module.h>
 #include <llvm/LLVMContext.h>
@@ -43,11 +44,17 @@
 
 using namespace llvm;
 using namespace std;
+using namespace sparsex::csx;
 
+namespace sparsex {
+
+// Forward declaration
 namespace csx {
-
 template<typename IndexType, typename ValueType>
 class CsxManager;
+}
+
+namespace jit {
 
 /**
  *  Singleton wrapper to an LLVM execution engine.
@@ -803,7 +810,8 @@ spmv_fn_t CsxJit<IndexType, ValueType>::GetSpmvFn() const
     return (spmv_fn_t) ((unsigned long) engine_->GetPointerToFunction(llvm_fn));
 }
 
-} // end csx namespace
+} // end of namespace jit
+} // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_JIT_HPP
 

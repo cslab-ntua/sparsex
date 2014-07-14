@@ -1,5 +1,7 @@
 /*
- * ThreadPool.cpp --  Thread management in SparseX.
+ * \file ThreadPool.cpp
+ *
+ * \brief Thread management in SparseX
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Athena Elafrou
@@ -8,8 +10,13 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/ThreadPool.hpp"
-#include "sparsex/internals/logger/Logger.hpp"
+#include <sparsex/internals/ThreadPool.hpp>
+#include <sparsex/internals/logger/Logger.hpp>
+
+namespace sparsex {
+namespace runtime {
+
+extern atomic<int> barrier_cnt;
 
 ThreadPool::~ThreadPool()
 {
@@ -26,7 +33,7 @@ ThreadPool::~ThreadPool()
 void ThreadPool::InitThreads(size_t nr_threads)
 {
     if (nr_threads < 0) {
-        LOG_ERROR << "initializing thread pool with unvalid number of threads";
+        LOG_ERROR << "initializing thread pool with invalid number of threads";
         exit(1);
     }
 
@@ -39,41 +46,43 @@ void ThreadPool::InitThreads(size_t nr_threads)
         workers_[i].SetId(i);
         // You can pass a member function pointer as the function, provided you
         // supply a suitable object pointer as the first argument
+        // workers_[i].thread_ = make_shared<boost::thread>
+        //     (&ThreadPool::Run, this, workers_.data() + i);
         workers_[i].thread_ = make_shared<boost::thread>
-            (&ThreadPool::Run, this, workers_.data() + i);  // exception throwing try-catch
+            (&ThreadPool::Run, this, boost::ref(workers_[i]));
     }
 
     centralized_barrier(GetSense(), size_ + 1);
 }
 
-void ThreadPool::Run(Worker *worker)
+void ThreadPool::Run(Worker &worker)
 {
-    centralized_barrier(worker->GetSense(), size_ + 1);
+    centralized_barrier(worker.GetSense(), size_ + 1);
 
     // Wait for the main thread to set a kernel to be executed
-    centralized_barrier(worker->GetSense(), size_ + 1);
+    centralized_barrier(worker.GetSense(), size_ + 1);
     while (!work_done_.load()) {
-        switch (worker->GetJob()) {
+        switch (worker.GetJob()) {
         case SPMV_MULT:
-            do_mv_thread(worker->data_);
+            do_mv_thread(worker.data_);
             break;
         case SPMV_KERNEL:
-            do_kernel_thread(worker->data_);
+            do_kernel_thread(worker.data_);
             break;
         case SPMV_MULT_SYM:
-            do_mv_sym_thread(worker->data_);
+            do_mv_sym_thread(worker.data_);
             break;
         case SPMV_KERNEL_SYM:
-            do_kernel_sym_thread(worker->data_);
+            do_kernel_sym_thread(worker.data_);
             break;
         default:
             break;
         }
-        centralized_barrier(worker->GetSense(), size_ + 1);
+        centralized_barrier(worker.GetSense(), size_ + 1);
         // Wait for a new kernel to be set
-        centralized_barrier(worker->GetSense(), size_ + 1);
+        centralized_barrier(worker.GetSense(), size_ + 1);
     }
-    centralized_barrier(worker->GetSense(), size_ + 1);
+    centralized_barrier(worker.GetSense(), size_ + 1);
 }
 
 void ThreadPool::SetKernel(int kernel_id)
@@ -88,3 +97,6 @@ void ThreadPool::SetKernel(int kernel_id)
         }
     }
 }
+
+} // end of namespace runtime
+} // end of namespace sparsex

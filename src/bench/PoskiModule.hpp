@@ -13,7 +13,7 @@
 #include <sparsex/internals/cdecl.h>
 
 SPX_BEGIN_C_DECLS__
-#include <poski.h>
+#include <poski/poski.h>
 SPX_END_C_DECLS__
 
 #include "Timer.hpp"

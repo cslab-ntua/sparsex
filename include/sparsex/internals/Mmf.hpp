@@ -1,5 +1,7 @@
 /*
- * Mmf.hpp --  Matrix Market Format routines
+ * \file Mmf.hpp
+ *
+ * \brief Matrix Market Format utilities
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -14,10 +16,8 @@
 #ifndef SPARSEX_INTERNALS_MMF_HPP
 #define SPARSEX_INTERNALS_MMF_HPP
 
-#include "sparsex/internals/Element.hpp"
-#include "sparsex/internals/logger/Logger.hpp"
-
-#include <iostream>
+#include <sparsex/internals/Element.hpp>
+#include <sparsex/internals/logger/Logger.hpp>
 #include <fstream>
 #include <iterator>
 #include <vector>
@@ -32,8 +32,10 @@
 #include <boost/unordered_map.hpp>
 
 using namespace std;
+using namespace sparsex::csx;
 
-namespace csx {
+namespace sparsex {
+namespace io {
 
 // For testing purposes; to be removed
 void ReadMmfSizeLine(const char *mmf_file, size_t& nr_rows, size_t& nr_cols,
@@ -306,7 +308,7 @@ MMF<IndexType, ValueType>::MMF(const char* filename)
     nr_cols_(0),
     nr_nzeros_(0),
     symmetric_(false), 
-    col_wise_(true),
+    col_wise_(false),
     zero_based_(false),
     reordered_(false),
     file_mode_(0)
@@ -488,7 +490,8 @@ void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x,
     }
 }
 
-}  //csx namespace end
+} // end of namespace io
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_MMF_HPP
 

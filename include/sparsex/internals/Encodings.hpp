@@ -1,5 +1,7 @@
 /*
- * Encodings.hpp -- All about encoding types
+ * \file Encodings.hpp
+ *
+ * \brief All about encoding types
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
@@ -12,17 +14,17 @@
 #ifndef SPARSEX_INTERNALS_ENCODINGS_HPP
 #define SPARSEX_INTERNALS_ENCODINGS_HPP
 
-#include "sparsex/internals/logger/Logger.hpp"
-
+#include <sparsex/internals/logger/Logger.hpp>
 #include <boost/bimap.hpp>
 #include <iostream>
 #include <map>
 #include <string>
 #include <vector>
 
-using namespace std;
-
+namespace sparsex {
 namespace csx {
+
+using namespace std;
 
 class Encoding
 {
@@ -104,14 +106,12 @@ public:
 
     size_t GetBlockAlignment() const
     {
-        size_t ret;
         if (IsBlockRow())
-            ret = type_ - BlockRowMin + 1;
+            return type_ - BlockRowMin + 1;
         else if (IsBlockCol())
-            ret = type_ - BlockColMin + 1;
+            return type_ - BlockColMin + 1;
         else
-            ret = 0;
-        return ret;
+            return 0;
     }
 
     void GetTypes(vector<Type> &types) const;
@@ -167,12 +167,12 @@ public:
         return sequence_.size();
     }
 
-    const_iterator Cbegin() const
+    const_iterator cbegin() const
     {
         return sequence_.begin();
     }
     
-    const_iterator Cend() const
+    const_iterator cend() const
     {
         return sequence_.end();
     }
@@ -219,12 +219,12 @@ public:
     PreprocessingMethod(Type meth)
         : method_type_(meth)
     {
-        // InitMethodNames();
+        InitMethodNames();
     }
 
     PreprocessingMethod(const string &name)
     {
-        // InitMethodNames();
+        InitMethodNames();
         method_type_ = method_names_.right.at(name);
     }
 
@@ -330,7 +330,8 @@ inline ostream &operator<<(ostream &out, PreprocessingHeuristic &heur)
     return out;
 }
 
-}   // end of namespace csx
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_ENCODINGS_HPP
 

@@ -1,6 +1,8 @@
 /*
- * Facade.cpp -- Explicit instantiation definitions of the SparseMatrix
- *               class and wrappers of its routines.
+ * \file Facade.cpp
+ *
+ * \brief Explicit instantiation definitions of the SparseMatrix class and
+ * \brief wrappers of its routines
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -9,15 +11,16 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/CsxGetSet.hpp"
-#include "sparsex/internals/CsxSaveRestore.hpp"
-#include "sparsex/internals/CsxUtil.hpp"
-#include "sparsex/internals/Facade.hpp"
-#include "sparsex/internals/Runtime.hpp"
-#include "sparsex/internals/SparseMatrix.hpp"
-#include "sparsex/internals/ThreadPool.hpp"
+#include <sparsex/internals/CsxGetSet.hpp>
+#include <sparsex/internals/CsxSaveRestore.hpp>
+#include <sparsex/internals/CsxUtil.hpp>
+#include <sparsex/internals/Facade.hpp>
+#include <sparsex/internals/Runtime.hpp>
+#include <sparsex/internals/SparseMatrix.hpp>
+#include <sparsex/internals/ThreadPool.hpp>
 
 using namespace std;
+using namespace sparsex;
 
 /**
  *  Wrapper routines.
@@ -90,12 +93,6 @@ void *TuneCSR(void *matrix, int *symmetric)
         *symmetric = 1;
     }
 
-#ifndef DISABLE_POOL
-    // FIXME: temporarily initialize here
-    ThreadPool &pool = ThreadPool::GetInstance();
-    pool.InitThreads(rt_context.GetNrThreads() - 1);
-#endif
-
     return (void *) spm_mt;
 }
 
@@ -114,12 +111,6 @@ void *TuneMMF(void *matrix, int *symmetric)
     if (config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric)) {
         *symmetric = 1;
     }
-
-#ifndef DISABLE_POOL
-    // FIXME: temporarily initialize here
-    ThreadPool &pool = ThreadPool::GetInstance();
-    pool.InitThreads(rt_context.GetNrThreads() - 1);
-#endif
 
     return (void *) spm_mt;
 }
@@ -205,4 +196,13 @@ void GetNodes(int *nodes)
     for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
         nodes[i] = numa_node_of_cpu(rt_context.GetAffinity(i));
     }
+}
+
+void CreatePool()
+{
+#if !SPX_DISABLE_POOL
+    RuntimeContext &rt_context = RuntimeContext::GetInstance();
+    ThreadPool &pool = ThreadPool::GetInstance();
+    pool.InitThreads(rt_context.GetNrThreads() - 1);
+#endif
 }

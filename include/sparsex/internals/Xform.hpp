@@ -1,5 +1,7 @@
 /*
- * Xform.hpp -- Matrix coordinate transformations
+ * \file Xform.hpp
+ *
+ * \brief Matrix coordinate transformations
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Vasileios Karakasis
@@ -11,8 +13,8 @@
 #ifndef SPARSEX_INTERNALS_XFORM_HPP
 #define SPARSEX_INTERNALS_XFORM_HPP
 
-#include "sparsex/internals/Element.hpp"
-#include "sparsex/internals/Encodings.hpp"
+#include <sparsex/internals/Element.hpp>
+#include <sparsex/internals/Encodings.hpp>
 #include <boost/lambda/bind.hpp>
 #include <boost/function.hpp>
 #include <cassert>
@@ -20,6 +22,7 @@
 namespace bll = boost::lambda;
 using namespace std;
 
+namespace sparsex {
 namespace csx {
 
 // Coordinate transformation functions
@@ -429,6 +432,7 @@ typename TransformFn<IndexType>::type GetXformFn(Encoding::Type from,
     return ret;
 }
 
-}   // end of csx namespace
+}   // end of namespace csx
+}   // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_XFORM_HPP

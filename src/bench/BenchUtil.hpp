@@ -10,10 +10,10 @@
 #ifndef BENCH_UTIL_HPP
 #define BENCH_UTIL_HPP
 
-#ifdef POSKI
+#if SPX_BENCH_POSKI
 #   include "PoskiModule.hpp"
 #endif
-#ifdef MKL
+#if SPX_BENCH_MKL
 #   include "MklModule.hpp"
 #endif
 #include "SparsexModule.hpp"

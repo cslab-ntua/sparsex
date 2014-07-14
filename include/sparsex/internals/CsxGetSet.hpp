@@ -1,5 +1,7 @@
 /*
- * CsxGetSet.hpp -- Get/Set routines for CSX.
+ * \file CsxGetSet.hpp
+ *
+ * \brief Get/Set utilities for CSX
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013,      Athena Elafrou
@@ -11,13 +13,15 @@
 #ifndef SPARSEX_INTERNALS_CSX_GET_SET_HPP
 #define SPARSEX_INTERNALS_CSX_GET_SET_HPP
 
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/Csx.hpp"
-#include "sparsex/internals/Encodings.hpp"
-#include "sparsex/internals/Element.hpp"
-#include "sparsex/internals/SpmMt.hpp"
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/Csx.hpp>
+#include <sparsex/internals/Encodings.hpp>
+#include <sparsex/internals/SpmMt.hpp>
 
-using namespace csx;
+namespace sparsex {
+namespace csx {
+
+extern const unsigned long PatternIdOffset;
 
 /**
  *  Returns the value of the corresponding element (0 if element doesn't exist)
@@ -521,5 +525,8 @@ bool SearchBlock(ValueType **v_ptr, uint8_t delta, uint8_t size,
 
     return false;
 }
+
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_CSX_GET_SET_HPP

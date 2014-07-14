@@ -27,7 +27,9 @@ libsparseximpl_la_SOURCES = \
 	Barrier.cpp \
 	Compiler.cpp \
 	CsxBuild.cpp \
-	CsxMatvec.cpp \
+	CsxKernels.cpp \
+	CsxSpmv.cpp \
+	CsxUtil.cpp \
 	CtlBuilder.cpp \
 	Encodings.cpp \
 	Facade.cpp \

@@ -1,5 +1,7 @@
 /*
- * Barrier.hpp --  A centralized barrier with timeout.
+ * \file Barrier.hpp
+ *
+ * \brief A centralized barrier with timeout
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Athena Elafrou
@@ -24,6 +26,12 @@
 #include <atomic>
 #include <cstdlib>
 
+namespace sparsex {
+namespace runtime {
+
 void centralized_barrier(int *local_sense, size_t nr_threads);
+
+} // end of namespace runtime
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_BARRIER_HPP

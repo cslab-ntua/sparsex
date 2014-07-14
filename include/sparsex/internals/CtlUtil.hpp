@@ -1,5 +1,7 @@
 /*
- * CtlUtil.hpp -- Definitions and utilities for the ctl byte array of CSX.
+ * \file CtlUtil.hpp
+ *
+ * \brief Definitions and utilities for the ctl byte array of CSX
  *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -12,7 +14,7 @@
 #ifndef SPARSEX_INTERNALS_CTL_UTIL_HPP
 #define SPARSEX_INTERNALS_CTL_UTIL_HPP
 
-#include "sparsex/internals/cdecl.h"
+#include <sparsex/internals/cdecl.h>
 #include <assert.h>
 #include <inttypes.h>
 

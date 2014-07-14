@@ -15,7 +15,7 @@
 
 #include "sparsex/internals/Affinity.hpp"
 #include "sparsex/internals/Csr.hpp"
-#include "sparsex/internals/CsxMatvec.hpp"
+#include "sparsex/internals/CsxKernels.hpp"
 #include "sparsex/internals/CsxUtil.hpp"
 #include "sparsex/internals/Mmf.hpp"
 #include "sparsex/internals/SpmMt.hpp"
@@ -30,7 +30,9 @@
 #include <boost/bind.hpp>
 
 using namespace std;
-using namespace csx;
+using namespace sparsex::io;
+using namespace sparsex::runtime;
+using namespace sparsex::timing;
 
 extern double csx_time;
 

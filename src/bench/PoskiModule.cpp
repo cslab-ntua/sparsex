@@ -9,7 +9,6 @@
  */
 
 #include "PoskiModule.hpp"
-
 #include <algorithm>
 #include <vector>
 

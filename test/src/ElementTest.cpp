@@ -8,19 +8,21 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/DynamicArray.hpp"
-#include "sparsex/internals/Element.hpp"
-#include "sparsex/internals/SparsePartition.hpp"
-#include "sparsex/internals/Statistics.hpp"
-#include "sparsex/internals/Utility.hpp"
-#include "sparsex/internals/Xform.hpp"
+#include <sparsex/internals/CsxUtil.hpp>
+#include <sparsex/internals/DynamicArray.hpp>
+#include <sparsex/internals/Element.hpp>
+#include <sparsex/internals/SparsePartition.hpp>
+#include <sparsex/internals/Statistics.hpp>
+#include <sparsex/internals/Utility.hpp>
+#include <sparsex/internals/Xform.hpp>
 #include <boost/container/vector.hpp>
 #include <cassert>
 #include <iostream>
 #include <vector>
 
-using namespace csx;
 using namespace std;
+using namespace sparsex::csx;
+using namespace sparsex::utilities;
 
 const size_t RleSize = 4;
 

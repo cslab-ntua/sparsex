@@ -9,7 +9,7 @@
 #
 
 AM_DEFAULT_VERBOSITY = 0
-SUBDIRS = internals templates api
+SUBDIRS = internals templates api examples
 
 if SPX_BUILD_BENCH
 SUBDIRS += bench

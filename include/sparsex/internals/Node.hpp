@@ -1,5 +1,7 @@
 /*
- * Node.hpp -- Node class.
+ * \file Node.hpp
+ *
+ * \brief Node class
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -13,13 +15,15 @@
 #ifndef SPARSEX_INTERNALS_NODE_HPP
 #define SPARSEX_INTERNALS_NODE_HPP
 
-#include "sparsex/internals/Encodings.hpp"
-
+#include <sparsex/internals/Encodings.hpp>
 #include <iostream>
 #include <set>
 #include <map>
 #include <inttypes.h>
 
+using namespace std;
+
+namespace sparsex {
 namespace csx {
 
 /**
@@ -50,12 +54,13 @@ public:
 
 private:
     uint32_t depth_;
-    std::map<Encoding::Type, set<uint64_t> > deltas_path_;
+    map<Encoding::Type, set<uint64_t> > deltas_path_;
     Encoding::Type *type_path_;
     Encoding::Type *type_ignore_;
     template<typename IndexType, typename ValueType> friend class EncodingManager;
 };
 
 } // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_NODE_HPP

@@ -31,7 +31,7 @@ static void align_ptr(uint8_t **ctl, int align)
 }
 #pragma GCC diagnostic pop
 
-#ifdef SPX_DEBUG
+#if SPX_DEBUG
 static void ctl_print(uint8_t *ctl, spx_index_t start, spx_index_t end,
                       const char *descr)
 {

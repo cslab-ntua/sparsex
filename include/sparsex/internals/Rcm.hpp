@@ -1,5 +1,7 @@
 /*
- * Rcm.hpp -- Reverse Cuthill-Mckee Ordering Interface
+ * \file Rcm.hpp
+ *
+ * \brief Reverse Cuthill-Mckee Ordering Interface
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2012-2013, Athena Elafrou
@@ -11,17 +13,20 @@
 #ifndef SPARSEX_INTERNALS_RCM_HPP
 #define SPARSEX_INTERNALS_RCM_HPP
 
-#include "sparsex/internals/Csr.hpp"
-#include "sparsex/internals/CsrIterator.hpp"
-#include "sparsex/internals/logger/Logger.hpp"
-#include "sparsex/internals/Mmf.hpp"
-#include "sparsex/internals/SparseInternal.hpp"
-
+#include <sparsex/internals/Csr.hpp>
+#include <sparsex/internals/CsrIterator.hpp>
+#include <sparsex/internals/Mmf.hpp>
+#include <sparsex/internals/logger/Logger.hpp>
 #include <boost/config.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/cuthill_mckee_ordering.hpp>
 #include <boost/graph/properties.hpp>
 #include <boost/graph/bandwidth.hpp>
+
+using namespace sparsex::io;
+
+namespace sparsex {
+namespace utilities {
 
 using namespace boost;
 
@@ -59,12 +64,6 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat);
 template<typename IndexType, typename ValueType>
 void DoReorder_RCM(MMF<IndexType, ValueType>& mat, vector<size_t>& perm);
 
-template<typename IndexType, typename ValueType>
-SparseInternal<SparsePartition<IndexType, ValueType> > *LoadMMF_RCM(const char *filename);
-template<typename IndexType, typename ValueType>
-SparseInternal<SparsePartition<IndexType, ValueType> > *LoadMMF_RCM_mt(const char *file_name,
-                                                     const long nr_threads = 0);
-
 /**
  *  Loads matrix from CSR format and applies the reverse Cuthill-Mckee 
  *  reordering algorithm
@@ -89,16 +88,6 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
                           size_t nr_nzeros, bool symmetric);
 template<typename IndexType, typename ValueType>
 void DoReorder_RCM(CSR<IndexType, ValueType>& mat, vector<size_t>& perm);
-
-template<typename IndexType, typename ValueType>
-SparseInternal<SparsePartition<IndexType, ValueType> >*LoadCSR_RCM_mt(IndexType *rowptr,
-                                                     IndexType *colind,
-                                                     ValueType *values,
-                                                     IndexType nr_rows,
-                                                     IndexType nr_cols,
-                                                     bool zero_based,
-                                                     const long nr_threads = 0);
-
 
 /*
  * Implementation of RCM interface
@@ -178,7 +167,7 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
     if (index == 0) {
         LOG_WARNING << "no reordering available for this matrix, "
                     << "all non-zero elements on main diagonal\n";
-        delete edges;
+        delete[] edges;
         throw bad_reorder;
     }
 
@@ -189,7 +178,7 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
         add_edge(edges[i].first, edges[i].second, graph);
     }
 
-    delete edges;
+    delete[] edges;
     return graph;
 }
 
@@ -225,29 +214,6 @@ void DoReorder_RCM(MMF<IndexType, ValueType>& mat, vector<size_t> &perm)
     // Reorder original matrix
     ReorderMat_MMF(mat, perm);
     LOG_INFO << "Reordering complete\n";
-}
-
-template<typename IndexType, typename ValueType>
-SparseInternal<SparsePartition<IndexType, ValueType> >*LoadMMF_RCM_mt(const char *mmf_file,
-                                                     const long nr_threads)
-{
-    SparseInternal<SparsePartition<IndexType, ValueType> > *ret = 0;
-    MMF<IndexType, ValueType> mat(mmf_file);
-    vector<size_t> perm;
-
-    // Reorder matrix
-    DoReorder_RCM(mat, perm);
-    // Create internal representation
-    ret = SparseInternal<SparsePartition<IndexType, ValueType> >::DoLoadMatrix(mat, nr_threads);
-    return ret;
-}
-
-template<typename IndexType, typename ValueType>
-SparseInternal<SparsePartition<IndexType, ValueType> >*LoadMMF_RCM(const char *mmf_file)
-{
-    SparseInternal<SparsePartition<IndexType, ValueType> >*ret;
-    ret = LoadMMF_RCM_mt<IndexType, ValueType>(mmf_file, 1);
-    return ret;
 }
 
 template<typename IterT>
@@ -286,7 +252,7 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
     if (index == 0) {
         LOG_WARNING << "no reordering available for this matrix, "
                     << "all non-zero elements on main diagonal\n";
-        delete edges;
+        delete[] edges;
         throw bad_reorder;
     }
 
@@ -294,7 +260,7 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
         add_edge(edges[i].first, edges[i].second, graph);
     }
 
-    delete edges;
+    delete[] edges;
     return graph;
 }
 
@@ -302,11 +268,22 @@ template<typename IndexType, typename ValueType>
 void ReorderMat_CSR(CSR<IndexType, ValueType>& mat, const vector<size_t>& perm,
                     vector<size_t>& inv_perm)
 {
+    // Have to work on a copy of colind and values if CSR structures are not
+    // be shared
+	IndexType *new_colind = new IndexType[mat.GetNrNonzeros()];
+	ValueType *new_values = new ValueType[mat.GetNrNonzeros()];
+    memcpy(new_values, mat.values_, sizeof(ValueType) * mat.GetNrNonzeros());
+
     // Apply permutation only to colind
     for (size_t i = 0; i < mat.GetNrNonzeros(); i++) {
-        mat.colind_[i] = perm[mat.colind_[i] - !mat.IsZeroBased()] +
+        // mat.colind_[i] = perm[mat.colind_[i] - !mat.IsZeroBased()] +
+        //     !mat.IsZeroBased();
+        new_colind[i] = perm[mat.colind_[i] - !mat.IsZeroBased()] +
             !mat.IsZeroBased();
     }
+
+    mat.colind_ = new_colind;
+    mat.values_ = new_values;
 
     // Simultaneously sort colind and values per row
     IndexType row_start, length;
@@ -348,26 +325,7 @@ void DoReorder_RCM(CSR<IndexType, ValueType>& mat, vector<size_t>& perm)
     LOG_INFO << "Reordering complete\n";
 }
 
-template<typename IndexType, typename ValueType>
-SparseInternal<SparsePartition<IndexType, ValueType> >*LoadCSR_RCM_mt(IndexType *rowptr,
-                                                     IndexType *colind,
-                                                     ValueType *values,
-                                                     IndexType nr_rows,
-                                                     IndexType nr_cols,
-                                                     bool zero_based,
-                                                     const long nr_threads)
-{
-    SparseInternal<SparsePartition<IndexType, ValueType> > *spi = NULL;
-    CSR<IndexType, ValueType> mat(rowptr, colind, values, 
-                                  nr_rows, nr_cols, zero_based);
-    vector<size_t> perm;
-
-    // Reorder original matrix
-    DoReorder_RCM(mat, perm);
-    // Create internal representation
-    spi = SparseInternal<SparsePartition<IndexType, ValueType> >::DoLoadMatrix(mat, nr_threads);
-
-    return spi;
-}
+} // end of namespace utilities
+} // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_RCM_HPP

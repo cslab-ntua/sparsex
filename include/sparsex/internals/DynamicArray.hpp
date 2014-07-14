@@ -1,6 +1,7 @@
 /*
- * DynamicArray.hpp -- Dynamic Array implementation supporting efficient
- *                     resizing.
+ * \file DynamicArray.hpp
+ *
+ * \brief Dynamic Array implementation supporting efficient resizing
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
@@ -12,14 +13,16 @@
 #ifndef SPARSEX_INTERNALS_DYNAMIC_ARRAY_HPP
 #define SPARSEX_INTERNALS_DYNAMIC_ARRAY_HPP
 
-#include "sparsex/internals/Allocators.hpp"
-
+#include <sparsex/internals/Allocators.hpp>
 #include <cassert>
 #include <cstddef>
 #include <iostream>
 #include <memory>
 
 using namespace std;
+
+namespace sparsex {
+namespace utilities {
 
 template<typename T, typename Allocator = reallocator<T> >
 class DynamicArray
@@ -154,5 +157,8 @@ ostream &operator<<(ostream& os, const DynamicArray<T> &da)
     os << "\n";
     return os;
 }
+
+} // end of namespace utilities
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_DYNAMIC_ARRAY_HPP

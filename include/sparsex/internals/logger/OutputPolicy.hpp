@@ -1,5 +1,7 @@
 /*
- * OutputPolicy.hpp --  Output policies for logging.
+ * \file OutputPolicy.hpp
+ *
+ * \brief Output policies for logging
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -19,6 +21,7 @@
 
 using namespace std;
 
+namespace sparsex {
 namespace logging {
 
 template<typename T>
@@ -71,5 +74,6 @@ private:
 typedef boost::function<void (ostringstream&)> OutputHandler;
 
 }   // end of namespace logging
+}   // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_LOGGER_OUTPUT_POLICY_HPP

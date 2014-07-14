@@ -1,5 +1,7 @@
 /*
- * Runtime.hpp -- Front-end utilities for runtime configuration
+ * \file Runtime.hpp
+ *
+ * \brief Front-end utilities for runtime configuration
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2012-2013, Athena Elafrou
@@ -12,31 +14,32 @@
 #ifndef SPARSEX_INTERNALS_RUNTIME_HPP
 #define SPARSEX_INTERNALS_RUNTIME_HPP
 
-#include "sparsex/internals/CsxManager.hpp"
-#include "sparsex/internals/Jit.hpp"
-#include "sparsex/internals/SpmMt.hpp"
-
+#include <sparsex/internals/CsxManager.hpp>
+#include <sparsex/internals/Jit.hpp>
+#include <sparsex/internals/SpmMt.hpp>
 #include <stdio.h>
 #include <stdlib.h>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
 #include <sstream>
-#include <sched.h>
 #include <string>
 #include <boost/bimap.hpp>
 #include <boost/lexical_cast.hpp>
 
 using namespace std;
+using namespace sparsex::jit;
+using namespace sparsex::csx;
 using boost::bimaps::tags::tagged;
 
-namespace csx {
+namespace sparsex {
 
 // Forward declarations
+namespace csx {
 template<typename PartitionType>
 class SparseInternal;
 template<typename I, typename V>
 class EncodingManager;
+}
+
+namespace runtime {
 
 /* Runtime configuration class */
 class RuntimeConfiguration
@@ -166,8 +169,8 @@ inline PreprocessingMethod RuntimeConfiguration::GetProperty(
     const Property &key) const
 {
     PropertyMap::const_iterator iter = property_map_.find(key);
-    PreprocessingMethod ret(iter->second);
-    return ret;
+    // PreprocessingMethod ret(iter->second);
+    return iter->second;
 }
 
 template<>
@@ -175,16 +178,8 @@ inline PreprocessingHeuristic RuntimeConfiguration::GetProperty(
     const Property &key) const
 {
     PropertyMap::const_iterator iter = property_map_.find(key);
-    PreprocessingHeuristic ret(iter->second);
-    return ret;
-}
-
-template<typename I, typename V>
-void RuntimeConfiguration::CheckProperties()
-{
-    // Every module should test its parameters here
-    EncodingManager<I, V>::CheckParams(*this);
-    // TODO: RuntimeContext test
+    // PreprocessingHeuristic ret(iter->second);
+    return iter->second;
 }
 
 /* Singleton class holding runtime information */
@@ -198,6 +193,7 @@ public:
         return instance;
     }
 
+    static void CheckParams(const RuntimeConfiguration &config);
     void SetRuntimeContext(const RuntimeConfiguration &conf);
 
     size_t GetNrThreads() const
@@ -234,6 +230,15 @@ private:
     vector<size_t> cpu_affinity_;
     CsxExecutionEngine *engine_;
 };
+
+template<typename I, typename V>
+void RuntimeConfiguration::CheckProperties()
+{
+    // TODO: RuntimeContext test
+    RuntimeContext::CheckParams(*this);
+    // Every module should test its parameters here
+    EncodingManager<I, V>::CheckParams(*this);
+}
 
 /* Class responsible for holding per thread information */
 template<class InternalType>
@@ -334,6 +339,7 @@ SetData(SparseInternal<InternalType> *spi, spm_mt_t *spm_mt)
         rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixFullColind));
 }
 
-}   // end of namespace csx
+} // end of namespace runtime
+} // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_RUNTIME_HPP

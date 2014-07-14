@@ -14,39 +14,35 @@ ACLOCAL_AMFLAGS = -I m4check
 AM_CPPFLAGS = \
 	-I$(top_builddir)/include \
 	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src/bench \
+	-I$(top_srcdir)/src/examples/examples \
 	$(AX_CPPFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
 AM_LDFLAGS	= \
-	-L$(top_builddir)/src/api/.libs \
+	-L$(top_builddir)/src/internals/.libs \
 	$(AX_LDFLAGS)
 
-noinst_PROGRAMS = bench_spmv
+noinst_PROGRAMS = mmf_example csr_example reordering_example
 
-bench_spmv_SOURCES = \
-	Bench.cpp \
-	main.cpp \
-	Timer.cpp \
-	SparsexModule.cpp
+mmf_example_SOURCES = \
+	mmf_example.c
 
-if SPX_BUILD_BENCH_MKL
-bench_spmv_SOURCES += MklModule.cpp
-endif
+csr_example_SOURCES = \
+	csr_example.c
 
-if SPX_BUILD_BENCH_POSKI
-bench_spmv_SOURCES += PoskiModule.cpp
-endif
+reordering_example_SOURCES = \
+	reordering_example.c
 
-bench_spmv_LDADD = \
+mmf_example_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
-	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
 	$(CLANG_LIBS) \
 	$(LLVM_LIBS)
 
-if SPX_BUILD_BENCH_MKL
-bench_spmv_LDADD += $(MKL_LIBS)
-endif
+csr_example_LDADD = \
+	$(top_builddir)/src/api/.libs/libsparsex.la \
+	$(CLANG_LIBS) \
+	$(LLVM_LIBS)
 
-if SPX_BUILD_BENCH_POSKI
-bench_spmv_LDADD += $(POSKI_LIBS)
-endif
+reordering_example_LDADD = \
+	$(top_builddir)/src/api/.libs/libsparsex.la \
+	$(CLANG_LIBS) \
+	$(LLVM_LIBS)

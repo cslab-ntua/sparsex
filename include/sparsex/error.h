@@ -1,5 +1,7 @@
 /**
- * \file error.h -- \brief Error handling interface.
+ * \file error.h
+ *
+ * \brief Error handling interface
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -29,9 +31,10 @@
 #define SPX_ERR_FILE             3   /* generic file error */
 #define SPX_ERR_INPUT_MAT        4   /* input matrix wasn't properly created */
 #define SPX_ERR_TUNED_MAT        5   /* tuned matrix wasn't properly created */
-#define SPX_ERR_VEC_DIM          6   /* incompatible vector dimension */
-#define SPX_ERR_ENTRY_NOT_FOUND  7   /* matrix entry not found */
-#define SPX_OUT_OF_BOUNDS        8   /* index out of bounds */
+#define SPX_ERR_DIM              6   /* incompatible matrix and vectors dimensions */
+#define SPX_ERR_VEC_DIM          7   /* incompatible vector dimension */
+#define SPX_ERR_ENTRY_NOT_FOUND  8   /* matrix entry not found */
+#define SPX_OUT_OF_BOUNDS        9   /* index out of bounds */
 /* OS related errors */
 #define SPX_ERR_SYSTEM           15
 #define SPX_ERR_FILE_OPEN        16  /* unable to open file */

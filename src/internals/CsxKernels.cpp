@@ -1,5 +1,7 @@
 /*
- * CsxMatvec.cpp -- Multithreaded kernel y <-- alpha*A*x + beta*y
+ * \file CsxKernels.cpp
+ *
+ * \brief Multithreaded SpMV kernels
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2013,      Athena Elafrou
@@ -8,77 +10,19 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/CsxMatvec.hpp"
-#include "sparsex/internals/ThreadPool.hpp"
+#include <sparsex/internals/CsxKernels.hpp>
 
+using namespace sparsex;
+using namespace sparsex::runtime;
+
+vector_t **temp;
+double ALPHA, BETA;
+size_t nr_threads;
+
+#if SPX_DISABLE_POOL
 using namespace boost;
-
-static vector_t **temp;
-static double ALPHA, BETA;
-static size_t nr_threads;
-#ifdef DISABLE_POOL
 static barrier *bar;
 #endif
-
-void do_mv_thread(void *args)
-{
-	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
-	setaffinity_oncpu(spm_thread->cpu);
-	spmv_fn_t fn = spm_thread->spmv_fn;
-
-	fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA, NULL);
-}
-
-void do_mv_sym_thread(void *args)
-{
-	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
-	setaffinity_oncpu(spm_thread->cpu);
-	spmv_fn_t fn = spm_thread->spmv_fn;
-	int id = spm_thread->id;
-    int *sense = spm_thread->sense;
-
-    VecInitFromMap(temp, 0, spm_thread->map);
-    centralized_barrier(sense, nr_threads);
-    fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA, temp[id]);
-    centralized_barrier(sense, nr_threads);
-    /* Switch Reduction Phase */
-    VecAddFromMap(spm_thread->y, temp, spm_thread->y, spm_thread->map);
-}
-
-void do_kernel_thread(void *args)
-{
-	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
-	setaffinity_oncpu(spm_thread->cpu);
-	spmv_fn_t fn = spm_thread->spmv_fn;
-    int start = spm_thread->row_start;
-    int end = start + spm_thread->nr_rows;
-
-	if (BETA != 1)
-        VecScalePart(spm_thread->y, spm_thread->y, BETA, start, end);
-
-	fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA, NULL);
-}
-
-void do_kernel_sym_thread(void *args)
-{
-	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
-	setaffinity_oncpu(spm_thread->cpu);
-	spmv_fn_t fn = spm_thread->spmv_fn;
-    int start = spm_thread->row_start;
-    int end = start + spm_thread->nr_rows;
-	int id = spm_thread->id;
-    int *sense = spm_thread->sense;
-
-    VecInitFromMap(temp, 0, spm_thread->map);
-    centralized_barrier(sense, nr_threads);
-	if (BETA != 1)
-        VecScalePart(spm_thread->y, spm_thread->y, BETA, start, end);
-
-    fn(spm_thread->spm, spm_thread->x, spm_thread->y, ALPHA, temp[id]);
-    centralized_barrier(sense, nr_threads);
-    /* Switch Reduction Phase */
-    VecAddFromMap(spm_thread->y, temp, spm_thread->y, spm_thread->map);
-}
 
 void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
                   vector_t *y, spx_value_t beta)
@@ -91,7 +35,7 @@ void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 		spm_mt->spm_threads[i].y = y;
 	}
 
-#ifdef DISABLE_POOL
+#if SPX_DISABLE_POOL
     vector<std::shared_ptr<thread> > threads(nr_threads);
     for (size_t i = 0; i < nr_threads; ++i) {
         threads[i] = make_shared<thread>
@@ -113,14 +57,14 @@ void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 #endif
 }
 
-void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
+void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
                       vector_t *y, spx_value_t beta)
 {
     ALPHA = alpha; BETA = beta;
 	nr_threads = spm_mt->nr_threads;
     temp = spm_mt->local_buffers;
 	temp[0] = y;
-#ifdef DISABLE_POOL
+#if SPX_DISABLE_POOL
     bar = new barrier(nr_threads);
 #endif
 
@@ -129,7 +73,7 @@ void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 		spm_mt->spm_threads[i].y = y;
 	}
 
-#ifdef DISABLE_POOL
+#if SPX_DISABLE_POOL
     vector<std::shared_ptr<thread> > threads(nr_threads);
     for (size_t i = 0; i < nr_threads; ++i) {
         threads[i] = make_shared<thread>
@@ -163,7 +107,7 @@ void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 		spm_mt->spm_threads[i].y = y;
 	}
 
-#ifdef DISABLE_POOL
+#if SPX_DISABLE_POOL
     vector<std::shared_ptr<thread> > threads(nr_threads);
     for (size_t i = 0; i < nr_threads; ++i) {
         threads[i] = make_shared<thread>
@@ -192,7 +136,7 @@ void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 	nr_threads = spm_mt->nr_threads;
     temp = spm_mt->local_buffers;
 	temp[0] = y;
-#ifdef DISABLE_POOL
+#if SPX_DISABLE_POOL
     bar = new barrier(nr_threads);
 #endif
 
@@ -201,7 +145,7 @@ void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 		spm_mt->spm_threads[i].y = y;
 	}
 
-#ifdef DISABLE_POOL
+#if SPX_DISABLE_POOL
     vector<std::shared_ptr<thread> > threads(nr_threads);
     for (size_t i = 0; i < nr_threads; ++i) {
         threads[i] = make_shared<thread>

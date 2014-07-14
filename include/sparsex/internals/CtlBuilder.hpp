@@ -1,5 +1,7 @@
 /*
- * CtlBuilder.hpp -- Utility class for building the CSX's ctl structure
+ * \file CtlBuilder.hpp
+ *
+ * \brief Utility class for building the CSX's ctl structure
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
@@ -10,10 +12,16 @@
 #ifndef SPARSEX_INTERNALS_CTL_BUILDER_HPP
 #define SPARSEX_INTERNALS_CTL_BUILDER_HPP
 
-#include "sparsex/internals/Allocators.hpp"
-#include "sparsex/internals/DynamicArray.hpp"
+#include <sparsex/internals/Allocators.hpp>
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/DynamicArray.hpp>
 #include <cstdint>
 #include <iostream>
+
+using namespace sparsex::utilities;
+
+namespace sparsex {
+namespace csx {
 
 class CtlBuilder
 {
@@ -50,5 +58,8 @@ private:
 
     CtlDynamicArray ctl_da_;
 };
+
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_CTL_BUILDER_HPP

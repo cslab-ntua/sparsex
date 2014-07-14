@@ -1,5 +1,6 @@
 /*
  * \file Config.hpp
+ *
  * \brief SparseX system configuration
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
@@ -12,9 +13,9 @@
 #ifndef SPARSEX_INTERNALS_CONFIG_HPP
 #define SPARSEX_INTERNALS_CONFIG_HPP
 
-#define SPX_JIT_INCLUDE         "@abs_top_srcdir@/include:@abs_top_builddir@/include"
-#define SPX_MULT_TEMPLATE_DIR   "@abs_top_srcdir@/src/templates"
-#define SPX_USE_NUMA            @SPX_USE_NUMA@
-#define CLANG_INC_SEARCH_PATH   "@CLANG_INC_SEARCH_PATH@"
+#define SPX_JIT_INCLUDE         "/usr/local/include"
+#define SPX_MULT_TEMPLATE_DIR   "/usr/local/share/templates"
+#define SPX_USE_NUMA            0
+#define CLANG_INC_SEARCH_PATH   ":/usr/local/include:/usr/local/bin/../lib/clang/3.0/include:/usr/include/x86_64-linux-gnu:/usr/include"
 
 #endif  // SPARSEX_INTERNALS_CONFIG_HPP

@@ -1,5 +1,7 @@
 /*
- * TemplateText.cpp -- Class for manipulating template texts.
+ * \file TemplateText.cpp
+ *
+ * \brief Class for manipulating template texts
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
@@ -8,13 +10,13 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/TemplateText.hpp"
-#include <boost/regex.hpp>
-#include <iostream>
-#include <string>
+#include <sparsex/internals/TemplateText.hpp>
 
 using namespace boost;
 using namespace std;
+
+namespace sparsex {
+namespace jit {
 
 TemplateText::TemplateText(string text)
     : template_text_(text), placeholder_pattern_("\\$\\{(\\w+)\\}")
@@ -39,7 +41,7 @@ string TemplateText::Substitute(const std::map<string, string> &values)
         if (placeholders_.count(iter->first))
             placeholders_[iter->first] = iter->second;
         else
-            cerr << "key '" << iter->first << "' not found\n";
+            LOG_ERROR << "key '" << iter->first << "' not found\n";
     }
 
     return DoSubstitute();
@@ -69,3 +71,6 @@ string TemplateText::DoSubstitute()
                   placeholder_pattern_, TextReplacer(this), match_default);
     return ret;
 }
+
+} // end of namespace jit
+} // end of namespace sparsex

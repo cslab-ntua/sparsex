@@ -10,7 +10,6 @@
  */
 
 #include "Timer.hpp"
-
 #include <stdlib.h>
 #include <iostream>
 

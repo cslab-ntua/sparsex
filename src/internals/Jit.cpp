@@ -1,5 +1,7 @@
 /*
- * Jit.cpp -- Just In Time compilation routines.
+ * \file Jit.cpp
+ *
+ * \brief Just In Time compilation utilities
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
@@ -9,13 +11,15 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Jit.hpp"
+#include <sparsex/internals/Jit.hpp>
 
-using namespace llvm;
-using namespace csx;
 using namespace std;
+using namespace llvm;
 
-CsxExecutionEngine &csx::CsxJitInit(void)
+namespace sparsex {
+namespace jit {
+
+CsxExecutionEngine &CsxJitInit(void)
 {
     InitializeNativeTarget();
     return CsxExecutionEngine::CreateEngine();
@@ -35,5 +39,8 @@ void CsxExecutionEngine::AddModule(Module *mod)
         llvm_engine_->addModule(mod);
     }
 }
+
+} // end of namespace jit
+} // end of namespace sparsex
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

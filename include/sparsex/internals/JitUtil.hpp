@@ -1,5 +1,7 @@
 /*
- * JitUtil.hpp -- Jit-related utility functions
+ * \file JitUtil.hpp
+ *
+ * \brief Jit-related utility functions
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
@@ -19,6 +21,9 @@
 
 using namespace std;
 
+namespace sparsex {
+namespace jit {
+
 string SourceFromFile(const char *filename);
 string SourceFromFile(const string &filename);
 void SourceToFile(const char *filename, const string &source);
@@ -34,6 +39,9 @@ string Stringify(const T& t)
     ss << t;
     return ss.str();
 }
+
+} // end of namespace jit
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_JIT_UTIL_HPP
 

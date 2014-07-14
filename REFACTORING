@@ -3,8 +3,8 @@
 * [DONE] Revisit statistics collecting mechanism
   -- Stats structure, element markers (new heur)
 * Revisit pattern-id assigning mechanism
-* [] Revisit namespace csx (should become sparsex, probably)
-* [] Eliminate unused/dead code, incl. commented out code
+* [DONE] Revisit namespace csx (should become sparsex, probably)
+* [90%] Eliminate unused/dead code, incl. commented out code
 * [50%] Clean up thgoud code
 * Revisit SparsePartition building, especially SetElems()
 * [DONE] Remove the emacs directive from header files
@@ -12,9 +12,9 @@
 * Consider making SparsePartition::iterator a const iterator
 * [] Treat zero-sized windows
 * [] Block alignment -> fixed dim vs. variable dim
-* [] Cbegin() -> cbegin()
-* [] Revisit PreparePat()'s arguments
-* [] Check FIXME tags
+* [DONE] Cbegin() -> cbegin()
+* [DONE] Revisit PreparePat()'s arguments
+* [20%] Check FIXME tags
 * [DONE] Remove std:: prefixes where possible
 * Revise iterators (Mmf, Csr, SparsePartition)
 * Consider zero-based indexing for Element
@@ -28,15 +28,15 @@
 * Unsigned to signed conversions
 * [DONE] Remove `inline' keyword and move member function definitions inside the class
   (SparseMatrix.hpp)
-* [] Xs -> Cols
+* [DONE] Xs -> Cols
 * [DONE] Rethink element marking mechanism
 * valgrind check / memory leaks
 * [DONE] DEBUG_MODE compilation macro
 * Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
 * Remove default arguments or document precisely
 * [DONE] Fix Diag <-> AntiDiag conversions
-* [] Use auto variables instead of heap allocated if their scope is limited
-  inside a function
+* [50%] Use auto variables instead of heap allocated if their scope is limited inside
+  a function
 * Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
 * Code replication
 * [DONE] max_rowptr_size_ is never used.
@@ -46,17 +46,17 @@
 * [DONE] Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion
   defines in header files
 * [DONE] Staged SPX_JIT_INCLUDE/SPX_MULT_TEMPLATE_DIR should use absolute paths
-* [ 50%] Segfault when TemplateText placeholders are empty/not found. Print
+* [50%] Segfault when TemplateText placeholders are empty/not found. Print
   error and inform about installation.
-* [ 50%] Use SPX_ prefix in macros, e.g., DEBUG_MODE -> SPX_DEBUG
-* DisableInfo() is counter-intuitive (why not EnableXXX()??)
-* Update README
+* [DONE] Use SPX_ prefix in macros, e.g., DEBUG_MODE -> SPX_DEBUG
+* [DONE] DisableInfo() is counter-intuitive (why not EnableXXX()??)
+* [] Update README
 * vector should become proper C++
-* (Re)move unnecessary includes from header files
-* Add copyright headers to all source files
-* Fix warnings when compiling with -DDISABLE_POOL
-* Always leave space after and of code block and next statement
-* Treat timings output and all info not yet passed through the logger somehow
+* [DONE] (Re)move unnecessary includes from header files
+* [] Add copyright headers to all source files
+* [DONE] Fix warnings when compiling with -DDISABLE_POOL
+* Always leave space after end of code block and next statement
+* [DONE] Treat timings output and all info not yet passed through the logger somehow
 
 Requirements for StatsCollection
 * [DONE] Scale stats

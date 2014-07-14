@@ -1,6 +1,7 @@
 /*
- * SparseMatrix.hpp --  Generic representation of a sparse matrix - policy-based
- *                      design.
+ * \file SparseMatrix.hpp
+ *
+ * \brief Generic representation of a sparse matrix
  *
  * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013-2014  Athena Elafrou
@@ -12,25 +13,29 @@
 #ifndef SPARSEX_INTERNALS_SPARSE_MATRIX_HPP
 #define SPARSEX_INTERNALS_SPARSE_MATRIX_HPP
 
-#include "sparsex/internals/Csr.hpp"
-#include "sparsex/internals/CsxBuild.hpp"
-#include "sparsex/internals/CsxGetSet.hpp"
-#include "sparsex/internals/CsxSaveRestore.hpp"
-#include "sparsex/internals/CsxUtil.hpp"
-#include "sparsex/internals/Mmf.hpp"
-#include "sparsex/internals/Rcm.hpp"
-#include "sparsex/internals/SparseInternal.hpp"
-#include "sparsex/internals/TimerCollection.hpp"
-#include "sparsex/internals/Types.hpp"
-
+#include <sparsex/internals/Csr.hpp>
+#include <sparsex/internals/CsxBuild.hpp>
+#include <sparsex/internals/CsxGetSet.hpp>
+#include <sparsex/internals/CsxSaveRestore.hpp>
+#include <sparsex/internals/CsxUtil.hpp>
+#include <sparsex/internals/Mmf.hpp>
+#include <sparsex/internals/Rcm.hpp>
+#include <sparsex/internals/SparseInternal.hpp>
+#include <sparsex/internals/TimerCollection.hpp>
+#include <sparsex/internals/Types.hpp>
 #include <boost/interprocess/detail/move.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/static_assert.hpp>
-
-#include <ostream>
+#include <sstream>
 
 using namespace std;
+using namespace sparsex::utilities;
 
+namespace sparsex {
+namespace csx {
+
+double internal_time, csx_time, dump_time;
+ 
 namespace internal {
 
 template<class MatrixType>
@@ -115,7 +120,7 @@ public:
 
     spm_mt_t *CreateCsx()
     {
-        spm_mt_t *spm = 0;
+        spm_mt_t *spm = nullptr;
         RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
 
         try {
@@ -203,24 +208,24 @@ private:
     {
         RuntimeContext& rt_context = RuntimeContext::GetInstance();
         SparseInternal<SparsePartitionSym<idx_t, val_t> > *spi;
-        timing::Timer timer;
 
         // Converting to internal representation
-        timer.Start();
+        timers_.StartTimer("load");
         spi = SparseInternal<SparsePartitionSym<idx_t, val_t> >::DoLoadMatrixSym
             (*this, rt_context.GetNrThreads());
-        timer.Pause();
+        timers_.PauseTimer("load");
 
         // Converting to CSX
-        timer.Clear();
-        timer.Start();
+        timers_.StartTimer("preproc");
         csx_ = BuildCsxSym<idx_t, val_t>(spi);
-        timer.Pause();
+        timers_.PauseTimer("preproc");
+        stringstream os;
+        os << "\n==== GENERAL TIMING STATISTICS ====\n";
+        timers_.PrintAllTimers(os);
+        LOG_VERBOSE << os.str();
 
-        // Clenaup
+        // Cleanup
         delete spi;
-        spi = 0;
-
         return csx_;
     }
 
@@ -228,7 +233,6 @@ private:
     {
         RuntimeContext& rt_context = RuntimeContext::GetInstance();
         SparseInternal<SparsePartition<idx_t, val_t> > *spi;
-        timing::Timer timer;
 
         // Converting to internal representation
         timers_.StartTimer("load");
@@ -240,9 +244,12 @@ private:
         timers_.StartTimer("preproc");
         csx_ = BuildCsx<idx_t, val_t>(spi);
         timers_.PauseTimer("preproc");
-        timers_.PrintAllTimers(cout);
+        stringstream os;
+        os << "\n==== GENERAL TIMING STATISTICS ====\n";
+        timers_.PrintAllTimers(os);
+        LOG_VERBOSE << os.str();
 
-        // Clenaup
+        // Cleanup
         delete spi;
         return csx_;
     }
@@ -257,6 +264,9 @@ private:
     internal::allow_instantiation<idx_t, val_t> instance;
     timing::TimerCollection timers_;
 };
+
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_SPARSE_MATRIX_HPP
 

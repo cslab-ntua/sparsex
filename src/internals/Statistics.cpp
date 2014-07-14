@@ -1,5 +1,7 @@
 /*
- * Statistics.cpp -- CSX statistics collection framework
+ * \file Statistics.cpp
+ *
+ * \brief CSX statistics collection framework
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Vasileios Karakasis
@@ -8,11 +10,12 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Statistics.hpp"
-#include <vector>
+#include <sparsex/internals/Statistics.hpp>
 
 using namespace std;
-using namespace csx;
+
+namespace sparsex {
+namespace csx {
 
 typedef typename StatsCollection<StatsData>::InstStats InstStats;
 
@@ -76,3 +79,6 @@ bool BlockSplitter::Manipulate(Encoding::Type type, InstStats &stats)
     EraseDims(stats, dims_to_erase);
     return ret;
 }
+
+} // end of namespace csx
+} // end of namespace sparsex

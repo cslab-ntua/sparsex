@@ -1,5 +1,7 @@
 /*
- * JitUtil.cpp -- Implementation of jit-related utility functions.
+ * \file JitUtil.cpp
+ *
+ * \brief Implementation of jit-related utility functions
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
@@ -8,8 +10,7 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/JitUtil.hpp"
-
+#include <sparsex/internals/JitUtil.hpp>
 #include <fstream>
 #include <cstdlib>
 #include <cstring>
@@ -17,6 +18,9 @@
 #include <unistd.h>
 
 using namespace std;
+
+namespace sparsex {
+namespace jit {
 
 string SourceFromFile(const char *filename)
 {
@@ -91,5 +95,8 @@ string Tabify(int num)
     
     return ss.str();
 }
+
+} // end of namespace jit
+} // end of namespace sparsex
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

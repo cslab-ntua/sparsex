@@ -1,5 +1,7 @@
 /*
- * numa_util.c -- NUMA utilitiy functions.
+ * \file numa_util.c
+ * 
+ * \brief NUMA utilitiy functions
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011-2012, Vasileios Karakasis
@@ -9,9 +11,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/numa_util.h"
-//#include "LoggerUtil.hpp"
-
+#include <sparsex/internals/numa_util.h>
+#include <sparsex/internals/logger/LoggerUtil.hpp>
 #include <numa.h>
 #include <numaif.h>
 #include <stdio.h>
@@ -61,7 +62,7 @@ static void fix_interleaving(size_t nr_parts, size_t *parts, int *nodes)
     size_t pagesize = numa_pagesize();
     size_t *node_scores = calloc(nr_nodes, sizeof(*node_scores));
     if (!node_scores) {
-        perror("malloc");
+        log_error("malloc failed\n");
         exit(1);
     }
 
@@ -175,7 +176,7 @@ void *alloc_interleaved(size_t size, size_t *parts, size_t nr_parts, int *nodes)
 		if (parts[i] != 0 &&
             mbind(curr_part, parts[i], MPOL_BIND,
                   nodemask->maskp, nodemask->size, 0) < 0) {
-			perror("mbind");
+			log_error("mbind failed\n");
 			exit(1);
 		}
 
@@ -197,7 +198,7 @@ void *alloc_onnode(size_t size, int node)
 void free_interleaved(void *addr, size_t length)
 {
 	if (munmap(addr, length) < 0) {
-		perror("munmap");
+		log_error("munmap failed\n");
 		exit(1);
 	}
 }
@@ -218,7 +219,7 @@ int check_region(void *addr, size_t size, int node)
 		int page_node;
 		if (get_mempolicy(&page_node, 0, 0, aligned_addr + i,
 		                  MPOL_F_ADDR | MPOL_F_NODE) < 0) {
-			perror("get_mempolicy()");
+			log_error("get_mempolicy()");
 			exit(1);
 		}
 
@@ -233,10 +234,12 @@ int check_region(void *addr, size_t size, int node)
 				// End of a misplaced region
 				assert(misplaced_node != -1);
 				size_t misplaced_size = (aligned_addr + i - misplaced_start);
-				fprintf(stderr, "Region [%p,%p) (%zd bytes) is misplaced "
+                char buffer[1024];
+				sprintf(buffer, "Region [%p,%p) (%zd bytes) is misplaced "
 				        "(lies on node %d but it should be on node %d)\n",
 				        misplaced_start, aligned_addr + i, misplaced_size,
 				        misplaced_node, node);
+                log_verbose(buffer);
 				misplaced_start = NULL;
 				misplaced_node = -1;
 			}
@@ -247,10 +250,12 @@ int check_region(void *addr, size_t size, int node)
 		// Last misplaced region
 		assert(misplaced_node != -1);
 		size_t misplaced_size = (aligned_addr + i - misplaced_start);
-		fprintf(stderr, "Region [%p,%p) (%zd bytes) is misplaced "
+        char buffer[1024];
+		sprintf(buffer, "Region [%p,%p) (%zd bytes) is misplaced "
 		        "(lies on node %d but it should be on node %d)\n",
 		        misplaced_start, aligned_addr + i, misplaced_size,
 		        misplaced_node, node);
+        log_verbose(buffer);
 	}
 
 	return err;
@@ -276,10 +281,8 @@ int check_interleaved(void *addr, const size_t *parts, size_t nr_parts,
 
 void print_alloc_status(const char *data_descr, int err)
 {
-	printf("allocation check for %s... %s\n", data_descr,
-	       (err) ? "FAILED (see above for more info)" : "DONE");
-	/* log_warning("allocation check for "); */
-    /* log_warning(data_descr); */
-    /* log_warning("... "); */
-    /* log_warning((err) ? "FAILED (see above for more info)" : "DONE"); */
+    char buffer[1024];
+	sprintf(buffer, "allocation check for %s... %s\n", data_descr,
+            (err) ? "FAILED (see above for more info)" : "DONE");
+    log_verbose(buffer);
 }

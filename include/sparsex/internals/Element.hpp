@@ -1,5 +1,7 @@
 /*
- * Element.hpp -- A generic matrix element of the internal CSX representation
+ * \file Element.hpp
+ *
+ * \brief A generic matrix element of the internal CSX representation
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Vasileios Karakasis
@@ -11,8 +13,8 @@
 #ifndef SPARSEX_INTERNALS_ELEMENT_HPP
 #define SPARSEX_INTERNALS_ELEMENT_HPP
 
-#include "sparsex/internals/Encodings.hpp"
-#include "sparsex/internals/Utility.hpp"
+#include <sparsex/internals/Encodings.hpp>
+#include <sparsex/internals/Utility.hpp>
 #include <boost/type_traits.hpp>
 #include <algorithm>
 #include <cassert>
@@ -23,6 +25,7 @@
 
 using namespace std;
 
+namespace sparsex {
 namespace csx {
 
 /**
@@ -600,49 +603,6 @@ TransformElement(const Element<IndexType, ValueType> &elem,
     }
 }
 
-// Pattern ID generation
-const static unsigned long DeltaIdOffset = 0;
-///< ID offset for delta units.
-
-const static unsigned long PatternIdOffset = 10000;
-///< ID offset for substructure units.
-
-/**
- *  Generate pattern id for delta units
- *
- *  @param delta_size   byte count of delta unit
- *  @return the pattern id of the delta unit
- */
-inline unsigned long GetPatternId(size_t delta_size)
-{
-    return (delta_size << 3) + DeltaIdOffset;
-}
-
-/**
- *  Generate pattern id for CSX units
- *
- *  @param elem a CSX generic element; must be a pattern
- *  @return the pattern id of the CSX unit
- *  @throws invalid_argument if elem is not a pattern
- */
-template<typename IndexType, typename ValueType>
-unsigned long GetPatternId(const Element<IndexType, ValueType> &elem)
-{
-    const Encoding::Instantiation &inst = elem.GetInstantiation();
-    size_t size = elem.GetSize();
-    if (inst.first == Encoding::None)
-        throw invalid_argument("elem is not a pattern");
-
-    Encoding e(inst.first);
-    unsigned long ret;
-    if (e.IsBlock())
-        ret = inst.first*PatternIdOffset + size / e.GetBlockAlignment();
-    else
-        ret = inst.first*PatternIdOffset + inst.second;
-
-    return ret;
-}
-
 /**
  *  Get the last column of elem's non-zero values based on a specific iteration
  *  order.
@@ -667,6 +627,7 @@ size_t GetLastCol(const Element<IndexType, ValueType> &elem,
     return ret;
 }
 
-}   // end of csx namespace
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_ELEMENT_HPP

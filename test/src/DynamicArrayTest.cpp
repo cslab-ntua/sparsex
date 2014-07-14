@@ -1,5 +1,5 @@
 /*
- * DynamicArray.cc -- Test dynamic array implementation
+ * DynamicArray.cpp -- Test dynamic array implementation
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
@@ -7,14 +7,15 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
-#include "sparsex/internals/DynamicArray.hpp"
-#include "sparsex/internals/Allocators.hpp"
-#include "sparsex/internals/Timer.hpp"
-
+#include <sparsex/internals/DynamicArray.hpp>
+#include <sparsex/internals/Allocators.hpp>
+#include <sparsex/internals/Timer.hpp>
 #include <iostream>
 #include <vector>
 
 using namespace std;
+using namespace sparsex::timing;
+using namespace sparsex::utilities;
 
 class MyClass
 {
@@ -39,7 +40,7 @@ int main(void)
     const size_t capacity = 10;
     DynamicArray<int, reallocator<int, NumaAllocator> > dynarray(capacity);
     vector<int> vec(capacity);
-    timing::Timer timer;
+    Timer timer;
 
     timer.Start();
     for (size_t i = 0; i < array_size; ++i) {

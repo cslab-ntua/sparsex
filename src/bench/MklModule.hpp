@@ -10,10 +10,10 @@
 #ifndef MKL_MODULE_HPP
 #define MKL_MODULE_HPP
 
-#include <sparsex/types.h>
-#include <iostream>
 #include "Timer.hpp"
-#include "mkl.h"
+#include <sparsex/types.h>
+#include <mkl.h>
+#include <iostream>
 
 using namespace std;
 

@@ -1,5 +1,7 @@
 /*
- * TemplateText.hpp -- Class for manipulating template texts.
+ * \file TemplateText.hpp
+ *
+ * \brief Class for manipulating template texts
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
@@ -11,9 +13,13 @@
 #ifndef SPARSEX_INTERNALS_TEMPLATE_TEXT_HPP
 #define SPARSEX_INTERNALS_TEMPLATE_TEXT_HPP
 
+#include <sparsex/internals/logger/Logger.hpp>
 #include <map>
 #include <string>
 #include <boost/regex.hpp>
+
+namespace sparsex {
+namespace jit {
 
 class TemplateText
 {
@@ -52,5 +58,8 @@ private:
         TemplateText *outer_;
     };
 };
+
+} // end of namespace jit
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_TEMPLATE_TEXT_HPP

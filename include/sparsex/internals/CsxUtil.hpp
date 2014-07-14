@@ -1,5 +1,7 @@
 /*
- * CsxUtil.hpp -- CSX-related routines.
+ * \file CsxUtil.hpp
+ *
+ * \breif CSX-related utilities
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -14,13 +16,56 @@
 #ifndef SPARSEX_INTERNALS_CSX_UTIL_HPP
 #define SPARSEX_INTERNALS_CSX_UTIL_HPP
 
-#include "sparsex/internals/Allocators.hpp"
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/Csx.hpp"
-#include "sparsex/internals/SpmMt.hpp"
-#include "sparsex/internals/Vector.hpp"
-
+#include <sparsex/internals/Allocators.hpp>
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/Csx.hpp>
+#include <sparsex/internals/Element.hpp>
+#include <sparsex/internals/SpmMt.hpp>
+#include <sparsex/internals/Vector.hpp>
 #include <cstdlib>
+
+namespace sparsex {
+namespace csx {
+
+// Pattern ID generation
+extern const unsigned long DeltaIdOffset;
+///< ID offset for delta units.
+
+extern const unsigned long PatternIdOffset;
+///< ID offset for substructure units.
+
+/**
+ *  Generate pattern id for delta units
+ *
+ *  @param delta_size   byte count of delta unit
+ *  @return the pattern id of the delta unit
+ */
+unsigned long GetPatternId(size_t delta_size);
+
+/**
+ *  Generate pattern id for CSX units
+ *
+ *  @param elem a CSX generic element; must be a pattern
+ *  @return the pattern id of the CSX unit
+ *  @throws invalid_argument if elem is not a pattern
+ */
+template<typename IndexType, typename ValueType>
+unsigned long GetPatternId(const Element<IndexType, ValueType> &elem)
+{
+    const Encoding::Instantiation &inst = elem.GetInstantiation();
+    size_t size = elem.GetSize();
+    if (inst.first == Encoding::None)
+        throw invalid_argument("elem is not a pattern");
+
+    Encoding e(inst.first);
+    unsigned long ret;
+    if (e.IsBlock())
+        ret = inst.first*PatternIdOffset + size / e.GetBlockAlignment();
+    else
+        ret = inst.first*PatternIdOffset + inst.second;
+
+    return ret;
+}
 
 /**
  *  Compute the size (in bytes) of the compressed matrix in CSX form.
@@ -45,7 +90,8 @@ uint64_t CsxSymSize(void *spm_mt);
  *  @param spm_mt  the complete multithreaded CSX-Sym matrix.
  *  @return        the size of the map.
  */
-size_t MapSize(void *spm);
+template<typename IndexType, typename ValueType>
+size_t CsxSymMapSize(void *spm);
 
 /**
  *  Deallocation of CSX or CSX-Sym sparse matrix.
@@ -157,11 +203,13 @@ void PutSpmMt(spm_mt_t *spm_mt)
 
             NumaAllocator &alloc = NumaAllocator::GetInstance();
             if (spm_mt->symmetric) {
-                CsxSymMatrix<ValueType> *csx_sym =
-                    (CsxSymMatrix<ValueType> *) spm_mt->spm_threads[0].spm;
+                CsxSymMatrix<IndexType, ValueType> *csx_sym =
+                    (CsxSymMatrix<IndexType, ValueType> *)
+                    spm_mt->spm_threads[0].spm;
                 csx = csx_sym->lower_matrix;
             } else {
-                csx = (CsxMatrix<ValueType> *) spm_mt->spm_threads[0].spm;
+                csx = (CsxMatrix<IndexType, ValueType> *)
+                    spm_mt->spm_threads[0].spm;
             }
 
             alloc.Destroy(csx->ctl, total_ctl_size);
@@ -240,5 +288,8 @@ static void DestroyCsxSym(CsxSymMatrix<IndexType, ValueType> *csx_sym)
     delete csx_sym;
 #endif
 }
+
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_CSX_UTIL_HPP

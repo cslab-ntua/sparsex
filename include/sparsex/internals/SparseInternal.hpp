@@ -1,8 +1,10 @@
 /*
- * SparseInternal.hpp --  Internal representation of sparse matrices.
+ * \file SparseInternal.hpp
+ *
+ * \brief Internal representation of sparse matrices
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ *   Copyright (C) 2013, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -11,12 +13,12 @@
 #ifndef SPARSEX_INTERNALS_SPARSE_INTERNAL_HPP
 #define SPARSEX_INTERNALS_SPARSE_INTERNAL_HPP
 
-#include "sparsex/internals/Encodings.hpp"
-#include "sparsex/internals/Runtime.hpp"
-#include "sparsex/internals/SparsePartition.hpp"
+#include <sparsex/internals/Encodings.hpp>
+#include <sparsex/internals/SparsePartition.hpp>
 
 using namespace std;
 
+namespace sparsex {
 namespace csx {
 
 template<typename PartitionType>
@@ -29,7 +31,7 @@ public:
           nr_cols_(nr_cols),
           nr_nzeros_(nr_nzeros),
           nr_partitions_(nr_partitions),
-          partitions_(0)
+          partitions_(nullptr)
     {}
 
     ~SparseInternal()
@@ -145,7 +147,8 @@ ostream &operator<<(ostream &os, const SparseInternal
     return os;
 }
 
-}  //end of csx namespace
+}  // end of namespace csx
+}  // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_SPARSE_INTERNAL_HPP
 

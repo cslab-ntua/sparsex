@@ -1,5 +1,7 @@
 /*
- * CtlBuilder.cpp -- Utility class for building the CSX's ctl structure
+ * \file CtlBuilder.cpp
+ *
+ * \brief Utility class for building the CSX's ctl structure
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
@@ -8,8 +10,11 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/CtlBuilder.hpp"
-#include "sparsex/internals/CtlUtil.hpp"
+#include <sparsex/internals/CtlBuilder.hpp>
+#include <sparsex/internals/CtlUtil.hpp>
+
+namespace sparsex {
+namespace csx {
 
 static inline void SetBit(uint8_t *byte, int bit)
 {
@@ -78,3 +83,6 @@ void CtlBuilder::AlignCtl(size_t boundary)
     for (size_t i = 0; i < nr_padd; ++i)
         ctl_da_.Append(0);
 }
+
+} // end of namespace csx
+} // end of namespace sparsex

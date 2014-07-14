@@ -1,5 +1,7 @@
 /*
- * Barrier.cpp --  A centralized barrier with timeout implementation.
+ * \file Barrier.cpp
+ *
+ * \brief A centralized barrier with timeout implementation
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Athena Elafrou
@@ -8,12 +10,15 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Barrier.hpp"
+#include <sparsex/internals/Barrier.hpp>
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <linux/futex.h>
 
 using namespace std;
+
+namespace sparsex {
+namespace runtime {
 
 static atomic<int> global_sense(1);
 atomic<int> barrier_cnt;
@@ -40,7 +45,7 @@ static inline void futex_wait(int *addr, int val)
     }
 }
 
-static inline void futex_wake (int *addr, int count)
+static inline void futex_wake(int *addr, int count)
 {
     int err;
     if ((err = syscall(SYS_futex, addr, FUTEX_WAKE, count)) < 0) {
@@ -63,3 +68,6 @@ void centralized_barrier(int *local_sense, size_t nr_threads)
             futex_wait((int *) &global_sense, !(*local_sense));
     }
 }
+
+} // end of namespace runtime
+} // end of namespace sparsex

@@ -1,5 +1,7 @@
 /*
- * CsxBuild.cpp -- Front-end utilities for building CSX.
+ * \file CsxBuild.cpp
+ *
+ * \brief Front-end utilities for building CSX
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -10,7 +12,10 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/CsxBuild.hpp"
+#include <sparsex/internals/CsxBuild.hpp>
+
+namespace sparsex {
+namespace csx {
 
 spm_mt_t *PrepareSpmMt()
 {
@@ -37,5 +42,8 @@ spm_mt_t *PrepareSpmMt()
 
     return spm_mt;
 }
+
+} // end of namespace csx
+} // end of namespace sparsex
 
 // vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

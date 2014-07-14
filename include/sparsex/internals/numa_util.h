@@ -1,5 +1,7 @@
 /*
- * numa_util.h -- NUMA utilitiy functions
+ * \file numa_util.h
+ *
+ * \brief NUMA utilitiy functions
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011-2012, Vasileios Karakasis
@@ -12,7 +14,7 @@
 #ifndef SPARSEX_INTERNALS_NUMA_UTIL_H
 #define SPARSEX_INTERNALS_NUMA_UTIL_H
 
-#include "sparsex/internals/cdecl.h"
+#include <sparsex/internals/cdecl.h>
 #include <stddef.h>
 
 SPX_BEGIN_C_DECLS__

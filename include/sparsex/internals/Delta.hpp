@@ -1,5 +1,7 @@
 /*
- * Delta.hpp -- Utilities for delta units.
+ * \file Delta.hpp
+ *
+ * \brief Utilities for delta units
  *
  * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -14,8 +16,7 @@
 
 #include <cstdint>
 
-using namespace std;
-
+namespace sparsex {
 namespace csx {
 
 typedef union {
@@ -40,6 +41,7 @@ inline size_t GetDeltaSize(size_t val)
     return sizeof(du.d64);
 }
 
-} // end csx namespace
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_DELTA_HPP

@@ -204,6 +204,7 @@ AC_CONFIG_FILES([
         src/Makefile
         src/api/Makefile
         src/bench/Makefile
+        src/examples/Makefile
         src/internals/Makefile
         src/templates/Makefile
         test/Makefile

@@ -1,5 +1,7 @@
 /*
- * Affinity.cpp -- CPU related utilities.
+ * \file Affinity.cpp
+ *
+ * \brief CPU related utilities
  *
  * Copyright (C) 2007-2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2007-2011, Kornilios Kourtis
@@ -9,11 +11,13 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Affinity.hpp"
-#include "sparsex/internals/logger/Logger.hpp"
-
+#include <sparsex/internals/Affinity.hpp>
+#include <sparsex/internals/logger/Logger.hpp>
 #include <stdlib.h>
 #include <sched.h>
+
+namespace sparsex {
+namespace runtime {
 
 void setaffinity_oncpu(unsigned int cpu)
 {
@@ -46,12 +50,5 @@ int get_cpu_count()
     return count;
 }
 
-// int get_cpu_count2()
-// {
-// #ifdef _SC
-//     return ;
-// #else
-//     int count = sysconf(_SC_NR_PROCESSORS_ONLN);
-//     return count;
-// #endif
-// }
+} // end of namespace runtime
+} // end of namespace sparsex

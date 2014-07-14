@@ -95,13 +95,14 @@ AC_DEFUN([AX_CHECK_POSKI],
     if test $poski_found -eq 1; then
         AC_MSG_RESULT([yes])
         AC_DEFINE([SPX_BENCH_POSKI], [1], [Build SpMV benchmarks with pOSKI.])
-        POSKI_CPPFLAGS="$with_poski/include"
-        POSKI_LDFLAGS="$with_poski/lib"
+        POSKI_CPPFLAGS="-I$with_poski/include -I$with_poski/build_oski/include"
+        POSKI_LDFLAGS="-L$with_poski/lib -L$with_poski/build_oski/lib/oski"
         POSKI_LIBS="-lposki"
     fi
 
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH_save
     AC_SUBST([POSKI_CPPFLAGS])
     AC_SUBST([POSKI_LDFLAGS])
+    AC_SUBST([POSKI_LIBS])
     AM_CONDITIONAL([SPX_BUILD_BENCH_POSKI], [test $poski_found -eq 1])
 ])

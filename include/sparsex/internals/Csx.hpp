@@ -1,5 +1,7 @@
 /*
- * Csx.hpp -- The CSX data structure (C front-end)
+ * \file Csx.hpp
+ *
+ * \brief The CSX data structure (C front-end)
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -20,9 +22,9 @@
 ///< CSX matrix format
 typedef struct {
     spx_index_t rowptr;    /* rowptr is the index in csx->ctl of
-                                the first element of row i */
+                              the first element of row i */
     spx_index_t valptr;    /* valptr is the index in csx->values of
-                                the first element of row i */
+                              the first element of row i */
     spx_index_t span;
 } row_info_t;
 
@@ -47,6 +49,9 @@ typedef struct {
 #ifdef __cplusplus
 // C++ only
 
+namespace sparsex {
+namespace csx {
+
 // FIXME: members of CsxMatrix MUST have the same order with csx_matrix_t
 //        This is error-prone with explicit casts between the two types
 template<typename IndexType, typename ValueType>
@@ -68,6 +73,9 @@ struct CsxSymMatrix {
     CsxMatrix<IndexType, ValueType> *lower_matrix;
     ValueType *dvalues;
 };
+
+} // end of namepsace csx
+} // end of namepsace sparsex
 
 #endif
 

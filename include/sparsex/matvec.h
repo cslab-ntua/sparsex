@@ -1,5 +1,7 @@
 /**
- * \file matvec.h -- \brief Sparse matrix routines.
+ * \file matvec.h
+ *
+ * \brief Sparse matrix routines
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -41,7 +43,7 @@ spx_input_t *spx_input_load_csr(spx_index_t *rowptr, spx_index_t *colind,
 spx_input_t *spx_input_load_mmf(const char *filename);
 
 /**
- *  This routine releases any memory internally used by the sparse input
+ *  Releases any memory internally used by the sparse input
  *  handle \a input.
  *
  *  @param[in] input        the input matrix handle.
@@ -50,10 +52,13 @@ spx_input_t *spx_input_load_mmf(const char *filename);
 spx_error_t spx_input_destroy(spx_input_t *input);
 
 /**
- *  \brief Converts the input matrix into the CSX format.
+ *  Converts the input matrix into the CSX format by applying all the options
+ *  previously set with the spx_option_set() routine. In case no options have
+ *  been explicitly set, the default values are used (see Table 3.2 of the
+ *  User's Guide).
  *
  *  @param[in] input        the input matrix handle.
- *  @param[in] ...          optional flag that indicates whether the matrix 
+ *  @param[in] optional     optional flag that indicates whether the matrix 
  *                          should be reordered with use of the Reverse Cuthill
  *                          McKee algorithm (\c OP_REORDER).
  *  @return                 a handle to the tuned matrix.
@@ -61,9 +66,10 @@ spx_error_t spx_input_destroy(spx_input_t *input);
 spx_matrix_t *spx_mat_tune(spx_input_t *input, ...);
 
 /**
- *  Returns the value of the corresponding element in (\a row, \a column),
- *  where \a row and \a column can be either zero- or one-based indexes. If the
- *  element doesn't exist an error is returned.
+ *  Returns the value of the corresponding nonzero element in (\a row, \a column),
+ *  where \a row and \a column can be either zero- or one-based indexes. Default
+ *  indexing is zero-based, but it can be overidden through the optional flag.
+ *  If the element exists, its value is returned in \a value.
  *
  *  @param[in] A            the tuned matrix handle.
  *  @param[in] row          the a row of the element to be retrieved.
@@ -79,8 +85,8 @@ spx_error_t spx_mat_get_entry(const spx_matrix_t *A, spx_index_t row,
 
 /**
  *  Sets the value of the corresponding element in (\a row, \a column), where
- *  \a row and \a column can be either zero- or one-based indexes. If the element
- *  doesn't exist an error is returned.
+ *  \a row and \a column can be either zero- or one-based indexes. Default
+ *  indexing is zero-based, but it can be overidden through the optional flag.
  *
  *  @param[in] A            the tuned matrix handle.
  *  @param[in] row          the row of the element to be set.
@@ -128,18 +134,19 @@ spx_index_t spx_mat_get_ncols(const spx_matrix_t *A);
 spx_index_t spx_mat_get_nnz(const spx_matrix_t *A);
 
 /**
- *  Returns information on the partitioning of the matrix.
+ *  Returns a partitioning object for matrix \a A.
  */
 spx_partition_t *spx_mat_get_partition(spx_matrix_t *A);
 
 /**
- *  Returns the permutation applied to the matrix.
+ *  Returns the permutation computed for matrix \a A by applying the Reverse
+ *  Cuthill-McKee algorithm.
  */
 spx_perm_t *spx_mat_get_perm(const spx_matrix_t *A);
 
 /**
- *  This routines performs a matrix-vector multiplication of the following form:
- *                      <em> y <-- alpha*A*x </em>
+ *  Performs a matrix-vector multiplication of the following form:
+ *                      <em> y = alpha*A*x </em>
  *  where \a alpha is a scalar, \a x and \a y are vectors
  *  and \a A is a sparse matrix in the CSX format.
  *
@@ -153,8 +160,8 @@ spx_error_t spx_matvec_mult(spx_value_t alpha, const spx_matrix_t *A,
                             spx_vector_t *x, spx_vector_t *y);
 
 /**
- *  This routines performs a matrix-vector multiplication of the following form:
- *                      <em> y <-- alpha*A*x + beta*y </em>
+ *  Performs a matrix-vector multiplication of the following form:
+ *                      <em> y = alpha*A*x + beta*y </em>
  *  where \a alpha and \a beta are scalars, \a x and \a y are vectors
  *  and \a A is a sparse matrix in the CSX format.
  *
@@ -169,8 +176,8 @@ spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
                               spx_vector_t *x, spx_value_t beta, spx_vector_t *y);
 
 /**
- *  This routines performs a matrix-vector multiplication of the following form:
- *                      <em> y <-- alpha*A*x + beta*y </em>
+ *  Performs a matrix-vector multiplication of the following form:
+ *                      <em> y = alpha*A*x + beta*y </em>
  *  where \a alpha and \a beta are scalars, \a x and \a y are vectors
  *  and \a A is a sparse matrix. The matrix is originally given in the CSR
  *  format and converted internally into the CSX format. This higher-level routine
@@ -204,7 +211,7 @@ spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A,
                                   spx_value_t beta, spx_vector_t *y);
 
 /**
- *  This routine releases any memory internally used by the tuned matrix
+ *  Releases any memory internally used by the tuned matrix
  *  handle \a A.
  *
  *  @param[in] A            the tuned matrix handle.
@@ -213,8 +220,9 @@ spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A,
 spx_error_t spx_mat_destroy(spx_matrix_t *A);
 
 /**
- *  This routine creates a partitioning handle of the matrix in the Compressed
- *  Sparse Row (CSR) format.
+ *  Creates a partitioning object for the matrix in the Compressed
+ *  Sparse Row (CSR) format. This routine should be used in conjunction
+ *  with the spx_matvec_kernel_csr() multiplication routine.
  *
  *  @param[in] rowptr       array \a rowptr of the CSR format.
  *  @param[in] nr_rows      number of rows of the matrix.
@@ -222,10 +230,10 @@ spx_error_t spx_mat_destroy(spx_matrix_t *A);
  *  @return                 an error code.
  */
 spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows, 
-                                   unsigned int nr_threads);
+                                   size_t nr_threads);
 
 /**
- *  This routine releases any memory internally used by the partition
+ *  Releases any memory internally used by the partition
  *  handle \a p.
  *
  *  @param[in] p            the partitioning handle.
@@ -235,7 +243,8 @@ spx_error_t spx_partition_destroy(spx_partition_t *p);
 
 /**
  *  Sets the \a option according to the description in \a string for the tuning
- *  process to follow. For available tuning options \see common.h
+ *  process to follow. For available tuning options and how to set them refer
+ *  to Table 3.2 of the User's Guide.
  *
  *  @param[in] option       the option to be set.
  *  @param[in] string       a description of how to set the option.
@@ -256,18 +265,22 @@ void spx_options_set_from_env();
  *  @param[in] p            a partitioning handle.
  *  @return                 a valid vector object.
  */
-spx_vector_t *spx_vec_create(unsigned long size, spx_partition_t *p);
+spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p);
 
 /**
  *  Creates and returns a valid vector object, whose values are mapped to a
- *  user-defined array.
+ *  user-defined array. If OP_SHARE is set, then the input buffer will be shared
+ *  with the user and modifications will directly apply to it. If OP_COPY is
+ *  selected, a copy of the input vector will be created and no modification of
+ *  the original buffer will occur.
  *
  *  @param[in] buff         the user-supplied buffer.
  *  @param[in] size         the size of the buffer.
  *  @param[in] p            a partitioning handle.
+ *  @param[in] mode         the copy mode (either \c OP_SHARE or \c OP_COPY).
  *  @return                 a valid vector object.
  */
-spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, unsigned long size,
+spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, size_t size,
                                        spx_partition_t *p, spx_copymode_t mode);
 
 /**
@@ -277,7 +290,7 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, unsigned long size,
  *  @param[in] p            a partitioning handle.
  *  @return                 a valid vector object.
  */
-spx_vector_t *spx_vec_create_random(unsigned long size, spx_partition_t *p);
+spx_vector_t *spx_vec_create_random(size_t size, spx_partition_t *p);
 
 /**
  *  Initializes the vector object \a v with \a val.
@@ -345,7 +358,7 @@ void spx_vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
                        spx_value_t num);
 
 /**
- *  \a v3[\a start...\a end) <-- \a v1[\a start...\a end) 
+ *  \a v3[\a start...\a end) = \a v1[\a start...\a end) 
  *  + \a num * \a v2[\a start...\a end)
  *
  *  @param[in] v1           a valid vector object.
@@ -361,7 +374,7 @@ void spx_vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2,
 
 /**
  *  Adds the input vectors \a v1 and \a v2 and places the result in \a v3.
- *  \a v3 <-- \a v1 + \a v2
+ *  \a v3 = \a v1 + \a v2
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -372,7 +385,7 @@ void spx_vec_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
 /**
  *  Adds the range [start...end) of the input vectors \a v1 and \a v2 and
  *  places the result in \a v3.
- *  \a v3[start...end) <-- \a v1[start...end) + \a v2[start...end)
+ *  \a v3[start...end) = \a v1[start...end) + \a v2[start...end)
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -396,7 +409,7 @@ void spx_vec_sub(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
 /**
  *  Subtracts the input vector \a v2 from \a v1 in the range [start...end) and
  *  places the result in \a v3.
- *  \a v3[start...end-1] <-- \a v1[start...end-1] - \a v2[start...end-1]
+ *  \a v3[start...end-1] = \a v1[start...end-1] - \a v2[start...end-1]
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -450,7 +463,7 @@ spx_error_t spx_vec_reorder(spx_vector_t *v, spx_perm_t *p);
 spx_error_t spx_vec_inv_reorder(spx_vector_t *v, spx_perm_t *p);
 
 /**
- *  Copies the elements of v1 to v2.
+ *  Copies the values of v1 to v2.
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -458,11 +471,12 @@ spx_error_t spx_vec_inv_reorder(spx_vector_t *v, spx_perm_t *p);
 void spx_vec_copy(const spx_vector_t *v1, spx_vector_t *v2);
 
 /**
- *  Compares the elements of v1 and v2. If they are equal it returns 0,
+ *  Compares the values of v1 and v2. If they are equal it returns 0,
  *  else -1.
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
+ *  @return                 0 on success, -1 on failure.
  */
 int spx_vec_compare(const spx_vector_t *v1, const spx_vector_t *v2);
 
@@ -470,7 +484,6 @@ int spx_vec_compare(const spx_vector_t *v1, const spx_vector_t *v2);
  *  Prints the input vector v.
  *
  *  @param[in] v            a valid vector object.
- *  @return                 an error code.
  */
 void spx_vec_print(const spx_vector_t *v);
 
@@ -479,7 +492,6 @@ void spx_vec_print(const spx_vector_t *v);
  *  defined buffer.
  *
  *  @param[in] v            a valid vector object.
- *  @param[in] ...          an optional user-defined buffer.
  */
 void spx_vec_destroy(spx_vector_t *v);
 

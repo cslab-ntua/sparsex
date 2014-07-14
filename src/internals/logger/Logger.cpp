@@ -1,5 +1,7 @@
 /*
- * Logger.cpp --  Logging interface.
+ * \file Logger.cpp
+ *
+ * \brief Logging interface
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,9 +10,10 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/logger/Logger.hpp"
-#include "sparsex/internals/logger/LoggerUtil.hpp"
+#include <sparsex/internals/logger/Logger.hpp>
+#include <sparsex/internals/logger/LoggerUtil.hpp>
 
+namespace sparsex {
 namespace logging {
 
 boost::unordered_map<Level, string> LoggingHandler::names_ =
@@ -18,6 +21,7 @@ boost::unordered_map<Level, string> LoggingHandler::names_ =
     (Error, "[ERROR]: ")
     (Warning, "[WARNING]: ")
     (Info, "[INFO]: ")
+    (Verbose, "[VERBOSE]: ")
     (Debug, "[DEBUG]: ");
 
 LoggingHandler::LoggingHandler()
@@ -30,16 +34,16 @@ LoggingHandler::LoggingHandler()
     handlers_[Error] = boost::ref(sinks_[DEFAULT_ERROR_POLICY]);
     handlers_[Warning] = boost::ref(sinks_[DEFAULT_WARNING_POLICY]);
     handlers_[Info] = boost::ref(sinks_[DEFAULT_INFO_POLICY]);
+    handlers_[Verbose] = boost::ref(sinks_[DEFAULT_VERBOSE_POLICY]);
     handlers_[Debug] = boost::ref(sinks_[DEFAULT_DEBUG_POLICY]);
 }
 
-void LoggingHandler::SetHandlers(Sink sink)
+void LoggingHandler::SetHandlers(Level level, Sink sink)
 {
     for (iterator it = handlers_.begin(); it != handlers_.end(); ++it)
-        (*it).second = boost::bind(boost::ref(sinks_[sink]), _1);
+        if ((*it).first <= level)
+            (*it).second = boost::bind(boost::ref(sinks_[sink]), _1);
 }
-
-} // end of namespace logging
 
 void LoggingHandler::SetLogFile(const char *log_file)
 {
@@ -53,67 +57,105 @@ void DisableLevel(Level level)
     h.SetHandler(level, Null);
 }
 
-void UseConsole(Level level)
+void EnableConsole(Level level)
 {
     LoggingHandler& h = LoggingHandler::GetInstance();
-    h.SetHandler(level, Console);
+    h.SetHandlers(level, Console);
 }
 
-void UseFile(Level level)
+void EnableFile(Level level)
 {
     LoggingHandler& h = LoggingHandler::GetInstance();
     h.SetLogFile("logfile");
-    h.SetHandler(level, File);
+    h.SetHandlers(level, File);
 }
 
-void UseFile(Level level, const char *log_file)
+} // end of namespace logging
+} // end of namespace sparsex
+
+void UseFile(const char *log_file)
 {
     LoggingHandler& h = LoggingHandler::GetInstance();
     h.SetLogFile(log_file);
-    h.SetHandler(level, File);
 }
 
 void DisableLogging()
 {
     LoggingHandler& h = LoggingHandler::GetInstance();
-    h.SetHandlers(Null);
+    h.SetHandlers(None, Null);
 }
 
-void DisableError()
+void EnableAllConsole()
 {
     LoggingHandler& h = LoggingHandler::GetInstance();
-    h.SetHandler(Error, Null);
+    h.SetHandlers(Debug, Console);
 }
 
-void DisableWarning()
-{
-    LoggingHandler& h = LoggingHandler::GetInstance();
-    h.SetHandler(Warning, Null);
-}
-
-void DisableInfo()
-{
-    LoggingHandler& h = LoggingHandler::GetInstance();
-    h.SetHandler(Info, Null);
-}
-
-void DisableDebug()
-{
-    LoggingHandler& h = LoggingHandler::GetInstance();
-    h.SetHandler(Debug, Null);
-}
-
-void AlwaysUseConsole()
-{
-    LoggingHandler& h = LoggingHandler::GetInstance();
-    h.SetHandlers(Console);
-}
-
-void AlwaysUseFile(const char *log_file)
+void EnableAllFile(const char *log_file)
 {
     LoggingHandler& h = LoggingHandler::GetInstance();
     h.SetLogFile(log_file);
-    h.SetHandlers(File);
+    h.SetHandlers(Debug, File);
+}
+
+void EnableErrorConsole()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Error, Console);
+}
+
+void EnableErrorFile()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Error, File);
+}
+
+void EnableWarningConsole()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Warning, Console);
+}
+
+void EnableWarningFile()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Warning, File);
+}
+
+void EnableInfoConsole()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Info, Console);
+}
+
+void EnableInfoFile()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Info, File);
+}
+
+void EnableVerboseConsole()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Verbose, Console);
+}
+
+void EnableVerboseFile()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Verbose, File);
+}
+
+void EnableDebugConsole()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Debug, Console);
+}
+
+void EnableDebugFile()
+{
+    LoggingHandler& h = LoggingHandler::GetInstance();
+    h.SetHandlers(Debug, File);
 }
 
 void log_error(const char *msg)
@@ -124,4 +166,9 @@ void log_error(const char *msg)
 void log_warning(const char *msg)
 {
     Logger<Warning>() << LoggingHandler::Prefix(Warning) << msg;
+}
+
+void log_verbose(const char *msg)
+{
+    Logger<Verbose>() << LoggingHandler::Prefix(Verbose) << msg;
 }

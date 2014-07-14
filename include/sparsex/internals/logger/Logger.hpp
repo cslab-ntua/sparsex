@@ -1,5 +1,7 @@
 /*
- * Logger.hpp --  Logging interface.
+ * \file Logger.hpp
+ *
+ * \brief Logging interface
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -11,8 +13,7 @@
 #ifndef SPARSEX_INTERNALS_LOGGER_LOGGER_HPP
 #define SPARSEX_INTERNALS_LOGGER_LOGGER_HPP
 
-#include "OutputPolicy.hpp"
-
+#include <sparsex/internals/logger/OutputPolicy.hpp>
 #include <sstream>
 #include <cstdlib>
 #include <boost/assign.hpp>
@@ -20,15 +21,17 @@
 #include <boost/assign/list_of.hpp>
 #include <boost/unordered_map.hpp>
 
+namespace sparsex {
 namespace logging {
 
 /* The logging levels */
 enum Level {
-    Error,
-    Warning,
-    Info,
-    Debug,
-    None
+    Error = 0,
+    Warning = 1,
+    Info = 2,
+    Verbose = 3,
+    Debug = 4,
+    None = 5
 };
 
 /* The available sinks */
@@ -41,6 +44,7 @@ enum Sink {
 #define DEFAULT_ERROR_POLICY Console
 #define DEFAULT_WARNING_POLICY Console
 #define DEFAULT_INFO_POLICY Null
+#define DEFAULT_VERBOSE_POLICY Null
 #define DEFAULT_DEBUG_POLICY Null
 
 class LoggingHandler
@@ -64,7 +68,7 @@ public:
         handlers_[level] = boost::bind(boost::ref(sinks_[sink]), _1);
     }
 
-    void SetHandlers(Sink sink);
+    void SetHandlers(Level level, Sink sink);
     void SetLogFile(const char *log_file);
 
     static string &Prefix(Level level)
@@ -123,13 +127,14 @@ public:
     }
 };
 
-} // end of namespace logging
-
-using namespace logging;
-
 void DisableLevel(Level level);
-void UseConsole(Level level);
-void UseFile(Level level, const char *log_file);
+void EnableConsole(Level level);
+void EnableFile(Level level, const char *log_file);
+
+} // end of namespace logging
+} // end of namespace sparsex
+
+using namespace sparsex::logging;
 
 /* Logging macros */
 #define LOG_ERROR Logger<Error>() << LoggingHandler::Prefix(Error) \
@@ -143,8 +148,9 @@ void UseFile(Level level, const char *log_file);
         << ":" << __FUNCTION__ << "()) "
 
 #define LOG_INFO Logger<Info>() << LoggingHandler::Prefix(Info)
+#define LOG_VERBOSE Logger<Verbose>() << LoggingHandler::Prefix(Verbose)
 
-#ifdef DEBUG_MODE
+#if SPX_DEBUG
 #   define LOG_DEBUG Logger<Debug>() << LoggingHandler::Prefix(Debug)
 #else
 #   define LOG_DEBUG Logger<None>()

@@ -1,6 +1,8 @@
 /*
- * Compiler.cpp -- Wrapper of a Clang compiler instance. Responsible for
- *                 generating LLVM IR code from C99 source.
+ * \file Compiler.cpp
+ *
+ * \brief Wrapper of a Clang compiler instance. Responsible for generating LLVM
+ * \brief IR code from C99 source
  *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
@@ -9,10 +11,9 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Compiler.hpp"
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/JitUtil.hpp"
-
+#include <sparsex/internals/Compiler.hpp>
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/JitUtil.hpp>
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/Version.h>
 #include <clang/CodeGen/CodeGenAction.h>
@@ -26,6 +27,9 @@
 
 using namespace boost;
 using namespace std;
+
+namespace sparsex {
+namespace jit {
 
 ClangCompiler::ClangCompiler()
     : invocation_(new CompilerInvocation()),
@@ -99,8 +103,7 @@ Module *ClangCompiler::Compile(const string &source,
     return llvm_codegen->takeModule();
 }
 
-void ClangCompiler::AddIncludeSearchPath(const string &inc_path,
-                                         Options type)
+void ClangCompiler::AddIncludeSearchPath(const string &inc_path, Options type)
 {
     bool is_user_path = true;
     frontend::IncludeDirGroup inc_group = frontend::Angled;
@@ -120,7 +123,6 @@ void ClangCompiler::AddIncludeSearchPath(const string &inc_path,
         header_search.AddPath(*tok_iter, inc_group,
                               is_user_path, false, false);
 }
-
 
 void ClangCompiler::SetCodeGenOptions()
 {
@@ -145,3 +147,6 @@ void ClangCompiler::SetCodeGenOptions()
         preproc_options.addMacroDef("NDEBUG");
     }
 }
+
+} // end of namespace jit
+} // end of namespace sparsex

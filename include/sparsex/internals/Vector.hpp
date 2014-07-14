@@ -1,5 +1,7 @@
 /*
- * Vector.hpp -- Vector interface.
+ * \file Vector.hpp
+ *
+ * \brief Vector interface
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -12,9 +14,9 @@
 #ifndef SPARSEX_INTERNALS_VECTOR_HPP
 #define SPARSEX_INTERNALS_VECTOR_HPP
 
-#include "sparsex/internals/Map.hpp"
-#include "sparsex/internals/numa_util.h"
-#include "sparsex/types.h"
+#include <sparsex/internals/Map.hpp>
+#include <sparsex/internals/numa_util.h>
+#include <sparsex/types.h>
 
 SPX_BEGIN_C_DECLS__
 
@@ -30,10 +32,17 @@ typedef struct vector_struct vector_t;
 
 vector_t *VecCreate(size_t size);
 vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, int mode);
+vector_t *VecCreateFromBuffInterleaved(spx_value_t *buff, size_t size,
+                                       size_t *parts, int nr_parts,
+                                       int *nodes, int mode);
+vector_t *VecCreateFromBuffOnnode(spx_value_t *buff, size_t size, int node,
+                                  int mode);
 vector_t *VecCreateOnnode(size_t size, int node);
 vector_t *VecCreateInterleaved(size_t size, size_t *parts, int nr_parts,
                                int *nodes);
 vector_t *VecCreateRandom(size_t size);
+vector_t *VecCreateRandomInterleaved(size_t size, size_t *parts, int nr_parts,
+                                     int *nodes);
 void VecDestroy(vector_t *v);
 void VecInit(vector_t *v, spx_value_t val);
 void VecInitPart(vector_t *v, spx_value_t val, spx_index_t start,

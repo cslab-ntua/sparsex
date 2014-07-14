@@ -1,11 +1,13 @@
 /*
- * SparsePartition.hpp --  Internal representation of sparse matrice partition.
+ * \file SparsePartition.hpp
+ *
+ * \brief Internal representation of sparse matrice partition
  *
  * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2009-2014, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
- * Copyright (C) 2013,      Athena Elafrou
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -14,24 +16,22 @@
 #ifndef SPARSEX_INTERNALS_SPARSE_PARTITION_HPP
 #define SPARSEX_INTERNALS_SPARSE_PARTITION_HPP
 
-#include "sparsex/internals/Allocators.hpp"
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/DynamicArray.hpp"
-#include "sparsex/internals/Element.hpp"
-#include "sparsex/internals/Utility.hpp"
-#include "sparsex/internals/Xform.hpp"
-
+#include <sparsex/internals/Allocators.hpp>
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/DynamicArray.hpp>
+#include <sparsex/internals/Element.hpp>
+#include <sparsex/internals/Utility.hpp>
+#include <sparsex/internals/Xform.hpp>
 #include <cassert>
 #include <vector>
 #include <iterator>
 #include <iostream>
 #include <algorithm>
-#include <iomanip>
-#include <boost/function.hpp>
-#include <boost/foreach.hpp>
 
 using namespace std;
+using namespace sparsex::utilities;
 
+namespace sparsex {
 namespace csx {
 
 /**
@@ -708,11 +708,12 @@ Transform(Encoding::Type t, IndexType rs, IndexType re)
     typename vector<Element<IndexType, ValueType> >::iterator e0, ee, es;
     typename TransformFn<IndexType>::type xform_fn =
         GetXformFn<IndexType>(type_, t);
-    iterator p0 = begin(rs);
-    iterator pe = end(re);
+    iterator p = begin(rs);
+    iterator pe = end(re); 
 
     elems.reserve(elems_size_);
-    for (iterator p = p0; p != pe; ++p) {
+    // for (iterator p = p0; p != pe; ++p) {
+    for (; p != pe; ++p) {
         Element<IndexType, ValueType> p_new =
             TransformElement(*p, xform_fn((*p).GetCoordinates(),
                                           nr_rows_, nr_cols_));
@@ -810,9 +811,11 @@ ExtractWindow(IndexType rs, IndexType length)
 
     assert(es <= ee);
     elems.reserve(ee - es);
-    iterator p0 = begin(rs);
+    // iterator p0 = begin(rs);
+    iterator p = begin(rs);
     iterator pe = end(rs + length - 1);
-    for (iterator p = p0; p != pe; ++p)
+    // for (iterator p = p0; p != pe; ++p)
+    for (; p != pe; ++p)
         elems.push_back(*p);
 
     elem_begin = elems.begin();
@@ -1201,6 +1204,7 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row,
 }
 
 }   // end of namespace csx
+}   // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_SPARSE_PARTITION_HPP
 

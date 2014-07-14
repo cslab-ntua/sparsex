@@ -1,5 +1,7 @@
 /*
- * Vector.cpp -- Vector interface.
+ * \file Vector.cpp
+ *
+ * \brief Vector interface
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -9,9 +11,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/internals/Vector.hpp"
-#include "sparsex/internals/logger/Logger.hpp"
-
+#include <sparsex/internals/Vector.hpp>
+#include <sparsex/internals/logger/Logger.hpp>
 #include <cstdlib>
 #include <cstdarg>
 #include <cassert>
@@ -64,6 +65,30 @@ vector_t *VecCreate(size_t size)
 	return v;
 }
 
+vector_t *VecCreateOnnode(size_t size, int node)
+{
+	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t), node);
+
+	v->size = size;
+	v->alloc_type = internal::ALLOC_MMAP;
+	v->elements = (spx_value_t *) alloc_onnode(sizeof(spx_value_t)*size, node);
+
+	return v;
+}
+
+vector_t *VecCreateInterleaved(size_t size, size_t *parts, int nr_parts,
+                               int *nodes)
+{
+	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t),
+                                            nodes[0]);
+
+	v->size = size;
+	v->alloc_type = internal::ALLOC_MMAP;
+	v->elements = (spx_value_t *) alloc_interleaved(size*sizeof(*v->elements),
+                                                    parts, nr_parts, nodes);
+	return v;
+}
+
 vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, int mode)
 {
 	vector_t *v = (vector_t *) malloc(sizeof(vector_t));
@@ -93,38 +118,58 @@ vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, int mode)
 	return v;
 }
 
-vector_t *VecCreateOnnode(unsigned long size, int node)
+vector_t *VecCreateFromBuffInterleaved(spx_value_t *buff, size_t size,
+                                       size_t *parts, int nr_parts,
+                                       int *nodes, int mode)
 {
-	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t), node);
+	vector_t *v = VecCreateInterleaved(size, parts, nr_parts, nodes);
+    for (size_t i = 0; i < size; i++)
+        v->elements[i] = buff[i];
+    v->copy_mode = mode;
+    if (mode == internal::SHARE)
+        v->ptr_buff = buff;
+    else if (mode == internal::COPY)
+        v->ptr_buff = NULL;
 
-	v->size = size;
-	v->alloc_type = internal::ALLOC_MMAP;
-	v->elements = (spx_value_t *) alloc_onnode(sizeof(spx_value_t)*size, node);
-
-	return v;
+    print_alloc_status("vector", check_interleaved(v->elements, parts,
+                                                   nr_parts,
+                                                   nodes));
+    return v;
 }
 
-vector_t *VecCreateInterleaved(size_t size, size_t *parts, int nr_parts,
-                               int *nodes)
+vector_t *VecCreateFromBuffOnnode(spx_value_t *buff, size_t size, int node,
+                                  int mode)
 {
-	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t),
-                                            nodes[0]);
+	vector_t *v = VecCreateOnnode(size, node);
+    for (size_t i = 0; i < size; i++)
+        v->elements[i] = buff[i];
+    v->copy_mode = mode;
+    if (mode == internal::SHARE)
+        v->ptr_buff = buff;
+    else if (mode == internal::COPY)
+        v->ptr_buff = NULL;
 
-	v->size = size;
-	v->alloc_type = internal::ALLOC_MMAP;
-	v->elements = (spx_value_t *) alloc_interleaved(size*sizeof(*v->elements),
-                                                    parts, nr_parts, nodes);
-	return v;
+    return v;
 }
 
 vector_t *VecCreateRandom(size_t size)
 {
-    vector_t *x = NULL;
+    vector_t *v = VecCreate(size);
+    VecInitRandRange(v, (spx_value_t) -0.1, (spx_value_t) 0.1);
 
-    x = VecCreate(size);
-    VecInitRandRange(x, (spx_value_t) -0.1, (spx_value_t) 0.1);
+    return v;
+}
 
-    return x;
+vector_t *VecCreateRandomInterleaved(size_t size, size_t *parts, int nr_parts,
+                                     int *nodes)
+{
+	vector_t *v = VecCreateInterleaved(size, parts, nr_parts, nodes);
+    VecInitRandRange(v, (spx_value_t) -0.1, (spx_value_t) 0.1);
+
+    print_alloc_status("vector", check_interleaved(v->elements, parts,
+                                                   nr_parts,
+                                                   nodes));
+    return v;
 }
 
 void VecDestroy(vector_t *v)
@@ -317,7 +362,7 @@ void VecCopy(const vector_t *v1, vector_t *v2)
     assert(v1->size == v2->size && "vectors for copy have different size");
 
     for (size_t i = 0; i < v1->size; i++)
-        v2->elements[i] = v1->elements[i];
+        v2->elements[i] = v1->elements[i];//memcpy
 }
 
 int VecCompare(const vector_t *v1, const vector_t *v2)

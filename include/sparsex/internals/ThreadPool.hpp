@@ -1,5 +1,7 @@
 /*
- * ThreadPool.hpp --  Thread management in SparseX.
+ * \file ThreadPool.hpp
+ *
+ * \brief Thread management in SparseX
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Athena Elafrou
@@ -11,14 +13,15 @@
 #ifndef SPARSEX_INTERNALS_THREAD_POOL_HPP
 #define SPARSEX_INTERNALS_THREAD_POOL_HPP
 
-#include "sparsex/internals/CsxMatvec.hpp"
-#include "sparsex/internals/Barrier.hpp"
-
+#include <sparsex/internals/Barrier.hpp>
+#include <sparsex/internals/CsxSpmv.hpp>
+// #include <sparsex/internals/ThreadPool.hpp>
 #include <atomic>
 #include <boost/thread/thread.hpp>
 #include <vector>
 
-using namespace std;
+namespace sparsex {
+namespace runtime {
 
 enum Op {
     IDLE = -1,
@@ -28,12 +31,12 @@ enum Op {
     SPMV_KERNEL_SYM
 };
 
-extern atomic<int> barrier_cnt;
-
 class ThreadPool;
 
 class Worker
 {
+    friend class ThreadPool;
+
 public:
     Worker() : sense_(1), job_(IDLE) {}
 
@@ -66,10 +69,9 @@ private:
     size_t id_;
     int sense_;
     int job_;
-public:
     // use unique_ptr when C++14 available (make_unique)
     std::shared_ptr<boost::thread> thread_;
-    void *data_;    // FIXME
+    void *data_;
 };
 
 class ThreadPool
@@ -83,7 +85,7 @@ public:
 
     ~ThreadPool();
 	void InitThreads(size_t nr_threads);
-    void Run(Worker *worker);
+    void Run(Worker &worker);
     void SetKernel(int kernel_id);
 
     void SetWorkerData(size_t worker_id, void *data)
@@ -111,5 +113,8 @@ private:
     ThreadPool(ThreadPool const&);
     ThreadPool& operator=(ThreadPool const&);
 };
+
+} // end of namespace runtime
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_THREAD_POOL_HPP

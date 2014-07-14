@@ -1,6 +1,7 @@
 /*
- * Types.hpp -- Wrap API's types.h and
- *              promote user supplied types to our internals
+ * \file Types.hpp
+ *
+ * \brief Wrap API's types.h and promote user supplied types to our internals
  *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2014, Vasileios Karakasis
@@ -12,8 +13,7 @@
 #ifndef SPARSEX_INTERNALS_TYPES_HPP
 #define SPARSEX_INTERNALS_TYPES_HPP
 
-#include "sparsex/types.h"
-
+#include <sparsex/types.h>
 #include <boost/type_traits.hpp>
 
 // Index type should be promoted to unsigned internally

@@ -1,5 +1,7 @@
 /*
- * Facade.hpp -- Wrappers of the SparseMatrix routines.
+ * \file Facade.hpp
+ *
+ * \brief Wrappers of the SparseMatrix routines
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -11,8 +13,8 @@
 #ifndef SPARSEX_INTERNALS_FACADE_HPP
 #define SPARSEX_INTERNALS_FACADE_HPP
 
-#include "sparsex/internals/cdecl.h"
-#include "sparsex/types.h"
+#include <sparsex/internals/cdecl.h>
+#include <sparsex/types.h>
 
 SPX_BEGIN_C_DECLS__
 
@@ -40,6 +42,7 @@ void DestroyCsx(void *matrix);
 void SetPropertyByMnemonic(const char *key, const char *value);
 void SetPropertiesFromEnv();
 void GetNodes(int *nodes);
+void CreatePool();
 
 SPX_END_C_DECLS__
 

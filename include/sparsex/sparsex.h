@@ -1,5 +1,7 @@
 /**
- * \file sparsex.h -- \brief SparseX header files.
+ * \file sparsex.h
+ *
+ * \brief SparseX header files
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou

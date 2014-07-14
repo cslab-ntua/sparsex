@@ -1,5 +1,7 @@
 /*
- * Map.hpp -- Map used for symmetric sparse matrices.
+ * \file Map.hpp
+ *
+ * \brief Map used for symmetric sparse matrices
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
@@ -11,11 +13,17 @@
 #ifndef SPARSEX_INTERNALS_MAP_HPP
 #define SPARSEX_INTERNALS_MAP_HPP
 
+// namespace sparsex {
+// namespace csx {
+
 ///> The definition of map used for symmetric sparse matrices.
 typedef struct map {
     unsigned int length;
     unsigned int *cpus;
     unsigned int *elems_pos;
 } map_t;
+
+// } // end of namespace csx
+// } // end of namespace sparsex
 
 #endif /* SPARSEX_INTERNALS_MAP_HPP */

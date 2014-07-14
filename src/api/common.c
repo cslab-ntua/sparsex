@@ -1,5 +1,7 @@
 /**
- * \file common.c -- Common utilities.
+ * \file common.c
+ *
+ * \brief Common utilities
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,10 +10,71 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/common.h"
+#include <sparsex/common.h>
+
+void spx_log_disable_all()
+{
+    DisableLogging();
+}
+
+void spx_log_error_console()
+{
+    EnableErrorConsole();
+}
+
+void spx_log_warning_console()
+{
+    EnableWarningConsole();
+}
+
+void spx_log_info_console()
+{
+    EnableInfoConsole();
+}
+
+void spx_log_debug_console()
+{
+    EnableDebugConsole();
+}
+
+void spx_log_error_file()
+{
+    EnableErrorFile();
+}
+
+void spx_log_warning_file()
+{
+    EnableWarningFile();
+}
+
+void spx_log_info_file()
+{
+    EnableInfoFile();
+}
+
+void spx_log_debug_file()
+{
+    EnableDebugFile();
+}
+
+void spx_log_all_console()
+{
+    EnableAllConsole();
+}
+
+void spx_log_all_file(const char *file)
+{
+    EnableAllFile(file);
+}
+
+void spx_log_set_file(const char *file)
+{
+    UseFile(file);
+}
 
 void spx_init()
 {
+    EnableWarningConsole();
 }
 
 void spx_finalize()

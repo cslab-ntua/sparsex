@@ -61,10 +61,10 @@ void Bench_Matrix(const char *filename, const char *library,
 
     MMFtoCSR(filename, &rowptr, &colind, &values, &nrows, &ncols, &nnz);
 
-	spx_value_t *x = (spx_value_t *) malloc(sizeof(spx_value_t) * ncols);
-	spx_value_t *y = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
-#if defined(MKL) || defined(POSKI)
-	spx_value_t *y_cmp = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
+	spx_value_t *x = new spx_value_t[ncols];
+	spx_value_t *y = new spx_value_t[nrows];
+#if SPX_BENCH_MKL || SPX_BENCH_POSKI
+	spx_value_t *y_cmp = new spx_value_t[nrows];
 #endif
     spx_value_t val = 0, max = 1, min = -1;
  
@@ -72,32 +72,31 @@ void Bench_Matrix(const char *filename, const char *library,
 		val = ((spx_value_t) (rand()+i) / ((spx_value_t) RAND_MAX + 1));
 		x[i] = min + val*(max-min);
 		y[i] = max + val*(min-max);
-#if defined(MKL) || defined(POSKI)
-        y_cmp[i] = y[i];
-#endif
     }
+#if SPX_BENCH_MKL || SPX_BENCH_POSKI
+    memcpy(y_cmp, y, nrows * sizeof(spx_value_t));
+#endif
 
     ALPHA = min + val*(max-min);
     BETA = max + val*(min-max);
 
     if (!library) {
-#ifdef MKL
+        cout << "Using library SparseX..." << endl;
+        sparsex_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);
+#if SPX_BENCH_MKL
         cout << "Using library Intel MKL..." << endl;
         mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);            
 #endif
-#ifdef POSKI
+#if SPX_BENCH_POSKI
         cout << "Using library pOSKI..." << endl;
         poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);
 #endif
-        cout << "Using library SparseX..." << endl;
-        sparsex_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);
 
-#ifdef COMPARE_RESULT
         if (vec_compare(y, y_cmp, nrows) < 0)
             cout << "Error in resulting vector!" << endl;
         else
             cout << "Checked passed!" << endl;
-#endif
+
     } else {
         cout << "Using library " << library << "...\n";
         if (strcmp(library, "MKL") == 0) {
@@ -114,13 +113,13 @@ void Bench_Matrix(const char *filename, const char *library,
     }
 
     /* Cleanup */
-    free(rowptr);
-    free(colind);
-    free(values);
-    free(x);
-    free(y);
-#if defined(MKL) || defined(POSKI)
-    free(y_cmp);
+    delete[] rowptr;
+    delete[] colind;
+    delete[] values;
+    delete[] x;
+    delete[] y;
+#if SPX_BENCH_MKL || SPX_BENCH_POSKI
+    delete[] y_cmp;
 #endif
 }
 
@@ -136,8 +135,8 @@ void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file)
 
     MMFtoCSR(mmf_file, &rowptr, &colind, &values, &nrows, &ncols, &nnz);
 
-	spx_value_t *x = (spx_value_t *) malloc(sizeof(spx_value_t) * ncols);
-	spx_value_t *y = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
+	spx_value_t *x = new spx_value_t[ncols];
+	spx_value_t *y = new spx_value_t[nrows];
     for (int i = 0; i < nrows; i++) {
         x[i] = 1;
         y[i] = 2;
@@ -146,11 +145,11 @@ void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file)
     fn(rowptr, colind, values, nrows, ncols, nnz, x, y);            
 
     /* Cleanup */
-    free(rowptr);
-    free(colind);
-    free(values);
-    free(x);
-    free(y);
+    delete[] rowptr;
+    delete[] colind;
+    delete[] values;
+    delete[] x;
+    delete[] y;
 }
 
 static SpmvFn GetSpmvFn(library type)
@@ -161,12 +160,12 @@ static SpmvFn GetSpmvFn(library type)
     case SparseX:
         ret = sparsex_spmv;
         break;
-#ifdef MKL
+#if SPX_BENCH_MKL
     case MKL:
         ret = mkl_spmv;
         break;
 #endif
-#ifdef POSKI
+#if SPX_BENCH_POSKI
     case pOSKI:
         ret = poski_spmv;
         break;
@@ -187,9 +186,9 @@ static void MMFtoCSR(const char *filename,
     MMF<spx_index_t, spx_value_t> mmf(filename);
     *nrows = mmf.GetNrRows(); *ncols = mmf.GetNrCols();
     *nnz = mmf.GetNrNonzeros();
-	*values = (spx_value_t *) malloc(sizeof(spx_value_t) * mmf.GetNrNonzeros());
-	*colind = (spx_index_t *) malloc(sizeof(**colind) * mmf.GetNrNonzeros());
-	*rowptr = (spx_index_t *) malloc(sizeof(**rowptr) * (mmf.GetNrRows() + 1));
+	*values = new spx_value_t[mmf.GetNrNonzeros()];
+	*colind = new spx_index_t[mmf.GetNrNonzeros()];
+	*rowptr = new spx_index_t[mmf.GetNrRows() + 1];
 
     MMF<spx_index_t, spx_value_t>::iterator iter = mmf.begin();
     MMF<spx_index_t, spx_value_t>::iterator iter_end = mmf.end();   

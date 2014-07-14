@@ -1,5 +1,7 @@
 /*
- * CsxManager.hpp -- The CSX Manager interface.
+ * \file CsxManager.hpp
+ *
+ * \brief The CSX Manager interface
  *
  * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
@@ -13,24 +15,26 @@
 #ifndef SPARSEX_INTERNALS_CSX_MANAGER_HPP
 #define SPARSEX_INTERNALS_CSX_MANAGER_HPP
 
-#include "sparsex/internals/Allocators.hpp"
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/Csx.hpp"
-#include "sparsex/internals/CtlBuilder.hpp"
-#include "sparsex/internals/CtlUtil.hpp"
-#include "sparsex/internals/Element.hpp"
-#include "sparsex/internals/SparsePartition.hpp"
-#include "sparsex/internals/Delta.hpp"
-#include "sparsex/internals/SpmMt.hpp"
-#include "sparsex/internals/logger/Logger.hpp"
+#include <sparsex/internals/Allocators.hpp>
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/Csx.hpp>
+#include <sparsex/internals/CsxUtil.hpp>
+#include <sparsex/internals/CtlBuilder.hpp>
+#include <sparsex/internals/CtlUtil.hpp>
+#include <sparsex/internals/Element.hpp>
+#include <sparsex/internals/SparsePartition.hpp>
+#include <sparsex/internals/Delta.hpp>
+#include <sparsex/internals/SpmMt.hpp>
+#include <sparsex/internals/logger/Logger.hpp>
 
 #if SPX_USE_NUMA
 #   include <numa.h>
-#   include "sparsex/internals/numa_util.h"
+#   include <sparsex/internals/numa_util.h>
 #endif
 
 using namespace std;
 
+namespace sparsex {
 namespace csx {
 
 /**
@@ -155,9 +159,9 @@ private:
      *  Set all the flags of pattern info for elements that do not adhere to
      *  any type of pattern.
      *
-     *  @param xs vector with the columns of elements.
+     *  @param cols vector with the columns of elements.
      */
-    void AddXs(vector<IndexType> &xs);
+    void AddCols(vector<IndexType> &cols);
 
     /**
      *  Set all the flags of pattern info for elements that adhere to a type of
@@ -168,10 +172,9 @@ private:
     void AddPattern(const Element<IndexType, ValueType> &elem);
 
     /**
-     *  @param xs  elements found before pattern.
+     *  @param cols  elements found before pattern.
      */
-    void PreparePat(vector<IndexType> &xs,
-                    const Element<IndexType, ValueType> &elem);
+    void PreparePat(vector<IndexType> &cols);
 
     /**
      *  Updates the span of a row.
@@ -198,8 +201,6 @@ private:
     size_t curr_row_;
 };
 
-}   // end of csx namespace
-
 /* Helper functions */
 template<typename IterT, typename ValT>
 void DeltaEncode(IterT start, IterT end, ValT &x0)
@@ -222,8 +223,6 @@ void Copy(D *dst, S *src, long nr_items)
         dst[i] = static_cast<D>(src[i]);
     }
 }
-
-namespace csx {
 
 /* 
  * Implementation of class CsxManager
@@ -319,10 +318,6 @@ CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
     values_ = new ValueType[spm_->GetNrNonzeros()];
     rows_info_ = new row_info_t[spm_->GetNrRows()];
 #endif  // SPX_USE_NUMA
-    if (!csx || !values_ || !rows_info_) {
-        LOG_ERROR << "malloc failed\n";
-        exit(1);
-    }
 
     // Be greedy with the initial capacity (equal to CSR col_ind size) 
     // to avoid realloc()'s.
@@ -505,7 +500,7 @@ DoRow(typename SparsePartition<IndexType, ValueType>::iterator &rbegin,
       typename SparsePartition<IndexType, ValueType>::iterator &rend,
       IndexType row)
 {
-    vector<IndexType> xs;
+    vector<IndexType> cols;
 
     span_ = 0;
     last_col_ = 1;
@@ -516,8 +511,8 @@ DoRow(typename SparsePartition<IndexType, ValueType>::iterator &rbegin,
         // Check if this element contains a pattern.
         if ((*ri).IsPattern()) {
             UpdateRowSpan(*ri);
-            PreparePat(xs, *ri);
-            assert(xs.size() == 0);
+            PreparePat(cols);
+            assert(cols.size() == 0);
             AddPattern(*ri);
             const ValueType *elem_vals = &(*ri).GetValues();
             copy(elem_vals, elem_vals + (*ri).GetSize(), values_ + values_idx_);
@@ -526,16 +521,16 @@ DoRow(typename SparsePartition<IndexType, ValueType>::iterator &rbegin,
         }
 
         // Check if we exceeded the maximum size for a unit.
-        assert(xs.size() <= CTL_SIZE_MAX);
-        if (xs.size() == CTL_SIZE_MAX)
-             AddXs(xs);
+        assert(cols.size() <= CTL_SIZE_MAX);
+        if (cols.size() == CTL_SIZE_MAX)
+             AddCols(cols);
 
-        xs.push_back((*ri).GetCol());
+        cols.push_back((*ri).GetCol());
         values_[values_idx_++] = (*ri).GetValue();
     }
 
-    if (xs.size() > 0)
-        AddXs(xs);
+    if (cols.size() > 0)
+        AddCols(cols);
 }
 
 /*
@@ -549,7 +544,7 @@ void CsxManager<IndexType, ValueType>::
 DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
          typename SparsePartition<IndexType, ValueType>::iterator &rend)
 {
-    vector<IndexType> xs;
+    vector<IndexType> cols;
     typename SparsePartition<IndexType, ValueType>::iterator &ri = rstart;
     span_ = 0;
 
@@ -560,8 +555,8 @@ DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
         // Check if this element contains a pattern.
         if ((*ri).IsPattern()) {
             UpdateRowSpan(*ri);
-            PreparePat(xs, *ri);
-            assert(xs.size() == 0);
+            PreparePat(cols);
+            assert(cols.size() == 0);
             AddPattern(*ri);
             const ValueType *elem_vals = &(*ri).GetValues();
             copy(elem_vals, elem_vals + (*ri).GetSize(), values_ + values_idx_);
@@ -570,16 +565,16 @@ DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
         }
 
         // Check if we exceeded the maximum size for a unit.
-        assert(xs.size() <= CTL_SIZE_MAX);
-        if (xs.size() == CTL_SIZE_MAX)
-             AddXs(xs);
+        assert(cols.size() <= CTL_SIZE_MAX);
+        if (cols.size() == CTL_SIZE_MAX)
+             AddCols(cols);
 
-        xs.push_back((*ri).GetCol());
+        cols.push_back((*ri).GetCol());
         values_[values_idx_++] = (*ri).GetValue();
     }
 
-    if (xs.size() > 0)
-        AddXs(xs);
+    if (cols.size() > 0)
+        AddCols(cols);
 
     // FIXME: this is completely the same as before!
     for ( ; ri != rend; ++ri) {
@@ -588,8 +583,8 @@ DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
         // Check if this element contains a pattern.
         if ((*ri).IsPattern()) {
             UpdateRowSpan(*ri);
-            PreparePat(xs, *ri);
-            assert(xs.size() == 0);
+            PreparePat(cols);
+            assert(cols.size() == 0);
             AddPattern(*ri);
             const ValueType *elem_vals = &(*ri).GetValues();
             copy(elem_vals, elem_vals + (*ri).GetSize(), values_ + values_idx_);
@@ -598,16 +593,16 @@ DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
         }
 
         // Check if we exceeded the maximum size for a unit.
-        assert(xs.size() <= CTL_SIZE_MAX);
-        if (xs.size() == CTL_SIZE_MAX)
-             AddXs(xs);
+        assert(cols.size() <= CTL_SIZE_MAX);
+        if (cols.size() == CTL_SIZE_MAX)
+             AddCols(cols);
 
-        xs.push_back((*ri).GetCol());
+        cols.push_back((*ri).GetCol());
         values_[values_idx_++] = (*ri).GetValue();
     }
 
-    if (xs.size() > 0)
-        AddXs(xs);
+    if (cols.size() > 0)
+        AddCols(cols);
 }
 
 template<typename IndexType, typename ValueType>
@@ -631,24 +626,24 @@ CsxManager<IndexType, ValueType>::UpdateNewRow()
 }
 
 template<typename IndexType, typename ValueType>
-void CsxManager<IndexType, ValueType>::AddXs(vector<IndexType> &xs)
+void CsxManager<IndexType, ValueType>::AddCols(vector<IndexType> &cols)
 {
     typename vector<IndexType>::iterator vi;
 
-    size_t xs_size = xs.size();
-    IndexType last_col = xs[xs_size-1];
-    IndexType x_start = xs[0];
+    size_t cols_size = cols.size();
+    IndexType last_col = cols[cols_size-1];
+    IndexType col_start = cols[0];
 
     // Do delta encoding
-    DeltaEncode(xs.begin(), xs.end(), last_col_);
+    DeltaEncode(cols.begin(), cols.end(), last_col_);
     last_col_ = last_col;
 
     // Calculate the delta's size and the pattern id
     IndexType max = 0;
-    if (xs_size > 1) {
-        vi = xs.begin();
+    if (cols_size > 1) {
+        vi = cols.begin();
         advance(vi, 1);
-        max = *(max_element(vi, xs.end()));
+        max = *(max_element(vi, cols.end()));
     }
 
     size_t delta_bytes = GetDeltaSize(max);
@@ -658,24 +653,24 @@ void CsxManager<IndexType, ValueType>::AddXs(vector<IndexType> &xs)
     pair<bool, size_t> newrow_info = UpdateNewRow();
     IndexType ucol;
     if (full_column_indices_)
-        ucol = x_start - 1;
+        ucol = col_start - 1;
     else
-        ucol = xs[0];
+        ucol = cols[0];
 
-    LOG_DEBUG << "AddXs() ucol " << ucol << "\n";
+    LOG_DEBUG << "AddCols() ucol " << ucol << "\n";
     LOG_DEBUG << "last_col_: " << last_col_ << "\n";
 
-    assert(xs_size > 0 && xs_size <= CTL_SIZE_MAX);
+    assert(cols_size > 0 && cols_size <= CTL_SIZE_MAX);
     ctl_builder_.AppendCtlHead(newrow_info.first, newrow_info.second,
-                               GetFlag(patt_id, xs_size),
-                               xs_size, ucol, sizeof(IndexType),
+                               GetFlag(patt_id, cols_size),
+                               cols_size, ucol, sizeof(IndexType),
                                full_column_indices_);
 
     // Add deltas (if needed)
-    for (size_t i = 1; i < xs_size; ++i)
-        ctl_builder_.AppendFixedInt(xs[i], delta_bytes);
+    for (size_t i = 1; i < cols_size; ++i)
+        ctl_builder_.AppendFixedInt(cols[i], delta_bytes);
 
-    xs.clear();
+    cols.clear();
     return;
 }
 
@@ -705,13 +700,14 @@ AddPattern(const Element<IndexType, ValueType> &elem)
 
 template<typename IndexType, typename ValueType>
 void CsxManager<IndexType, ValueType>::
-PreparePat(vector<IndexType> &xs, const Element<IndexType, ValueType> &elem)
+PreparePat(vector<IndexType> &cols)
 {
-    if (xs.size() != 0)
-        AddXs(xs);
+    if (cols.size() != 0)
+        AddCols(cols);
 }
 
-} // end of csx namespace
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_CSX_MANAGER_HPP
 

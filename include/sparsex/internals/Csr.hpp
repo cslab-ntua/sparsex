@@ -1,6 +1,8 @@
 /*
- * Csr.hpp -- Routines for converting standard CSR to our intermediate
- *            representation.
+ * \file Csr.hpp
+ *
+ * \brief Routines for converting standard CSR to our intermediate
+ * \brief representation
  *
  * Copyright (C) 2011-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011,      Vasileios Karakasis
@@ -13,14 +15,15 @@
 #ifndef SPARSEX_INTERNALS_CSR_HPP
 #define SPARSEX_INTERNALS_CSR_HPP
 
-#include "sparsex/internals/Element.hpp"
-#include <inttypes.h>
+#include <sparsex/internals/Element.hpp>
 #include <iterator>
 #include <vector>
 
 using namespace std;
+using namespace sparsex::csx;
 
-namespace csx {
+namespace sparsex {
+namespace io {
 
 /**
  *  CSR wrapper.
@@ -34,9 +37,9 @@ public:
 
     CSR(const char *filename) {}  // Dummy
     CSR()
-        : rowptr_(0),
-          colind_(0),
-          values_(0),
+        : rowptr_(nullptr),
+          colind_(nullptr),
+          values_(nullptr),
           nr_rows_(0),
           nr_cols_(0),
           zero_based_(false),
@@ -71,6 +74,14 @@ public:
           reordered_(false)
     {
         nr_nzeros_ = rowptr_[nr_rows] - !zero_based_;
+    }
+
+    ~CSR()
+    {
+        if (reordered_) {
+            delete[] colind_;
+            delete[] values_;
+        }
     }
 
     size_t GetNrNonzeros() const
@@ -353,7 +364,8 @@ private:
     vector<size_t> permutation_;
 };
 
-} // namespace csx
+} // end of namespace io
+} // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_CSR_HPP
 

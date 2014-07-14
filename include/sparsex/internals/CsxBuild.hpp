@@ -1,10 +1,12 @@
 /*
- * CsxBuild.hpp -- Front-end utilities for building CSX.
+ * \file CsxBuild.hpp
+ *
+ * \brief Front-end utilities for building CSX
  *
  * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011-2012, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
- * Copyright (C) 2013,      Athena Elafrou
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -13,25 +15,24 @@
 #ifndef SPARSEX_INTERNALS_CSX_BUILD_HPP
 #define SPARSEX_INTERNALS_CSX_BUILD_HPP
 
-#include "sparsex/internals/Affinity.hpp"
-#include "sparsex/internals/Config.hpp"
-#include "sparsex/internals/Csx.hpp"
-#include "sparsex/internals/EncodingManager.hpp"
-#include "sparsex/internals/Jit.hpp"
-#include "sparsex/internals/Runtime.hpp"
-#include "sparsex/internals/SparseInternal.hpp"
-#include "sparsex/internals/SparsePartition.hpp"
-#include "sparsex/internals/SpmMt.hpp"
-
-#include <iostream>
+#include <sparsex/internals/Affinity.hpp>
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/Csx.hpp>
+#include <sparsex/internals/EncodingManager.hpp>
+#include <sparsex/internals/Jit.hpp>
+#include <sparsex/internals/Runtime.hpp>
+#include <sparsex/internals/SparseInternal.hpp>
+#include <sparsex/internals/SparsePartition.hpp>
+#include <sparsex/internals/SpmMt.hpp>
 #include <numa.h>
-#include <numaif.h>
 #include <boost/thread/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 
-using namespace csx;
 using namespace std;
+
+namespace sparsex {
+namespace csx {
 
 /**
  *  Routine responsible for making a map for the symmetric representation of
@@ -105,8 +106,9 @@ void Compile(spm_mt_t *spm_mt, vector<ThreadContext<InternalType> > &data,
     for (size_t i = 0; i < nr_threads; ++i) {
         Jits[i] = new CsxJit<IndexType, ValueType>(data[i].GetCsxManager(),
                                                    &engine, i, symmetric);
+        data[i].GetBuffer() << "==== ENCODED PATTERNS ====\n";
         Jits[i]->GenCode(data[i].GetBuffer());    
-        LOG_INFO << data[i].GetBuffer().str();
+        LOG_VERBOSE << data[i].GetBuffer().str();
     }
 
     for (size_t i = 0; i < nr_threads; i++)
@@ -118,21 +120,39 @@ void Compile(spm_mt_t *spm_mt, vector<ThreadContext<InternalType> > &data,
     delete[] Jits;
 }
 
+// template<typename InternalType>
+// void Compile(spm_mt_t *spm_mt, vector<ThreadContext<InternalType> > &data, 
+//              size_t nr_threads, bool symmetric)
+// {
+//     typedef typename InternalType::idx_t IndexType;
+//     typedef typename InternalType::val_t ValueType;
+
+//     CsxExecutionEngine &engine = CsxJitInit();
+//     vector<CsxJit<IndexType, ValueType> > Jits;
+//     for (size_t i = 0; i < nr_threads; ++i) {
+//         Jits.push_back(CsxJit<IndexType, ValueType>(data[i].GetCsxManager(),
+//                                                     &engine, i, symmetric));
+//         Jits[i].GenCode(data[i].GetBuffer());    
+//         LOG_VERBOSE << data[i].GetBuffer().str();
+//     }
+
+//     for (size_t i = 0; i < nr_threads; i++)
+//         spm_mt->spm_threads[i].spmv_fn = Jits[i].GetSpmvFn();
+// }
+
 template<typename IndexType, typename ValueType>
 void PreprocessThread(
     ThreadContext<SparsePartition<IndexType, ValueType> > &data)
 {
     RuntimeConfiguration &rtconfig = RuntimeConfiguration::GetInstance();
-    timing::Timer timer;
 
     // Set CPU affinity.
     setaffinity_oncpu(data.GetCpu());
 
     // Search for encodings
-    timer.Start();
-
     EncodingManager<IndexType, ValueType> *DrleMg;
     data.GetBuffer() << "==> Thread: #" << data.GetId() << "\n";
+    data.GetBuffer() << "==== ENCODING STATISTICS ====\n";
 
     // Initialize the Encoding manager.
     DrleMg = new EncodingManager<IndexType, ValueType>(data.GetSpm(), rtconfig);
@@ -153,51 +173,56 @@ void PreprocessThread(
         DrleMg->RemoveIgnore(encseq);
         DrleMg->EncodeAll(data.GetBuffer());
     }
-    timer.Pause();  // encoding time
 
-    timer.Clear();
+    timing::Timer timer;
     timer.Start();
     CsxMatrix<IndexType, ValueType> *csx = data.GetCsxManager()->MakeCsx(false);
     timer.Pause();  // csx creation time
+    double csx_create_time = timer.ElapsedTime();
+    data.GetBuffer() << "CSX build: " << csx_create_time << "\n";
+
     data.GetSpmEncoded()->spm = csx;
     data.GetSpmEncoded()->nr_rows = csx->nrows;
     data.GetSpmEncoded()->row_start = csx->row_start;
     assert(csx->ctl);
     assert(((csx_matrix_t *)data.GetSpmEncoded()->spm)->ctl);
 
-#if SPX_USE_NUMA && NUMA_CHECKS
+#if SPX_USE_NUMA
     int alloc_err = 0;
     alloc_err = check_region(csx->ctl, csx->ctl_size * sizeof(uint8_t),
                              data.GetSpmEncoded()->node);
-    cout << "allocation check for ctl field... "
-         << ((alloc_err) ?
-             "FAILED (see above for more info)" : "DONE")
-         << "\n";
+
+    data.GetBuffer() << "==== ALLOCATION CHECKS ====\n";
+    data.GetBuffer() << " * allocation check for ctl field... "
+                     << ((alloc_err) ?
+                         "FAILED (see above for more info)" : "DONE")
+                     << "\n";
 
     alloc_err = check_region(csx->values, csx->nnz * sizeof(*csx->values),
                              data.GetSpmEncoded()->node);
-    cout << "allocation check for values field... " 
-         << ((alloc_err) ?
-             "FAILED (see above for more info)" : "DONE")
-         << "\n";
+    data.GetBuffer() << " * allocation check for values field... " 
+                     << ((alloc_err) ?
+                         "FAILED (see above for more info)" : "DONE")
+                     << "\n";
 #endif
 
     delete DrleMg;
 }
 
 template<typename IndexType, typename ValueType>
-void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType>
-                                       >& data)
+void PreprocessThreadSym(
+    ThreadContext<SparsePartitionSym<IndexType, ValueType> >& data)
 {
     RuntimeConfiguration &rtconfig = RuntimeConfiguration::GetInstance();
 
     // Set CPU affinity.
     setaffinity_oncpu(data.GetCpu());
-    
+
     EncodingManager<IndexType, ValueType> *DrleMg1;
     EncodingManager<IndexType, ValueType> *DrleMg2;
 
     data.GetBuffer() << "==> Thread: #" << data.GetId() << "\n";
+    data.GetBuffer() << "==== ENCODING STATISTICS ====\n";
     data.GetSpm()->DivideMatrix();
         
     // Initialize the DRLE manager
@@ -226,36 +251,42 @@ void PreprocessThreadSym(ThreadContext<SparsePartitionSym<IndexType, ValueType>
 
     data.GetSpm()->MergeMatrix();
 
-    CsxSymMatrix<IndexType, ValueType> *csx =
-        data.GetCsxManager()->MakeCsxSym();
+    timing::Timer timer;
+    timer.Start();
+    CsxSymMatrix<IndexType, ValueType> *csx = data.GetCsxManager()->MakeCsxSym();
+    timer.Pause();  // csx creation time
+    double csx_create_time = timer.ElapsedTime();
+    data.GetBuffer() << "CSX build: " << csx_create_time << "\n";
+
     data.GetSpmEncoded()->spm = csx;
     data.GetSpmEncoded()->row_start = csx->lower_matrix->row_start;
     data.GetSpmEncoded()->nr_rows = csx->lower_matrix->nrows;
    
-#if SPX_USE_NUMA && NUMA_CHECKS
+#if SPX_USE_NUMA
     int alloc_err = check_region(csx->lower_matrix->ctl,
                                  csx->lower_matrix->ctl_size * sizeof(uint8_t),
                                  data.GetSpmEncoded()->node);
-    cout << "allocation check for ctl field... "
-         << ((alloc_err) ?
-             "FAILED (see above for more info)" : "DONE")
-         << "\n";
+    data.GetBuffer() << "==== ALLOCATION CHECKS ====\n";
+    data.GetBuffer() << " * allocation check for ctl field... "
+                     << ((alloc_err) ?
+                         "FAILED (see above for more info)" : "DONE")
+                     << "\n";
 
     alloc_err = check_region(csx->lower_matrix->values,
                              csx->lower_matrix->nnz * sizeof(ValueType),
                              data.GetSpmEncoded()->node);
-    cout << "allocation check for values field... "
-         << ((alloc_err) ?
-             "FAILED (see above for more info)" : "DONE")
-         << "\n";
-                     
+    data.GetBuffer() << " * allocation check for values field... "
+                     << ((alloc_err) ?
+                         "FAILED (see above for more info)" : "DONE")
+                     << "\n";
+
     alloc_err = check_region(csx->dvalues,
 	                         csx->lower_matrix->nrows * sizeof(ValueType),
                              data.GetSpmEncoded()->node);
-    cout << "allocation check for dvalues field... "
-         << ((alloc_err) ?
-             "FAILED (see above for more info)" : "DONE")
-         << "\n";
+    data.GetBuffer() << "allocation check for dvalues field... "
+                     << ((alloc_err) ?
+                         "FAILED (see above for more info)" : "DONE")
+                     << "\n";
 #endif
 
     delete DrleMg1;
@@ -293,7 +324,6 @@ void DoBuild(SparseInternal<SparsePartition<IndexType, ValueType> > *spms,
     for (size_t i = 0; i < nr_threads - 1; ++i) {
         threads[i]->join();
     }
-
 
     // CSX JIT compilation
     Compile<SparsePartition<IndexType, ValueType> >(
@@ -513,7 +543,7 @@ void MakeMap(spm_mt_t *spm_mt,
     assert(temp_count == map->length);
     spm_thread->map = map;
 
-#if SPX_USE_NUMA && NUMA_CHECKS
+#if SPX_USE_NUMA
     int alloc_err = 0;
     for (unsigned int i = 0; i < ncpus; i++) {
         node = spm_mt->spm_threads[i].node;
@@ -526,9 +556,11 @@ void MakeMap(spm_mt_t *spm_mt,
                                   map->length * sizeof(unsigned int), node);
     }
 
-    cout << "allocation check for map... "
-         << ((alloc_err) ? "FAILED (see above for more info)" : "DONE")
-         << "\n";
+    stringstream os;
+    os << "allocation check for map... "
+       << ((alloc_err) ? "FAILED (see above for more info)" : "DONE")
+       << "\n";
+    LOG_VERBOSE << os.str();
 #endif
     ///> Print final map.  
     // for (unsigned int i = 0; i < ncpus; i++) {
@@ -550,6 +582,9 @@ void MakeMap(spm_mt_t *spm_mt,
     delete[] initial_map;
     delete[] count;
 }    
+
+} // end of namespace csx
+} // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_CSX_BUILD_HPP
 

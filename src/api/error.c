@@ -1,5 +1,7 @@
 /**
- * \file error.c -- Error handling interface.
+ * \file error.c
+ *
+ * \brief Error handling interface
  *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
@@ -8,8 +10,8 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-#include "sparsex/error.h"
-#include "sparsex/internals/logger/LoggerUtil.hpp"
+#include <sparsex/error.h>
+#include <sparsex/internals/logger/LoggerUtil.hpp>
 
 /**
  *  The first global variable points to the current error handler. The default
@@ -101,10 +103,11 @@ void spx_err_set_handler(spx_errhandler_t new_handler)
  */
 static const char *spx_errors[] = {
     "invalid argument",
-    "file doesn't exist",
+    "file error",
     "loading of input matrix failed",
     "conversion to CSX failed",
-    "incompatible vector dimension",
+    "incompatible matrix and vector dimensions",
+    "incompatible vector dimensions",
     "matrix entry doesn't exist",
     "index out of bounds",
     "dummy",

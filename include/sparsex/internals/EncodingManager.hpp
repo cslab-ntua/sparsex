@@ -1,10 +1,13 @@
 /*
- * EncodingManager.hpp -- Delta Run-Length Encoding Manager
+ * \file EncodingManager.hpp
+ *
+ * \brief Delta Run-Length Encoding Manager
  *
  * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2013, Vasileios Karakasis
  * Copyright (C) 2010-2012, Theodoros Gkountouvas
  * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -13,28 +16,28 @@
 #ifndef SPARSEX_INTERNALS_ENCODING_MANAGER_HPP
 #define SPARSEX_INTERNALS_ENCODING_MANAGER_HPP
 
-#include "sparsex/internals/Delta.hpp"
-#include "sparsex/internals/Element.hpp"
-#include "sparsex/internals/Encodings.hpp"
-#include "sparsex/internals/Runtime.hpp"
-#include "sparsex/internals/SparsePartition.hpp"
-#include "sparsex/internals/Statistics.hpp"
-#include "sparsex/internals/TimerCollection.hpp"
-#include "sparsex/internals/Node.hpp"
-#include "sparsex/internals/logger/Logger.hpp"
-
-#include <map>
+#include <sparsex/internals/Config.hpp>
+#include <sparsex/internals/Delta.hpp>
+#include <sparsex/internals/Element.hpp>
+#include <sparsex/internals/Encodings.hpp>
+#include <sparsex/internals/Runtime.hpp>
+#include <sparsex/internals/SparsePartition.hpp>
+#include <sparsex/internals/Statistics.hpp>
+#include <sparsex/internals/TimerCollection.hpp>
+#include <sparsex/internals/logger/Logger.hpp>
 #include <bitset>
 #include <limits>
 #include <cassert>
-#include <iostream>
 #include <sstream>
 #include <boost/container/vector.hpp>
+#include <boost/foreach.hpp>
 
 #define FOREACH BOOST_FOREACH
 
 using namespace std;
+using namespace sparsex::runtime;
 
+namespace sparsex {
 namespace csx {
 
 /**
@@ -65,7 +68,15 @@ public:
                     RuntimeConfiguration &config);
     ~EncodingManager() {
         if (selected_splits_)
-            delete selected_splits_;
+            delete[] selected_splits_;
+    }
+
+    void DoCreateTimers()
+    {
+        tc_.CreateTimer("Total", "Total");
+        tc_.CreateTimer("Stats", " * Statistics");
+        tc_.CreateTimer("Encode", " * Encoding");
+        tc_.CreateTimer("Alloc", " * Allocations");
     }
 
     /**
@@ -142,8 +153,8 @@ public:
 
     void RemoveIgnore(const EncodingSequence &encseq)
     {
-        for (EncodingSequence::const_iterator iter = encseq.Cbegin();
-             iter != encseq.Cend(); ++iter) {
+        for (EncodingSequence::const_iterator iter = encseq.cbegin();
+             iter != encseq.cend(); ++iter) {
             const Encoding &e = iter->first;
             RemoveIgnore(e);
         }
@@ -291,7 +302,7 @@ private:
      */
     void UpdateStats(SparsePartition<IndexType, ValueType> *sp,
                      std::vector<IndexType> &xs,
-                     std::vector<Element<IndexType, ValueType> *> &elems,
+                     std::vector<Element<IndexType, ValueType> > &elems,
                      StatsCollection<StatsData> &stats);
 
     /**
@@ -303,7 +314,7 @@ private:
      */
     void UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
                           uint64_t align,
-                          std::vector<Element<IndexType, ValueType> *> &elems,
+                          std::vector<Element<IndexType, ValueType> > &elems,
                           StatsCollection<StatsData> &stats);
 
     /**
@@ -362,7 +373,7 @@ private:
     size_t *selected_splits_;
     StatsCollection<StatsData> encoded_stats_; // stats for the *encoded* types
     set<Encoding::Instantiation> encoded_inst_;
-    std::bitset<Encoding::Max> xforms_ignore_;
+    bitset<Encoding::Max> xforms_ignore_;
     timing::TimerCollection tc_;
 };
 
@@ -477,6 +488,9 @@ CheckParams(RuntimeConfiguration &config)
             LOG_ERROR << "invalid sampling portion\n";
             exit(1);
         }
+        LOG_INFO << "Preprocessing method: fixed portion\n";
+        LOG_INFO << "* Sampling portion: " << sampling_portion << "\n";
+        LOG_INFO << "* Number of samples: " << samples_max << "\n";
     } else if (method.GetType() == PreprocessingMethod::FixedWindow) {
         size_t sort_window_size = config.GetProperty<size_t>(
             RuntimeConfiguration::PreprocWindowSize);
@@ -490,7 +504,13 @@ CheckParams(RuntimeConfiguration &config)
             LOG_ERROR << "invalid window size\n";
             exit(1);
         }
+        LOG_INFO << "Preprocessing method: fixed window\n";
+        LOG_INFO << "* Window size: " << sort_window_size << "\n";
+        LOG_INFO << "* Number of samples: " << samples_max << "\n";
     }
+    PreprocessingHeuristic heur = config.GetProperty<PreprocessingHeuristic>(
+        RuntimeConfiguration::PreprocHeuristic);
+    LOG_INFO << "Compression heuristic selected: " << heur.GetName() << "\n";
 }
 
 template<typename IndexType, typename ValueType>
@@ -522,11 +542,7 @@ EncodingManager(SparsePartition<IndexType, ValueType> *spm,
           split_type_(SPLIT_BY_NNZ)
 {
     // Enable timers
-    tc_.CreateTimer("Total", "Total time");
-    tc_.CreateTimer("Stats", "Statistics time");
-    tc_.CreateTimer("Encode", "Encoding time");
-    tc_.CreateTimer("Alloc", "Allocations time");
-
+    DoCreateTimers();
     // Ignore all encodings by default
     IgnoreAll();
 
@@ -567,7 +583,7 @@ GenerateStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
               IndexType re, StatsCollection<StatsData> &stats)
 {
     std::vector<IndexType> xs;
-    std::vector<Element<IndexType, ValueType> *> elems;
+    std::vector<Element<IndexType, ValueType> > elems;
     for (IndexType i = rs; i < re; ++i) {
         typename SparsePartition<IndexType, ValueType>::iterator ei =
             sp->begin(i);
@@ -577,7 +593,7 @@ GenerateStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
             Marker &m = (*ei).GetMarker();
             if (!m.IsMarked(PatternMarker::InPattern)) {
                 xs.push_back((*ei).GetCol());
-                elems.push_back(&(*ei));
+                elems.push_back(*ei);
                 continue;
             }
 
@@ -801,7 +817,6 @@ unsigned long EncodingManager<IndexType, ValueType>::GetTypeScore(
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
 {
-    typename SparsePartition<IndexType, ValueType>::Builder *SpmBld = 0;
     boost::container::vector<Element<IndexType, ValueType> > new_row;
 
     if (type == Encoding::None)
@@ -810,8 +825,8 @@ void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
     // Transform matrix to the desired iteration order
     spm_->Transform(type);
 
-    SpmBld = new typename SparsePartition<IndexType, ValueType>::Builder(
-        spm_, spm_->GetRowptrSize(), spm_->GetElemsSize());
+    typename SparsePartition<IndexType, ValueType>::Builder SpmBld
+        (spm_, spm_->GetRowptrSize(), spm_->GetElemsSize());
 
     for (size_t i = 0; i < spm_->GetRowptrSize() - 1; ++i) {
         typename SparsePartition<IndexType, ValueType>::iterator rbegin =
@@ -823,21 +838,20 @@ void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
         if (nr_size > 0) {
             tc_.StartTimer("Alloc");
             for (size_t i = 0; i < nr_size; ++i)
-                SpmBld->AppendElem(new_row[i]);
+                SpmBld.AppendElem(new_row[i]);
             tc_.PauseTimer("Alloc");
         }
 
         new_row.clear();
-        SpmBld->NewRow();
+        SpmBld.NewRow();
     }
 
-    SpmBld->Finalize();
-    delete SpmBld;
+    SpmBld.Finalize();
     AddIgnore(type);
 }
 
 template<typename IndexType, typename ValueType>
-void EncodingManager<IndexType, ValueType>::EncodeAll(std::ostringstream &os)
+void EncodingManager<IndexType, ValueType>::EncodeAll(ostringstream &os)
 {
     if (!spm_->GetNrNonzeros())
         // If matrix is empty, just return
@@ -888,6 +902,7 @@ void EncodingManager<IndexType, ValueType>::EncodeAll(std::ostringstream &os)
     }
 
     os << "\n";
+    os << "==== PREPROCESSING TIMING STATISTICS ====\n";
     tc_.PrintAllTimers(os);
 }
 
@@ -900,8 +915,8 @@ void EncodingManager<IndexType, ValueType>::EncodeSerial(
         return;
 
     IgnoreAll();
-    for (EncodingSequence::const_iterator iter = encseq.Cbegin();
-         iter != encseq.Cend(); ++iter) {
+    for (EncodingSequence::const_iterator iter = encseq.cbegin();
+         iter != encseq.cend(); ++iter) {
         const Encoding &e = iter->first;
         RemoveIgnore(e);
         for (EncodingSequence::delta_const_iterator
@@ -918,8 +933,7 @@ void EncodingManager<IndexType, ValueType>::EncodeSerial(
 }
 
 template<typename IndexType, typename ValueType>
-void EncodingManager<IndexType, ValueType>::OutputSortSplits(
-    std::ostringstream& out)
+void EncodingManager<IndexType, ValueType>::OutputSortSplits(ostringstream& out)
 {
     sort_split_iterator iter;
     for (iter = sort_splits_.begin(); iter != sort_splits_.end() - 1; ++iter) {
@@ -961,7 +975,9 @@ DoEncode(IndexType row_no,
 
             col += rle.val;
             if (col != rle.val) {
+#if !SPX_USE_NUMA
                 Element<IndexType, ValueType> &last_elem = encoded.back();
+#endif
                 rle_start = col;
                 rle_freq = rle.freq;
 #if !SPX_USE_NUMA
@@ -981,7 +997,7 @@ DoEncode(IndexType row_no,
             
             int nr_parts = 0;
             while (rle_freq >= min_limit_) {
-                size_t curr_freq = std::min(max_limit_, rle_freq);
+                size_t curr_freq = min(max_limit_, rle_freq);
                 encoded.emplace_back(row_no, rle_start, vi, curr_freq,
                                      make_pair(spm_->GetType(), rle.val));
 
@@ -1073,7 +1089,7 @@ DoEncodeBlock(IndexType row_no,
             // Align max_limit
             size_t max_limit = max_limit_ / block_align * block_align;
             size_t nr_blocks = nr_elem / max_limit;
-            size_t nr_elem_block = std::min(max_limit, nr_elem);
+            size_t nr_elem_block = min(max_limit, nr_elem);
 
             if (nr_blocks == 0)
                 nr_blocks = 1;
@@ -1240,7 +1256,7 @@ template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
 UpdateStats(SparsePartition<IndexType, ValueType> *spm,
             std::vector<IndexType> &xs,
-            std::vector<Element<IndexType, ValueType> *> &elems,
+            std::vector<Element<IndexType, ValueType> > &elems,
             StatsCollection<StatsData> &stats)
 {
     std::vector< RLE<IndexType> > rles;
@@ -1258,8 +1274,10 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
 
     rles = RLEncode(DeltaEncode(xs));
     IndexType col = 0;
+#if !SPX_USE_NUMA
     bool last_rle_patt = false; // turn on for encoded units
-    typename std::vector<Element<IndexType, ValueType> *>::iterator ei =
+#endif
+    typename std::vector<Element<IndexType, ValueType> >::iterator ei =
         elems.begin();
 
     FOREACH(RLE<IndexType> &rle, rles) {
@@ -1293,16 +1311,20 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
                 --ei;
 
             // Mark the elements of the pattern and its start
-            (*ei)->GetMarker().Mark(PatternMarker::PatternStart);
+            (*ei).GetMarker().Mark(PatternMarker::PatternStart);
             for (size_t i = 0; i < real_nnz - rem_nnz; ++i) {
                 assert(ei < elems.end());
-                (*ei)->GetMarker().Mark(PatternMarker::InPattern);
+                (*ei).GetMarker().Mark(PatternMarker::InPattern);
                 ++ei;
             }
 
+#if !SPX_USE_NUMA
             last_rle_patt = true;
+#endif
         } else {
+#if !SPX_USE_NUMA
             last_rle_patt = false;
+#endif
             ei += rle.freq;
         }
 
@@ -1317,7 +1339,7 @@ template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
 UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
                  size_t block_align,
-                 std::vector<Element<IndexType, ValueType>*> &elems,
+                 std::vector<Element<IndexType, ValueType> > &elems,
                  StatsCollection<StatsData> &stats)
 {
     std::vector<RLE<IndexType> > rles;
@@ -1329,7 +1351,9 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
     rles = RLEncode(DeltaEncode(xs));
 
     IndexType unit_start = 0;
-    typename std::vector<Element<IndexType, ValueType>*>::iterator ei =
+    // typename std::vector<Element<IndexType, ValueType>*>::iterator ei =
+    //     elems.begin();
+    typename std::vector<Element<IndexType, ValueType> >::iterator ei =
         elems.begin();
 
     FOREACH (RLE<IndexType> &rle, rles) {
@@ -1361,7 +1385,7 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
 
             size_t other_dim = nr_elem / block_align;
 
-            ei += std::min(skip_front, nr_elem);
+            ei += min(skip_front, nr_elem);
             if (other_dim >= 2) {
                 size_t patt_nnz = other_dim * block_align;
                 size_t patt_npatterns = 1;
@@ -1369,11 +1393,11 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
                                   StatsData(patt_nnz, patt_npatterns));
 
                 // Mark the elements
-                (*ei)->GetMarker().Mark(PatternMarker::PatternStart);
+                (*ei).GetMarker().Mark(PatternMarker::PatternStart);
                 for (size_t i = 0; i < nr_elem; ++i) {
                     assert(ei < elems.end());
                     if (i < patt_nnz)
-                        (*ei)->GetMarker().Mark(PatternMarker::InPattern);
+                        (*ei).GetMarker().Mark(PatternMarker::InPattern);
                     ++ei;
                 }
             }
@@ -1518,7 +1542,8 @@ void EncodingManager<IndexType, ValueType>::DoCheckSortByNNZ()
         sampling_enabled_ = true;
 }
 
-} // end of csx namespace
+}   // end of namespace csx
+}   // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_ENCODING_MANAGER_HPP
 
