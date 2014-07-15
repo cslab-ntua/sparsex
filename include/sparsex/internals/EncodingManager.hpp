@@ -82,9 +82,11 @@ public:
     /**
      *  Generate pattern statistics for a sub-matrix of SparsePartition.
      *
-     *  @param sp  the matrix to generate statistics for.
-     *  @param rs  starting row of matrix where to start searching.
-     *  @param re  end row of matrix where to end searching.
+     *  @param sp    the matrix to generate statistics for.
+     *  @param rs    starting row of matrix where to start searching.
+     *  @param re    end row of matrix where to end searching.
+     *  @param stats the StatsCollection where the collected statistics will be
+     *  stored
      */
     void GenerateStats(SparsePartition<IndexType, ValueType> *sp,
                        IndexType rs, IndexType re,
@@ -174,6 +176,7 @@ public:
      *  Choose a pattern type for encoding the matrix. This function chooses the
      *  type with the highest score.
      *
+     *  @param stats the StatsColletion that holds the statistics
      *  @return the type chosen.
      *  @see GetTypeScore()
      */
@@ -194,6 +197,7 @@ public:
      *  patterns can achieve.
      *
      *  @param type the type whose score will be evaluated.
+     *  @param sdata statistics data for this type
      *  @return     score of the type.
      *  @see GenAllStats()
      */
@@ -298,6 +302,7 @@ private:
      *  @param sp    object of SparsePartition class that describes
      *               the sub-matrix elements.
      *  @param xs    deltas of elements examined.
+     *  @param elems FIXME: undocumented
      *  @param stats stats of the sub-matrix so far.
      */
     void UpdateStats(SparsePartition<IndexType, ValueType> *sp,
@@ -308,8 +313,10 @@ private:
     /**
      *  Updates the stats for a block pattern.
      *
+     *  @param type  FIXME: undocumented  
      *  @param xs    deltas of elements examined.
      *  @param stats stats of the sub-matrix so far.
+     *  @param elems FIXME: undocumented
      *  @param align block's main dimension.
      */
     void UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,

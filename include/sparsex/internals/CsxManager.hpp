@@ -137,8 +137,9 @@ private:
     /**
      *  Transform a row of the matrix into CSX form.
      *
-     *  @rstart first element of the row.
-     *  @rend   last element of the row.
+     *  @param rstart first element of the row.
+     *  @param rend   last element of the row.
+     *  @param row    current row
      */
     void DoRow(
         typename SparsePartition<IndexType, ValueType>::iterator &rstart,

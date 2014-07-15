@@ -287,9 +287,7 @@ public:
      *  Move construct an element.
      *
      *  @param other the element to move from.
-     *
-     *  @nothrow
-     *
+     *  @throws This function offers no-throw guarantee.
      *  @remark
      *  The internal values and marker are stolen from other. At exit other's
      *  values and marker are set to 0.
@@ -412,7 +410,7 @@ public:
      *  Get the value of this single element.
      *
      *  @return the value of this element.
-     *  @nothrow
+     *  @throws This function offers no-throw guarantee.
      *  @remark
      *  The returned reads correctly on single elements.
      */

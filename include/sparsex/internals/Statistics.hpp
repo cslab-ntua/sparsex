@@ -54,7 +54,7 @@ public:
      *  @param nr_patterns number of encoded patterns.
      *  @param nr_deltas number of delta units generated.
      *
-     *  @nothrow
+     *  \throws This constructor offers the no-throw guarantee.
      */
     StatsData(size_t nr_encoded, size_t nr_patterns, size_t nr_deltas = 0)
         : nr_encoded_(nr_encoded),

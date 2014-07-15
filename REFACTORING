@@ -25,9 +25,9 @@
 * [DONE] Gather all general utilities (iceil, gcd, check_iterator) in a single
   file
 * [DONE] Advanced type checking with type traits
-* Unsigned to signed conversions
-* [DONE] Remove `inline' keyword and move member function definitions inside the class
-  (SparseMatrix.hpp)
+* [DONE] Unsigned to signed conversions
+* [DONE] Remove `inline' keyword and move member function definitions inside the
+  class (SparseMatrix.hpp)
 * [DONE] Xs -> Cols
 * [DONE] Rethink element marking mechanism
 * valgrind check / memory leaks
@@ -35,8 +35,8 @@
 * Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
 * Remove default arguments or document precisely
 * [DONE] Fix Diag <-> AntiDiag conversions
-* [50%] Use auto variables instead of heap allocated if their scope is limited inside
-  a function
+* [50%] Use auto variables instead of heap allocated if their scope is limited
+  inside a function
 * Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
 * Code replication
 * [DONE] max_rowptr_size_ is never used.
@@ -56,7 +56,9 @@
 * [] Add copyright headers to all source files
 * [DONE] Fix warnings when compiling with -DDISABLE_POOL
 * Always leave space after end of code block and next statement
-* [DONE] Treat timings output and all info not yet passed through the logger somehow
+* [DONE] Treat timings output and all info not yet passed through the logger
+  somehow
+* Change "" to <> for sparsex-related includes
 
 Requirements for StatsCollection
 * [DONE] Scale stats

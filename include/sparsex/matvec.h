@@ -1,15 +1,23 @@
-/**
- * \file matvec.h
- *
- * \brief Sparse matrix routines
- *
+/*
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2013-2014, Athena Elafrou
+ * Copyright (C) 2014,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
+/**
+ * \file matvec.h
+ * \brief Sparse matrix routines.
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \author Athena Elafrou
+ * \author Vasileios Karakasis
+ * \date 2013&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
 #ifndef SPARSEX_MATVEC_H
 #define SPARSEX_MATVEC_H
 
@@ -24,7 +32,7 @@
  *  @param[in] values       array \a values of the CSR format.
  *  @param[in] nr_rows      number of rows of the matrix.
  *  @param[in] nr_cols      number of columns of the matrix.
- *  @param[in]              optional argument that specifies the indexing
+ *  @param[in] ...          optional argument that specifies the indexing
  *                          (either \c INDEXING_ZERO_BASED or 
  *                          \c INDEXING_ONE_BASED).
  *  @return                 a handle to the input matrix.
@@ -75,7 +83,7 @@ spx_matrix_t *spx_mat_tune(spx_input_t *input, ...);
  *  @param[in] row          the a row of the element to be retrieved.
  *  @param[in] column       the column of the element to be retrieved.
  *  @param[out] value       the value of the element in (\a row, \a column).
- *  @param[in]              optional argument that specifies the indexing
+ *  @param[in] ...          optional argument that specifies the indexing
  *                          (either \c INDEXING_ZERO_BASED or 
  *                          \c INDEXING_ONE_BASED).
  *  @return                 an error code.
@@ -84,15 +92,15 @@ spx_error_t spx_mat_get_entry(const spx_matrix_t *A, spx_index_t row,
                               spx_index_t column, spx_value_t *value, ...);
 
 /**
- *  Sets the value of the corresponding element in (\a row, \a column), where
- *  \a row and \a column can be either zero- or one-based indexes. Default
- *  indexing is zero-based, but it can be overidden through the optional flag.
+ *  Sets the value of the corresponding element in (\a row, \a column), where \a
+ *  row and \a column can be either zero- or one-based indexes. If the element
+ *  doesn't exist an error is returned.
  *
  *  @param[in] A            the tuned matrix handle.
  *  @param[in] row          the row of the element to be set.
  *  @param[in] column       the column of the element to be set.
  *  @param[in] value        the new value of the element in (\a row, \a column).
- *  @param[in]              optional argument that specifies the indexing
+ *  @param[in] ...          optional argument that specifies the indexing
  *                          (either \c INDEXING_ZERO_BASED or 
  *                          \c INDEXING_ONE_BASED).
  *  @return                 an error code.
@@ -330,7 +338,8 @@ void spx_vec_init_rand_range(spx_vector_t *v, spx_value_t max, spx_value_t min);
  *  @param[in] idx          an index inside the vector.
  *  @param[in] val          the value to be set.
  */
-spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val);
+spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx,
+                              spx_value_t val);
 
 /**
  *

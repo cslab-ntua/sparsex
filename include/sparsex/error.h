@@ -1,13 +1,22 @@
-/**
- * \file error.h
- *
- * \brief Error handling interface
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+/*
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
+ * Copyright (C) 2014,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */ 
+
+/**
+ * \file error.h
+ * \brief Error handling interface.
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \author Athena Elafrou
+ * \author Vasileios Karakasis
+ * \date 2013&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_ERROR_H
@@ -31,7 +40,8 @@
 #define SPX_ERR_FILE             3   /* generic file error */
 #define SPX_ERR_INPUT_MAT        4   /* input matrix wasn't properly created */
 #define SPX_ERR_TUNED_MAT        5   /* tuned matrix wasn't properly created */
-#define SPX_ERR_DIM              6   /* incompatible matrix and vectors dimensions */
+#define SPX_ERR_DIM              6   /* incompatible matrix and vectors
+                                      * dimensions */
 #define SPX_ERR_VEC_DIM          7   /* incompatible vector dimension */
 #define SPX_ERR_ENTRY_NOT_FOUND  8   /* matrix entry not found */
 #define SPX_OUT_OF_BOUNDS        9   /* index out of bounds */
@@ -61,19 +71,33 @@ typedef void (*spx_errhandler_t) (spx_error_t, const char *, unsigned long,
                                   const char *, const char *, ...);
 
 /**
+ *  @defgroup seterror_group Convenient macros for logging errors and warnings
  *  Macros that are called when an error has been detected. Both versions call
  *  the current error handling routine (either default or user-defined).
  *
  *  Note: The _0 version uses the default error message, as defined in
  *        spx_ErrorStrings[] (\see SparseX/error.c).                
- *
+ */
+
+/**
+ *  @ingroup seterror_group 
  *  @param[in] code     nonzero error code, see the list above
- *  @param[in] message  error message, if NULL a default error message is used
  */
 #define SETERROR_0(code) \
     spx_err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, NULL)
+
+/**
+ *  @ingroup seterror_group 
+ *  @param[in] code     nonzero error code, see the list above
+ *  @param[in] message  error message, if NULL a default error message is used
+ */
 #define SETERROR_1(code, message) \
     spx_err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, message)
+
+/**
+ *  @ingroup seterror_group 
+ *  @param[in] code     nonzero error code, see the list above
+ */
 #define SETWARNING(code) \
     spx_err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, NULL)
 

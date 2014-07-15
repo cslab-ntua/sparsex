@@ -164,13 +164,23 @@ public:
      *  @param limit      limit for the number of elements.
      *  @param nr_elems   size for elems allocation.
      *  @param nr_rows    size for rows allocation.
-     *  @param Bld        point to a builder responsible for allocations.
      *  @return           number of elements allocated.
      */
     template <typename IterT>
     IndexType SetElems(IterT &pnts_start, const IterT &pnts_end,
                        IndexType first_row, size_t limit = 0, 
                        size_t nr_elems = 0, size_t nr_rows = 0);
+
+    /**
+     *  Function for filling the matrix using point iterators
+     *
+     *  @param pnts_start point iterators start.
+     *  @param pnts_end   point iterators end.
+     *  @param first_row  first row of the matrix.
+     *  @param limit      limit for the number of elements.
+     *  @param Bld        point to a builder responsible for allocations.
+     *  @return           number of elements allocated.
+     */
     template <typename IterT>
     IndexType SetElems(IterT &pnts_start, const IterT &pnts_end,
                        IndexType first_row, size_t limit, 
@@ -485,13 +495,23 @@ public:
      *  @param limit        limit for the number of elements.
      *  @param nr_elems     size for elems allocation.
      *  @param nr_rows      size for rows allocation.
-     *  @param spm_sym_bld  point to a builder responsible for allocations.
      *  @return             number of elements allocated.
      */
     template <typename IterT>
     IndexType SetElems(IterT &pnts_start, const IterT &pnts_end,
                        IndexType first_row, size_t limit = 0,
                        size_t nr_elems = 0, size_t nr_rows = 0);
+
+    /**
+     *  Function for filling the matrix using point iterators
+     *
+     *  @param pnts_start   point iterators start.
+     *  @param pnts_end     point iterators end.
+     *  @param first_row    first row of the matrix.
+     *  @param limit        limit for the number of elements.
+     *  @param spm_sym_bld  point to a builder responsible for allocations.
+     *  @return             number of elements allocated.
+     */
     template <typename IterT>
     IndexType SetElems(IterT &pnts_start, const IterT &pnts_end,
                        IndexType first_row, size_t limit,

@@ -1,14 +1,22 @@
-/**
- * \file types.h
- *
- * \brief Available indexing and value types
- *
+/*
  * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Athena Elafrou
  * Copyright (C) 2014, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file types.h
+ * \brief Available indexing and value types.
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \author Athena Elafrou
+ * \author Vasileios Karakasis
+ * \date 2013&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_TYPES_H

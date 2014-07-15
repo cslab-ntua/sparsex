@@ -3,7 +3,7 @@ dnl configure.ac -- System configuration checks
 dnl
 dnl Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
 dnl Copyright (C) 2014, Vasileios Karakasis
-dnl All rights reserved.
+dnl All rights reserved
 dnl
 dnl This file is distributed under the BSD License. See LICENSE.txt for details.
 dnl
@@ -197,6 +197,9 @@ AC_SUBST([SPX_VALUE_TYPE])
 
 AC_CONFIG_FILES([
         Makefile
+        doc/Makefile
+        doc/Doxyfile.api
+        doc/Doxyfile.devel
         include/Makefile
         include/sparsex/config.h
         include/sparsex/internals/Config.hpp
