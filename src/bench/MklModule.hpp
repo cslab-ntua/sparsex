@@ -10,6 +10,10 @@
 #ifndef MKL_MODULE_HPP
 #define MKL_MODULE_HPP
 
+#ifdef HAVE_CONFIG_H
+#   include "build_config.h"
+#endif
+
 #include "Timer.hpp"
 #include <sparsex/types.h>
 #include <mkl.h>

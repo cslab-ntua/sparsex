@@ -192,6 +192,8 @@ private:
 
     void *DoReallocate(void *p, size_t old_size, size_t new_size) throw()
     {
+        if (!p)
+            return DoAllocate(new_size);
         if (!new_size)
             DoDeallocate(p, old_size);
         else

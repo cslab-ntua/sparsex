@@ -10,11 +10,10 @@
 * [DONE] Remove the emacs directive from header files
 * [DONE] Heuristic selection could be an spx option
 * Consider making SparsePartition::iterator a const iterator
-* [] Treat zero-sized windows
-* [] Block alignment -> fixed dim vs. variable dim
+* [DONE] Block alignment -> fixed dim vs. variable dim
 * [DONE] Cbegin() -> cbegin()
 * [DONE] Revisit PreparePat()'s arguments
-* [20%] Check FIXME tags
+* [ 50%] Check FIXME tags
 * [DONE] Remove std:: prefixes where possible
 * Revise iterators (Mmf, Csr, SparsePartition)
 * Consider zero-based indexing for Element
@@ -35,9 +34,9 @@
 * Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
 * Remove default arguments or document precisely
 * [DONE] Fix Diag <-> AntiDiag conversions
-* [50%] Use auto variables instead of heap allocated if their scope is limited
+* [ 50%] Use auto variables instead of heap allocated if their scope is limited
   inside a function
-* Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
+* [DONE] Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
 * Code replication
 * [DONE] max_rowptr_size_ is never used.
 * [DONE] Use -Wextra? Lots of warnings of unused function parameters
@@ -46,19 +45,21 @@
 * [DONE] Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion
   defines in header files
 * [DONE] Staged SPX_JIT_INCLUDE/SPX_MULT_TEMPLATE_DIR should use absolute paths
-* [50%] Segfault when TemplateText placeholders are empty/not found. Print
+* [ 50%] Segfault when TemplateText placeholders are empty/not found. Print
   error and inform about installation.
 * [DONE] Use SPX_ prefix in macros, e.g., DEBUG_MODE -> SPX_DEBUG
 * [DONE] DisableInfo() is counter-intuitive (why not EnableXXX()??)
 * [] Update README
 * vector should become proper C++
 * [DONE] (Re)move unnecessary includes from header files
-* [] Add copyright headers to all source files
+* [] Add and fix copyright headers to all source files
 * [DONE] Fix warnings when compiling with -DDISABLE_POOL
 * Always leave space after end of code block and next statement
+* Fix 80-column layout
 * [DONE] Treat timings output and all info not yet passed through the logger
   somehow
-* Change "" to <> for sparsex-related includes
+* [DONE] Change "" to <> for sparsex-related includes
+* Fix error when invoking test_sparsex without arguments
 
 Requirements for StatsCollection
 * [DONE] Scale stats

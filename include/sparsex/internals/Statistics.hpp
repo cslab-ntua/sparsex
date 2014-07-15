@@ -1,13 +1,20 @@
 /*
- * \file Statistics.hpp
- *
- * \brief SparseX statistics collection framework
- *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Statistics.hpp
+ * \brief SparseX statistics collection framework
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \author Vasileios Karakasis
+ * \date 2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_STATISTICS_HPP

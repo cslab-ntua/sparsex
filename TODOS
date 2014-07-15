@@ -44,22 +44,29 @@
 3. User config & installation
    -- [DONE] autotools (configure; make; make install)
    -- [DONE] config.h
-   -- version.h (with version string)
+   -- [DONE] version.h (with version string)
    -- [DONE] Add an installable sparsex-config script
    -- Fix linking when building the static libraries only
    -- [DONE] Check if -Wl,--allow-multiple-definitions is needed
    -- [DONE] Check compilation with diverse index and value types
    -- [ 50%] CsxBench.hpp should not be installed, check other similar headers.
    -- [DONE] SpmvTest crashes with spx_value_t=float
-   -- Generate documentation with `make doc'
+   -- [DONE] Generate documentation with `make doc'
+   -- Check pOSKI/MKL bench  builds
 
 4. Testing
-   -- Command-line interface
+   -- [DONE] Command-line interface
       * use of options
-   -- Test suite
+   -- Test script
 
 5. Documentation
-   -- [DONE] doxygen (API/Development)
+   -- [ 80%] doxygen (API/Development)
+      * Add a description of SparseX at main page of the Doxygen documentation
+      * Check that EVERYTHING is documented in API, including #define's
+      * v3[start...end) = v1[start...end) + num * v2[start...end)
+        > Notation is not symmetric. Think of using TBB notation, e.g.,
+          v3[start:end] = v1[start:end] + num*v2[start:end]
+
    -- [DONE] User guide & Manual
 
 6. [DONE] Demo

@@ -23,8 +23,9 @@ unsigned int OUTER_LOOPS = 5;   /**< Number of SpMV iterations */
 unsigned long LOOPS = 128;      /**< Number of repeats */
 unsigned int NR_THREADS = 1;    /**< Number of threads for a multithreaded
                                    execution */
-spx_value_t ALPHA = 1.32, BETA = 0.48;     /**< Scalar parameters of the SpMV kernel
-                                        (y->APLHA*A*x + BETA*y) */
+spx_value_t ALPHA = 1.32, BETA = 0.48;
+/**< Scalar parameters of the SpMV kernel (y->APLHA*A*x + BETA*y) */
+
 Timer t;                        /**< Timer for benchmarking */
 
 static SpmvFn GetSpmvFn(library type);
@@ -85,17 +86,19 @@ void Bench_Matrix(const char *filename, const char *library,
         sparsex_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);
 #if SPX_BENCH_MKL
         cout << "Using library Intel MKL..." << endl;
-        mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);            
+        mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);  
 #endif
 #if SPX_BENCH_POSKI
         cout << "Using library pOSKI..." << endl;
         poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);
 #endif
 
+#if SPX_BENCH_MKL || SPX_BENCH_POSKI
         if (vec_compare(y, y_cmp, nrows) < 0)
             cout << "Error in resulting vector!" << endl;
         else
             cout << "Checked passed!" << endl;
+#endif
 
     } else {
         cout << "Using library " << library << "...\n";

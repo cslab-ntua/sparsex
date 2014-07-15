@@ -202,6 +202,7 @@ AC_CONFIG_FILES([
         doc/Doxyfile.devel
         include/Makefile
         include/sparsex/config.h
+        include/sparsex/version.h
         include/sparsex/internals/Config.hpp
         scripts/Makefile
         src/Makefile

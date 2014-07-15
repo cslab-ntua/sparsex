@@ -297,12 +297,13 @@ private:
         boost::container::vector<Element<IndexType, ValueType> > &newrow);
 
     /**
-     *  Update the statistics of a sub-matrix.
+     *  Apply run-length encoding and search for patterns in elems, updating
+     *  statistics accordingly.
      *
      *  @param sp    object of SparsePartition class that describes
      *               the sub-matrix elements.
      *  @param xs    deltas of elements examined.
-     *  @param elems FIXME: undocumented
+     *  @param elems the elements to be searched for patterns
      *  @param stats stats of the sub-matrix so far.
      */
     void UpdateStats(SparsePartition<IndexType, ValueType> *sp,
@@ -311,13 +312,14 @@ private:
                      StatsCollection<StatsData> &stats);
 
     /**
-     *  Updates the stats for a block pattern.
+     *  Apply run-length encoding and search for block patterns in elems,
+     *  updating statistics accordingly.
      *
-     *  @param type  FIXME: undocumented  
-     *  @param xs    deltas of elements examined.
-     *  @param stats stats of the sub-matrix so far.
-     *  @param elems FIXME: undocumented
-     *  @param align block's main dimension.
+     *  @param type  the iteration order of elems
+     *  @param xs    deltas of elements examined
+     *  @param stats stats of the sub-matrix so far
+     *  @param elems the elements to be searched for patterns
+     *  @param align block's main dimension
      */
     void UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
                           uint64_t align,

@@ -20,8 +20,16 @@ AM_LDFLAGS	= \
 	-L$(top_builddir)/src/internals/.libs \
 	$(AX_LDFLAGS)
 
-noinst_PROGRAMS = test_sparsex test_spmv 
-check_PROGRAMS = test_spmv test_element test_dynarray test_timer
+SPARSEXIMPL_LDADD = \
+	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
+	$(CLANG_LIBS) \
+	$(LLVM_LIBS) \
+	$(BOOST_REGEX_LIB) \
+	$(BOOST_SERIALIZATION_LIB) \
+	$(BOOST_SYSTEM_LIB) \
+	$(BOOST_THREAD_LIB)
+
+check_PROGRAMS = test_spmv test_sparsex test_element test_dynarray test_timer
 
 test_sparsex_SOURCES = sparsex_test.c
 test_sparsex_LDADD = \
@@ -32,41 +40,13 @@ test_sparsex_LDADD = \
 test_spmv_SOURCES = \
 	CsxBench.cpp \
 	SpmvTest.cpp
-test_spmv_LDADD = \
-	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS) \
-	$(BOOST_REGEX_LIB) \
-	$(BOOST_SERIALIZATION_LIB) \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_THREAD_LIB)
+test_spmv_LDADD = $(SPARSEXIMPL_LDADD)
 
 test_element_SOURCES = ElementTest.cpp
-test_element_LDADD = \
-	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS) \
-	$(BOOST_REGEX_LIB) \
-	$(BOOST_SERIALIZATION_LIB) \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_THREAD_LIB)
+test_element_LDADD = $(SPARSEXIMPL_LDADD)
 
 test_dynarray_SOURCES = DynamicArrayTest.cpp
-test_dynarray_LDADD = \
-	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS) \
-	$(BOOST_REGEX_LIB) \
-	$(BOOST_SERIALIZATION_LIB) \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_THREAD_LIB)
+test_dynarray_LDADD = $(SPARSEXIMPL_LDADD)
 
 test_timer_SOURCES = TimerTest.cpp
-test_timer_LDADD = \
-	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS) \
-	$(BOOST_REGEX_LIB) \
-	$(BOOST_SERIALIZATION_LIB) \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_THREAD_LIB)
+test_timer_LDADD = $(SPARSEXIMPL_LDADD)

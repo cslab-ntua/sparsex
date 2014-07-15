@@ -10,6 +10,10 @@
 #ifndef POSKI_MODULE_HPP
 #define POSKI_MODULE_HPP
 
+#ifdef HAVE_CONFIG_H
+#   include "build_config.h"
+#endif
+
 #include <sparsex/internals/cdecl.h>
 
 SPX_BEGIN_C_DECLS__
