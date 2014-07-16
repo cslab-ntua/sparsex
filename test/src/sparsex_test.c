@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     const size_t loops = 128;
 
     spx_init();
-    spx_log_info_console();
+    spx_log_verbose_console();
 
     char c;
     char *filename = NULL;

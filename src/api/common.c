@@ -39,6 +39,11 @@ void spx_log_info_console()
     EnableInfoConsole();
 }
 
+void spx_log_verbose_console()
+{
+    EnableVerboseConsole();
+}
+
 void spx_log_debug_console()
 {
     EnableDebugConsole();
