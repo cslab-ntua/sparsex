@@ -1,16 +1,20 @@
 /*
- * \file Runtime.cpp
- *
- * \brief Front-end utilities for runtime configuration
- *
- * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2009-2013, Vasileios Karakasis
- * Copyright (C) 2012-2013, Athena Elafrou
- * Copyright (C) 2010-2012, Theodoros Gkountouvas
- * Copyright (C) 2009-2011, Kornilios Kourtis
+ * Copyright (C) 2012-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2012-2014, Athena Elafrou
+ * Copyright (C) 2013,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Runtime.cpp
+ * \brief Front-end utilities for runtime configuration
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/Config.hpp>
@@ -128,7 +132,7 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
     return *this;
 }
 
-vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
+vector<size_t> &ParseCpuAffinity(string str, vector<size_t> &affinity)
 {
     vector<string> mt_split;
     boost::split(mt_split, str, boost::algorithm::is_any_of(","),
@@ -137,7 +141,14 @@ vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
     // Clear in case it has been already set.
     affinity.clear();
     for (size_t i = 0; i < mt_split.size(); ++i) {
-        affinity.push_back(boost::lexical_cast<size_t, string>(mt_split[i]));
+        try {
+            affinity.push_back(boost::lexical_cast<size_t, string>
+                               (mt_split[i]));
+        } catch (const boost::bad_lexical_cast &e) {
+            LOG_ERROR << "invalid value \"" << mt_split[i] 
+                      << "\" while setting property \"spx.rt.cpu_affinity\"\n";
+            exit(1);
+        }
     }
     
     return affinity;
@@ -146,10 +157,13 @@ vector<size_t> &ParseOptionMT(string str, vector<size_t> &affinity)
 void RuntimeContext::CheckParams(const RuntimeConfiguration &conf)
 {
     vector<size_t> affinity;
-    affinity = ParseOptionMT(
-        conf.GetProperty<string>(RuntimeConfiguration::RtCpuAffinity), affinity);
+    affinity = ParseCpuAffinity(
+        conf.GetProperty<string>(RuntimeConfiguration::RtCpuAffinity),
+        affinity);
+    size_t nr_threads = conf.GetProperty<size_t>(
+        RuntimeConfiguration::RtNrThreads);
 
-    LOG_INFO << "Number of threads: " << affinity.size() << "\n";
+    LOG_INFO << "Number of threads: " << nr_threads << "\n";
     stringstream os;
     os << "Thread affinity: {";
     for (size_t i = 0; i < affinity.size(); ++i) {
@@ -157,6 +171,7 @@ void RuntimeContext::CheckParams(const RuntimeConfiguration &conf)
             os << ",";
         os << affinity[i];
     }
+
     os << "}\n";
     LOG_INFO << os.str();
 }
@@ -164,9 +179,9 @@ void RuntimeContext::CheckParams(const RuntimeConfiguration &conf)
 void RuntimeContext::SetRuntimeContext(const RuntimeConfiguration &conf)
 {
     cpu_affinity_ =
-        ParseOptionMT(conf.GetProperty<string>(
-                          RuntimeConfiguration::RtCpuAffinity),
-                      cpu_affinity_);
+        ParseCpuAffinity(conf.GetProperty<string>(
+                             RuntimeConfiguration::RtCpuAffinity),
+                         cpu_affinity_);
 }
 
 } // end of namespace runtime

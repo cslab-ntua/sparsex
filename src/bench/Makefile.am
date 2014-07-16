@@ -3,7 +3,7 @@
 #
 # Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
 # Copyright (C) 2014, Vasileios Karakasis
-# All righrs reserved.
+# All rights reserved.
 #
 # This file is distributed under the BSD License. See LICENSE.txt for details.
 #

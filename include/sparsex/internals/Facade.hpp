@@ -1,13 +1,19 @@
 /*
- * \file Facade.hpp
- *
- * \brief Wrappers of the SparseMatrix routines
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Facade.hpp
+ * \brief Wrappers of the SparseMatrix routines
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_FACADE_HPP
@@ -40,7 +46,6 @@ int GetValue(void *matrix,
 int SetValue(void *matrix, spx_index_t row, spx_index_t col, spx_value_t value);
 void DestroyCsx(void *matrix);
 void SetPropertyByMnemonic(const char *key, const char *value);
-void SetPropertiesFromEnv();
 void GetNodes(int *nodes);
 void CreatePool();
 

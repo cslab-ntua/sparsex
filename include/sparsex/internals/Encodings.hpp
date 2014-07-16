@@ -1,14 +1,20 @@
 /*
- * \file Encodings.hpp
- *
- * \brief All about encoding types
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Vasileios Karakasis
- * Copyright (C) 2014, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Vasileios Karakasis
+ * Copyright (C) 2014,      Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Encodings.hpp
+ * \brief All about encoding types
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_ENCODINGS_HPP
@@ -218,13 +224,10 @@ public:
 
     PreprocessingMethod(Type meth)
         : method_type_(meth)
-    {
-        InitMethodNames();
-    }
+    {}
 
     PreprocessingMethod(const string &name)
     {
-        InitMethodNames();
         method_type_ = method_names_.right.at(name);
     }
 
@@ -244,15 +247,6 @@ private:
     typedef boost::bimap<Type, string> NameMap;
     static NameMap method_names_;
     Type method_type_;
-
-    // static void InitMethodNames()
-    // {
-    //     if (method_names_.empty()) {
-    //         method_names_.insert(NameMap::value_type(None, "none"));
-    //         method_names_.insert(NameMap::value_type(FixedWindow, "window"));
-    //         method_names_.insert(NameMap::value_type(FixedPortion, "portion"));
-    //     }
-    // }
 
     static NameMap InitMethodNames()
     {
@@ -280,13 +274,10 @@ public:
 
     PreprocessingHeuristic(Type meth)
         : heur_type_(meth)
-    {
-        // InitHeuristicNames();
-    }
+    {}
 
     PreprocessingHeuristic(const string &name)
     {
-        // InitHeuristicNames();
         heur_type_ = heur_names_.right.at(name);
     }
 
@@ -306,14 +297,6 @@ private:
     typedef boost::bimap<Type, string> NameMap;
     static NameMap heur_names_;
     Type heur_type_;
-
-    // static void InitHeuristicNames()
-    // {
-    //     if (heur_names_.empty()) {
-    //         heur_names_.insert(NameMap::value_type(MaxRatio, "ratio"));
-    //         heur_names_.insert(NameMap::value_type(MinCost, "cost"));
-    //     }
-    // }
 
     static NameMap InitHeuristicNames()
     {

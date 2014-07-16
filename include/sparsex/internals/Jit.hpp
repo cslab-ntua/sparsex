@@ -1,15 +1,21 @@
 /*
- * \file Jit.hpp
- *
- * \brief Just In Time compilation routines
- *
- * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2009-2011, Vasileios Karakasis
+ * Copyright (C) 2009-2014, Vasileios Karakasis
  * Copyright (C) 2010-2011, Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Jit.hpp
+ * \brief Just In Time compilation routines
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_JIT_HPP

@@ -1,13 +1,20 @@
 /*
- * \file CsxKernels.cpp
- *
- * \brief Multithreaded SpMV kernels
- *
- * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA
- * Copyright (C) 2013,      Athena Elafrou
+ * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA
+ * Copyright (C) 2011-2012, Vasileios Karakasis
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file CsxKernels.cpp
+ * \brief Multithreaded SpMV kernels
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/CsxKernels.hpp>

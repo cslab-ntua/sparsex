@@ -1,16 +1,23 @@
 /*
- * Bench.cpp --  Benchmarking interface.
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
+/**
+ * \file Bench.cpp
+ * \brief Benchmarking interface
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #include "Bench.hpp"
 #include "Mmf.hpp"
-
 #include <cassert>
 #include <libgen.h>
 

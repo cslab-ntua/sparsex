@@ -1,14 +1,19 @@
 /*
- * \file Facade.cpp
- *
- * \brief Explicit instantiation definitions of the SparseMatrix class and
- * \brief wrappers of its routines
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Facade.cpp
+ * \brief Wrappers of the SparseMatrix routines
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/CsxGetSet.hpp>
@@ -30,13 +35,13 @@ void *CreateCSR(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
 {
     SparseMatrix<CSR<spx_index_t, spx_value_t> > *matrix =
         new SparseMatrix<CSR<spx_index_t, spx_value_t> >(rowptr, colind, values,
-                                                      nr_rows, nr_cols,
-                                                      zero_based);
+                                                         nr_rows, nr_cols,
+                                                         zero_based);
     return (void *) matrix;
 }
 
-void *CreateMMF(const char *filename, spx_index_t *nr_rows, spx_index_t *nr_cols,
-                spx_index_t *nnz)
+void *CreateMMF(const char *filename, spx_index_t *nr_rows,
+                spx_index_t *nr_cols, spx_index_t *nnz)
 {
     SparseMatrix<MMF<spx_index_t, spx_value_t> > *matrix =
         new SparseMatrix<MMF<spx_index_t, spx_value_t> >(filename);
@@ -181,12 +186,6 @@ void SetPropertyByMnemonic(const char *key, const char *value)
     RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
     rt_config.SetProperty(rt_config.GetPropertyByMnemonic(string(key)),
                           string(value));
-}
-
-void SetPropertiesFromEnv()
-{
-    RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
-    config.LoadFromEnv();
 }
 
 void GetNodes(int *nodes)

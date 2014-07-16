@@ -11,9 +11,7 @@
  * \file timing.h
  * \brief Timing routines.
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \author Athena Elafrou
- * \author Vasileios Karakasis
- * \date 2013&ndash;2014
+ * \date 2011&ndash;2014
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */
@@ -30,7 +28,7 @@ struct timer {
 typedef struct timer spx_timer_t;
 
 /**
- *  Initialises a timer object.
+ *  Initializes a timer object.
  *
  *  @param[in] t       timer object to be initialized.
  */

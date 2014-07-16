@@ -1,13 +1,19 @@
 /*
- * \file ThreadPool.cpp
- *
- * \brief Thread management in SparseX
- *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file ThreadPool.cpp
+ * \brief Thread management in SparseX
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/ThreadPool.hpp>

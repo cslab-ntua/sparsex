@@ -12,9 +12,7 @@
  * \brief Available indexing and value types.
  *
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \author Athena Elafrou
- * \author Vasileios Karakasis
- * \date 2013&ndash;2014
+ * \date 2011&ndash;2014
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */

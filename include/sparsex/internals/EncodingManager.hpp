@@ -1,16 +1,22 @@
 /*
- * \file EncodingManager.hpp
- *
- * \brief Delta Run-Length Encoding Manager
- *
- * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2009-2013, Vasileios Karakasis
+ * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2014, Vasileios Karakasis
  * Copyright (C) 2010-2012, Theodoros Gkountouvas
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file EncodingManager.hpp
+ * \brief Delta Run-Length Encoding Manager
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_ENCODING_MANAGER_HPP
@@ -519,7 +525,9 @@ CheckParams(RuntimeConfiguration &config)
     }
     PreprocessingHeuristic heur = config.GetProperty<PreprocessingHeuristic>(
         RuntimeConfiguration::PreprocHeuristic);
-    LOG_INFO << "Compression heuristic selected: " << heur.GetName() << "\n";
+    LOG_INFO << "Compression heuristic: " << heur.GetName() << "\n";
+    LOG_INFO << "Substruture types: " << config.GetProperty<string>(
+        RuntimeConfiguration::PreprocXform) << "\n";
 }
 
 template<typename IndexType, typename ValueType>

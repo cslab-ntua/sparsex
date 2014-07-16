@@ -1,13 +1,19 @@
 /*
- * \file CtlBuilder.cpp
- *
- * \brief Utility class for building the CSX's ctl structure
- *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file CtlBuilder.cpp
+ * \brief Utility class for building the CSX's ctl structure
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/CtlBuilder.hpp>

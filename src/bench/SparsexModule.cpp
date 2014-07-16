@@ -1,11 +1,19 @@
 /*
- * SparsexModule.cpp --  Implementation of the SpMV kernel with SparseX.
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file SparsexModule.cpp
+ * \brief The SpMV kernel implemented with SparseX
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include "SparsexModule.hpp"
@@ -20,7 +28,7 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
     spx_init();
     /* 1. Matrix loading phase */
     spx_input_t *input = spx_input_load_csr(
-        rowptr, colind, values, nrows, ncols, INDEXING_ZERO_BASED);
+        rowptr, colind, values, nrows, ncols, SPX_INDEX_ZERO_BASED);
 
     /* 2. Tuning phase */
     spx_option_set("spx.rt.nr_threads", "2");
@@ -32,14 +40,16 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
     // spx_option_set("spx.matrix.symmetric", "true");
     t.Clear();
     t.Start();
-    spx_matrix_t *A = spx_mat_tune(input);//, OP_REORDER);
+    spx_matrix_t *A = spx_mat_tune(input);//, SPX_MAT_REORDER);
     t.Pause();
     spx_value_t pt = t.ElapsedTime();
 
     /* 3. Vector loading */
     spx_partition_t *parts = spx_mat_get_partition(A);
-    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts, OP_SHARE);
-    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts, OP_SHARE);
+    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts,
+                                                    SPX_VEC_SHARE);
+    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts,
+                                                    SPX_VEC_SHARE);
 
     /* Reorder vectors */
     // spx_perm_t *p = spx_mat_get_perm(A);

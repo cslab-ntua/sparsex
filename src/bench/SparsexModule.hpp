@@ -1,12 +1,21 @@
 /*
- * SparsexModule.hpp --  The SpMV kernel implemented with SparseX.
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
+/**
+ * \file SparsexModule.hpp
+ * \brief The SpMV kernel implemented with SparseX
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #ifndef SPARSEX_MODULE_HPP
 #define SPARSEX_MODULE_HPP
 

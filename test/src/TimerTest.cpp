@@ -1,12 +1,21 @@
 /*
- * TimerTest.cpp -- Test timer
- *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
+/*
+ * \file TimerTest.cpp
+ * \brief Test timer
+ *
+ * \author Vasileios Karakasis
+ * \date 2013
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #include <sparsex/internals/Timer.hpp>
 #include <stdio.h>
 #include <iostream>

@@ -9,15 +9,14 @@
 
 /**
  * \file matvec.h
- * \brief Sparse matrix routines.
+ * \brief Sparse matrix routines
  *
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \author Athena Elafrou
- * \author Vasileios Karakasis
- * \date 2013&ndash;2014
+ * \date 2011&ndash;2014
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */
+
 #ifndef SPARSEX_MATVEC_H
 #define SPARSEX_MATVEC_H
 
@@ -33,8 +32,8 @@
  *  @param[in] nr_rows      number of rows of the matrix.
  *  @param[in] nr_cols      number of columns of the matrix.
  *  @param[in] ...          optional argument that specifies the indexing
- *                          (either \c INDEXING_ZERO_BASED or 
- *                          \c INDEXING_ONE_BASED).
+ *                          (either \c SPX_INDEX_ZERO_BASED or 
+ *                          \c SPX_INDEX_ONE_BASED).
  *  @return                 a handle to the input matrix.
  */
 spx_input_t *spx_input_load_csr(spx_index_t *rowptr, spx_index_t *colind,
@@ -66,26 +65,27 @@ spx_error_t spx_input_destroy(spx_input_t *input);
  *  User's Guide).
  *
  *  @param[in] input        the input matrix handle.
- *  @param[in] optional     optional flag that indicates whether the matrix 
+ *  @param[in] ...          optional flag that indicates whether the matrix 
  *                          should be reordered with use of the Reverse Cuthill
- *                          McKee algorithm (\c OP_REORDER).
+ *                          McKee algorithm (\c SPX_MAT_REORDER).
  *  @return                 a handle to the tuned matrix.
  */
 spx_matrix_t *spx_mat_tune(spx_input_t *input, ...);
 
 /**
- *  Returns the value of the corresponding nonzero element in (\a row, \a column),
- *  where \a row and \a column can be either zero- or one-based indexes. Default
- *  indexing is zero-based, but it can be overidden through the optional flag.
- *  If the element exists, its value is returned in \a value.
+ *  Returns the value of the corresponding nonzero element in
+ *  (\a row, \a column), where \a row and \a column can be either zero-
+ *  or one-based indices. Default indexing is zero-based, but it can be
+ *  overridden through the optional flag. If the element exists, its value
+ *  is returned in \a value.
  *
  *  @param[in] A            the tuned matrix handle.
  *  @param[in] row          the a row of the element to be retrieved.
  *  @param[in] column       the column of the element to be retrieved.
  *  @param[out] value       the value of the element in (\a row, \a column).
  *  @param[in] ...          optional argument that specifies the indexing
- *                          (either \c INDEXING_ZERO_BASED or 
- *                          \c INDEXING_ONE_BASED).
+ *                          (either \c SPX_INDEX_ZERO_BASED or 
+ *                          \c SPX_INDEX_ONE_BASED).
  *  @return                 an error code.
  */
 spx_error_t spx_mat_get_entry(const spx_matrix_t *A, spx_index_t row,
@@ -93,7 +93,7 @@ spx_error_t spx_mat_get_entry(const spx_matrix_t *A, spx_index_t row,
 
 /**
  *  Sets the value of the corresponding element in (\a row, \a column), where \a
- *  row and \a column can be either zero- or one-based indexes. If the element
+ *  row and \a column can be either zero- or one-based indices. If the element
  *  doesn't exist an error is returned.
  *
  *  @param[in] A            the tuned matrix handle.
@@ -101,8 +101,8 @@ spx_error_t spx_mat_get_entry(const spx_matrix_t *A, spx_index_t row,
  *  @param[in] column       the column of the element to be set.
  *  @param[in] value        the new value of the element in (\a row, \a column).
  *  @param[in] ...          optional argument that specifies the indexing
- *                          (either \c INDEXING_ZERO_BASED or 
- *                          \c INDEXING_ONE_BASED).
+ *                          (either \c SPX_INDEX_ZERO_BASED or 
+ *                          \c SPX_INDEX_ONE_BASED).
  *  @return                 an error code.
  */
 spx_error_t spx_mat_set_entry(spx_matrix_t *A, spx_index_t row,
@@ -181,25 +181,26 @@ spx_error_t spx_matvec_mult(spx_value_t alpha, const spx_matrix_t *A,
  *  @return                 an error code.
  */
 spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
-                              spx_vector_t *x, spx_value_t beta, spx_vector_t *y);
+                              spx_vector_t *x, spx_value_t beta,
+                              spx_vector_t *y);
 
 /**
  *  Performs a matrix-vector multiplication of the following form:
  *                      <em> y = alpha*A*x + beta*y </em>
  *  where \a alpha and \a beta are scalars, \a x and \a y are vectors
  *  and \a A is a sparse matrix. The matrix is originally given in the CSR
- *  format and converted internally into the CSX format. This higher-level routine
- *  hides the preprocessing phase of CSX.
+ *  format and converted internally into the CSX format. This higher-level
+ *  routine hides the preprocessing phase of CSX.
  *
  *  This routine can be efficiently used in a loop, since only the first call
- *  will convert the matrix into the CSX format and every subsequent call will use
- *  the previously tuned matrix handle.
+ *  will convert the matrix into the CSX format and every subsequent call will
+ *  use the previously tuned matrix handle.
  *
  *  @param[in] A            either an invalid matrix handle or a tuned
- *                          matrix handle. If A is equal to an \c INVALID_MAT then
- *                          the matrix in the CSR format is first converted to CSX. 
- *                          Otherwise, the valid (previously) tuned matrix handle
- *                          is used to perform the multiplication. 
+ *                          matrix handle. If A is equal to \c SPX_INVALID_MAT
+ *                          then the matrix in the CSR format is first converted
+ *                          to CSX. Otherwise, the valid (previously) tuned 
+ *                          matrix handle is used to perform the multiplication.
  *  @param[in] nr_rows      number of rows of the matrix \a A.
  *  @param[in] nr_cols      number of columns of the matrix \a A.
  *  @param[in] rowptr       array \a rowptr of the CSR format.
@@ -260,12 +261,6 @@ spx_error_t spx_partition_destroy(spx_partition_t *p);
 void spx_option_set(const char *option, const char *string);
 
 /**
- *  Sets the tuning options according to the environmental variables 
- *  set on the command line. For available tuning options \see common.h
- */
-void spx_options_set_from_env();
-
-/**
  *  Creates and returns a valid vector object, whose values must be explicitly
  *  initialized.
  *
@@ -277,15 +272,16 @@ spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p);
 
 /**
  *  Creates and returns a valid vector object, whose values are mapped to a
- *  user-defined array. If OP_SHARE is set, then the input buffer will be shared
- *  with the user and modifications will directly apply to it. If OP_COPY is
- *  selected, a copy of the input vector will be created and no modification of
- *  the original buffer will occur.
+ *  user-defined array. If SPX_VEC_SHARE is set, then the input buffer will
+ *  be shared with the user and modifications will directly apply to it.
+ *  If SPX_VEC_COPY is selected, a copy of the input vector will be created
+ *  and no modification of the original buffer will occur.
  *
  *  @param[in] buff         the user-supplied buffer.
  *  @param[in] size         the size of the buffer.
  *  @param[in] p            a partitioning handle.
- *  @param[in] mode         the copy mode (either \c OP_SHARE or \c OP_COPY).
+ *  @param[in] mode         the copy mode (either \c SPX_VEC_SHARE or
+ *                          \c SPX_VEC_COPY).
  *  @return                 a valid vector object.
  */
 spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, size_t size,
@@ -309,7 +305,7 @@ spx_vector_t *spx_vec_create_random(size_t size, spx_partition_t *p);
 void spx_vec_init(spx_vector_t *v, spx_value_t val);
 
 /**
- *  Initializes the [\a start, \a end) range of the vector object \a v
+ *  Initializes the [\a start : \a end] range of the vector object \a v
  *  with \a val.
  *
  *  @param[in] v            a valid vector object.
@@ -337,9 +333,13 @@ void spx_vec_init_rand_range(spx_vector_t *v, spx_value_t max, spx_value_t min);
  *  @param[in] v            a valid vector object.
  *  @param[in] idx          an index inside the vector.
  *  @param[in] val          the value to be set.
+ *  @param[in] ...          optional argument that specifies the indexing
+ *                          (either \c SPX_INDEX_ZERO_BASED or 
+ *                          \c SPX_INDEX_ONE_BASED).
+
  */
 spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx,
-                              spx_value_t val);
+                              spx_value_t val, ...);
 
 /**
  *
@@ -367,8 +367,8 @@ void spx_vec_scale_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
                        spx_value_t num);
 
 /**
- *  \a v3[\a start...\a end) = \a v1[\a start...\a end) 
- *  + \a num * \a v2[\a start...\a end)
+ *  \a v3[\a start : \a end] = \a v1[\a start : \a end] +
+ *  \a num * \a v2[\a start : \a end]
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -392,9 +392,10 @@ void spx_vec_scale_add_part(spx_vector_t *v1, spx_vector_t *v2,
 void spx_vec_add(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
 
 /**
- *  Adds the range [start...end) of the input vectors \a v1 and \a v2 and
+ *  Adds the range [\a start : \a end] of the input vectors \a v1 and \a v2 and
  *  places the result in \a v3.
- *  \a v3[start...end) = \a v1[start...end) + \a v2[start...end)
+ *  \a v3[\a start : \a end] = \a v1[\a start : \a end] +
+ *  \a v2[\a start : \a end]
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -416,9 +417,10 @@ void spx_vec_add_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
 void spx_vec_sub(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3);
 
 /**
- *  Subtracts the input vector \a v2 from \a v1 in the range [start...end) and
- *  places the result in \a v3.
- *  \a v3[start...end-1] = \a v1[start...end-1] - \a v2[start...end-1]
+ *  Subtracts the input vector \a v2 from \a v1 in the range [\a start :
+ *  \a end] and places the result in \a v3.
+ *  \a v3[\a start : \a end] = \a v1[\a start : \a end] -
+ *  \a v2[\a start : \a end]
  *
  *  @param[in] v1           a valid vector object.
  *  @param[in] v2           a valid vector object.
@@ -439,7 +441,7 @@ void spx_vec_sub_part(spx_vector_t *v1, spx_vector_t *v2, spx_vector_t *v3,
 spx_value_t spx_vec_mul(const spx_vector_t *v1, const spx_vector_t *v2);
 
 /**
- *  Returns the product of the range [\a start, \a end) of the input vectors
+ *  Returns the product of the range [\a start : \a end] of the input vectors
  *  \a v1 and \a v2.
  *
  *  @param[in] v1           a valid vector object.

@@ -1,14 +1,20 @@
 /*
- * \file TimerCollection.cpp
- *
- * \brief A collection of arbitrary timers
- *
- * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013       Athena Elafrou
  * Copyright (C) 2014       Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file TimerCollection.cpp
+ * \brief A collection of arbitrary timers
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/TimerCollection.hpp>

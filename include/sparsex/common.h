@@ -12,9 +12,7 @@
  * \brief Common library utilities and definitions.
  * 
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \author Athena Elafrou
- * \author Vasileios Karakasis
- * \date 2013&ndash;2014
+ * \date 2011&ndash;2014
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */
@@ -26,68 +24,142 @@
 #include <sparsex/types.h>
 #include <sparsex/internals/logger/LoggerUtil.hpp>
 #include <sparsex/internals/Vector.hpp>
-
 #include <stdlib.h>
 
 /**
- *  \brief The sparse matrix handle type.
+ *  The sparse matrix handle type.
  */
 typedef struct matrix spx_matrix_t;
 
 /**
- *  \brief The input matrix handle type.
+ *  The input matrix handle type.
  */
 typedef struct input spx_input_t;
 
 /**
- *  \brief The vector handle type.
+ *  The vector handle type.
  */
 typedef struct vector_struct spx_vector_t;
 
 /**
- *  \brief Partitioning object.
+ *  The partitioning handle type.
  */
 typedef struct partition spx_partition_t;
 
 /**
- *  \brief Dense array object that represents a permutation.
+ *  Dense array object that represents a permutation.
  */
 typedef spx_index_t spx_perm_t;
 
 /**
- *  \brief Matrix property type.
+ *  Generic option type.
  */
-typedef int spx_property_t;
+typedef int spx_option_t;
 
 /**
- *  \brief A vector copy-mode type.
+ *  Vector copy-mode type.
  */
 typedef int spx_copymode_t;
 
-#define INVALID_INPUT   ((spx_input_t *) NULL)
-#define INVALID_MAT     ((spx_matrix_t *) NULL)
-#define INVALID_VEC     ((spx_vector_t *) NULL)
-#define INVALID_PART    ((spx_partition_t *) NULL)
-#define INVALID_PERM    ((spx_perm_t *) NULL)
+/**
+ *  @defgroup invalid_handles_group Invalid handle types
+ *  @{
+ */
 
-#define OP_REORDER          42
-#define OP_SHARE            43
-#define OP_COPY             44
-#define INDEXING_ZERO_BASED 0
-#define INDEXING_ONE_BASED  1
+/**
+ *  Invalid input handle.
+ */
+#define SPX_INVALID_INPUT   ((spx_input_t *) NULL)
+/**
+ *  Invalid matrix handle.
+ */
+#define SPX_INVALID_MAT     ((spx_matrix_t *) NULL)
+/**
+ *  Invalid vector handle.
+ */
+#define SPX_INVALID_VEC     ((spx_vector_t *) NULL)
+/**
+ *  Invalid partitioning handle.
+ */
+#define SPX_INVALID_PART    ((spx_partition_t *) NULL)
+/**
+ *  Invalid permutation handle.
+ */
+#define SPX_INVALID_PERM    ((spx_perm_t *) NULL)
+/**
+ *  @}
+ */
 
+/**
+ *  @defgroup options_group Available options
+ *  @{
+ */
+
+/**
+ *  Reorder the input matrix. @sa spx_mat_tune()
+ */
+#define SPX_MAT_REORDER          42
+
+/**
+ *  The user and the library agree to share a vector. The user promises not to 
+ *  free, reallocate or modify the corresponding array (except through the
+ *  interface's set-value routine, @sa spx_vec_set_entry()), while the library
+ *  promises to directly update the input array values.
+ */
+#define SPX_VEC_SHARE            43
+
+/**
+ *  The library makes a copy of the input array. The user is henceforth allowed 
+ *  to free, reallocate or modify the corresponding array, without affecting
+ *  the previously created vector object, while the library will only modify
+ *  its internal copy.
+ */
+#define SPX_VEC_COPY             44
+
+/**
+ *  Array indices start at 0.
+ */
+#define SPX_INDEX_ZERO_BASED     0
+
+/**
+ *  Array indices start at 1.
+ */
+#define SPX_INDEX_ONE_BASED      1
+/**
+ *  @}
+ */
+
+/**
+ *  Checks indexing validity.
+ */
 static inline
-int check_indexing(int base)
+int check_indexing(spx_option_t base)
 {
     return (base == 0 || base == 1);
 }
 
+/**
+ *  Checks copy mode validity.
+ */
+static inline
+int check_copymode(spx_copymode_t mode)
+{
+    return (mode == SPX_VEC_SHARE || mode == SPX_VEC_COPY);
+}
+
+
+/**
+ *  Checks validity of a matrix dimension.
+ */
 static inline
 int check_mat_dim(spx_index_t dim)
 {
     return (dim >= 0);
 }
 
+/**
+ *  Checks compatibility of a vector's size.
+ */
 static inline
 int check_vec_dim(const spx_vector_t *x, unsigned long dim)
 {
@@ -189,17 +261,17 @@ void spx_log_all_file(const char *file);
 void spx_log_set_file(const char *file);
 
 /**
- *  \brief Library initialization routine.
+ *  Library initialization routine.
  */
 void spx_init();
 
 /**
- *  \brief Library shutdown routine.
+ *  Library shutdown routine.
  */
 void spx_finalize();
 
 /**
- *  \brief malloc() wrapper.
+ *  A malloc() wrapper.
  */
 #define spx_malloc(type, size) \
 	(type *) malloc_internal(size, __FILE__, __LINE__, __FUNCTION__)
@@ -207,7 +279,7 @@ void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
                       const char *function);
 
 /**
- *  \brief free() wrapper.
+ *  A free() wrapper.
  */
 #define spx_free(object) \
     free_internal(object, __FILE__, __LINE__, __FUNCTION__)

@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2014, Athena Elafrou
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file main.cpp
+ * \brief Benchmarking utility
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #include "Bench.hpp"
 #include <cstring>
 #include <getopt.h>

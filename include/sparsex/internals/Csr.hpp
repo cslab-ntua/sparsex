@@ -1,15 +1,21 @@
 /*
- * \file Csr.hpp
- *
- * \brief Routines for converting standard CSR to our intermediate
- * \brief representation
- *
- * Copyright (C) 2011-2013, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011,      Vasileios Karakasis
- * Copyright (C) 2012-2013, Athena Elafrou
+ * Copyright (C) 2012-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Csr.hpp
+ * \brief Routines for converting standard CSR to our intermediate
+ * representation
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_CSR_HPP

@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2014, Athena Elafrou
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file csr_example.c
+ * \brief Example 2
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #include <sparsex/sparsex.h>
 
 int main(int argc, char **argv)
@@ -26,7 +44,7 @@ int main(int argc, char **argv)
 
     /* Cretae CSR wrapper */
     spx_input_t *input = spx_input_load_csr(rowptr, colind, values, nrows,
-                                            ncols, INDEXING_ZERO_BASED);
+                                            ncols, SPX_INDEX_ZERO_BASED);
 
     /* Transform to CSX */
     spx_option_set("spx.rt.nr_threads", "2");
@@ -36,8 +54,10 @@ int main(int argc, char **argv)
 
     /* Create x and y vector views */
     spx_partition_t *parts = spx_mat_get_partition(A);
-    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts, OP_SHARE);
-    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts, OP_SHARE);
+    spx_vector_t *x_view = spx_vec_create_from_buff(x, ncols, parts,
+                                                    SPX_VEC_SHARE);
+    spx_vector_t *y_view = spx_vec_create_from_buff(y, nrows, parts,
+                                                    SPX_VEC_SHARE);
 
     /* Run the SpMV kernel */
     spx_value_t alpha = 0.8, beta = 0.42;

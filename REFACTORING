@@ -2,25 +2,16 @@
 * [DONE] Replace all instances of Elem/CooElem/RLEs with the Element
 * [DONE] Revisit statistics collecting mechanism
   -- Stats structure, element markers (new heur)
-* Revisit pattern-id assigning mechanism
 * [DONE] Revisit namespace csx (should become sparsex, probably)
-* [90%] Eliminate unused/dead code, incl. commented out code
-* [50%] Clean up thgoud code
-* Revisit SparsePartition building, especially SetElems()
 * [DONE] Remove the emacs directive from header files
 * [DONE] Heuristic selection could be an spx option
-* Consider making SparsePartition::iterator a const iterator
 * [DONE] Block alignment -> fixed dim vs. variable dim
 * [DONE] Cbegin() -> cbegin()
 * [DONE] Revisit PreparePat()'s arguments
-* [ 50%] Check FIXME tags
 * [DONE] Remove std:: prefixes where possible
-* Revise iterators (Mmf, Csr, SparsePartition)
-* Consider zero-based indexing for Element
 * [DONE] Clean the interfaces, one- or zero-based, decide! -> core library uses
          one-base indexing everywhere, api provides both
 * [DONE] Replace Print() methods with friend operator<<()'s
-* Consider implementing operator->() in iterators
 * [DONE] Gather all general utilities (iceil, gcd, check_iterator) in a single
   file
 * [DONE] Advanced type checking with type traits
@@ -29,37 +20,46 @@
   class (SparseMatrix.hpp)
 * [DONE] Xs -> Cols
 * [DONE] Rethink element marking mechanism
-* valgrind check / memory leaks
 * [DONE] DEBUG_MODE compilation macro
-* Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
-* Remove default arguments or document precisely
 * [DONE] Fix Diag <-> AntiDiag conversions
-* [ 50%] Use auto variables instead of heap allocated if their scope is limited
-  inside a function
 * [DONE] Verify that MemoryAllocator::Reallocate follows the realloc(3) contract
-* Code replication
 * [DONE] max_rowptr_size_ is never used.
 * [DONE] Use -Wextra? Lots of warnings of unused function parameters
 * [DONE] Eliminate all -Wall warnings (debug version)
-* When _GLIBCXX_DEBUG is defined, error in debug mode compilation
 * [DONE] Add the SPARSEX_ or SPARSEX_INTERNALS_ prefix to double inclusion
   defines in header files
 * [DONE] Staged SPX_JIT_INCLUDE/SPX_MULT_TEMPLATE_DIR should use absolute paths
-* [ 50%] Segfault when TemplateText placeholders are empty/not found. Print
-  error and inform about installation.
 * [DONE] Use SPX_ prefix in macros, e.g., DEBUG_MODE -> SPX_DEBUG
 * [DONE] DisableInfo() is counter-intuitive (why not EnableXXX()??)
-* [] Update README
-* vector should become proper C++
 * [DONE] (Re)move unnecessary includes from header files
-* [] Add and fix copyright headers to all source files
-* [DONE] Fix warnings when compiling with -DDISABLE_POOL
-* Always leave space after end of code block and next statement
-* Fix 80-column layout
-* [DONE] Treat timings output and all info not yet passed through the logger
-  somehow
 * [DONE] Change "" to <> for sparsex-related includes
-* Fix error when invoking test_sparsex without arguments
+* [DONE] Fix error when invoking test_sparsex without arguments
+* [DONE] Fix warnings when compiling with -DDISABLE_POOL
+* [DONE] Fix 80-column layout
+* [DONE] Treat timings output and all info not yet passed through the logger somehow
+* [DONE] ADD SPX prefix to INVALID_MAT...
+* [DONE] Add and fix copyright headers to all source files
+* [90%] Eliminate unused/dead code, incl. commented out code
+* [50%] Check FIXME tags
+* [50%] Clean up thgoud code
+* [50%] Segfault when TemplateText placeholders are empty/not found. Print
+  error and inform about installation.
+* [50%] Use auto variables instead of heap allocated if their scope is limited
+  inside a function
+* [] Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
+* [] Remove default arguments or document precisely
+* [] Update README
+* When _GLIBCXX_DEBUG is defined, error in debug mode compilation
+* Always leave space after end of code block and next statement
+* Valgrind check / memory leaks
+* Code replication
+* Revisit pattern-id assigning mechanism
+* Consider implementing operator->() in iterators
+* Revise iterators (Mmf, Csr, SparsePartition)
+* Consider zero-based indexing for Element
+* Vector should become proper C++
+* Revisit SparsePartition building, especially SetElems()
+* Consider making SparsePartition::iterator a const iterator
 
 Requirements for StatsCollection
 * [DONE] Scale stats
@@ -71,6 +71,7 @@ Tests:
 * [DONE] NUMA
 * [DONE] Symmetric
 * Reordering
+
 
 XFORM_CONF: none|h|v|br|all
 SAMPLING_PORTION: .4

@@ -1,12 +1,21 @@
 /*
- * DynamicArray.cpp -- Test dynamic array implementation
- *
  * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2013, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
+/*
+ * \file DynamicArray.cpp
+ * \brief Test dynamic array implementation
+ *
+ * \author Vasileios Karakasis
+ * \date 2013
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #include <sparsex/internals/DynamicArray.hpp>
 #include <sparsex/internals/Allocators.hpp>
 #include <sparsex/internals/Timer.hpp>

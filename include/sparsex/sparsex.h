@@ -12,11 +12,16 @@
  * \brief SparseX header files.
  * 
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \author Athena Elafrou
- * \author Vasileios Karakasis
- * \date 2013&ndash;2014
+ * \date 2011&ndash;2014
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
+ *
+ * \mainpage
+ * The SparseX library is a collection of low-level primitives written in the
+ * C/C++ programming languages, that provides the means to developers of solver
+ * libraries and of scientific and engineering applications to easily attain
+ * high performance of the Sparse Matrix-by-Vector multiplication kernel (SpMV)
+ * on modern multicore architectures.
  */
 
 #ifndef SPARSEX_SPARSEX_H

@@ -1,8 +1,4 @@
 /*
- * \file SparsePartition.hpp
- *
- * \brief Internal representation of sparse matrice partition
- *
  * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2009-2014, Vasileios Karakasis
@@ -11,6 +7,16 @@
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file SparsePartition.hpp
+ * \brief Internal representation of sparse matrice partition
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_SPARSE_PARTITION_HPP

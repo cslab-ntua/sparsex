@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2014, Athena Elafrou
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/*
+ * \file sparsex_test.c
+ * \brief Simple program for testing the SparseX API
+ *
+ * \author Athena Elafrou
+ * \date 2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #include <sparsex/sparsex.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,17 +25,16 @@ static const char *program_name;
 
 static struct option long_options[] = {
     {"option",  required_argument,  0, 'o'},
-    {"file",    required_argument,  0, 'f'},
     {"help",    no_argument,        0, 'h'}
 };
 
 static void print_usage()
 {
     fprintf(stderr,
-            "Usage:  ./sparsex_test -f <mmf_file> [-o <option=value>]...\n\n"
-            "\t-f, --file <mmf_file>\t\tMMF file to load\n"
+            "Usage: %s [-o <option=value>]... <mmf_file>\n\n"
             "\t-o, --option <option=value>\tset a preprocessing option\n"
-            "\t-h, --help\t\t\tprint this help message and exit\n");
+            "\t-h, --help\t\t\tprint this help message and exit\n",
+            basename(program_name));
 }
 
 static void set_option(const char *arg)
@@ -40,20 +57,17 @@ int main(int argc, char **argv)
     spx_log_info_console();
 
     char c;
-    char *filename;
+    char *filename = NULL;
     char *option;
     int option_index = 0;
 
     program_name = argv[0];
-    while ((c = getopt_long(argc, argv, "o:f:h", long_options,
+    while ((c = getopt_long(argc, argv, "o:h", long_options,
                             &option_index)) != -1) {
         switch (c) {
         case 'o':
             option = optarg;
             set_option(option);
-            break;
-        case 'f':
-            filename = optarg;
             break;
         case 'h':
             print_usage();
@@ -64,6 +78,14 @@ int main(int argc, char **argv)
         }
     }
     
+	int remargs = argc - optind; // remaining arguments
+	if (remargs < 1) {
+		print_usage();
+		exit(1);
+	}
+	argv = &argv[optind];
+	filename = argv[0];
+
     /* Load matrix from MMF file */
     spx_input_t *input = spx_input_load_mmf(filename);
 

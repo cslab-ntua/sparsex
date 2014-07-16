@@ -1,12 +1,21 @@
 /*
- * draw.h -- Definitions for the drawing utility.
- *
  * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
+/**
+ * \file draw.h
+ * \brief Definitions for the drawing utility
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #ifndef SPARSEX_INTERNALS_DRAW_H
 #define SPARSEX_INTERNALS_DRAW_H
 

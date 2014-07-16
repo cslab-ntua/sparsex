@@ -1,13 +1,19 @@
 /*
- * \file JitConfig.hpp
- *
- * \brief JIT global configuration options
- *
  * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011-2014, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file JitConfig.hpp
+ * \brief JIT global configuration options
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_JIT_CONFIG_HPP

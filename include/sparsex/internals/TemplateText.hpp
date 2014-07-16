@@ -1,13 +1,19 @@
 /*
- * \file TemplateText.hpp
- *
- * \brief Class for manipulating template texts
- *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file TemplateText.hpp
+ * \brief Class for manipulating template texts
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_TEMPLATE_TEXT_HPP

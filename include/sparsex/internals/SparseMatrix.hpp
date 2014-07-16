@@ -1,13 +1,19 @@
 /*
- * \file SparseMatrix.hpp
- *
- * \brief Generic representation of a sparse matrix
- *
- * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013-2014  Athena Elafrou
+ * Copyright (C) 2012-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2012-2014  Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file SparseMatrix.hpp
+ * \brief Generic representation of a sparse matrix
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_SPARSE_MATRIX_HPP
@@ -126,8 +132,10 @@ public:
         try {
             if (config.GetProperty<bool>
                 (RuntimeConfiguration::MatrixSymmetric)) {
+                LOG_INFO << "Format: CSX-sym\n";
                 spm = DoCreateCsx(internal::Sym<true>());
             } else {
+                LOG_INFO << "Format: CSX\n";
                 spm = DoCreateCsx(internal::Sym<false>());
             }
         } catch (std::exception &e) {

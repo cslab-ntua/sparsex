@@ -1,15 +1,21 @@
 /*
- * \file CsrIterator.hpp
- *
- * \brief An iterator that simultaneously iterates through two arrays
- * 
- * Based on iterator_facade by boost, compliant with std::sort.
- *
- * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2012-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2012-2013, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file CsrIterator.hpp
+ * \brief An iterator that simultaneously iterates through two arrays
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ *
+ * Implementation based on iterator_facade by boost, compliant with std::sort.
  */
 
 #ifndef SPARSEX_INTERNALS_CSR_ITERATOR_HPP

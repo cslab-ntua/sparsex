@@ -1,3 +1,23 @@
+/*
+ * Copyright (C) 2012-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2012-2014, Athena Elafrou
+ * Copyright (C) 2013,      Vasileios Karakasis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/*
+ * \file SpmvTest.cpp
+ * \brief Simple program for testing the internal C++ library
+ *
+ * \author Athena Elafrou
+ * \author Vasileios Karakasis
+ * \date 2012&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #include <sparsex/types.h>
 #include <sparsex/internals/logger/Logger.hpp>
 #include <sparsex/internals/SparseMatrix.hpp>

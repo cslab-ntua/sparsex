@@ -1,14 +1,20 @@
 /*
- * \file Runtime.hpp
- *
- * \brief Front-end utilities for runtime configuration
- *
- * Copyright (C) 2009-2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2012-2013, Athena Elafrou
+ * Copyright (C) 2012-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2012-2014, Athena Elafrou
  * Copyright (C) 2013,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Runtime.hpp
+ * \brief Front-end utilities for runtime configuration
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_RUNTIME_HPP
@@ -97,6 +103,7 @@ public:
                       << "\"\n";
             exit(1);
         }
+
         return ret;
     }
 
@@ -111,7 +118,8 @@ public:
         try {
             property_map_.at(key) = value;
         } catch (const std::out_of_range& oor) {
-            LOG_WARNING << "property doesn't exist, so option will not be set\n";
+            LOG_WARNING << "property doesn't exist, so no option will be "
+                "set\n";
         }
     }
 
@@ -121,8 +129,7 @@ public:
             mnemonic_map_.by<Mnemonic>().find(key);
 
         if (iter == mnemonic_map_.right.end()) {
-            LOG_ERROR << "mnemonic \"" << key << "\" not found\n";
-            exit(1);
+            LOG_WARNING << "mnemonic \"" << key << "\" not found\n";
         }
 
         return iter->second;
@@ -169,7 +176,6 @@ inline PreprocessingMethod RuntimeConfiguration::GetProperty(
     const Property &key) const
 {
     PropertyMap::const_iterator iter = property_map_.find(key);
-    // PreprocessingMethod ret(iter->second);
     return iter->second;
 }
 
@@ -178,7 +184,6 @@ inline PreprocessingHeuristic RuntimeConfiguration::GetProperty(
     const Property &key) const
 {
     PropertyMap::const_iterator iter = property_map_.find(key);
-    // PreprocessingHeuristic ret(iter->second);
     return iter->second;
 }
 
@@ -234,9 +239,8 @@ private:
 template<typename I, typename V>
 void RuntimeConfiguration::CheckProperties()
 {
-    // TODO: RuntimeContext test
-    RuntimeContext::CheckParams(*this);
     // Every module should test its parameters here
+    RuntimeContext::CheckParams(*this);
     EncodingManager<I, V>::CheckParams(*this);
 }
 

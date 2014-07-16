@@ -1,12 +1,21 @@
 /*
- * MklModule.hpp --  The SpMV kernel with Intel MKL.
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
+/**
+ * \file MklModule.hpp
+ * \brief The SpMV kernel implemented with Intel MKL
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #ifndef MKL_MODULE_HPP
 #define MKL_MODULE_HPP
 

@@ -1,14 +1,20 @@
 /*
- * \file Compiler.cpp
- *
- * \brief Wrapper of a Clang compiler instance. Responsible for generating LLVM
- * \brief IR code from C99 source
- *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Compiler.cpp
+ * \brief Wrapper of a Clang compiler instance. Responsible for generating LLVM
+ * IR code from C99 source
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/Compiler.hpp>

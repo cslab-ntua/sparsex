@@ -1,13 +1,19 @@
 /*
- * \file CsxSpmv.hpp
- *
- * \brief Thread-level SpMV routines
- *
- * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2014, Athena Elafrou
+ * Copyright (C) 2012-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2012-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file CsxSpmv.hpp
+ * \brief Thread-level SpMV routines
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_CSX_SPMV_HPP

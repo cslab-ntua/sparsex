@@ -1,15 +1,21 @@
 /*
- * Mmf.hpp --  Matrix Market Format routines
- *
- * Copyright (C) 2009-2011, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2011,      Vasileios Karakasis
- * Copyright (C) 2011,      Theodoros Gkountouvas
- * Copyright (C) 2012-2013, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
+/**
+ * \file Mmf.hpp
+ * \brief Matrix Market Format routines
+ *
+ * \author Athena Elafrou
+ * \date 2013&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #ifndef MMF_HPP
 #define MMF_HPP
 

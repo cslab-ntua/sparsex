@@ -11,8 +11,7 @@
  * \brief SparseX statistics collection framework
  *
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \author Vasileios Karakasis
- * \date 2014
+ * \date 2011&ndash;2014
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */

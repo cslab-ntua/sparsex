@@ -17,6 +17,7 @@
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */
+
 #ifndef SPARSEX_VERSION_H
 #define SPARSEX_VERSION_H
 

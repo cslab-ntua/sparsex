@@ -1,15 +1,22 @@
 /*
- * \file CsxManager.hpp
- *
- * \brief The CSX Manager interface
- *
- * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2011-2012, Vasileios Karakasis
+ * Copyright (C) 2011-2014, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
+ * Copyright (C) 2012-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file CsxManager.hpp
+ * \brief The CSX Manager interface
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_CSX_MANAGER_HPP
@@ -337,10 +344,10 @@ CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
             typename SparsePartition<IndexType, ValueType>::iterator rend =
                 spm_->end(i);
 
-            LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
+            // LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
     
             if (rbegin == rend) {		// Check if row is empty.
-                LOG_DEBUG << "MakeCsx(): row is empty\n";
+                // LOG_DEBUG << "MakeCsx(): row is empty\n";
                 if (new_row_ == false) {
                     rows_info_[i].rowptr = 0;
                     new_row_ = true;	// In case the first row is empty.
@@ -377,10 +384,9 @@ CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
             typename SparsePartition<IndexType, ValueType>::iterator rend =
                 spm_->end(i);
 
-            LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
-    
+            // LOG_DEBUG << "MakeCsx(): row: " << i << "\n";
             if (rbegin == rend){		// Check if row is empty.
-                LOG_DEBUG << "MakeCsx(): row is empty\n";
+                // LOG_DEBUG << "MakeCsx(): row is empty\n";
     
                 if (new_row_ == false) {
                     rows_info_[i].rowptr = 0;
@@ -413,9 +419,9 @@ CsxManager<IndexType, ValueType>::MakeCsx(bool symmetric)
     }
 
 #if SPX_DEBUG
-    LOG_DEBUG << "values_\n";
-    for (size_t i = 0; i < spm_->GetNrNonzeros(); ++i)
-        LOG_DEBUG << values_[i] << "\n";
+    // LOG_DEBUG << "values_\n";
+    // for (size_t i = 0; i < spm_->GetNrNonzeros(); ++i)
+    //     LOG_DEBUG << values_[i] << "\n";
 #endif
 
     csx->row_jumps = row_jmps_;
@@ -507,7 +513,7 @@ DoRow(typename SparsePartition<IndexType, ValueType>::iterator &rbegin,
     last_col_ = 1;
     typename SparsePartition<IndexType, ValueType>::iterator &ri = rbegin;
     for (; ri != rend; ++ri) {
-        LOG_DEBUG << "\t" << *ri << "\n";
+        // LOG_DEBUG << "\t" << *ri << "\n";
 
         // Check if this element contains a pattern.
         if ((*ri).IsPattern()) {
@@ -551,7 +557,7 @@ DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
 
     last_col_ = 1;
     for ( ; ri != rend && (*ri).GetCol() < spm_->GetRowStart() + 1; ++ri) {
-        LOG_DEBUG << "\t" << *ri << "\n";
+        // LOG_DEBUG << "\t" << *ri << "\n";
 
         // Check if this element contains a pattern.
         if ((*ri).IsPattern()) {
@@ -579,7 +585,7 @@ DoSymRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
 
     // FIXME: this is completely the same as before!
     for ( ; ri != rend; ++ri) {
-        LOG_DEBUG << "\t" << *ri << "\n";
+        // LOG_DEBUG << "\t" << *ri << "\n";
 
         // Check if this element contains a pattern.
         if ((*ri).IsPattern()) {
@@ -658,8 +664,8 @@ void CsxManager<IndexType, ValueType>::AddCols(vector<IndexType> &cols)
     else
         ucol = cols[0];
 
-    LOG_DEBUG << "AddCols() ucol " << ucol << "\n";
-    LOG_DEBUG << "last_col_: " << last_col_ << "\n";
+    // LOG_DEBUG << "AddCols() ucol " << ucol << "\n";
+    // LOG_DEBUG << "last_col_: " << last_col_ << "\n";
 
     assert(cols_size > 0 && cols_size <= CTL_SIZE_MAX);
     ctl_builder_.AppendCtlHead(newrow_info.first, newrow_info.second,
@@ -694,9 +700,9 @@ AddPattern(const Element<IndexType, ValueType> &elem)
                                patt_size, ucol, sizeof(IndexType),
                                full_column_indices_);
 
-    LOG_DEBUG << "AddPattern() ucol " << ucol << "\n";
+    // LOG_DEBUG << "AddPattern() ucol " << ucol << "\n";
     last_col_ = GetLastCol(elem, spm_->GetType());
-    LOG_DEBUG << "last_col_: " << last_col_ << "\n";
+    // LOG_DEBUG << "last_col_: " << last_col_ << "\n";
 }
 
 template<typename IndexType, typename ValueType>

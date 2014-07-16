@@ -1,13 +1,19 @@
 /*
- * \file CsxGetSet.hpp
- *
- * \brief Get/Set utilities for CSX
- *
- * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013,      Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file CsxGetSet.hpp
+ * \brief Get/Set utilities for CSX
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_CSX_GET_SET_HPP
@@ -514,7 +520,8 @@ bool SearchBlock(ValueType **v_ptr, uint8_t delta, uint8_t size,
             if (isrow) {
                 *v_ptr += (row - 1) - current_row + row_dim * (col - ucol - 1);
             } else { 
-                *v_ptr += col_dim * ((row - 1) - current_row) + (col - ucol - 1);
+                *v_ptr += col_dim * ((row - 1) - current_row) +
+                    (col - ucol - 1);
             }
             GetSet(value, *v_ptr, mode);
             return true;

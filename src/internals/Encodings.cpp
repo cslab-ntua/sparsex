@@ -1,14 +1,20 @@
 /*
- * \file Encodings.cpp
- *
- * \brief All about encoding types
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Vasileios Karakasis
- * Copyright (C) 2014, Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Vasileios Karakasis
+ * Copyright (C) 2014,      Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Encodings.cpp
+ * \brief All about encoding types
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/Encodings.hpp>
@@ -92,7 +98,8 @@ void Encoding::CheckNameValidity(const string &name)
 {
     std::map<string, Type>::const_iterator i = rev_names_.find(name);
     if (i == rev_names_.end()) {
-        // LOG_ERROR << "substructure type \"" << name << "\" not valid\n";
+        LOG_ERROR << "invalid value \"" << name << "\" while setting property "
+            "\"spx.preproc.xform\"\n";
         exit(1);
     }
 }
@@ -154,14 +161,15 @@ void EncodingSequence::Print(ostream &out) const
 bimap<PreprocessingMethod::Type, string> PreprocessingMethod::method_names_ = 
     PreprocessingMethod::InitMethodNames();
 
-bimap<PreprocessingHeuristic::Type, string> PreprocessingHeuristic::heur_names_ =
+bimap<PreprocessingHeuristic::Type, string> PreprocessingHeuristic::heur_names_=
     PreprocessingHeuristic::InitHeuristicNames();
 
 void PreprocessingMethod::CheckNameValidity(const string &name)
 {
     NameMap::right_const_iterator i = method_names_.right.find(name);
     if (i == method_names_.right.end()) {
-        LOG_ERROR << "sampling method \"" << name << "\" not valid\n";
+        LOG_ERROR << "invalid value \"" << name << "\" while setting property "
+            "\"spx.preproc.sampling\"\n";
         exit(1);
     }
 }
@@ -170,7 +178,8 @@ void PreprocessingHeuristic::CheckNameValidity(const string &name)
 {
     NameMap::right_const_iterator i = heur_names_.right.find(name);
     if (i == heur_names_.right.end()) {
-        LOG_ERROR << "compression heuristic \"" << name << "\" not valid\n";
+        LOG_ERROR << "invalid value \"" << name << "\" while setting property "
+            "\"spx.preproc.heuristic\"\n";
         exit(1);
     }
 }

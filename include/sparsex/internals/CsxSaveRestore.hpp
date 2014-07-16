@@ -1,13 +1,19 @@
 /*
- * \file CsxSaveRestore.hpp
- *
- * \breif Saving/Restoring Csx to/from binary archive.
- *
- * Copyright (C) 2009-2012, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013,      Athena Elafrou
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file CsxSaveRestore.hpp
+ * \brief Saving/Restoring Csx to/from binary archive.
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_CSX_SAVE_RESTORE_HPP
@@ -112,8 +118,8 @@ void SaveCsx(void *spm, const char *filename, IndexType *permutation)
                     spm_mt->spm_threads[i].spm;
                 csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
             } else {
-                csx =
-                    (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].spm;
+                csx = (CsxMatrix<IndexType, ValueType> *)
+                    spm_mt->spm_threads[i].spm;
             }
 
             oa << csx->nnz & csx->ncols & csx->nrows & csx->ctl_size
@@ -265,7 +271,8 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
             ia >> boost::serialization::make_array(csx->rows_info, csx->nrows);
 
             if (symmetric) {
-                ia >> boost::serialization::make_array(csx_sym->dvalues, csx->nrows);
+                ia >> boost::serialization::make_array(csx_sym->dvalues,
+                                                       csx->nrows);
                 map_t *map = 0;
                 unsigned int length;
                 ia >> length;

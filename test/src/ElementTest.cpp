@@ -1,11 +1,19 @@
 /*
- * ElementTest.cpp -- Simple program for testing generic elements
- *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/*
+ * \file ElementTest.cpp
+ * \brief Simple program for testing generic elements
+ *
+ * \author Vasileios Karakasis
+ * \date 2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/internals/CsxUtil.hpp>

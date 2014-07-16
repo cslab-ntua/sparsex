@@ -1,12 +1,21 @@
 /*
- * elmerif.h -- Elmer interface
- *
  * Copyright (C) 2011, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2011, Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
+/**
+ * \file elmerif.h
+ * \brief Elmer interface
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #ifndef ELMERIF_H__
 #define ELMERIF_H__
 

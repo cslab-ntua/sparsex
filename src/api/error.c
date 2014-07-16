@@ -1,13 +1,20 @@
-/**
- * \file error.c
- *
- * \brief Error handling interface
- *
- * Copyright (C) 2013, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2013, Athena Elafrou
+/*
+ * Copyright (C) 2013-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2013-2014, Athena Elafrou
+ * Copyright (C) 2014,      Vasileios Karakasis
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */ 
+
+/**
+ * \file error.c
+ * \brief Error handling interface.
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #include <sparsex/error.h>
@@ -99,7 +106,7 @@ void spx_err_set_handler(spx_errhandler_t new_handler)
 }
 
 /**
- *  \brief Strings corresponding to the defined generic error codes.
+ *  Strings corresponding to the defined generic error codes.
  */
 static const char *spx_errors[] = {
     "invalid argument",
@@ -119,7 +126,7 @@ static const char *spx_errors[] = {
 };
 
 /**
- *  \brief Strings corresponding to the defined generic warning codes.
+ *  Strings corresponding to the defined generic warning codes.
  */
 static const char *spx_warnings[] = {
     "no specific file given to save CSX, using default: \"csx_file\"",

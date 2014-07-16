@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2014, Athena Elafrou
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file reordering_example.c
+ * \brief Example 3
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #include <sparsex/sparsex.h>
 
 int main(int argc, char **argv)
@@ -11,8 +29,13 @@ int main(int argc, char **argv)
     spx_input_t *input = spx_input_load_mmf(argv[1]);
 
     /* Transform to CSX with reordering enabled */
-    spx_options_set_from_env();
-    spx_matrix_t *A = spx_mat_tune(input, OP_REORDER);
+    spx_option_set("spx.rt.nr_threads", "2");
+    spx_option_set("spx.rt.cpu_affinity", "0,1");
+    spx_option_set("spx.preproc.xform", "all");
+    spx_option_set("spx.preproc.sampling", "portion");
+    spx_option_set("spx.preproc.sampling.nr_samples", "48");
+    spx_option_set("spx.preproc.sampling.portion", "0.01");
+    spx_matrix_t *A = spx_mat_tune(input, SPX_MAT_REORDER);
 
     /* Create random x and y vectors */
     spx_partition_t *parts = spx_mat_get_partition(A);

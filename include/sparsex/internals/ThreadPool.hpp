@@ -1,8 +1,4 @@
 /*
- * \file ThreadPool.hpp
- *
- * \brief Thread management in SparseX
- *
  * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2014, Athena Elafrou
  * All rights reserved.
@@ -10,12 +6,21 @@
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
+/**
+ * \file ThreadPool.hpp
+ * \brief Thread management in SparseX
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #ifndef SPARSEX_INTERNALS_THREAD_POOL_HPP
 #define SPARSEX_INTERNALS_THREAD_POOL_HPP
 
 #include <sparsex/internals/Barrier.hpp>
 #include <sparsex/internals/CsxSpmv.hpp>
-// #include <sparsex/internals/ThreadPool.hpp>
 #include <atomic>
 #include <boost/thread/thread.hpp>
 #include <vector>

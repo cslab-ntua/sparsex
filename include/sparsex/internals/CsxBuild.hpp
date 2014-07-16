@@ -1,15 +1,21 @@
 /*
- * \file CsxBuild.hpp
- *
- * \brief Front-end utilities for building CSX
- *
- * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011-2012, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file CsxBuild.hpp
+ * \brief Front-end utilities for building CSX
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_CSX_BUILD_HPP
@@ -88,7 +94,8 @@ template<typename IndexType, typename ValueType>
 void DoBuildSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> >*spms,
                 spm_mt *spm_mt);
 template<typename IndexType, typename ValueType>
-spm_mt_t *BuildCsx(SparseInternal<SparsePartition<IndexType, ValueType> > *spms);
+spm_mt_t *BuildCsx(SparseInternal<SparsePartition
+                                  <IndexType, ValueType> > *spms);
 template<typename IndexType, typename ValueType>
 spm_mt_t *BuildCsxSym(SparseInternal<SparsePartitionSym<IndexType,
                                                         ValueType> > *spms);
@@ -253,7 +260,8 @@ void PreprocessThreadSym(
 
     timing::Timer timer;
     timer.Start();
-    CsxSymMatrix<IndexType, ValueType> *csx = data.GetCsxManager()->MakeCsxSym();
+    CsxSymMatrix<IndexType, ValueType> *csx =
+        data.GetCsxManager()->MakeCsxSym();
     timer.Pause();  // csx creation time
     double csx_create_time = timer.ElapsedTime();
     data.GetBuffer() << "CSX build: " << csx_create_time << "\n";
@@ -346,8 +354,9 @@ spm_mt_t *BuildCsx(SparseInternal<SparsePartition<IndexType, ValueType> > *spms)
 }
 
 template<typename IndexType, typename ValueType>
-void DoBuildSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms_sym,
-                spm_mt *spm_mt)
+void DoBuildSym(
+    SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms_sym,
+    spm_mt *spm_mt)
 {
     RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
     RuntimeContext &rt_context = RuntimeContext::GetInstance();
@@ -384,7 +393,8 @@ void DoBuildSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms_
 }
 
 template<typename IndexType, typename ValueType>
-spm_mt_t *BuildCsxSym(SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms)
+spm_mt_t *BuildCsxSym(
+    SparseInternal<SparsePartitionSym<IndexType, ValueType> > *spms)
 {
     spm_mt_t *spm_mt;
     RuntimeContext &rt_context = RuntimeContext::GetInstance();

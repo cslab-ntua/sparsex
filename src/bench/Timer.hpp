@@ -1,6 +1,4 @@
 /*
- * timer.hpp -- Timing framework
- *
  * Copyright (C) 2012-2013, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2010-2012, Vasileios Karakasis
  * Copyright (C) 2012-2013, Athena Elafrou
@@ -8,6 +6,17 @@
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
+
+/**
+ * \file Timer.hpp
+ * \brief Timing utilities
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
 #ifndef TIMER_HPP
 #define TIMER_HPP
 

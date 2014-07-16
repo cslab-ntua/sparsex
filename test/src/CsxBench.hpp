@@ -1,13 +1,23 @@
 /*
- * CsxBench.hpp -- Benchmark utilities.
- *
- * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2011-2012, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/*
+ * \file CsxBench.hpp
+ * \brief Benchmark utilities
+ *
+ * \author Vasileios Karakasis
+ * \author Theodoros Gkountouvas
+ * \author Athena Elafrou
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
 
 #ifndef SPARSEX_INTERNALS_CSX_BENCH_HPP
