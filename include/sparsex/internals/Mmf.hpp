@@ -155,9 +155,9 @@ public:
         matrix_.push_back(elem);
     }
 
-    void SetReordered()
+    void SetReordered(bool flag)
     {
-        reordered_ = true;
+        reordered_ = flag;
     }
 
     class iterator;

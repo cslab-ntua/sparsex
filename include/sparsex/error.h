@@ -41,11 +41,12 @@
 #define SPX_ERR_VEC             6   /** vector creation failed */
 #define SPX_ERR_PART            7   /** partitioning object wasn't properly
                                         created */
-#define SPX_ERR_DIM             8   /** incompatible matrix and vectors
+#define SPX_ERR_PERM            8   /** error in permutation */
+#define SPX_ERR_DIM             9   /** incompatible matrix and vectors
                                          dimensions */
-#define SPX_ERR_VEC_DIM         9   /** incompatible vector dimension */
-#define SPX_ERR_ENTRY_NOT_FOUND 10  /** matrix entry not found */
-#define SPX_OUT_OF_BOUNDS       11  /** index out of bounds */
+#define SPX_ERR_VEC_DIM         10   /** incompatible vector dimension */
+#define SPX_ERR_ENTRY_NOT_FOUND 11  /** matrix entry not found */
+#define SPX_OUT_OF_BOUNDS       12  /** index out of bounds */
 #define SPX_ERR_SYSTEM          15
 #define SPX_ERR_FILE_OPEN       16  /** unable to open file */
 #define SPX_ERR_FILE_READ       17  /** unable to read from file */

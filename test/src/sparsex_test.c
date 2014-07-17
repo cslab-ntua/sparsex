@@ -142,6 +142,10 @@ int main(int argc, char **argv)
     spx_perm_t *p = SPX_INVALID_PERM;
     if (enable_reordering) {
         p = spx_mat_get_perm(A);
+        if (p == SPX_INVALID_PERM) {
+            SETERROR_0(SPX_ERR_PERM);
+            exit(1);
+        }
         spx_vec_reorder(x, p);
     }
 

@@ -115,6 +115,7 @@ static const char *spx_errors[] = {
     "conversion to CSX failed",
     "vector creation failed",
     "partitioning object wasn't properly created",
+    "reordering failed to produce a permutation",
     "incompatible matrix and vector dimensions",
     "incompatible vector dimensions",
     "matrix entry doesn't exist",

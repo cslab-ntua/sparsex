@@ -141,7 +141,7 @@ template<typename IndexType, typename ValueType>
 Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
 {
     // The flag must be set before using the MMF iterator
-    mat.SetReordered();
+    mat.SetReordered(true);
 
     // Make a pessimistic guess for nr_edges
     size_t nr_edges;
@@ -175,8 +175,7 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
     // index -> actual nr_edges
     assert(index <= nr_edges);
     if (index == 0) {
-        LOG_WARNING << "no reordering available for this matrix, "
-                    << "all non-zero elements on main diagonal\n";
+        LOG_WARNING << "no reordering available for this matrix\n";
         delete[] edges;
         throw bad_reorder;
     }
@@ -213,7 +212,8 @@ void DoReorder_RCM(MMF<IndexType, ValueType>& mat, vector<size_t> &perm)
         graph = ConstructGraph_MMF(graph, mat);
     } catch (int e) {
         mat.ResetStream();
-        LOG_INFO << "error in reordering\n";
+        mat.SetReordered(false);
+        LOG_WARNING << "reordering failed\n";
         return;
     }
     // Find permutation
@@ -257,8 +257,7 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
     assert(index <= nr_edges);
 
     if (index == 0) {
-        LOG_WARNING << "no reordering available for this matrix, "
-                    << "all non-zero elements on main diagonal\n";
+        LOG_WARNING << "no reordering available for this matrix\n";
         delete[] edges;
         throw bad_reorder;
     }
@@ -322,7 +321,7 @@ void DoReorder_RCM(CSR<IndexType, ValueType>& mat, vector<size_t>& perm)
         graph = ConstructGraph_CSR(graph, iter, iter_end, mat.GetNrNonzeros(),
                                    mat.IsSymmetric());
     } catch (int e) {
-        LOG_INFO << "Reordering complete\n";
+        LOG_INFO << "reordering failed\n";
         return;
     }
     // Find permutation
