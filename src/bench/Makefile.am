@@ -41,7 +41,7 @@ bench_spmv_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
 	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
 	$(CLANG_LIBS) \
-	$(LLVM_LIBS)
+	$(LLVM_LIBS) -ldl -lm
 
 if SPX_BUILD_BENCH_MKL
 bench_spmv_LDADD += $(MKL_LIBS)

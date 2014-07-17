@@ -16,6 +16,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/examples/examples \
 	$(AX_CPPFLAGS)
+
+AM_CFLAGS = $(AX_CFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
 AM_LDFLAGS	= \
 	-L$(top_builddir)/src/internals/.libs \
@@ -35,14 +37,14 @@ reordering_example_SOURCES = \
 mmf_example_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
 	$(CLANG_LIBS) \
-	$(LLVM_LIBS)
+	$(LLVM_LIBS) -ldl -lm
 
 csr_example_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
 	$(CLANG_LIBS) \
-	$(LLVM_LIBS)
+	$(LLVM_LIBS) -ldl -lm
 
 reordering_example_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
 	$(CLANG_LIBS) \
-	$(LLVM_LIBS)
+	$(LLVM_LIBS) -ldl -lm

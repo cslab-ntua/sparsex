@@ -15,6 +15,8 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/include \
 	-I$(top_srcdir)/include \
 	$(AX_CPPFLAGS)
+
+AM_CFLAGS = $(AX_CFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
 AM_LDFLAGS	= \
 	-L$(top_builddir)/src/internals/.libs \
@@ -27,7 +29,7 @@ SPARSEXIMPL_LDADD = \
 	$(BOOST_REGEX_LIB) \
 	$(BOOST_SERIALIZATION_LIB) \
 	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_THREAD_LIB)
+	$(BOOST_THREAD_LIB) -ldl -lm
 
 check_PROGRAMS = test_spmv test_sparsex test_element test_dynarray test_timer
 
@@ -35,8 +37,8 @@ test_sparsex_SOURCES = \
 	CsxBench.cpp \
 	sparsex_test.c
 test_sparsex_LDADD = \
-	$(SPARSEXIMPL_LDADD) \
-	$(top_builddir)/src/api/.libs/libsparsex.la
+	$(top_builddir)/src/api/.libs/libsparsex.la \
+	$(SPARSEXIMPL_LDADD)
 
 test_spmv_SOURCES = \
 	CsxBench.cpp \

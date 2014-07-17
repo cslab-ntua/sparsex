@@ -41,7 +41,8 @@ static void MMFtoCSR(const char *filename,
                      spx_value_t **values,
                      spx_index_t *nrows, spx_index_t *ncols, spx_index_t *nnz);
 static inline int elems_neq(spx_value_t a, spx_value_t b);
-static int vec_compare(const spx_value_t *v1, const spx_value_t *v2, size_t size)
+static int vec_compare(const spx_value_t *v1, const spx_value_t *v2,
+                       size_t size)
     __attribute__ ((unused));
 
 void Bench_Directory(const char *directory, const char *library,

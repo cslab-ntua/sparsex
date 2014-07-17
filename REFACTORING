@@ -36,15 +36,16 @@
 * [DONE] Fix error when invoking test_sparsex without arguments
 * [DONE] Fix warnings when compiling with -DDISABLE_POOL
 * [DONE] Fix 80-column layout
-* [DONE] Treat timings output and all info not yet passed through the logger somehow
+* [DONE] Treat timings output and all info not yet passed through the logger
+  somehow
 * [DONE] ADD SPX prefix to INVALID_MAT...
 * [DONE] Add and fix copyright headers to all source files
-* [90%] Eliminate unused/dead code, incl. commented out code
-* [50%] Check FIXME tags
-* [50%] Clean up thgoud code
-* [50%] Segfault when TemplateText placeholders are empty/not found. Print
+* [ 90%] Eliminate unused/dead code, incl. commented out code
+* [ 50%] Check FIXME tags
+* [ 50%] Clean up thgoud code
+* [ 50%] Segfault when TemplateText placeholders are empty/not found. Print
   error and inform about installation.
-* [50%] Use auto variables instead of heap allocated if their scope is limited
+* [ 50%] Use auto variables instead of heap allocated if their scope is limited
   inside a function
 * [] Clarify the use of nr_rows_ of SparsePartition and rowptr_size_
 * [] Remove default arguments or document precisely
@@ -70,8 +71,7 @@ Tests:
 * [DONE] Sampling
 * [DONE] NUMA
 * [DONE] Symmetric
-* Reordering
-
+* [DONE] Reordering
 
 XFORM_CONF: none|h|v|br|all
 SAMPLING_PORTION: .4

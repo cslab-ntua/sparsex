@@ -15,6 +15,8 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/include \
 	-I$(top_srcdir)/include \
 	$(AX_CPPFLAGS)
+
+AM_CFLAGS = $(AX_CFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
 AM_LDFLAGS	= \
 	-L$(top_builddir)/src/internals/.libs \

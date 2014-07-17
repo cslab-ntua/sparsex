@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
  * Copyright (C) 2014, Athena Elafrou
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
  */
 
-/*
+/**
  * \file sparsex_test.c
  * \brief Simple program for testing the SparseX API
  *
@@ -33,13 +33,14 @@ static struct option long_options[] = {
 
 static void print_usage()
 {
-    fprintf(stderr,
-            "Usage: %s [-o <option=value>]... [-t] <mmf_file>\n\n"
-            "\t-o, --option <option=value>\tset a preprocessing option\n"
-            "\t-r, --enable-timing \t\tenable reordering of the input matrix\n"
-            "\t-t, --enable-reordering \t\tenable timing of the SpMV kernel\n"
-            "\t-h, --help\t\t\tprint this help message and exit\n",
-            basename(program_name));
+    fprintf(
+        stderr,
+        "Usage: %s [-o <option=value>]... [-t] <mmf_file>\n\n"
+        "\t-o, --option <option=value>\tset a preprocessing option\n"
+        "\t-r, --enable-timing \t\tenable timing of the SpMV kernel\n"
+        "\t-t, --enable-reordering \tenable reordering of the input matrix\n"   
+        "\t-h, --help\t\t\tprint this help message and exit\n",
+        basename(program_name));
 }
 
 static void set_option(const char *arg)
@@ -150,23 +151,20 @@ int main(int argc, char **argv)
     }
 
     /* Run a matrix-vector multiplication: y <-- A*x */
-    size_t i;
     spx_timer_t t;
-    double elapsed_time, flops;
-
     if (enable_timing) {
         spx_timer_clear(&t);
         spx_timer_start(&t);
     }
     
-    for (i = 0; i < loops; i++) {
+    for (size_t i = 0; i < loops; i++) {
         spx_matvec_mult(1, A, x, y);
     }
 
     if (enable_timing) {
         spx_timer_pause(&t);
-        elapsed_time = spx_timer_get_secs(&t);
-        flops = (double) (2*loops*spx_mat_get_nnz(A)) /
+        double elapsed_time = spx_timer_get_secs(&t);
+        double flops = (double) (2*loops*spx_mat_get_nnz(A)) /
             ((double) 1000*1000*elapsed_time);
         printf("Elapsed time: %lf secs\n", elapsed_time);
         printf("FLOPS: %lf\n", flops);
@@ -187,6 +185,5 @@ int main(int argc, char **argv)
     spx_partition_destroy(parts);
     spx_vec_destroy(x);
     spx_vec_destroy(y);
-
     return 0;
 }

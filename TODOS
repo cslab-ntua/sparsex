@@ -54,13 +54,13 @@
    -- [DONE] Generate documentation with `make doc'
    -- Check pOSKI/MKL bench  builds
 
-4. Testing
+4. [DONE] Testing
    -- [DONE] Command-line interface
       * use of options
-   -- Test script
+   -- [DONE] Test script
 
-5. Documentation
-   -- [ 80%] doxygen (API/Development)
+5. [DONE] Documentation
+   -- [DONE] doxygen (API/Development)
       * Add a description of SparseX at main page of the Doxygen documentation
       * Check that EVERYTHING is documented in API, including #define's
       * v3[start...end) = v1[start...end) + num * v2[start...end)

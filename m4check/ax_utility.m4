@@ -337,7 +337,7 @@ AC_DEFUN([AX_SUMMARY_CONFIG],
     fi
 
     AC_REQUIRE([AC_CANONICAL_BUILD])
-    echo "*** BUILD SUMMARY ***"
+    echo "*** CONFIGURATION SUMMARY ***"
     echo "    Target     $build"
     echo "    Build      $build_type"
     echo "    NUMA       $is_numa ($ax_memory_nodes memory node(s) detected)"

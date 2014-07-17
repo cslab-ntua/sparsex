@@ -217,6 +217,8 @@ AC_CONFIG_FILES([
 
 AC_CONFIG_FILES([scripts/sparsex-config],
                 [chmod +x scripts/sparsex-config])
+AC_CONFIG_FILES([test/scripts/test-sparsex.sh],
+                [chmod +x test/scripts/test-sparsex.sh])
 
 AC_OUTPUT
 
