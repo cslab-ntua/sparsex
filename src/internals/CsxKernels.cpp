@@ -114,6 +114,8 @@ void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 		spm_mt->spm_threads[i].y = y;
 	}
 
+    VecInit(y, 0);
+
 #if SPX_DISABLE_POOL
     vector<std::shared_ptr<thread> > threads(nr_threads);
     for (size_t i = 0; i < nr_threads; ++i) {
@@ -151,6 +153,8 @@ void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 		spm_mt->spm_threads[i].x = x;
 		spm_mt->spm_threads[i].y = y;
 	}
+
+    VecInit(y, 0);
 
 #if SPX_DISABLE_POOL
     vector<std::shared_ptr<thread> > threads(nr_threads);

@@ -261,8 +261,8 @@ spx_error_t spx_partition_destroy(spx_partition_t *p);
 void spx_option_set(const char *option, const char *string);
 
 /**
- *  Creates and returns a valid vector object, whose values must be explicitly
- *  initialized.
+ *  Creates and returns a valid vector object, whose values are initialized to
+ *  zero.
  *
  *  @param[in] size         the size of the vector to be created.
  *  @param[in] p            a partitioning handle.

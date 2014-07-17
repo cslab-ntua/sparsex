@@ -124,25 +124,24 @@ public:
         sort(matrix_.begin(), matrix_.end());
     }
 
-    /*void Print(std::ostream &os) const
-    {
-        os << "Elements of Matrix" << endl;
-        os << "------------------" << endl;
-        if (symmetric_ || col_wise_) {
-            for (size_t i = 0; i < matrix_.size(); i++) {
-                os << matrix_[i].row << " " << matrix_[i].col << " "
-                   << matrix_[i].val << endl;
-            }
-        }//  else {
-        //     iterator iter = begin();
-        //     iterator iter_end = end();
-        //     for (;iter != iter_end; ++iter) {
-        //         cout << (*iter).row << " " << (*iter).col << " "
-        //              << (*iter).val << endl;
-        //     }
-        // }
-        os << endl;
-        }*/
+    // void Print(std::ostream &os) const
+    // {
+    //     os << "Elements of Matrix" << endl;
+    //     os << "------------------" << endl;
+    //     if (symmetric_ || col_wise_) {
+    //         for (size_t i = 0; i < matrix_.size(); i++) {
+    //             os << matrix_[i] << endl;
+    //         }
+    //     } else {
+    //         // iterator iter = begin();
+    //         // iterator iter_end = end();
+    //         // for (;iter != iter_end; ++iter) {
+    //         //     cout << (*iter).row << " " << (*iter).col << " "
+    //         //          << (*iter).val << endl;
+    //         // }
+    //     }
+    //     os << endl;
+    // }
 
     void InitMatrix(size_t size)
     {
@@ -200,16 +199,20 @@ class MMF<IndexType, ValueType>::iterator
     : public std::iterator<forward_iterator_tag, Element<IndexType, ValueType> >
 {
 public:
-    // In case subsequent calls to DoLoadMatrix() are made
     ~iterator() {
-        mmf_->ResetStream();
+        if (!mmf_->reordered_)
+            mmf_->matrix_.clear();
+        // In case subsequent calls to DoLoadMatrix() are made
+        // mmf_->ResetStream();
     }
     
     iterator(MMF *mmf, size_t cnt)
       : mmf_(mmf),
         cnt_(cnt),
         elem_(Element<IndexType, ValueType>(0, 0, 0)),
-        valid_(false)
+        valid_(false),
+        row_prev_(1),
+        col_prev_(1)
     {
         if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_)
             return;
@@ -252,6 +255,20 @@ public:
                 exit(1);
             }
 
+            if (elem_.GetRow() < row_prev_ || (elem_.GetRow() == row_prev_
+                                               && elem_.GetCol() < col_prev_)) {
+                LOG_ERROR << "indices are not sorted in MMF file\n";
+                exit(1);
+            }
+
+            if (elem_.GetRow() == row_prev_) {
+                col_prev_ = elem_.GetCol();
+            } else {
+                col_prev_ = 1;
+            }
+
+            row_prev_ = elem_.GetRow();
+
             return elem_;
         }
     }
@@ -269,6 +286,7 @@ private:
     size_t cnt_;
     Element<IndexType, ValueType> elem_;
     bool valid_;
+    IndexType row_prev_, col_prev_;
 };
 
 template<typename IndexType, typename ValueType>
@@ -314,7 +332,7 @@ MMF<IndexType, ValueType>::MMF(const char* filename)
     nr_cols_(0),
     nr_nzeros_(0),
     symmetric_(false), 
-    col_wise_(false),
+    col_wise_(true),
     zero_based_(false),
     reordered_(false),
     file_mode_(0)
@@ -467,7 +485,7 @@ bool MMF<IndexType, ValueType>::GetNext(IndexType &r, IndexType &c,
         r++;
         c++;
     }
-
+    
     return true;
 }
 

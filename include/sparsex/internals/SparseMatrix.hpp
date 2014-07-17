@@ -194,14 +194,11 @@ public:
 
     void Save(const char *filename)
     {
-        timing::Timer timer;
         if (!csx_) {
             LOG_ERROR << "Matrix hasn't been encoded yet\n";
             exit(1);
         } else {
-            timer.Start();
             SaveCsx<idx_t, val_t>(csx_, filename, NULL);
-            timer.Pause();
         }
     }
 
@@ -264,7 +261,7 @@ private:
     
     void DoCreateTimers()
     {
-        timers_.CreateTimer("load", "Load matrix");
+        timers_.CreateTimer("load", "Conversion to internal representation");
         timers_.CreateTimer("preproc", "Preprocessing");
     }
 

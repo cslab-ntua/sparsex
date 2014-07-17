@@ -31,25 +31,28 @@
  *  @defgroup errorcode_group List of available generic error codes.
  *  @{
  */
-#define SPX_FAILURE             -1   /** failure */
-#define SPX_SUCCESS              0   /** success */
-#define SPX_ERR_MIN_VALUE        1
-#define SPX_ERR_ARG_INVALID      2   /** invalid argument */
-#define SPX_ERR_FILE             3   /** generic file error */
-#define SPX_ERR_INPUT_MAT        4   /** input matrix wasn't properly created */
-#define SPX_ERR_TUNED_MAT        5   /** tuned matrix wasn't properly created */
-#define SPX_ERR_DIM              6   /** incompatible matrix and vectors
+#define SPX_FAILURE             -1  /** failure */
+#define SPX_SUCCESS             0   /** success */
+#define SPX_ERR_MIN_VALUE       1
+#define SPX_ERR_ARG_INVALID     2   /** invalid argument */
+#define SPX_ERR_FILE            3   /** generic file error */
+#define SPX_ERR_INPUT_MAT       4   /** input matrix wasn't properly created */
+#define SPX_ERR_TUNED_MAT       5   /** tuned matrix wasn't properly created */
+#define SPX_ERR_VEC             6   /** vector creation failed */
+#define SPX_ERR_PART            7   /** partitioning object wasn't properly
+                                        created */
+#define SPX_ERR_DIM             8   /** incompatible matrix and vectors
                                          dimensions */
-#define SPX_ERR_VEC_DIM          7   /** incompatible vector dimension */
-#define SPX_ERR_ENTRY_NOT_FOUND  8   /** matrix entry not found */
-#define SPX_OUT_OF_BOUNDS        9   /** index out of bounds */
-#define SPX_ERR_SYSTEM           15
-#define SPX_ERR_FILE_OPEN        16  /** unable to open file */
-#define SPX_ERR_FILE_READ        17  /** unable to read from file */
-#define SPX_ERR_FILE_WRITE       18  /** unable to write to file */
-#define SPX_ERR_MEM_ALLOC        19  /** memory allocation failed */
-#define SPX_ERR_MEM_FREE         20  /** memory deallocation failed */
-#define SPX_ERR_MAX_VALUE        21
+#define SPX_ERR_VEC_DIM         9   /** incompatible vector dimension */
+#define SPX_ERR_ENTRY_NOT_FOUND 10  /** matrix entry not found */
+#define SPX_OUT_OF_BOUNDS       11  /** index out of bounds */
+#define SPX_ERR_SYSTEM          15
+#define SPX_ERR_FILE_OPEN       16  /** unable to open file */
+#define SPX_ERR_FILE_READ       17  /** unable to read from file */
+#define SPX_ERR_FILE_WRITE      18  /** unable to write to file */
+#define SPX_ERR_MEM_ALLOC       19  /** memory allocation failed */
+#define SPX_ERR_MEM_FREE        20  /** memory deallocation failed */
+#define SPX_ERR_MAX_VALUE       21
 /**
  *  @}
  */

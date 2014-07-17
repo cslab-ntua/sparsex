@@ -115,7 +115,6 @@ static void mat_free_struct(spx_matrix_t *A)
     spx_free(A);
 }
 
-#if SPX_USE_NUMA
 /**
  *  \brief Allocates a partition structure.
  */
@@ -142,7 +141,6 @@ static void part_free_struct(spx_partition_t *p)
 
     spx_free(p);
 }
-#endif  // SPX_USE_NUMA
 
 spx_input_t *spx_input_load_csr(spx_index_t *rowptr, spx_index_t *colind, 
                                 spx_value_t *values, spx_index_t nrows, 
@@ -486,6 +484,8 @@ spx_partition_t *spx_mat_get_partition(spx_matrix_t *A)
 		ret->parts[i] = spm->nr_rows * sizeof(spx_value_t);
 		ret->nodes[i] = spm->node;
 	}
+#else
+    part_alloc_struct(&ret);
 #endif
     return ret;
 }
@@ -643,13 +643,13 @@ spx_error_t spx_mat_destroy(spx_matrix_t *A)
 spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows, 
                                    size_t nr_threads)
 {
+    spx_partition_t *ret = SPX_INVALID_PART;
 #if SPX_USE_NUMA
 	// Compute the matrix splits.
 	size_t nnz_per_split = (rowptr[nr_rows] - 1) / nr_threads;
 	size_t curr_nnz = 0;
 	size_t row_start = 0;
 	size_t split_cnt = 0;
-    spx_partition_t *ret = SPX_INVALID_PART;
     part_alloc_struct(&ret);
 	ret->parts = (size_t *) malloc(sizeof(*ret->parts)*nr_threads);
 	ret->nodes = (int *) malloc(sizeof(*ret->nodes)*nr_threads);
@@ -672,10 +672,10 @@ spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows,
 	}
 
     GetNodes(ret->nodes);
-	return ret;
 #else
-    return SPX_INVALID_PART;
+    part_alloc_struct(&ret);
 #endif
+	return ret;
 }
 
 spx_error_t spx_partition_destroy(spx_partition_t *p)
@@ -686,10 +686,11 @@ spx_error_t spx_partition_destroy(spx_partition_t *p)
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
         return SPX_FAILURE;
     }
+#endif
 
     /* Free allocated memory of matrix handle */
     part_free_struct(p);
-#endif
+
     return SPX_SUCCESS;
 }
 
@@ -701,6 +702,12 @@ void spx_option_set(const char *option, const char *value)
 spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p)
 {
     spx_vector_t *v = SPX_INVALID_VEC;
+
+    if (p == SPX_INVALID_PART) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
+        return SPX_INVALID_VEC;
+    }
+
 #if SPX_USE_NUMA
 	v = VecCreateInterleaved(size, p->parts, p->nr_partitions, p->nodes);
 #else
@@ -715,6 +722,11 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, size_t size,
     /* Check validity of input arguments */
     if (!buff) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid buffer");
+        return SPX_INVALID_VEC;
+    }
+
+    if (p == SPX_INVALID_PART) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
         return SPX_INVALID_VEC;
     }
 
@@ -736,6 +748,12 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, size_t size,
 spx_vector_t *spx_vec_create_random(size_t size, spx_partition_t *p)
 {
     spx_vector_t *v = SPX_INVALID_VEC;
+
+    if (p == SPX_INVALID_PART) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
+        return SPX_INVALID_VEC;
+    }
+
 #if SPX_USE_NUMA
 	v = VecCreateRandomInterleaved(size, p->parts, p->nr_partitions,
                                    p->nodes);

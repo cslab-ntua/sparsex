@@ -113,6 +113,8 @@ static const char *spx_errors[] = {
     "file error",
     "loading of input matrix failed",
     "conversion to CSX failed",
+    "vector creation failed",
+    "partitioning object wasn't properly created",
     "incompatible matrix and vector dimensions",
     "incompatible vector dimensions",
     "matrix entry doesn't exist",

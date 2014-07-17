@@ -63,7 +63,7 @@ vector_t *VecCreate(size_t size)
 
 	v->size = size;
 	v->alloc_type = internal::ALLOC_STD;
-	v->elements = (spx_value_t *) malloc(sizeof(spx_value_t) * size);
+	v->elements = (spx_value_t *) calloc(size, sizeof(spx_value_t));
 	if (!v->elements) {
 		LOG_ERROR << "malloc\n";
 		exit(1);
@@ -75,24 +75,29 @@ vector_t *VecCreate(size_t size)
 vector_t *VecCreateOnnode(size_t size, int node)
 {
 	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t), node);
-
 	v->size = size;
 	v->alloc_type = internal::ALLOC_MMAP;
 	v->elements = (spx_value_t *) alloc_onnode(sizeof(spx_value_t)*size, node);
+	if (!v->elements) {
+		LOG_ERROR << "allocation failed\n";
+		exit(1);
+	}
 
+    VecInit(v, 0);
 	return v;
 }
 
 vector_t *VecCreateInterleaved(size_t size, size_t *parts, int nr_parts,
                                int *nodes)
 {
-	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t),
-                                            nodes[0]);
-
+	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t), nodes[0]);
 	v->size = size;
+	v->copy_mode = -1;
+	v->ptr_buff = NULL;
 	v->alloc_type = internal::ALLOC_MMAP;
 	v->elements = (spx_value_t *) alloc_interleaved(size*sizeof(*v->elements),
                                                     parts, nr_parts, nodes);
+    VecInit(v, 0);
 	return v;
 }
 
@@ -118,7 +123,7 @@ vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, int mode)
         
         memcpy(v->elements, buff, size * sizeof(spx_value_t));
     } else {
-        LOG_ERROR << "Invalid copy-mode type";
+        LOG_ERROR << "invalid copy-mode type";
         exit(1);
     }
 

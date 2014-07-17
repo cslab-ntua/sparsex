@@ -29,7 +29,7 @@ void StdPolicy::operator()(const buffer_type &buffer)
         exit(1);
     }
 
-    cout << buffer.str();
+    cerr << buffer.str();
 
     if (pthread_mutex_unlock(&write_mutex_) != 0) {
         cerr << "[LOGGER]: failed to unlock shared variable." 

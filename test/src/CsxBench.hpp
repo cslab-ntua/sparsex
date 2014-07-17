@@ -23,18 +23,21 @@
 #ifndef SPARSEX_INTERNALS_CSX_BENCH_HPP
 #define SPARSEX_INTERNALS_CSX_BENCH_HPP
 
-#include "sparsex/internals/Affinity.hpp"
-#include "sparsex/internals/Csr.hpp"
-#include "sparsex/internals/CsxKernels.hpp"
-#include "sparsex/internals/CsxUtil.hpp"
-#include "sparsex/internals/Mmf.hpp"
-#include "sparsex/internals/SpmMt.hpp"
-#include "sparsex/internals/SpmvMethod.hpp"
-#include "sparsex/internals/ThreadPool.hpp"
-#include "sparsex/internals/Types.hpp"
-#include "sparsex/internals/Timer.hpp"
-#include "sparsex/internals/Vector.hpp"
+#include <sparsex/internals/SpmMt.hpp>
 
+#ifdef __cplusplus
+// C++ only
+
+#include <sparsex/internals/Affinity.hpp>
+#include <sparsex/internals/Csr.hpp>
+#include <sparsex/internals/CsxKernels.hpp>
+#include <sparsex/internals/CsxUtil.hpp>
+#include <sparsex/internals/Mmf.hpp>
+#include <sparsex/internals/SpmvMethod.hpp>
+#include <sparsex/internals/ThreadPool.hpp>
+#include <sparsex/internals/Types.hpp>
+#include <sparsex/internals/Timer.hpp>
+#include <sparsex/internals/Vector.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/barrier.hpp>
 #include <boost/bind.hpp>
@@ -94,6 +97,30 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
     } else{
         spmv_check_sym_mt(csr, spm_mt, 1, csr->GetNrRows(), csr->GetNrCols());
     }
+    cout << "Check Passed" << endl;
+
+    // Cleanup
+    delete[] csr->rowptr_;
+    delete[] csr->colind_;
+    delete[] csr->values_;
+    delete csr;
+}
+
+template<typename IndexType, typename ValueType>
+void CheckResult(vector_t *result, vector_t *x, char *mmf_name, size_t loops)
+{
+    CSR<IndexType, ValueType> *csr = new CSR<IndexType, ValueType>;
+    MMFtoCSR<IndexType, ValueType>(mmf_name, &csr->rowptr_, &csr->colind_,
+                                   &csr->values_, &csr->nr_rows_,
+                                   &csr->nr_cols_, &csr->nr_nzeros_);
+
+    cout << "Checking... " << flush;
+	vector_t *y_csr = VecCreate(csr->nr_rows_);
+    for (size_t i = 0; i < loops; i++) {
+        csr_spmv(csr, x, y_csr);
+    }
+    if (VecCompare(y_csr, result) < 0)
+        exit(1);
     cout << "Check Passed" << endl;
 
     // Cleanup
@@ -171,5 +198,11 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
 
 	(*rowptr)[row_i++] = val_i;
 }
+
+#endif
+
+SPX_BEGIN_C_DECLS__
+void check_result(vector_t *result, vector_t *x, char *filename, size_t loops);
+SPX_END_C_DECLS__
 
 #endif // SPARSEX_INTERNALS_CSX_BENCH_HPP

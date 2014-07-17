@@ -31,11 +31,12 @@ SPARSEXIMPL_LDADD = \
 
 check_PROGRAMS = test_spmv test_sparsex test_element test_dynarray test_timer
 
-test_sparsex_SOURCES = sparsex_test.c
+test_sparsex_SOURCES = \
+	CsxBench.cpp \
+	sparsex_test.c
 test_sparsex_LDADD = \
-	$(top_builddir)/src/api/.libs/libsparsex.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS)
+	$(SPARSEXIMPL_LDADD) \
+	$(top_builddir)/src/api/.libs/libsparsex.la
 
 test_spmv_SOURCES = \
 	CsxBench.cpp \

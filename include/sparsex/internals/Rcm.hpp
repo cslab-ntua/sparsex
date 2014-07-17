@@ -140,9 +140,13 @@ void FindPerm(vector<size_t>& perm, vector<size_t>& invperm, Graph& graph)
 template<typename IndexType, typename ValueType>
 Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
 {
-    // make a pessimistic guess for nr_edges
+    // The flag must be set before using the MMF iterator
+    mat.SetReordered();
+
+    // Make a pessimistic guess for nr_edges
     size_t nr_edges;
-    if (mat.IsSymmetric()) {    //if main diagonal is full (nr_nzeros - nr_rows) / 2
+    if (mat.IsSymmetric()) {
+        // If main diagonal is full (nr_nzeros - nr_rows) / 2
         nr_edges = mat.GetNrNonzeros() / 2;
     } else {
         nr_edges = mat.GetNrNonzeros();
@@ -177,9 +181,6 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
         throw bad_reorder;
     }
 
-    if (!mat.IsSymmetric() && !mat.IsColWise()) 
-        mat.SetReordered();
-
     for (size_t i = 0; i < index; ++i) {
         add_edge(edges[i].first, edges[i].second, graph);
     }
@@ -212,7 +213,7 @@ void DoReorder_RCM(MMF<IndexType, ValueType>& mat, vector<size_t> &perm)
         graph = ConstructGraph_MMF(graph, mat);
     } catch (int e) {
         mat.ResetStream();
-        LOG_INFO << "Reordering complete\n";
+        LOG_INFO << "error in reordering\n";
         return;
     }
     // Find permutation

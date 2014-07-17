@@ -20,7 +20,7 @@
  * for details.
  */
 
-#include "sparsex/internals/Config.hpp"
+#include <sparsex/internals/Config.hpp>
 #include "CsxBench.hpp"
 
 static vector_t *x = NULL;
@@ -621,4 +621,9 @@ void spmv_check_sym_mt(CSR<spx_uindex_t, spx_value_t> *spm, spm_mt_t *spm_mt,
     free(parts);
     free(nodes);
 #endif
+}
+
+void check_result(vector_t *result, vector_t *x, char *filename, size_t loops)
+{
+    CheckResult<spx_uindex_t, spx_value_t>(result, x, filename, loops);
 }
