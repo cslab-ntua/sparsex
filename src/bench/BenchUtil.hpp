@@ -45,7 +45,8 @@ enum library {
 
 typedef boost::function<void (spx_index_t*, spx_index_t*, spx_value_t*,
                               spx_index_t, spx_index_t, spx_index_t,
-                              spx_value_t*, spx_value_t*)> SpmvFn;
+                              spx_value_t*, spx_value_t*,
+                              spx_value_t, spx_value_t)> SpmvFn;
 
 class DirectoryIterator
 {

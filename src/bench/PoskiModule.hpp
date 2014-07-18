@@ -33,18 +33,10 @@ SPX_END_C_DECLS__
 #include <sparsex/types.h>
 #include <iostream>
 
-using namespace std;
-
-extern string MATRIX; 
-extern unsigned int OUTER_LOOPS;
-extern unsigned long LOOPS;
-extern unsigned int NR_THREADS;
-extern spx_value_t ALPHA, BETA;
-extern Timer t;
-
 void poski_spmv(spx_index_t *Aptr, spx_index_t *Aind, spx_value_t *Aval,
-                spx_index_t nrows, spx_index_t ncols,
-                spx_index_t nnz, spx_value_t *x, spx_value_t *y);
+                spx_index_t nrows, spx_index_t ncols, spx_index_t nnz,
+                spx_value_t *x, spx_value_t *y,
+                spx_value_t ALPHA, spx_value_t BETA);
 
 #endif  // POSKI_MODULE_HPP
 

@@ -188,11 +188,11 @@ void PreprocessThread(
     double csx_create_time = timer.ElapsedTime();
     data.GetBuffer() << "CSX build: " << csx_create_time << "\n";
 
-    data.GetSpmEncoded()->spm = csx;
+    data.GetSpmEncoded()->csx = csx;
     data.GetSpmEncoded()->nr_rows = csx->nrows;
     data.GetSpmEncoded()->row_start = csx->row_start;
     assert(csx->ctl);
-    assert(((csx_matrix_t *)data.GetSpmEncoded()->spm)->ctl);
+    assert(((csx_matrix_t *)data.GetSpmEncoded()->csx)->ctl);
 
 #if SPX_USE_NUMA
     int alloc_err = 0;
@@ -266,7 +266,7 @@ void PreprocessThreadSym(
     double csx_create_time = timer.ElapsedTime();
     data.GetBuffer() << "CSX build: " << csx_create_time << "\n";
 
-    data.GetSpmEncoded()->spm = csx;
+    data.GetSpmEncoded()->csx = csx;
     data.GetSpmEncoded()->row_start = csx->lower_matrix->row_start;
     data.GetSpmEncoded()->nr_rows = csx->lower_matrix->nrows;
    

@@ -30,9 +30,6 @@ unsigned int OUTER_LOOPS = 5;   /**< Number of SpMV iterations */
 unsigned long LOOPS = 128;      /**< Number of repeats */
 unsigned int NR_THREADS = 1;    /**< Number of threads for a multithreaded
                                    execution */
-spx_value_t ALPHA = 1.32, BETA = 0.48;
-/**< Scalar parameters of the SpMV kernel (y->APLHA*A*x + BETA*y) */
-
 Timer t;                        /**< Timer for benchmarking */
 
 static SpmvFn GetSpmvFn(library type);
@@ -72,9 +69,13 @@ void Bench_Matrix(const char *filename, const char *library,
 
 	spx_value_t *x = new spx_value_t[ncols];
 	spx_value_t *y = new spx_value_t[nrows];
-#if SPX_BENCH_MKL || SPX_BENCH_POSKI
-	spx_value_t *y_cmp = new spx_value_t[nrows];
+#if SPX_BENCH_MKL
+	spx_value_t *y_mkl = new spx_value_t[nrows];
 #endif
+#if SPX_BENCH_POSKI
+	spx_value_t *y_poski = new spx_value_t[nrows];
+#endif
+
     spx_value_t val = 0, max = 1, min = -1;
  
     for (spx_index_t i = 0; i < nrows; i++) {
@@ -82,28 +83,43 @@ void Bench_Matrix(const char *filename, const char *library,
 		x[i] = min + val*(max-min);
 		y[i] = max + val*(min-max);
     }
-#if SPX_BENCH_MKL || SPX_BENCH_POSKI
-    memcpy(y_cmp, y, nrows * sizeof(spx_value_t));
+
+#if SPX_BENCH_MKL
+    memcpy(y_mkl, y, nrows * sizeof(spx_value_t));
 #endif
 
-    ALPHA = min + val*(max-min);
-    BETA = max + val*(min-max);
+#if SPX_BENCH_POSKI
+    memcpy(y_poski, y, nrows * sizeof(spx_value_t));
+#endif
+
+    spx_value_t ALPHA = min + val*(max-min);
+    spx_value_t BETA = max + val*(min-max);
 
     if (!library) {
         cout << "Using library SparseX..." << endl;
-        sparsex_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y);
+        sparsex_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y,
+                     ALPHA, BETA);
 #if SPX_BENCH_MKL
         cout << "Using library Intel MKL..." << endl;
-        mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);  
+        mkl_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_mkl,
+                 ALPHA, BETA);
 #endif
 #if SPX_BENCH_POSKI
         cout << "Using library pOSKI..." << endl;
-        poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_cmp);
+        poski_spmv(rowptr, colind, values, nrows, ncols, nnz, x, y_poski,
+                   ALPHA, BETA);
 #endif
 
-#if SPX_BENCH_MKL || SPX_BENCH_POSKI
-        if (vec_compare(y, y_cmp, nrows) < 0)
-            cout << "Error in resulting vector!" << endl;
+#if SPX_BENCH_MKL
+        if (vec_compare(y, y_mkl, nrows) < 0)
+            cout << "Error in resulting vector when comparing to MKL!" << endl;
+        else
+            cout << "Checked passed!" << endl;
+#endif
+
+#if SPX_BENCH_POSKI
+        if (vec_compare(y, y_poski, nrows) < 0)
+            cout << "Error in resulting vector when comparing pOSKI!" << endl;
         else
             cout << "Checked passed!" << endl;
 #endif
@@ -120,7 +136,7 @@ void Bench_Matrix(const char *filename, const char *library,
             cerr << "Library doesn't exist." << endl;
         }
 
-        fn(rowptr, colind, values, nrows, ncols, nnz, x, y);            
+        fn(rowptr, colind, values, nrows, ncols, nnz, x, y, ALPHA, BETA);
     }
 
     /* Cleanup */
@@ -129,8 +145,13 @@ void Bench_Matrix(const char *filename, const char *library,
     delete[] values;
     delete[] x;
     delete[] y;
-#if SPX_BENCH_MKL || SPX_BENCH_POSKI
-    delete[] y_cmp;
+
+#if SPX_BENCH_MKL
+    delete[] y_mkl;
+#endif
+
+#if SPX_BENCH_MKL
+    delete[] y_poski;
 #endif
 }
 
@@ -153,7 +174,12 @@ void Bench_Matrix(const char *mmf_file, SpmvFn fn, const char *stats_file)
         y[i] = 2;
     }
     
-    fn(rowptr, colind, values, nrows, ncols, nnz, x, y);            
+    spx_value_t val = 0, max = 1, min = -1;
+    val = ((spx_value_t) rand() / ((spx_value_t) RAND_MAX + 1));
+    spx_value_t ALPHA = min + val*(max-min);
+    spx_value_t BETA = max + val*(min-max);
+
+    fn(rowptr, colind, values, nrows, ncols, nnz, x, y, ALPHA, BETA);
 
     /* Cleanup */
     delete[] rowptr;

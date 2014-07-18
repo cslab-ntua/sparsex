@@ -23,7 +23,6 @@ using namespace sparsex;
 using namespace sparsex::runtime;
 
 vector_t **temp;
-double ALPHA, BETA;
 size_t nr_threads;
 
 #if SPX_DISABLE_POOL
@@ -34,12 +33,13 @@ static barrier *bar;
 void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
                   vector_t *y, spx_value_t beta)
 {
-    ALPHA = alpha; BETA = beta;
     nr_threads = spm_mt->nr_threads;
 
 	for (size_t i = 0; i < nr_threads; i++) {
 		spm_mt->spm_threads[i].x = x;
 		spm_mt->spm_threads[i].y = y;
+		spm_mt->spm_threads[i].alpha = alpha;
+		spm_mt->spm_threads[i].beta = beta;
 	}
 
 #if SPX_DISABLE_POOL
@@ -67,7 +67,6 @@ void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
                       vector_t *y, spx_value_t beta)
 {
-    ALPHA = alpha; BETA = beta;
 	nr_threads = spm_mt->nr_threads;
     temp = spm_mt->local_buffers;
 	temp[0] = y;
@@ -78,6 +77,8 @@ void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 	for (size_t i = 0; i < nr_threads; i++) {
 		spm_mt->spm_threads[i].x = x;
 		spm_mt->spm_threads[i].y = y;
+		spm_mt->spm_threads[i].alpha = alpha;
+		spm_mt->spm_threads[i].beta = beta;
 	}
 
 #if SPX_DISABLE_POOL
@@ -106,12 +107,12 @@ void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
                 vector_t *y)
 {
-    ALPHA = alpha;
     nr_threads = spm_mt->nr_threads;
 
 	for (size_t i = 0; i < nr_threads; i++) {
 		spm_mt->spm_threads[i].x = x;
 		spm_mt->spm_threads[i].y = y;
+		spm_mt->spm_threads[i].alpha = alpha;
 	}
 
     VecInit(y, 0);
@@ -141,7 +142,6 @@ void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
                     vector_t *y)
 {
-    ALPHA = alpha;
 	nr_threads = spm_mt->nr_threads;
     temp = spm_mt->local_buffers;
 	temp[0] = y;
@@ -152,6 +152,7 @@ void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 	for (size_t i = 0; i < nr_threads; i++) {
 		spm_mt->spm_threads[i].x = x;
 		spm_mt->spm_threads[i].y = y;
+		spm_mt->spm_threads[i].alpha = alpha;
 	}
 
     VecInit(y, 0);

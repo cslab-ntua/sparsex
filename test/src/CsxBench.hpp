@@ -107,7 +107,7 @@ void CheckLoop(spm_mt_t *spm_mt, char *mmf_name)
 }
 
 template<typename IndexType, typename ValueType>
-void CheckResult(vector_t *result, vector_t *x, char *mmf_name, size_t loops)
+void CheckResult(vector_t *result, vector_t *x, char *mmf_name)
 {
     CSR<IndexType, ValueType> *csr = new CSR<IndexType, ValueType>;
     MMFtoCSR<IndexType, ValueType>(mmf_name, &csr->rowptr_, &csr->colind_,
@@ -116,9 +116,7 @@ void CheckResult(vector_t *result, vector_t *x, char *mmf_name, size_t loops)
 
     cout << "Checking... " << flush;
 	vector_t *y_csr = VecCreate(csr->nr_rows_);
-    for (size_t i = 0; i < loops; i++) {
-        csr_spmv(csr, x, y_csr);
-    }
+    csr_spmv(csr, x, y_csr);
     if (VecCompare(y_csr, result) < 0)
         exit(1);
     cout << "Check Passed" << endl;
@@ -202,7 +200,7 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
 #endif
 
 SPX_BEGIN_C_DECLS__
-void check_result(vector_t *result, vector_t *x, char *filename, size_t loops);
+void check_result(vector_t *result, vector_t *x, char *filename);
 SPX_END_C_DECLS__
 
 #endif // SPARSEX_INTERNALS_CSX_BENCH_HPP

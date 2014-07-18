@@ -29,32 +29,35 @@
 #include <stdint.h>
 
 struct spm_mt_thread {
-	void *spm;
 	spmv_fn_t spmv_fn;
+	void *csx;
+	void *data;
+	map_t *map;
+	// uint64_t *col_map;
+	vector_t *x;
+    vector_t *y;
+    int *sense;
+    double alpha;
+    double beta;
+	double secs;
 	unsigned int cpu;
 	unsigned int id;
-	int node;
-	size_t row_start;
-	size_t end;
-	size_t nr_rows;
-	// uint64_t *col_map;
-	map_t *map;
-	vector_t *x, *y;
+	unsigned int node;
+	unsigned int row_start;
+	unsigned int end;
+	unsigned int nr_rows;
 	size_t size_assigned;
-	double secs;
-	void *data;
-    int *sense;
 };
 typedef struct spm_mt_thread spm_mt_thread_t;
 
 struct spm_mt {
 	spm_mt_thread_t *spm_threads;
+    vector_t **local_buffers;
 	unsigned int nr_threads;
 	bool symmetric;
 #if SPX_USE_NUMA
     bool interleaved;
 #endif
-    vector_t **local_buffers;
 };
 
 typedef struct spm_mt spm_mt_t;

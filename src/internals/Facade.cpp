@@ -150,7 +150,7 @@ void *LoadTuned(const char *filename,
     spm_mt = RestoreCsx<spx_index_t, spx_value_t>(filename, permutation);
 	for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
         csx =
-            (CsxMatrix<spx_index_t, spx_value_t> *) spm_mt->spm_threads[i].spm;
+            (CsxMatrix<spx_index_t, spx_value_t> *) spm_mt->spm_threads[i].csx;
         *nr_rows += csx->nrows;
         *nnz += csx->nnz;
     }

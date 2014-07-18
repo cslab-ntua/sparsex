@@ -177,7 +177,7 @@ int main(int argc, char **argv)
     }
 
     /* Check the result */
-    check_result(y, x, filename, loops);
+    check_result(y, x, filename);
 
     /* Cleanup */
     spx_input_destroy(input);

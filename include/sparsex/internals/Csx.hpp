@@ -36,12 +36,12 @@ typedef struct {
 
 typedef struct {
     spx_value_t *values;
+    uint8_t *ctl;
     spx_index_t nnz;
     spx_index_t ncols;
     spx_index_t nrows;
     spx_index_t ctl_size;
     spx_index_t row_start;
-    uint8_t *ctl;
     uint8_t row_jumps;
     long id_map[CTL_PATTERNS_MAX];
     row_info_t *rows_info; 
@@ -63,12 +63,12 @@ namespace csx {
 template<typename IndexType, typename ValueType>
 struct CsxMatrix {
     ValueType *values;
+    uint8_t *ctl;
     IndexType nnz;
     IndexType ncols;
     IndexType nrows;
     IndexType ctl_size;
     IndexType row_start;
-    uint8_t *ctl;
     uint8_t row_jumps;
     long id_map[CTL_PATTERNS_MAX];
     row_info_t *rows_info;

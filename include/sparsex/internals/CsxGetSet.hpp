@@ -87,7 +87,7 @@ bool GetValueCsx(void *spm, IndexType row, IndexType col, ValueType *value)
 
     //Add boundary check for row/col
     for (size_t i = 0; i < spm_mt->nr_threads; i++) {
-        csx = (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].spm;
+        csx = (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].csx;
         if ((size_t) row <= (csx->row_start + csx->nrows)) {
             found = SearchValue(csx, row, col, *value, false);
             break;
@@ -114,7 +114,7 @@ bool GetValueCsxSym(void *spm, IndexType row, IndexType col, ValueType *value)
     }
     for (size_t i = 0; i < spm_mt->nr_threads; i++) {
         csx_sym = (CsxSymMatrix<IndexType, ValueType> *)
-            spm_mt->spm_threads[i].spm;
+            spm_mt->spm_threads[i].csx;
         csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
         // Check if element is on main diagonal
         if (row == col && ((size_t) row <= (csx->row_start + csx->nrows))) {
@@ -137,7 +137,7 @@ bool SetValueCsx(void *spm, IndexType row, IndexType col, ValueType value)
 
     //Add boundary check for row/col
     for (size_t i = 0; i < spm_mt->nr_threads; i++) {
-        csx = (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].spm;
+        csx = (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].csx;
         if ((size_t) row <= (csx->row_start + csx->nrows)) {
             found = SearchValue(csx, row, col, value, true);
             break;
@@ -164,7 +164,7 @@ bool SetValueCsxSym(void *spm, IndexType row, IndexType col, ValueType value)
     }
     for (size_t i = 0; i < spm_mt->nr_threads; i++) {
         csx_sym =
-            (CsxSymMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].spm;
+            (CsxSymMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].csx;
         csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
         // Check if element is on main diagonal
         if (row == col && ((size_t) row <= (csx->row_start + csx->nrows))) {

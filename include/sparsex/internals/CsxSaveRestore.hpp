@@ -101,11 +101,11 @@ void SaveCsx(void *spm, const char *filename, IndexType *permutation)
 #if SPX_USE_NUMA
             if (spm_mt->symmetric) {
                 csx_sym = (CsxSymMatrix<IndexType, ValueType> *)
-                    spm_mt->spm_threads[i].spm;
+                    spm_mt->spm_threads[i].csx;
                 csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
             } else {
                 csx = (CsxMatrix<IndexType, ValueType> *)
-                    spm_mt->spm_threads[i].spm;
+                    spm_mt->spm_threads[i].csx;
             }
 
             oa << csx->nnz & csx->ctl_size;
@@ -115,11 +115,11 @@ void SaveCsx(void *spm, const char *filename, IndexType *permutation)
         for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
             if (spm_mt->symmetric) {
                 csx_sym = (CsxSymMatrix<IndexType, ValueType> *)
-                    spm_mt->spm_threads[i].spm;
+                    spm_mt->spm_threads[i].csx;
                 csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
             } else {
                 csx = (CsxMatrix<IndexType, ValueType> *)
-                    spm_mt->spm_threads[i].spm;
+                    spm_mt->spm_threads[i].csx;
             }
 
             oa << csx->nnz & csx->ncols & csx->nrows & csx->ctl_size
@@ -290,9 +290,9 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
                 ia >> boost::serialization::make_array(map->elems_pos, length);
                 spm_mt->spm_threads[i].map = map;
                 csx_sym->lower_matrix = csx;
-                spm_mt->spm_threads[i].spm = csx_sym;
+                spm_mt->spm_threads[i].csx = csx_sym;
             } else {
-                spm_mt->spm_threads[i].spm = csx;
+                spm_mt->spm_threads[i].csx = csx;
             }
 
             spm_mt->spm_threads[i].row_start = csx->row_start;
@@ -312,11 +312,11 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
         for (size_t i = 0; i < nr_threads; ++i) {
             if (symmetric) {
                 csx_sym = (CsxSymMatrix<IndexType, ValueType> *)
-                    spm_mt->spm_threads[i].spm;
+                    spm_mt->spm_threads[i].csx;
                 csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
             } else { 
                 csx = (CsxMatrix<IndexType, ValueType> *)
-                    spm_mt->spm_threads[i].spm;
+                    spm_mt->spm_threads[i].csx;
             }
             bool row_jumps = csx->row_jumps != 0;
             Jits[i] = new CsxJit<IndexType, ValueType>(csx, &engine,

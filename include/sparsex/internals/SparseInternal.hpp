@@ -142,7 +142,12 @@ void SparseInternal<PartitionType>::BuildPartitions(InputType &input, size_t nr)
         cnt += nnz;
     }
 
-    assert(cnt == nr_nzeros_);
+    // assert(cnt == nr_nzeros_);
+    if (cnt != nr_nzeros_) {
+        LOG_ERROR << "error in input matrix (matrix has less elements than "
+            "claimed)\n";
+        exit(1);
+    }
 }
 
 template<typename IndexType, typename ValueType>

@@ -130,7 +130,7 @@ size_t CsxSize(spm_mt_t *spm_mt)
     for (size_t i = 0; i < spm_mt->nr_threads; ++i) {
         spm_mt_thread_t *t = spm_mt->spm_threads + i;
         CsxMatrix<IndexType, ValueType> *csx =
-            (CsxMatrix<IndexType, ValueType> *) t->spm;
+            (CsxMatrix<IndexType, ValueType> *) t->csx;
         
         ret += csx->nnz * sizeof(ValueType);
         ret += csx->ctl_size;
@@ -154,7 +154,7 @@ size_t CsxSymSize(spm_mt_t *spm_mt)
     for (size_t i = 0; i < spm_mt->nr_threads; i++) {
         spm_mt_thread_t *t = spm_mt->spm_threads + i;
         CsxSymMatrix<IndexType, ValueType> *csx_sym =
-            (CsxSymMatrix<IndexType, ValueType> *)t->spm;
+            (CsxSymMatrix<IndexType, ValueType> *)t->csx;
         CsxMatrix<IndexType, ValueType> *csx = csx_sym->lower_matrix;
 
         ret += (csx->nnz + csx->nrows) * sizeof(ValueType);
@@ -192,11 +192,11 @@ void PutSpmMt(spm_mt_t *spm_mt)
                 if (spm_mt->symmetric) {
                     CsxSymMatrix<IndexType, ValueType> *csx_sym =
                         (CsxSymMatrix<IndexType, ValueType> *)
-                        spm_mt->spm_threads[i].spm;           
+                        spm_mt->spm_threads[i].csx;           
                     csx = csx_sym->lower_matrix;
                 } else {
                     csx = (CsxMatrix<IndexType, ValueType> *)
-                        spm_mt->spm_threads[i].spm;
+                        spm_mt->spm_threads[i].csx;
                 }
 
                 total_nnz += csx->nnz;
@@ -211,11 +211,11 @@ void PutSpmMt(spm_mt_t *spm_mt)
             if (spm_mt->symmetric) {
                 CsxSymMatrix<IndexType, ValueType> *csx_sym =
                     (CsxSymMatrix<IndexType, ValueType> *)
-                    spm_mt->spm_threads[0].spm;
+                    spm_mt->spm_threads[0].csx;
                 csx = csx_sym->lower_matrix;
             } else {
                 csx = (CsxMatrix<IndexType, ValueType> *)
-                    spm_mt->spm_threads[0].spm;
+                    spm_mt->spm_threads[0].csx;
             }
 
             alloc.Destroy(csx->ctl, total_ctl_size);
@@ -226,14 +226,14 @@ void PutSpmMt(spm_mt_t *spm_mt)
     if (!spm_mt->symmetric) {
         for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
             CsxMatrix<IndexType, ValueType> *csx =
-                (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].spm;
+                (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].csx;
             DestroyCsx(csx);
         }
     } else {
         for (unsigned int i = 0; i < spm_mt->nr_threads; i++) {
             CsxSymMatrix<IndexType, ValueType> *csx_sym =
                 (CsxSymMatrix<IndexType, ValueType> *)
-                spm_mt->spm_threads[i].spm;
+                spm_mt->spm_threads[i].csx;
             DestroyCsxSym(csx_sym);
 #if SPX_USE_NUMA
             NumaAllocator &alloc = NumaAllocator::GetInstance();
