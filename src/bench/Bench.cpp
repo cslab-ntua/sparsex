@@ -150,7 +150,7 @@ void Bench_Matrix(const char *filename, const char *library,
     delete[] y_mkl;
 #endif
 
-#if SPX_BENCH_MKL
+#if SPX_BENCH_POSKI
     delete[] y_poski;
 #endif
 }

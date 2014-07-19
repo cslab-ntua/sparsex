@@ -188,6 +188,12 @@ void SetPropertyByMnemonic(const char *key, const char *value)
                           string(value));
 }
 
+void SetPropertiesFromEnv()
+{
+    RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
+    config.LoadFromEnv();
+}
+
 void GetNodes(int *nodes)
 {
     RuntimeContext &rt_context = RuntimeContext::GetInstance();

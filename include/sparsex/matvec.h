@@ -261,6 +261,12 @@ spx_error_t spx_partition_destroy(spx_partition_t *p);
 void spx_option_set(const char *option, const char *string);
 
 /**
+ *  Sets the tuning options according to the environmental variables 
+ *  set on the command line (to be deprecated).
+ */
+void spx_options_set_from_env();
+
+/**
  *  Creates and returns a valid vector object, whose values are initialized to
  *  zero.
  *

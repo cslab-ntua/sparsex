@@ -699,6 +699,11 @@ void spx_option_set(const char *option, const char *value)
     SetPropertyByMnemonic(option, value);
 }
 
+void spx_options_set_from_env()
+{
+    SetPropertiesFromEnv();
+}
+
 spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p)
 {
     spx_vector_t *v = SPX_INVALID_VEC;

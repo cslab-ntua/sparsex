@@ -46,6 +46,7 @@ int GetValue(void *matrix,
 int SetValue(void *matrix, spx_index_t row, spx_index_t col, spx_value_t value);
 void DestroyCsx(void *matrix);
 void SetPropertyByMnemonic(const char *key, const char *value);
+void SetPropertiesFromEnv();
 void GetNodes(int *nodes);
 void CreatePool();
 
