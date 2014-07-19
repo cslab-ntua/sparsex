@@ -117,7 +117,7 @@ AC_CHECK_LIB([numa], [numa_realloc], [],
 Please make sure you have installed correctly libnuma >= 2.0.8.])
              ])
 
-dnl If library benchmarks are enabled, check also for MKL and pOSKI
+dnl If library benchmarks are enabled, build also the MKL and pOSKI benchmarks
 if test x"$enable_bench" = x"yes"; then
     SPX_BUILD_BENCH=1
 else
@@ -138,8 +138,8 @@ fi
 
 dnl Set necessary flags
 AX_CXXFLAGS=""
-AX_CPPFLAGS="$BOOST_CPPFLAGS $LLVM_CPPFLAGS $MKL_CPPFLAGS $POSKI_CPPFLAGS"
-AX_LDFLAGS="$BOOST_LDFLAGS $LLVM_LDFLAGS $MKL_LDFLAGS $POSKI_LDFLAGS"
+AX_CPPFLAGS="$BOOST_CPPFLAGS $LLVM_CPPFLAGS"
+AX_LDFLAGS="$BOOST_LDFLAGS $LLVM_LDFLAGS"
 
 dnl Set up the compilation flags for the package.
 dnl If user did not specify any custom flags, use our default

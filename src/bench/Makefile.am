@@ -30,10 +30,16 @@ bench_spmv_SOURCES = \
 	SparsexModule.cpp
 
 if SPX_BUILD_BENCH_MKL
+AM_CPPFLAGS += $(MKL_CPPFLAGS)
+AM_CXXFLAGS += $(MKL_CXXFLAGS)
+AM_LDFLAGS += $(MKL_LDFLAGS)
 bench_spmv_SOURCES += MklModule.cpp
 endif
 
 if SPX_BUILD_BENCH_POSKI
+AM_CPPFLAGS += $(POSKI_CPPFLAGS)
+AM_CXXFLAGS += $(POSKI_CXXFLAGS)
+AM_LDFLAGS += $(POSKI_LDFLAGS)
 bench_spmv_SOURCES += PoskiModule.cpp
 endif
 

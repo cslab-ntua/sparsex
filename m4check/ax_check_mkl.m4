@@ -42,13 +42,14 @@ AC_DEFUN([AX_CHECK_MKL],
                 #include "$p/include/mkl.h"
                 ],
                 [
-                    printf("%d,%d,%d\n", __INTEL_MKL__,
+                    printf("%d.%d.%d\n", __INTEL_MKL__,
                            __INTEL_MKL_MINOR__, __INTEL_MKL_UPDATE__);
                 ])],
             [
                 mkl_found=1
                 MKL_CPPFLAGS="-I$p/include"
-                MKL_LDFLAGS="-L$p/lib/intel64"
+                MKL_CXXFLAGS="-fopenmp -m64"
+                MKL_LDFLAGS="-L$p/lib/intel64 -fopenmp"
                 mkl_version=`./conftest$EXEEXT`
                 AS_VERSION_COMPARE([$mkl_version],
                                    [$mkl_required_version],
@@ -67,7 +68,7 @@ AC_DEFUN([AX_CHECK_MKL],
     else
         AC_DEFINE([SPX_BENCH_MKL], [1], [Build SpMV benchmarks with MKL.])
         AC_MSG_RESULT([yes (found version $mkl_version)])
-        MKL_LIBS="-lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core"
+        MKL_LIBS="-lmkl_intel_lp64 -lmkl_core -lmkl_gnu_thread -ldl -lpthread -lm"
     fi
 
     # restore compiler flags
@@ -75,6 +76,7 @@ AC_DEFUN([AX_CHECK_MKL],
     CXXFLAGS="$CXXFLAGS_save"
 
     AC_SUBST([MKL_CPPFLAGS])
+    AC_SUBST([MKL_CXXFLAGS])
     AC_SUBST([MKL_LDFLAGS])
     AC_SUBST([MKL_LIBS])
     AM_CONDITIONAL([SPX_BUILD_BENCH_MKL], [test $mkl_found -eq 1])
@@ -87,20 +89,23 @@ AC_DEFUN([AX_CHECK_POSKI],
                         [use pOSKI library installed in DIR.])],
         [])
     
-    LD_LIBRARY_PATH_save=$LD_LIBRARY_PATH
-    LD_LIBRARY_PATH="$with_poski/lib:$LD_LIBRARY_PATH"
+    CPPFLAGS_save="$CPPFLAGS"
+    CPPFLAGS="-I$with_poski/include"
+    LDFLAGS_save="$LDFLAGS"
+    LDFLAGS="-L$with_poski/lib -L$with_poski/build_oski/lib/oski"
     AC_CHECK_LIB([poski], [poski_Init],
                  [poski_found=1], [poski_found=0])
 
     if test $poski_found -eq 1; then
-        AC_MSG_RESULT([yes])
         AC_DEFINE([SPX_BENCH_POSKI], [1], [Build SpMV benchmarks with pOSKI.])
+
         POSKI_CPPFLAGS="-I$with_poski/include -I$with_poski/build_oski/include"
         POSKI_LDFLAGS="-L$with_poski/lib -L$with_poski/build_oski/lib/oski"
         POSKI_LIBS="-lposki"
     fi
 
-    LD_LIBRARY_PATH=$LD_LIBRARY_PATH_save
+    CPPFLAGS=$CPPFLAGS_save
+    LDFLAGS=$LDFLAGS_save
     AC_SUBST([POSKI_CPPFLAGS])
     AC_SUBST([POSKI_LDFLAGS])
     AC_SUBST([POSKI_LIBS])

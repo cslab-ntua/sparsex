@@ -19,13 +19,11 @@
 #ifndef POSKI_MODULE_HPP
 #define POSKI_MODULE_HPP
 
-#ifdef HAVE_CONFIG_H
-#   include "build_config.h"
-#endif
-
 #include <sparsex/internals/cdecl.h>
 
 SPX_BEGIN_C_DECLS__
+// Undefine HAVE_CONFIG_H, as if we were including poski normally
+#undef HAVE_CONFIG_H
 #include <poski/poski.h>
 SPX_END_C_DECLS__
 

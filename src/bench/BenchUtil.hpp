@@ -19,6 +19,10 @@
 #ifndef BENCH_UTIL_HPP
 #define BENCH_UTIL_HPP
 
+#ifdef HAVE_CONFIG_H
+#   include "build_config.h"
+#endif
+
 #if SPX_BENCH_POSKI
 #   include "PoskiModule.hpp"
 #endif
