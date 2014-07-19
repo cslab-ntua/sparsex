@@ -206,7 +206,7 @@ dnl
 
 AC_DEFUN([AX_SELECT_BUILD],
 [
-    AC_ARG_VAR([build_type], [Select build type.])
+    AC_ARG_VAR([build_type], [@<:@release|debug@:>@ Select build type for $PACKAGE_NAME. Default value is `release'])
 	if test -z $build_type; then
 	    build_type="release-shared"
 	fi

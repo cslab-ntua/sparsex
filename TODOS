@@ -46,15 +46,15 @@
    -- [DONE] config.h
    -- [DONE] version.h (with version string)
    -- [DONE] Add an installable sparsex-config script
-   -- Fix linking when building the static libraries only
+   -- [DONE] Fix linking when building the static libraries only
    -- [DONE] Check if -Wl,--allow-multiple-definitions is needed
    -- [DONE] Check compilation with diverse index and value types
    -- [DONE] CsxBench.hpp should not be installed, check other similar headers.
    -- [DONE] SpmvTest crashes with spx_value_t=float
    -- [DONE] Generate documentation with `make doc'
    -- [DONE] Check pOSKI/MKL bench  builds
-   -- Check if CXX supports the required C++11 features
-   -- If CXX=icc set up the correct flags for MKL
+   -- [DONE] Check if CXX supports the required C++11 features
+   -- [DONE] If CXX=icc set up the correct flags for MKL
    -- Library version suffix when installed
 
 4. [DONE] Testing

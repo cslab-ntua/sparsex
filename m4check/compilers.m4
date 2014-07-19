@@ -8,6 +8,144 @@ dnl
 dnl This file is distributed under the BSD License. See LICENSE.txt for details.
 dnl
 
+dnl AX_CHECK_{CC,CXX}
+dnl
+dnl     Checks the C/C++ compiler provided by the user and returns a
+dnl     platform-independent string describing the compiler in `ax_cc' or
+dnl     `ax_cxx' respectively
+
+AC_DEFUN([AX_CHECK_CC],
+[
+CPPFLAGS_save="$CPPFLAGS"
+CFLAGS_save="$CFLAGS"
+LDFLAGS_save="$LDFLAGS"
+AC_LANG_PUSH([C])
+AC_LINK_IFELSE([
+    AC_LANG_PROGRAM([
+        #include <stdio.h>
+        ],
+        [
+            #if defined(__ICC)
+            printf("%s\n", "icc");
+            #elif defined(__GNUC__)
+            printf("%s\n", "gcc");
+            #else
+            printf("%s\n", "unknown");
+            #endif
+        ])],
+    [
+        ax_cc=`./conftest$EXEEXT`
+    ],
+    [
+        AC_MSG_ERROR([[AX_CHECK_CC] failed: This is probably a bug! dnl
+Please report this to $PACKAGE_BUGREPORT.])
+    ])
+
+AC_LANG_POP([C])
+CPPFLAGS="$CPPFLAGS_save"
+CFLAGS="$CFLAGS_save"
+LDFLAGS="$LDFLAGS_save"
+])
+
+AC_DEFUN([AX_CHECK_CXX],
+[
+CPPFLAGS_save="$CPPFLAGS"
+CXXFLAGS_save="$CXXFLAGS"
+LDFLAGS_save="$LDFLAGS"
+AC_LANG_PUSH([C++])
+AC_LINK_IFELSE([
+    AC_LANG_PROGRAM([
+        #include <stdio.h>
+        ],
+        [
+            #if defined(__ICC)
+            printf("%s\n", "icpc");
+            #elif defined(__GNUC__)
+            printf("%s\n", "g++");
+            #else
+            printf("%s\n", "unknown");
+            #endif
+        ])],
+    [
+        ax_cxx=`./conftest$EXEEXT`
+    ],
+    [
+        AC_MSG_ERROR([[AX_CHECK_CXX] failed: This is probably a bug! dnl
+Please report this to $PACKAGE_BUGREPORT.])
+    ])
+
+AC_LANG_POP([C++])
+CPPFLAGS="$CPPFLAGS_save"
+CXXFLAGS="$CXXFLAGS_save"
+LDFLAGS="$LDFLAGS_save"
+])
+
+
+dnl
+dnl AX_CXX_CHECK_CXX11_FEATURES
+dnl
+dnl     Checks if the supplied C++ compiler supports the C++11 features
+dnl     used by SparseX
+dnl
+
+AC_DEFUN([AX_CXX_CHECK_CXX11_FEATURES],
+[
+AC_MSG_CHECKING([whether C++ compiler supports the required C++11 features])
+
+CPPFLAGS_save="$CPPFLAGS"
+CXXFLAGS_save="$CXXFLAGS"
+LDFLAGS_save="$LDFLAGS"
+
+CPPFLAGS=""
+CXXFLAGS="-std=c++0x -pedantic"
+LDFLAGS=""
+
+AC_LANG_PUSH([C++])
+AC_LINK_IFELSE([
+    AC_LANG_PROGRAM([
+        #include <atomic>
+        #include <vector>
+
+        using namespace std;
+
+        class C
+        {
+        public:
+            C(int v) { v_ = v; }
+                C(const C &other) { }
+                C(C &&other) { }
+        private:
+            int v_;
+        };
+    ],
+    [
+        vector<C> v;
+        v.emplace_back(1);
+
+        C *vd = v.data();
+        atomic<int> a;
+        a = 0;
+        atomic_fetch_sub(&a, 1);
+        a.store(10);
+    ])],
+    [
+        AC_MSG_RESULT([yes])
+    ],
+    [
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([dnl
+The supplied compiler does not support the required C++11 features dnl
+for building $PACKAGE_NAME. Consider using a more recent version.])
+    ])
+
+AC_LANG_POP([C++])
+
+CPPFLAGS="$CPPFLAGS_save"
+CXXFLAGS="$CXXFLAGS_save"
+LDFLAGS="$LDFLAGS_save"
+])
+
+
 dnl
 dnl AX_CHECK_{CPPFLAGS,CFLAGS,CXXFLAGS}([flags])
 dnl
