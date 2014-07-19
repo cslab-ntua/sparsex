@@ -35,13 +35,14 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
                   spx_value_t ALPHA, spx_value_t BETA)
 {
     spx_init();
+    spx_log_info_console();
+
     /* 1. Matrix loading phase */
     spx_input_t *input = spx_input_load_csr(
         rowptr, colind, values, nrows, ncols, SPX_INDEX_ZERO_BASED);
 
     /* 2. Tuning phase */
-    spx_option_set("spx.rt.nr_threads", "2");
-    spx_option_set("spx.rt.cpu_affinity", "0,1");
+    spx_options_set_from_env();
     spx_option_set("spx.preproc.xform", "all");
     spx_option_set("spx.preproc.sampling", "portion");
     spx_option_set("spx.preproc.sampling.nr_samples", "48");

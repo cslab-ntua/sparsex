@@ -101,6 +101,11 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         SetProperty(RuntimeConfiguration::RtCpuAffinity, string(mt_conf_str));
     }
 
+    const char *thr_str = getenv("NR_THREADS");
+    if (thr_str) {
+        SetProperty(RuntimeConfiguration::RtNrThreads, string(thr_str));
+    }
+
     const char *xform_conf_str = getenv("XFORM_CONF");
     if (xform_conf_str) {
         SetProperty(RuntimeConfiguration::PreprocXform, string(xform_conf_str));
@@ -162,6 +167,12 @@ void RuntimeContext::CheckParams(const RuntimeConfiguration &conf)
         affinity);
     size_t nr_threads = conf.GetProperty<size_t>(
         RuntimeConfiguration::RtNrThreads);
+
+    if (affinity.size() != nr_threads) {
+        LOG_ERROR << "error in configuration of runtime (clash in number "
+            "of threads and affinity)\n";
+        exit(1);
+    }
 
     LOG_INFO << "Number of threads: " << nr_threads << "\n";
     stringstream os;
