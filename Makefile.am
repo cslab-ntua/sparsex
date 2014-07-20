@@ -17,6 +17,8 @@ silent_flag_  = $(silent_flag_$(AM_DEFAULT_VERBOSITY))
 silent_flag_0 = --silent
 AM_MAKEFLAGS  = $(silent_flag)
 
+dist_noinst_DATA = LICENSE.txt
+
 # Recursively invoke our new and/or redefined targets
 doc doc-api doc-devel clean-doc mostlyclean-local:
 	$(MAKE) $(AM_MAKEFLAGS) -C @dx_docdir@ $@
