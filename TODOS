@@ -55,7 +55,13 @@
    -- [DONE] Check pOSKI/MKL bench  builds
    -- [DONE] Check if CXX supports the required C++11 features
    -- [DONE] If CXX=icc set up the correct flags for MKL
-   -- Library version suffix when installed
+   -- [DONE] Update README
+   -- [DONE] Update INSTALL
+   -- [DONE] Add LICENSE.txt to distribution
+   -- [DONE] Check distribution tarball
+   -- [DONE] build_type variable description, fix $PACKAGE_NAME appearance
+   -- [DONE] Fix appearance of `--disable-bench' option
+   -- Remove brackets in options' arguments, when the argument is mandatory
 
 4. [DONE] Testing
    -- [DONE] Command-line interface

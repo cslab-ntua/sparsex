@@ -70,8 +70,8 @@ LT_INIT
 dnl --enable-bench option
 AC_ARG_ENABLE([bench],
     [AS_HELP_STRING([--enable-bench@<:@={yes|no}@:>@],
-        [Compile also library benchmarks. Default value is `no'.])]
-    [AS_HELP_STRING([--disable-bench], [Disable library benchmarks.])],
+        [Compile also library benchmarks. Default is `no'.])]
+[AS_HELP_STRING([--disable-bench], [Disable library benchmarks.])],
     [
         if test x"$enableval" != x"yes" && test x"$enableval" != x"no"; then
             AC_MSG_ERROR([Invalid value for option `--enable-bench'. dnl
@@ -81,15 +81,29 @@ Type `configure --help' for more information.])
 
 dnl --with-index/--with-value options
 AC_ARG_WITH([index],
-    [AS_HELP_STRING([--with-index@<:@=TYPE@:>@],
+    [AS_HELP_STRING([--with-index=TYPE],
         [Compile SparseX with indices of type `TYPE'. `TYPE' must be a valid C integral type.])],
-    [SPX_INDEX_TYPE="$with_index"],
+    [
+        if test x"$with_index" == x"yes"; then
+            # User did not specify a value
+            AC_MSG_ERROR([Index type is empty. Please specify a valid C dnl
+integral type.])
+        fi
+        SPX_INDEX_TYPE="$with_index"
+    ],
     [SPX_INDEX_TYPE="int"])
 
 AC_ARG_WITH([value],
-    [AS_HELP_STRING([--with-value@<:@=TYPE@:>@],
+    [AS_HELP_STRING([--with-value=TYPE],
         [Compile SparseX with indices of type `TYPE'. `TYPE' must be a valid C floating poing type.])],
-    [SPX_VALUE_TYPE="$with_value"],
+    [
+        if test x"$with_value" == x"yes"; then
+            # User did not specify a value
+            AC_MSG_ERROR([Value type is empty. Please specify a valid C dnl
+real number type.])
+        fi
+        SPX_VALUE_TYPE="$with_value"
+    ],
     [SPX_VALUE_TYPE="double"])
 
 dnl Check for programs
@@ -214,6 +228,7 @@ AC_CONFIG_FILES([
         src/internals/Makefile
         src/templates/Makefile
         test/Makefile
+        test/matrices/Makefile
         test/src/Makefile
         ])
 

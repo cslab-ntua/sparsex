@@ -1,13 +1,10 @@
 Installation Instructions
 *************************
 
-Copyright (C) 1994-1996, 1999-2002, 2004-2011 Free Software Foundation,
-Inc.
+Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
+All rights reserved.
 
-   Copying and distribution of this file, with or without modification,
-are permitted in any medium without royalty provided the copyright
-notice and this notice are preserved.  This file is offered as-is,
-without warranty of any kind.
+This file is distributed under the BSD License. See LICENSE.txt for details.
 
 Basic Installation
 ==================
@@ -368,3 +365,86 @@ operates.
 `configure' also accepts some other, not widely useful, options.  Run
 `configure --help' for more details.
 
+SparseX-specific configuration options and variables
+====================================================
+
+    Apart from the standard Autoconf options described above, SparseX provides a
+set of additional configuration options and variables that affect its
+behavior. These are summarized below:
+
+
+`--with-index=TYPE'
+    This option changes the data type for storing indices inside the SparseX
+    library to `TYPE'. `TYPE' can be any C/C++ integral type. The default data
+    type is `int'.
+
+`--with-value=TYPE'
+    This option changes the data type for storing the nonzero values of sparse
+    matrices inside the SparseX library to `TYPE'. `TYPE' can be any C/C++ real
+    number type. The default data type is `double'.
+
+For example, if you want to build the SparseX library using `short' as index
+type and `float' as nonzero values, you should invoke `configure' as follows:
+
+`./configure --with-index=short --with-value=float'
+
+The `TYPE' argument can contain spaces, e.g., `unsigned long', provided it is
+properly quoted.
+
+`--enable-bench'
+    Enables the build of library performance benchmarks.
+
+
+SparseX build type
+==================
+
+    You can specify the build type of the SparseX library using the
+`build_type=BUILD' variable. `BUILD' can be either `debug' or `release'
+(default). The `debug' version of the library disables all compiler
+optimizations and is mostly suitable for early development phases. If you want
+to change the default build type, you should invoke configure as follows:
+
+`./configure build_type=debug'
+
+Options controlling the resolution of SparseX's external dependencies
+=====================================================================
+
+    The SparseX library depends on a series of external libraries for building
+successfully (see `README', Section 2, REQUIREMENTS). To locate them, the
+`./configure' script either searches for specific configuration scripts from the
+installed libraries, .e.g., `llvm-config', or searches the standard system
+prefixes in the following order: `/usr', `/usr/local', `/opt', `/opt/local'. If
+it is unable to locate any of its dependencies, it will issue an error and
+exit. Normally, the standard `./configure; make; make install' process will work
+without a problem, if all SparseX's dependencies are installed in standard
+locations. However, since this is not always the case, SparseX's configuration
+offers a series of option for locating the required libraries. These options are
+summarized below:
+
+`--with-boostdir=DIR'
+    Use the Boost Library installed in `DIR'.
+
+`--with-<boost_lib>[=variant]
+    Use a the specific `variant' of `boost_lib'. In some systems, multiple
+    variants of the Boost libraries are installed (e.g., debug, multithreaded
+    etc.). These variants are identified with a special suffix (see page
+    `Getting Started', section `Library Naming' in your Boost's installation
+    guide for more details), which is the `variant' argument of this set of
+    options.
+
+`--with-llvm=CONFIG'
+    Use `CONFIG' for querying LLVM installation instead of the standard
+    `llvm-config'.
+
+`--with-llvm-components=COMPONENTS'
+    Link also with the supplied LLVM `COMPONENTS'. This option is mainly
+    intended for development reasons, especially if you are dealing with the
+    code generation component of the SparseX library. This option is useful when
+    you want to link against to additional LLVM components (see `llvm-config
+    --components' for a list of the available components).
+
+`--with-{mkl|poski}[=DIR]
+    This option is only considered if `./configure' is invoked with the
+    `--enable-bench'. If given, performance benchmarks will also be built for
+    the Intel MKL and/or pOSKI libraries. If `DIR' is not given, a set standard
+    prefixes will be searched for locating the libraries.

@@ -21,6 +21,15 @@ AM_LDFLAGS	= \
 	-L$(top_builddir)/src/api/.libs \
 	$(AX_LDFLAGS)
 
+noinst_HEADERS = \
+	Bench.hpp \
+	BenchUtil.hpp \
+	MklModule.hpp \
+	Mmf.hpp \
+	PoskiModule.hpp \
+	SparsexModule.hpp \
+	Timer.hpp
+
 noinst_PROGRAMS = bench_spmv
 
 bench_spmv_SOURCES = \

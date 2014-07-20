@@ -33,14 +33,14 @@ AC_DEFUN([AX_CHECK_LLVM],
                                 [use CONFIG as LLVM configuration script.])],
                 [], [with_llvm="llvm-config"])
 
-    dnl Default LLVM libraries required by SparseX
-    default_llvm_libs="core analysis executionengine jit native bitreader ipo \
-linker bitwriter asmparser instrumentation"
+    dnl Default LLVM components required by SparseX
+    default_llvm_components="core analysis executionengine jit native \
+bitreader ipo linker bitwriter asmparser instrumentation"
 
-    AC_ARG_WITH([llvm-libs],
-                [AS_HELP_STRING([--with-llvm-libs@<:@=LIBS@:>@],
-                                [additional LLVM libraries to link against.])],
-                [], [with_llvm_libs="$default_llvm_libs"])
+    AC_ARG_WITH([llvm-components],
+                [AS_HELP_STRING([--with-llvm-components@<:@=COMPONENTS@:>@],
+                                [additional LLVM components to link against.])],
+                [], [with_llvm_components="$default_llvm_components"])
 
     llvm_config_prog=$with_llvm
     llvm_version=`$llvm_config_prog --version 2> /dev/null`
@@ -66,7 +66,7 @@ try using the `--with-llvm' option.])
     dnl Everything's fine with LLVM; set the variables
     LLVM_CPPFLAGS=`$llvm_config_prog --cppflags`
     LLVM_LDFLAGS=`$llvm_config_prog --ldflags`
-    LLVM_LIBS=`$llvm_config_prog --libs $with_llvm_libs`
+    LLVM_LIBS=`$llvm_config_prog --libs $with_llvm_components`
 
     dnl Check for Clang
     AX_CHECK_PROG([clang])

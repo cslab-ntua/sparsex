@@ -10,12 +10,14 @@
 
 AM_DEFAULT_VERBOSITY = 0
 ACLOCAL_AMFLAGS = -I m4check
-SUBDIRS = include scripts src test
+SUBDIRS = doc include scripts src test
 
 silent_flag   = $(silent_flag_$(V))
 silent_flag_  = $(silent_flag_$(AM_DEFAULT_VERBOSITY))
 silent_flag_0 = --silent
 AM_MAKEFLAGS  = $(silent_flag)
+
+dist_noinst_DATA = LICENSE.txt
 
 # Recursively invoke our new and/or redefined targets
 doc doc-api doc-devel clean-doc mostlyclean-local:

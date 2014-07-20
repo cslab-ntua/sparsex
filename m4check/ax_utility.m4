@@ -206,9 +206,9 @@ dnl
 
 AC_DEFUN([AX_SELECT_BUILD],
 [
-    AC_ARG_VAR([build_type], [@<:@release|debug@:>@ Select build type for $PACKAGE_NAME. Default value is `release'])
+    AC_ARG_VAR([build_type], [@<:@release|debug@:>@ Select build type for SparseX. Default is `release'])
 	if test -z $build_type; then
-	    build_type="release-shared"
+	    build_type="release"
 	fi
 
 	case "$build_type" in
