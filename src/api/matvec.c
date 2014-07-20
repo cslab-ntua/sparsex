@@ -576,7 +576,7 @@ spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
     return SPX_SUCCESS;
 }
 
-spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A, 
+spx_error_t spx_matvec_kernel_csr(spx_matrix_t **A, 
                                   spx_index_t nrows, spx_index_t ncols,
                                   spx_index_t *rowptr, spx_index_t *colind, 
                                   spx_value_t *values,
@@ -594,7 +594,7 @@ spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A,
         return SPX_FAILURE;
     }
 
-    if (!A) {
+    if (!*A) {
         if (!check_mat_dim(nrows) || !check_mat_dim(ncols)) {
             SETERROR_1(SPX_ERR_ARG_INVALID, "invalid matrix dimensions");
             return SPX_FAILURE;
@@ -618,11 +618,13 @@ spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A,
         /* Assumes zero-based indexing */
         spx_input_t *input = spx_input_load_csr(rowptr, colind, values, nrows,
                                                 ncols, SPX_INDEX_ZERO_BASED);
-        A = spx_mat_tune(input);
+        *A = SPX_INVALID_MAT;
+        *A = spx_mat_tune(input);
         spx_input_destroy(input);
     }
 
-    spx_matvec_kernel(alpha, A, x, beta, y);
+    spx_matvec_kernel(alpha, *A, x, beta, y);
+
     return SPX_SUCCESS;
 }
 

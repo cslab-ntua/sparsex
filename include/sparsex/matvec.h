@@ -196,11 +196,12 @@ spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
  *  will convert the matrix into the CSX format and every subsequent call will
  *  use the previously tuned matrix handle.
  *
- *  @param[in] A            either an invalid matrix handle or a tuned
- *                          matrix handle. If A is equal to \c SPX_INVALID_MAT
- *                          then the matrix in the CSR format is first converted
- *                          to CSX. Otherwise, the valid (previously) tuned 
- *                          matrix handle is used to perform the multiplication.
+ *  @param[in] A            either a pointer to an invalid matrix handle or a
+ *                          tuned matrix handle. If (*A) is equal to
+ *                          \c SPX_INVALID_MAT then the matrix in the CSR
+ *                          format is first converted to CSX. Otherwise,
+ *                          the valid (previously) tuned matrix handle is
+ *                          used to perform the multiplication.
  *  @param[in] nr_rows      number of rows of the matrix \a A.
  *  @param[in] nr_cols      number of columns of the matrix \a A.
  *  @param[in] rowptr       array \a rowptr of the CSR format.
@@ -212,7 +213,7 @@ spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
  *  @param[in,out] y        the output vector.
  *  @return                 an error code.
  */
-spx_error_t spx_matvec_kernel_csr(spx_matrix_t *A, 
+spx_error_t spx_matvec_kernel_csr(spx_matrix_t **A, 
                                   spx_index_t nr_rows, spx_index_t nr_cols,
                                   spx_index_t *rowptr, spx_index_t *colind, 
                                   spx_value_t *values,

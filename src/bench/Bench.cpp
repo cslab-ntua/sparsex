@@ -111,17 +111,19 @@ void Bench_Matrix(const char *filename, const char *library,
 #endif
 
 #if SPX_BENCH_MKL
+        cout << "Comparing to MKL result...";
         if (vec_compare(y, y_mkl, nrows) < 0)
-            cout << "Error in resulting vector when comparing to MKL!" << endl;
+            cout << "error in resulting vector!" << endl;
         else
-            cout << "Checked passed!" << endl;
+            cout << "check passed!" << endl;
 #endif
 
 #if SPX_BENCH_POSKI
+        cout << "Comparing to pOSKI result...";
         if (vec_compare(y, y_poski, nrows) < 0)
-            cout << "Error in resulting vector when comparing pOSKI!" << endl;
+            cout << "error in resulting vector!" << endl;
         else
-            cout << "Checked passed!" << endl;
+            cout << "check passed!" << endl;
 #endif
 
     } else {
