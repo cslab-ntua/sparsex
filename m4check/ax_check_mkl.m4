@@ -30,6 +30,14 @@ AC_DEFUN([AX_CHECK_MKL],
         search_prefixes=$with_mkl
     fi
 
+    # Check first what compiler we have, so as to set the appropriate
+    # flags if MKL is found
+    AX_CHECK_CXX
+    if test x"$ax_cxx" != x"g++" && test x"$ax_cxx" != x"icpc"; then
+        AC_MSG_RESULT([no])
+        AC_MSG_WARN([Building with MKL is only supported with GCC and ICC.])
+    fi
+
     CPPFLAGS_save="$CPPFLAGS"
     CXXFLAGS_save="$CXXFLAGS"
     AC_LANG_PUSH([C])
@@ -48,8 +56,25 @@ AC_DEFUN([AX_CHECK_MKL],
             [
                 mkl_found=1
                 MKL_CPPFLAGS="-I$p/include"
-                MKL_CXXFLAGS="-fopenmp -m64"
-                MKL_LDFLAGS="-L$p/lib/intel64 -fopenmp"
+                if test x"$ax_cxx" == x"g++"; then
+                    MKL_CXXFLAGS="-fopenmp"
+                    if test x"$build_cpu" == x"x86_64"; then
+                        MKL_CXXFLAGS="$MKL_CXXFLAGS -m64"
+                    fi
+                elif test x"$ax_cxx" == x"icpc"; then
+                    MKL_CXXFLAGS="-openmp"                
+                fi
+
+                if test x"$build_cpu" == x"x86_64"; then
+                    MKL_LDFLAGS="-L$p/lib/intel64"
+                else
+                    MKL_LDFLAGS="-L$p/lib/ia32"
+                fi
+
+                if test x"$ax_cxx" == x"g++"; then
+                    MKL_LDFLAGS="$MKL_LDFLAGS -fopenmp"
+                fi
+
                 mkl_version=`./conftest$EXEEXT`
                 AS_VERSION_COMPARE([$mkl_version],
                                    [$mkl_required_version],
@@ -68,7 +93,13 @@ AC_DEFUN([AX_CHECK_MKL],
     else
         AC_DEFINE([SPX_BENCH_MKL], [1], [Build SpMV benchmarks with MKL.])
         AC_MSG_RESULT([yes (found version $mkl_version)])
-        MKL_LIBS="-lmkl_intel_lp64 -lmkl_core -lmkl_gnu_thread -ldl -lpthread -lm"
+        
+        MKL_LIBS="-lmkl_intel_lp64 -lmkl_core"
+        if test x"$ax_cxx" == x"g++"; then
+            MKL_LIBS="$MKL_LIBS -lmkl_gnu_thread -ldl -lpthread -lm"
+        elif test x"$ax_cxx" == x"icpc"; then
+            MKL_LIBS="$MKL_LIBS -lmkl_intel_thread -lpthread -lm"
+        fi
     fi
 
     # restore compiler flags
