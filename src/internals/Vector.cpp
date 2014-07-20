@@ -46,7 +46,7 @@ enum copy_mode {
 template<typename ValueType>
 int elems_neq(ValueType a, ValueType b)
 {
-	if (fabs((ValueType) (a - b) / (ValueType) a)  > 1.e-7)
+	if (fabs((ValueType) (a - b) / (ValueType) a)  > 1.e-6)
 		return 1;
 	return 0;
 }

@@ -35,16 +35,20 @@ optimized SpMV routines for each encoded pattern.
 
 More information about the CSX format can be found in:
 
+V. Karakasis, T. Gkountouvas, K. Kourtis, G. Goumas, and N. Koziris. 
+"An extended compression format for the optimization of sparse matrix-vector 
+multiplication". IEEE Transactions on Parallel and Distributed Systems (TPDS),
+24(10):1930–1940, 2013. IEEE.
+
+T. Gkountouvas, V. Karakasis, K. Kourtis, G. Goumas, and N. Koziris. 
+"Improving the performance of the symmetric sparse matrix-vector multiplication
+in multicore". In 27th IEEE International Parallel & Distributed Processing 
+Symposium (IPDPS'13), Boston, MA, USA, 2013. IEEE.
+
 K. Kourtis, V. Karakasis, G. Goumas, and N. Koziris, "CSX: An extended
 compression format for SpMV on shared memory systems," 16th ACM
 SIGPLAN Annual Symposium on Principles and Practice of Parallel
 Programming (PPoPP'11) San Antonio, TX, USA, February 12-16, 2011.
-
-V. Karakasis, G. Goumas, K. Nikas, N. Koziris, J. Ruokolainen, and
-P. Råback, "Using State-of-the-Art Sparse Matrix Optimizations for
-Accelerating the Performance of Multiphysics Simulations" PARA 2012:
-Workshop on State-of-the-Art in Scientific and Parallel Computing
-Helsinki, Finland, June 10-13, 2012.
 
 ===============
 2. REQUIREMENTS
@@ -107,6 +111,15 @@ The simplest way to compile this package is:
        ‘--prefix=PREFIX’, where PREFIX must be an absolute directory path.
 
        $ make install
+
+After the installation process is complete, a utility named 'sparsex-config'
+will also be installed in your ${prefix}/bin that allows either the user or 
+other programs that are dependent on the SparseX library to retrieve 
+installation information, e.g. the installation prefix of the package, 
+compiler flags etc. For more details type:
+
+       $ sparsex-config --help
+
 
 See INSTALL for more details on the installation process and the available 
 options and also refer to the library's User's Guide.
