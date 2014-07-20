@@ -1,4 +1,5 @@
 SparseX library v1.0.0
+This file is distributed under the BSD License. See LICENSE.txt for details.
 
 =====================
 CONTENTS OF THIS FILE
@@ -7,9 +8,10 @@ CONTENTS OF THIS FILE
  1. Introduction
  2. Requirements
  3. Installation
- 4. Testing
- 5. License
- 6. Maintainers
+ 4. Building the documentation
+ 5. Testing
+ 6. License
+ 7. Maintainers
 
 ===============
 1. INTRODUCTION
@@ -124,8 +126,28 @@ compiler flags etc. For more details type:
 See INSTALL for more details on the installation process and the available 
 options and also refer to the library's User's Guide.
 
+=============================
+4. BUILDING THE DOCUMENTATION
+=============================
+
+During the installation process ('make install') the library's documentation 
+is also built (in html format) by default in the /doc subdirectory of the 
+installation directory. This includes the documentation of the C API (in /api) 
+and that of the C++ internal library (in /devel). However, if a developer 
+wishes to update the documentation of either the API or the internal library 
+she can simply type:
+
+       $ make doc
+
+for updating the entire documentation, or 
+
+       $ make doc-api
+       $ make doc-devel
+
+for updating separate levels.
+ 
 ==========
-4. TESTING
+5. TESTING
 ==========
 
 The test/src subdirectory of the installation directory includes a testing 
@@ -149,14 +171,14 @@ Common pitfalls:
    $ export LD_LIBRARY_PATH=$(LIBDIR):$LD_LIBRARY_PATH
 
 ==========
-5. LICENSE
+6. LICENSE
 ==========
 
-This package is distributed under the BSD Licence. See `LICENCE.txt' for more
-information.
+The SparseX package is distributed under the BSD Licence. See `LICENCE.txt' 
+for more information.
 
 ==============
-6. MAINTAINERS
+7. MAINTAINERS
 ==============
 
 The SparseX library was developed in the Computing Systems Laboratory of the
