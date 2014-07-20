@@ -126,7 +126,7 @@ public:
 
     spm_mt_t *CreateCsx()
     {
-        spm_mt_t *spm = nullptr;
+        spm_mt_t *spm = 0;
         RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
 
         try {
