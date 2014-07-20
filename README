@@ -1,22 +1,39 @@
-CSX library v0.2
+SparseX library v1.0.0
 
-1. Introduction
+=====================
+CONTENTS OF THIS FILE
+=====================
+
+ 1. Introduction
+ 2. Requirements
+ 3. Installation
+ 4. Testing
+ 5. License
+ 6. Maintainers
+
+===============
+1. INTRODUCTION
 ===============
 
-This package is a proof-of-concept release of the Compressed Sparse
-eXtended format for sparse matrices. This format seeks to minimize the
-memory footprint of the column index array of the typical Compressed
-Sparse Row (CSR) format by exploiting dense substructures inside the
-sparse matrix. Instead of storing a single index for every nonzero
-element of the sparse matrix, CSX stores a short description for each
-substructure found in the matrix (and selected for encoding). This
-technique can save significant amount of main memory storage and
-minimize the bandwidth requirements of the Sparse Matrix-Vector
+The SparseX library is a collection of low-level primitives written in the 
+C/C++ programming languages, that provides the means to developers of solver 
+libraries and of scientific and engineering applications to easily attain high 
+performance of the Sparse Matrix-by-Vector multiplication kernel (SpMV) on 
+modern multicore architectures.
+
+The SparseX package uses the Compressed Sparse eXtended format for sparse 
+matrices. This format seeks to minimize the memory footprint of the 
+column index array of the typical Compressed Sparse Row (CSR) format by 
+exploiting dense substructures inside the sparse matrix. Instead of storing 
+a single index for every nonzero element of the sparse matrix, CSX stores a 
+short description for each substructure found in the matrix (and selected for 
+encoding). This technique can save significant amount of main memory storage 
+and minimize the bandwidth requirements of the Sparse Matrix-Vector
 Multiplication (SpMV) kernel. Finally, the CSX format employs runtime
 code generation (using the LLVM compiler infrastructure) for emitting
 optimized SpMV routines for each encoded pattern.
 
-More information about the CSX format can be found in
+More information about the CSX format can be found in:
 
 K. Kourtis, V. Karakasis, G. Goumas, and N. Koziris, "CSX: An extended
 compression format for SpMV on shared memory systems," 16th ACM
@@ -29,400 +46,113 @@ Accelerating the Performance of Multiphysics Simulations" PARA 2012:
 Workshop on State-of-the-Art in Scientific and Parallel Computing
 Helsinki, Finland, June 10-13, 2012.
 
-2. Summary of changes with the previous version
-===============================================
-
-The CSX format and library has matured considerably since its first
-release in February, 2011. A summary of the changes follows:
-
-* Complete re-implementation of the runtime code generation module
-  using Clang and LLVM
-* Efficient support of NUMA architectures
-* Support for symmetric matrices
-* Proof-of-concept non-preconditioned CG implementation using CSX
-* Revised preprocessing (better sampling, multi-threading, careful
-  memory management)
-* Code and Makefile restructuring
-* Support for multi-threaded compilation
-* Efficient implementations, incl. NUMA-aware versions, of other
-  sparse matrix storage formats, such as CSR, BCSR, VBL, SSS
-* Self-contained library interface (libcsx.so) for use with sparse
-  linear algebra s/w, specifically tuned for the Elmer multiphysics
-  simulation s/w.
-* Several bug fixes
-
-3. Prerequisites and external dependencies
-==========================================
+===============
+2. REQUIREMENTS
+===============
 
 * A fairly recent Linux OS
 * LLVM >= 3.0 and Clang
 * Boost Library >= 1.48 (regex, serialization, system, thread)
 * numactl library >= 2.0.7
-* Cairo library (optionally)
+* gcc/g++ >= 4.6
 
-4. Compiling the package
-========================
+===============
+3. INSTALLATION
+===============
 
-This package is written in C and C++. We have compiled it successfully
-with several GCC up to 4.6. Running `make' at the top-level source
-directory will be enough to compile the whole package for a typical
-installation of LLVM and Boost. If you have installed LLVM 2.9 in a
-non-standard location that is not in your path, you can instruct the
-compilation process to use your preferred LLVM 2.9 installation by
-typing
+To get the latest version of the SparseX library, you can
 
-$ make llvmconf=/path/to/llvm-2.9/bin/llvm-config
+Option 1: visit https://github.com/cslab-ntua/sparsex and download a tarball 
+          of the latest release
 
-If, for any reason, you might want to alter the predefined
-preprocessor, compiler flags and/or linker flags, you can use the
-standard CPPFLAGS, CFLAGS, CXXFLAGS and LDFLAGS. You need not worry
-for the dependencies within the CSX library, since we append the
-required flags to the user supplied ones.
+Option 2: clone the git repository by typing
+          $ git clone git://github.com/cslab-ntua/sparsex.git
 
-Finally, you can speed up the compilation by using multiple tasks with
-the `-j' flag of make:
+The simplest way to compile this package is:
 
-$ make -j8
+    1. If the library has been downloaded in means of cloning the git 
+       repository or downloading the tarball available on the github link, 
+       you must first run:
 
-5. Running CSX
-==============
+       $ autoreconf -vfi
 
-After you have successfully compiled CSX, the final executable, named
-`spmv', will be placed inside the `csx' directory. The spmv executable
-may be invoked as follows:
+       in order to remake all of the configure scripts.
 
-[ENV=<value>] ... ./spmv [-b | -s] <matrix_file> [...]
+    2. ‘cd’ to the directory containing the package’s source code and type
+       ‘./configure’ to configure the package for your system.
+       If you have installed LLVM/Clang in a non-standard location that is 
+       not in your path, you can instruct the compilation process to use your 
+       preferred LLVM installation through the ‘--with-llvm’ configuration 
+       option (by providing the absolute path to the LLVM configuration script 
+       “llvm-config”). Similarly for the Boost library you can use the 
+       ‘--with-boostdir’ option.
 
-The execution of CSX is controlled by a set of environment variables
-and takes as input one or more files describing sparse matrices. For
-each matrix, `spmv' will perform an analysis of the patterns found and
-print the results, the preprocessing time and the wall-clock time (and
-performance in Mflop/s) for the execution of 128 consecutive SpMV
-operations.
+       $ cd SPARSEX_DIR
+       $ ./configure [options]
 
-5.1 Input matrix format
------------------------
+    3. Type ‘make’ to compile the package. 
+       You can speed up the compilation by using multiple tasks with the ‘-j’ 
+       flag of make:
 
-The `spmv' executable requires the input matrices to be in a variation
-of the Matrix Market Exchange format. Specifically, the first line of
-the file must contain the number of rows, columns and non-zeros,
-respectively, separated by whitespace. The rest of the lines contain
-the nonzero elements of the matrix (one per line) in the form of
-`<row> <column> <value>', sorted lexicographically (i.e.,
-row-major). To facilitate the conversion to the desired format, the
-utility script `scripts/sort-mtx.sh' is supplied.
+       $ make -j8
 
-See also http://math.nist.gov/MatrixMarket/formats.html
+    4. Type ‘make install’ to install the library and any data files and 
+       documentation.
+       When installing into a prefix owned by root, it is recommended that the
+       package be configured and built as a regular user, and only the 
+       ‘make install’ phase executed with root privileges. By default, 
+       ‘make install’ installs the library under /usr/local/lib and include 
+       files under /usr/local/include. You can specify an installation prefix 
+       other than /usr/local by giving ‘configure’ in step 1 the option 
+       ‘--prefix=PREFIX’, where PREFIX must be an absolute directory path.
 
-5.2 Environment
----------------
+       $ make install
 
-The execution of `spmv' is solely controlled by environment variables,
-which are described in detail below.
+See INSTALL for more details on the installation process and the available 
+options and also refer to the library's User's Guide.
 
-** Variables controlling multithreaded execution
+==========
+4. TESTING
+==========
 
-MT_CONF         Set the CPU affinity for running `spmv'. This is the
-                only way to setup a multithreaded execution for
-                `spmv'. You should supply the CPU numbers (see
-                /sys/devices/) of the desired CPUs as a
-                comma-separated list. If MT_CONF is not specified, it
-                is set to `0', thus assuming single-threaded
-                execution.
+The test/src subdirectory of the installation directory includes a testing 
+utility 'test_sparsex' for the SparseX library. This is not installed by 
+default and requires you to type 'make check' in test/src/. This executable
+tests different aspects of the library and is important for verifying that the
+library works properly on your system. To facilitate the testing process, the 
+'test-sparsex.sh' script is available in the test/scripts subdirectory. Simply 
+type:
 
-** Variables controlling the construction of CSX
+        $ ./test/scripts/test-sparsex.sh 
 
-XFORM_CONF      Set the pattern types to search for in the
-                matrix. This is a comma-separated list of the pattern
-                type IDs as specified in the enumeration
-                `SpmIterOrder' in `spm.h'. The mapping between type
-                IDs and types is the following:
+from the top level of the build directory and a number of tests will be
+performed with their progress (PASSED or FAILED) printed on stdout.
 
-                           0 -> NONE
-                           1 -> HORIZONTAL
-                           2 -> VERTICAL
-                           3 -> DIAGONAL
-                           4 -> REV_DIAGONAL
-                           5 -> BLOCK_TYPE_START (not used)
-                           6 -> BLOCK_R1 (not used)
-                           7 -> BLOCK_R2
-                           8 -> BLOCK_R3
-                           9 -> BLOCK_R4
-                          10 -> BLOCK_R5
-                          11 -> BLOCK_R6
-                          12 -> BLOCK_R7
-                          13 -> BLOCK_R8
-                          14 -> BLOCK_COL_START (not used)
-                          15 -> BLOCK_C1 (not used)
-                          16 -> BLOCK_C2
-                          17 -> BLOCK_C3
-                          18 -> BLOCK_C4
-                          19 -> BLOCK_C5
-                          20 -> BLOCK_C6
-                          21 -> BLOCK_C7
-                          22 -> BLOCK_C8
-                          23 -> BLOCK_TYPE_END (not used)
-                          24 -> XFORM_MAX
-                
-                The default value of XFORM_CONF is `0', i.e.,
-                NONE. You can optionally enable the BLOCK_R1 and
-                BLOCK_C1 types, i.e., one-dimensional fixed size
-                blocks, programmatically through the DRLE_Manager
-                interface.
+Common pitfalls:
+ * In case the library has been installed in a non-standard location, you must
+   explicitly add the library directory to the LD_LIBRARY_PATH environment 
+   variable before execution, e.g.
 
-ENCODE_DELTAS   Set specific deltas to encode for one-dimensional
-                patterns or block dimensions for two-dimensional
-                patterns. ENCODE_DELTAS is a comma-separated list of
-                "delta descriptors". A delta descriptor is a tuple in
-                the form of `{d1,d2,...,dn}', where `di' is a specific
-                delta to be encoded. For two-dimensional patterns
-                types, the `di' signifies the second dimension of the
-                block pattern. The ENCODE_DELTAS variable must be
-                specified along with XFORM_CONF, in which case there
-                is a one-to-one mapping between the pattern types and
-                delta descriptors. For example, using
-                XFORM_CONF=16,1,3 and ENCODE_DELTAS={4,7},{1},{11},
-                first `BLOCK_C2' patterns with a second dimension of 4
-                and 7, respectively (i.e., block patterns 4x2 and 7x2)
-                will be encoded into the matrix. Second, `HORIZONTAL'
-                patterns with delta 1 will be encoded and, finally,
-                `DIAGONAL' patterns with delta 11. The number of
-                pattern types specified in XFORM_CONF must equal the
-                number of delta descriptors specified in
-                ENCODE_DELTAS.
+   $ export LD_LIBRARY_PATH=$(LIBDIR):$LD_LIBRARY_PATH
 
-** Variables controlling preprocessing
-
-The preprocessing phase of CSX can be optimized with the use of
-statistical sampling. Preprocessing is done in multiple threads using
-the thread configuration specified by the MT_CONF variable. The
-following variables control the sampling process.
-
-SAMPLES         Specify the number of sampling windows to consider for
-                searching per thread. This variable actually enables
-                the optimized preprocessing. It can be used in
-                conjunction with one of the following variables, which
-                specify the sampling window size, either explicitly or
-                implicitly. If the specified number of samples exceeds
-                the maximum possible number of samples (depending on
-                the sampling policy), it will be set to this maximum
-                number. In this case, no statistical sampling takes
-                place, but the preprocessing is performed simply with
-                the use of preprocessing windows.
-
-WINDOW_SIZE     Set the preprocessing window size explicitly. The
-                window size is set in terms of non-zero elements by
-                default. The size of the window will be "rounded" up
-                to the next full row. You can sample the matrix
-                row-wise, in which case WINDOW_SIZE is the number or
-                rows of each window. However, to enable this policy,
-                you should alter the sampling policy during the
-                creation of the DRLE_Manager in `spmv.cc'. This kind
-                of sampling is not recommended, since it cannot
-                provide a good coverage for irregular matrices.
-
-SAMPLING_PORTION Specify the portion of the matrix to sample as a real
-                number in [0,1]. If this variable is specified, the
-                window size in non-zero elements will be automatically
-                computed to meet the following requirement:
-
-                SAMPLING_PORTION*non_zeros = SAMPLES*computed_win_size
-
-
-5.3 Other options controlling execution
----------------------------------------
-
-You can specify the two following options when running CSX:
-
--b      Disable the split-block optimization. The split-blocks
-        optimization leads to better compression, since it improves
-        the statistics (number of nonzero elements covered by a
-        pattern) of smaller blocks making them eligible for
-        encoding.
-
--s      Use the version of CSX for symmetric matrices. In this
-        variation, the elements of the main diagonal are stored
-        separately and the lower triangular matrix is stored in the
-        CSX format.
-
-5.4 Output
-----------
-
-The typical output of running the CSX is the following (lines starting
-with `#' are not part of the output, but serve as explanatory comments):
-
-=== BEGIN BENCHMARK ===
-##
-## CSX set-up information
-##
-MT_CONF=0
-Encoding type: HORIZONTAL, VERTICAL, DIAGONAL, REV_DIAGONAL, __BLOCK_TYPE_START__, BLOCK_R1, BLOCK_R2, BLOCK_R3, BLOCK_R4, BLOCK_R5, BLOCK_R6, BLOCK_R7, BLOCK_R8, __BLOCK_COL_START__, BLOCK_C1, BLOCK_C2, BLOCK_C3, BLOCK_C4, BLOCK_C5, BLOCK_C6, BLOCK_C7, BLOCK_C8
-Window size: Not set
-Number of samples: Not set
-Sampling portion: Not set
-##
-## Per-thread preprocessing results
-##
-## s: heuristic score
-## <int>-> : the delta value or the second dimension of the block for
-##           blocked substructures
-## np: number of patterns encoded by every substructure instantiation
-## nnz (<percent>): number of non-zeros encoded by every substructure
-##                  instantiation followed by the coverage percentage.
-##                  This percentage is an estimation if sampling is
-##                  used.
-==> Thread: #0
-HORIZONTAL  s:12    1-> np:4 nnz: 16 (42.1053%)
-VERTICAL    s:15    1-> np:5 nnz: 20 (52.6316%)
-DIAGONAL    s:8    1-> np:1 nnz: 6 (15.7895%)    2-> np:1 nnz: 4 (10.5263%)
-REV_DIAGONAL    s:3    1-> np:1 nnz: 4 (10.5263%)
-BLOCK_R2    s:16    2-> np:3 nnz: 12 (31.5789%)    4-> np:1 nnz: 8 (21.0526%)
-BLOCK_R3    s:10    2-> np:2 nnz: 12 (31.5789%)
-BLOCK_C2    s:19    3-> np:1 nnz: 6 (15.7895%)    4-> np:2 nnz: 16 (42.1053%)
-BLOCK_C3    s:8    3-> np:1 nnz: 9 (23.6842%)
-##
-## Substructure type selected for encoding and the detection process
-## starts over
-##
-Encode to BLOCK_C2
-HORIZONTAL  s:3    1-> np:1 nnz: 4 (10.5263%)
-VERTICAL    s:3    1-> np:1 nnz: 4 (10.5263%)
-DIAGONAL    s:3    2-> np:1 nnz: 4 (10.5263%)
-REV_DIAGONAL    s:3    1-> np:1 nnz: 4 (10.5263%)
-Encode to HORIZONTAL
-VERTICAL    s:3    1-> np:1 nnz: 4 (10.5263%)
-DIAGONAL    s:3    2-> np:1 nnz: 4 (10.5263%)
-REV_DIAGONAL    s:3    1-> np:1 nnz: 4 (10.5263%)
-Encode to VERTICAL
-DIAGONAL    s:3    2-> np:1 nnz: 4 (10.5263%)
-REV_DIAGONAL    s:3    1-> np:1 nnz: 4 (10.5263%)
-Encode to DIAGONAL
-REV_DIAGONAL    s:3    1-> np:1 nnz: 4 (10.5263%)
-Encode to REV_DIAGONAL
-##
-## The substructure types were selected for encoded in the selection
-## order
-##
-Encoding sequence: BLOCK_C2, HORIZONTAL, VERTICAL, DIAGONAL, REV_DIAGONAL
-##
-## The exact instantiations that were encoded
-##
-## delta:<int> : the delta value of the instantiation
-## dim:<int>x<int> : the block dimensions of the encoded blocks
-## npatterns:<int> : the number of patterns encoded by the instantiation
-## nnz:<int> : the number of non-zeros encoded by the instantiation
-##
-type:HORIZONTAL delta:1 npatterns:1 nnz:4
-type:VERTICAL delta:1 npatterns:1 nnz:4
-type:DIAGONAL delta:2 npatterns:1 nnz:4
-type:REV_DIAGONAL delta:1 npatterns:1 nnz:4
-type:BLOCK_C2 dim:3x2 npatterns:1 nnz:6
-type:BLOCK_C2 dim:4x2 npatterns:2 nnz:16
-Checking ... Check Passed
-##
-## Performance info
-##
-## m:<method> : method used (csx or csx-sym)
-## f:<file> : the matrix file (basename)
-## s:<size> : size in bytes of the CSX format
-## pt:<time> : preprocessing time in seconds
-## t:<time> : execution time of 128 SpMV operations in seconds
-## r:<perf> : performance in Mflop/s
-##
-m:csx f:demopatt.mtx.sorted s:327 pt:0.063501 t:0.000086 r:113.363468
-=== END BENCHMARK ===
-
-6. Running CG
-=============
-
-After you have successfully compiled CG, the final executable, named
-`cg', will be placed inside the `cg' directory. The cg executable may
-be invoked as follows:
-
-[ENV=<value>] ... ./cg [-s | -x | -l <n> | -L <n>] <matrix_file>
-
-The execution of CG is controlled by a set of environment variables
-and command line parameters and takes as input a file describing the
-sparse matrix. The solution vector of equation Ax = b (s) is
-randomized with double precision elements from -1000 to 1000, the
-vector b is calculated from the multiplication b = As and the
-estimated solution vector (x) is initialized with elements equal to
-0.01. The result shows the square distance between the estimated
-vector (x) and the real solution vector values (s), the time breakdown
-into spmv multiplication phase, spmv reduction time and rest vector
-operations, and the total cg time.
-
-6.1 Input matrix format
------------------------
-
-See 5.1. 
-
-6.2 Environment
----------------
-
-See 5.2.
-
-6.3 Other options controlling execution
----------------------------------------
-
-You can control the execution of the CG method with the following four
-command line options:
-
--x      Activate the CSX format. By default (if the options is not
-        set), CSR will be used.
-
--s      Replace with the respective symmetric formats. Instead of CSR,
-        SSS will be deployed and instead of CSX, CSX-Sym would be
-        used.
-
--l <n>  Specify the maximum number of iterations of the CG method
-        (default is 1024).
-
--L <n>  Specify how many times to run the specified benchmark (default
-        is once).
-
-6.4 Output
-----------
-
-The typical output of running CG is the following (lines starting with `#' are
-not part of the output, but serve as explanatory comments):
-
-##
-## The CPU configuration.
-##
-MT_CONF: 0,1,2,3
-##
-## The specified format output (if CSX or CSX-Sym is activated the details about
-## stats, encoding etc. is shown.
-##
-...
-##
-## Performance info
-##
-## m:<matrix> : the matrix file (basename)
-## l:<loops> : number of iterations of CG
-## rd:<distance> : square distance from actual solution
-## st:<time> : SpMxV multiplication operations time
-## rt:<time> : SpMxV reduction operations time
-## ct:<time> : CG total time
-##
-## * the rest vector operations time of CG can be found by subtracting 'st' and
-##   'rt' from 'ct' time.
-##
-m:26.nd12k.mtx.sorted l:1024 rd:0.004506 st:10.816884 rt:0.145372 ct:11.367220
-
-7. Licence
+==========
+5. LICENSE
 ==========
 
 This package is distributed under the BSD Licence. See `LICENCE.txt' for more
 information.
 
+==============
+6. MAINTAINERS
+==============
 
-8. Authors
-==========
-
-This package is maintained by 
+The SparseX library was developed in the Computing Systems Laboratory of the
+National Technical University of Athens (NTUA) and is actively maintained by:
 
 Vasileios Karakasis        <bkk@cslab.ece.ntua.gr>
+Athena Elafrou             <athena@cslab.ece.ntua.gr>
+
+Past contributors include:
+
 Theodoros Gkountouvas      <thgoud@cslab.ece.ntua.gr>
 Kornilios Kourtis          <kkourt@cslab.ece.ntua.gr>

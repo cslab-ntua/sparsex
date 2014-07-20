@@ -37,7 +37,7 @@ public:
           nr_cols_(nr_cols),
           nr_nzeros_(nr_nzeros),
           nr_partitions_(nr_partitions),
-          partitions_(nullptr)
+          partitions_(0)
     {}
 
     ~SparseInternal()

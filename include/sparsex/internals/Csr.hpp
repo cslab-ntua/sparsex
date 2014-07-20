@@ -43,9 +43,9 @@ public:
 
     CSR(const char *filename) {}  // Dummy
     CSR()
-        : rowptr_(nullptr),
-          colind_(nullptr),
-          values_(nullptr),
+        : rowptr_(0),
+          colind_(0),
+          values_(0),
           nr_rows_(0),
           nr_cols_(0),
           zero_based_(false),
