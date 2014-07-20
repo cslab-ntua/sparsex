@@ -55,7 +55,10 @@
    -- [DONE] Check pOSKI/MKL bench  builds
    -- [DONE] Check if CXX supports the required C++11 features
    -- [DONE] If CXX=icc set up the correct flags for MKL
-   -- Library version suffix when installed
+   -- Update README
+   -- Update INSTALL
+   -- Add LICENSE.txt to distribution
+   -- Check distribution tarball
 
 4. [DONE] Testing
    -- [DONE] Command-line interface

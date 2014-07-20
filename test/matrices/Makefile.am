@@ -1,5 +1,5 @@
 #
-# Makefile.am -- Top-level Makefile.am for test suite
+# Makefile.am -- Test matrices
 #
 # Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
 # Copyright (C) 2014, Vasileios Karakasis
@@ -9,4 +9,9 @@
 #
 
 AM_DEFAULT_VERBOSITY = 0
-SUBDIRS = matrices src
+
+dist_noinst_DATA = \
+	demopatt.mtx.sorted \
+	demopatt.mtx.unsorted \
+	symmetric.mtx.sorted \
+	symmetric-very-sparse.mtx.sorted

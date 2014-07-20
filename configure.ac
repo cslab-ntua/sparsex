@@ -214,6 +214,7 @@ AC_CONFIG_FILES([
         src/internals/Makefile
         src/templates/Makefile
         test/Makefile
+        test/matrices/Makefile
         test/src/Makefile
         ])
 

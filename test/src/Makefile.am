@@ -33,6 +33,8 @@ SPARSEXIMPL_LDADD = \
 
 check_PROGRAMS = test_spmv test_sparsex test_element test_dynarray test_timer
 
+noinst_HEADERS = CsxBench.hpp
+
 test_sparsex_SOURCES = \
 	CsxBench.cpp \
 	sparsex_test.c
