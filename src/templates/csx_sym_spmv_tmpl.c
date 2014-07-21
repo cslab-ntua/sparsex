@@ -1,15 +1,22 @@
 /*
- * csx_sym_spmv_tmpl.c
- *
- * \brief The CSX-Sym multiplication template
- *
- * Copyright (C) 2011-2012, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2011-2012, Theodoros Gkountouvas
- * Copyright (C) 2014, Vasileios Karakasis
+ * Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2011-2014, Vasileios Karakasis
+ * Copyright (C) 2011,      Theodoros Gkountouvas
  * All rights reserved.
  *
  * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */ 
+
+/**
+ * \file csx_sym_spmv_tmpl.c
+ * \brief The CSX-sym multiplication template for runtime code generation.
+ * 
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
  */
+
 #include <sparsex/types.h>
 #include <sparsex/internals/CtlUtil.hpp>
 #include <sparsex/internals/Vector.hpp>
