@@ -1,4 +1,9 @@
 SparseX library v1.0.0
+**********************
+
+Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
+All rights reserved.
+
 This file is distributed under the BSD License. See LICENSE.txt for details.
 
 =====================
@@ -80,7 +85,7 @@ The simplest way to compile this package is:
        repository or downloading the tarball available on the github link, 
        you must first run:
 
-       $ autoreconf -vfi
+       $ autoreconf -vi
 
        in order to remake all of the configure scripts.
 
