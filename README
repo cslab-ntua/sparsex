@@ -173,7 +173,7 @@ Common pitfalls:
    explicitly add the library directory to the LD_LIBRARY_PATH environment 
    variable before execution, e.g.
 
-   $ export LD_LIBRARY_PATH=$(LIBDIR):$LD_LIBRARY_PATH
+   $ export LD_LIBRARY_PATH=${LIBDIR}:$LD_LIBRARY_PATH
 
 ==========
 6. LICENSE

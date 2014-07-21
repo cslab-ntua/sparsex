@@ -10,7 +10,11 @@
 
 AM_DEFAULT_VERBOSITY = 0
 ACLOCAL_AMFLAGS = -I m4check
-SUBDIRS = doc include scripts src test
+SUBDIRS = include scripts src test
+
+if SPX_GENERATE_DOC
+SUBDIRS += doc
+endif
 
 silent_flag   = $(silent_flag_$(V))
 silent_flag_  = $(silent_flag_$(AM_DEFAULT_VERBOSITY))

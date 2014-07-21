@@ -61,7 +61,9 @@
    -- [DONE] Check distribution tarball
    -- [DONE] build_type variable description, fix $PACKAGE_NAME appearance
    -- [DONE] Fix appearance of `--disable-bench' option
-   -- Remove brackets in options' arguments, when the argument is mandatory
+   -- [DONE] Remove brackets in options' arguments, when the argument is
+      mandatory
+   -- [DONE] Add options to sparsex-config for retrieving the index/value types.
 
 4. [DONE] Testing
    -- [DONE] Command-line interface

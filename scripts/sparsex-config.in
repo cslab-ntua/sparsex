@@ -19,8 +19,10 @@ function print_help
 {
     cat << _EOF
 Usage: $program_name [OPTION]...
-Print installation information about the @PACKAGE_NAME@ package.
+Print installation information about the @PACKAGE_NAME@ library.
 
+  --index-type             Print the index type used in the @PACKAGE_NAME@ library.
+  --value-type             Print the value type used in the @PACKAGE_NAME@ library.
   --cppflags               Print required C preprocessor flags.
   --cppflags-searchpath    Print the include search path only.
   --cxxflags               Print the compiler flags that this library was
@@ -53,7 +55,7 @@ exec_prefix="@exec_prefix@"
 datarootdir="@datarootdir@"
 datadir=$datarootdir
 
-long_opts="cppflags,cppflags-searchpath,cxxflags,ldflags,ldflags-searchpath,ldflags-libsonly,prefix,exec-prefix,docdir,resourcesdir,help,version"
+long_opts="index-type,value-type,cppflags,cppflags-searchpath,cxxflags,ldflags,ldflags-searchpath,ldflags-libsonly,prefix,exec-prefix,docdir,resourcesdir,help,version"
 
 if [ $# -eq 0 ]; then
     print_help
@@ -71,6 +73,10 @@ set -- $args
 out_string=""
 until [ -z $1 ]; do
     case $1 in
+        "--index-type")
+            out_string="$out_string @SPX_INDEX_TYPE@" ;;
+        "--value-type")
+            out_string="$out_string @SPX_VALUE_TYPE@" ;;
         "--cppflags")
             out_string="$out_string -I@includedir@" ;;
         "--cppflags-searchpath")

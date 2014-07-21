@@ -27,9 +27,10 @@ AC_DEFUN([AX_CHECK_BOOST],
     boost_required_version=$1
     AC_MSG_CHECKING([for Boost library >= $boost_required_version])
     AC_ARG_WITH([boostdir],
-                [AS_HELP_STRING([--with-boostdir@<:@=DIR@:>@],
+                [AS_HELP_STRING([--with-boostdir=DIR],
                                 [use Boost library installed in DIR.])],
                 [], [with_boostdir=check])
+
      if test x"$with_boostdir" = x"check"; then
          search_dirs=$system_dirs
      else
@@ -102,7 +103,7 @@ AC_DEFUN([AX_CHECK_BOOST_LIB],
           [m4_errprintn([Too few arguments to $0.]) m4_exit(1)])
 
     AC_ARG_WITH([boost_$1],
-                [AS_HELP_STRING([--with-boost_$1@<:@=variant@:>@],
+                [AS_HELP_STRING([--with-boost_$1@<:@=VARIANT@:>@],
                                 [use the specified variant for this library.
                                  See naming convention for Boost libraries.])],
                 [user_variant=$withval], [])

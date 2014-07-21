@@ -29,9 +29,14 @@ AC_DEFUN([AX_CHECK_LLVM],
     llvm_required_version=$1
     AC_MSG_CHECKING([for LLVM >= $llvm_required_version])
     AC_ARG_WITH([llvm],
-                [AS_HELP_STRING([--with-llvm@<:@=CONFIG@:>@],
+                [AS_HELP_STRING([--with-llvm=CONFIG],
                                 [use CONFIG as LLVM configuration script.])],
                 [], [with_llvm="llvm-config"])
+
+    if test -z $withval; then
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([No LLVM config script given. Please supply one.])
+    fi
 
     dnl Default LLVM components required by SparseX
     default_llvm_components="core analysis executionengine jit native \
@@ -43,6 +48,17 @@ bitreader ipo linker bitwriter asmparser instrumentation"
                 [], [with_llvm_components="$default_llvm_components"])
 
     llvm_config_prog=$with_llvm
+
+    dnl Run a sanity check that the user has not given us an irrelevant program
+    $llvm_config_prog --help 2>&1 | grep LLVM &> /dev/null && \
+        seems_llvm_config=1
+
+    if test -z $seems_llvm_config; then
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([`$withval' doesn't seem like an actual dnl
+llvm-config script. Please check your supplied argument.])
+    fi
+
     llvm_version=`$llvm_config_prog --version 2> /dev/null`
     if test -z $llvm_version; then
         AC_MSG_RESULT([no])
@@ -66,7 +82,7 @@ try using the `--with-llvm' option.])
     dnl Everything's fine with LLVM; set the variables
     LLVM_CPPFLAGS=`$llvm_config_prog --cppflags`
     LLVM_LDFLAGS=`$llvm_config_prog --ldflags`
-    LLVM_LIBS=`$llvm_config_prog --libs $with_llvm_components`
+    LLVM_LIBS=`$llvm_config_prog --libs $with_llvm_components 2> /dev/null`
 
     dnl Check for Clang
     AX_CHECK_PROG([clang])

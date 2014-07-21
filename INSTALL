@@ -421,7 +421,13 @@ The `TYPE' argument can contain spaces, e.g., `unsigned long', provided it is
 properly quoted.
 
 `--enable-bench'
-    Enables the build of library performance benchmarks.
+    Enables the build of library performance benchmarks. If given, `./configure'
+    will try locate also the Intel MKL and the pOSKI sparse kernel library, in
+    order to build performance benchmarks for these libraries, too. By default,
+    `configure' searches in the following set of standard prefixes in this
+    order: `/usr', `/usr/local', `/opt' and `/opt/local'. If not found there,
+    and you already have installed any of these libraries, try the `--with-mkl'
+    and `--with-poski' options.
 
 
 ======================
@@ -467,15 +473,24 @@ summarized below:
     Use `CONFIG' for querying LLVM installation instead of the standard
     `llvm-config'.
 
-`--with-llvm-components=COMPONENTS'
+`--with-llvm-components[=COMPONENTS]'
+
     Link also with the supplied LLVM `COMPONENTS'. This option is mainly
     intended for development reasons, especially if you are dealing with the
     code generation component of the SparseX library. This option is useful when
     you want to link against to additional LLVM components (see `llvm-config
-    --components' for a list of the available components).
+    --components' for a list of the available components). If `COMPONENTS' is
+    empty, SparseX will link against all LLVM components. Please note, (a) that
+    setting this option overwrites the default LLVM components used by SparseX
+    and (b) the `COMPONENTS' argument is considered empty in the following
+    invocation only:
 
-`--with-{mkl|poski}[=DIR]
+    `--with-llvm-components='
+
+    If the final `=' is omitted, `./configure' supplies `yes' as an argument,
+    which (as of this writing) is not an LLVM component.
+
+`--with-{mkl|poski}=DIR
     This option is only considered if `./configure' is invoked with the
-    `--enable-bench'. If given, performance benchmarks will also be built for
-    the Intel MKL and/or pOSKI libraries. If `DIR' is not given, a set of 
-    standard prefixes will be searched for locating the libraries.
+    `--enable-bench'. If given, `./configure' will try to locate these libraries
+    in `DIR'.

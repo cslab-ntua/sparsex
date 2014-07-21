@@ -84,7 +84,7 @@ AC_ARG_WITH([index],
     [AS_HELP_STRING([--with-index=TYPE],
         [Compile SparseX with indices of type `TYPE'. `TYPE' must be a valid C integral type.])],
     [
-        if test x"$with_index" == x"yes"; then
+        if test -z $withval; then
             # User did not specify a value
             AC_MSG_ERROR([Index type is empty. Please specify a valid C dnl
 integral type.])
@@ -97,7 +97,7 @@ AC_ARG_WITH([value],
     [AS_HELP_STRING([--with-value=TYPE],
         [Compile SparseX with indices of type `TYPE'. `TYPE' must be a valid C floating poing type.])],
     [
-        if test x"$with_value" == x"yes"; then
+        if test -z $withval; then
             # User did not specify a value
             AC_MSG_ERROR([Value type is empty. Please specify a valid C dnl
 real number type.])
