@@ -21,10 +21,19 @@ silent_flag_  = $(silent_flag_$(AM_DEFAULT_VERBOSITY))
 silent_flag_0 = --silent
 AM_MAKEFLAGS  = $(silent_flag)
 
-dist_noinst_DATA = LICENSE.txt
+dist_noinst_DATA = LICENSE.txt doc/SparseX_UG.pdf
 
 # Recursively invoke our new and/or redefined targets
 doc doc-api doc-devel clean-doc mostlyclean-local:
 	$(MAKE) $(AM_MAKEFLAGS) -C @dx_docdir@ $@
+
+# Always install user guide, whether doxygen documentation is built or not
+install-data-local:
+	@echo -n "Installing user guide... "
+	@INSTALL_DATA@ $(top_srcdir)/doc/SparseX_UG.pdf @docdir@ && \
+echo "done" || echo "failed"
+
+uninstall-local:
+	$(RM) @docdir@/SparseX_UG.pdf
 
 .PHONY: doc doc-api doc-devel

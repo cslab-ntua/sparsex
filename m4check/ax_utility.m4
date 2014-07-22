@@ -336,6 +336,12 @@ AC_DEFUN([AX_SUMMARY_CONFIG],
         is_numa="no"
     fi
 
+    if test -z $DOXYGEN; then
+        generate_doc=no
+    else
+        generate_doc=yes
+    fi
+
     AC_REQUIRE([AC_CANONICAL_BUILD])
     echo "*** CONFIGURATION SUMMARY ***"
     echo "    Target     $build"
@@ -349,6 +355,7 @@ AC_DEFUN([AX_SUMMARY_CONFIG],
     echo "    LDFLAGS    $AX_LDFLAGS $LDFLAGS"
     echo "    LIBS       $LIBS"
     echo "    PREFIX     $prefix"
+    echo "    GENDOC     $generate_doc"
     echo "    INDEX_TYPE $SPX_INDEX_TYPE"
     echo "    VALUE_TYPE $SPX_VALUE_TYPE"
 ])
