@@ -57,6 +57,12 @@ compression format for SpMV on shared memory systems," 16th ACM
 SIGPLAN Annual Symposium on Principles and Practice of Parallel
 Programming (PPoPP'11) San Antonio, TX, USA, February 12-16, 2011.
 
+To download the latest version, obtain the User's Guide (which alos includes 
+installation instructions), or get help using SparseX, see the SparseX home 
+page:
+
+        http://research.cslab.ece.ntua.gr/sparsex
+
 ===============
 2. REQUIREMENTS
 ===============
