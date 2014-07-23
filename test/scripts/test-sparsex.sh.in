@@ -1,0 +1,250 @@
+#!/bin/bash
+#
+# test-sparsex.sh -- Test suite for SparseX library
+#
+# Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
+# Copyright (C) 2014, Vasileios Karakasis
+# All rights reserved.
+#
+# This file is distributed under the BSD License. See LICENSE.txt for details.
+# 
+
+TESTPROG="@abs_top_builddir@/test/src/test_sparsex"
+TESTPROG_OUT=$(basename $TESTPROG).out
+TESTPROG_ERR=$(basename $TESTPROG).err
+NR_FAILS=0
+
+trap '' SIGABRT SIGSEGV SIGFPE SIGILL
+
+run_testprog()
+{
+    args=$*
+    echo ">>> BEGIN OF TEST OUTPUT <<< " >> $TESTPROG_ERR
+    echo ">>> TEST COMMAND: $TESTPROG $args" >> $TESTPROG_ERR
+    $TESTPROG $args 2>> $TESTPROG_ERR 1>> $TESTPROG_OUT
+    return $?
+}
+
+test_passed()
+{
+    echo -e ">>> END OF TEST OUTPUT [PASSED] <<<\n" >> $TESTPROG_ERR
+    echo "PASSED"
+}
+
+test_failed()
+{
+    echo -e ">>> END OF TEST OUTPUT [FAILED] <<<\n" >> $TESTPROG_ERR
+    echo "FAILED" && ((NR_FAILS++))
+}
+
+test_must_fail_normally()
+{
+    test_exit_code=$?
+    if ((test_exit_code > 128)); then
+        # Test exited abnormally due to signal
+        echo "FAILED (Caught signal $((test_exit_code - 128)))" && \
+((NR_FAILS++))
+        echo -e ">>> END OF TEST OUTPUT [FAILED] <<<\n" >> $TESTPROG_ERR
+    else
+        echo "PASSED"
+        echo -e ">>> END OF TEST OUTPUT [PASSED] <<<\n" >> $TESTPROG_ERR
+    fi    
+}
+
+# Tests
+test_encodings_deltas()
+{
+    testprog_options=""
+    test_matrix="@abs_top_srcdir@/test/matrices/demopatt.mtx.sorted"
+    echo -n "Checking encodings [deltas] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_horizontal()
+{
+    testprog_options="-o spx.preproc.xform=h"
+    test_matrix="@abs_top_srcdir@/test/matrices/demopatt.mtx.sorted"
+    echo -n "Checking encodings [horizontal] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_vertical()
+{
+    testprog_options="-o spx.preproc.xform=v"
+    test_matrix="@abs_top_srcdir@/test/matrices/demopatt.mtx.sorted"
+    echo -n "Checking encodings [vertical] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all()
+{
+    testprog_options="-o spx.preproc.xform=all"
+    test_matrix="@abs_top_srcdir@/test/matrices/demopatt.mtx.sorted"
+    echo -n "Checking encodings [all] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_symm()
+{
+    testprog_options="\
+-o spx.preproc.xform=all \
+-o spx.matrix.symmetric=true"
+    test_matrix="@abs_top_srcdir@/test/matrices/symmetric.mtx.sorted"
+    echo -n "Checking symmetrics [all] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_symm_verysparse()
+{
+    testprog_options="\
+-o spx.preproc.xform=all \
+-o spx.matrix.symmetric=true"
+    test_matrix="\
+@abs_top_srcdir@/test/matrices/symmetric-very-sparse.mtx.sorted"
+    echo -n "Checking symmetrics [all (very sparse)] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_symm_reordering()
+{
+    testprog_options="\
+-r \
+-o spx.preproc.xform=all \
+-o spx.matrix.symmetric=true"
+    test_matrix="@abs_top_srcdir@/test/matrices/symmetric.mtx.sorted"
+    echo -n "Checking symmetrics [all (reordering)] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_sampling()
+{
+    testprog_options="\
+-o spx.preproc.xform=all \
+-o spx.preproc.sampling=portion \
+-o spx.preproc.sampling.nr_samples=2 \
+-o spx.preproc.sampling.portion=0.4 \
+-o spx.matrix.symmetric=true"
+    test_matrix="@abs_top_srcdir@/test/matrices/symmetric.mtx.sorted"
+    echo -n "Checking encodings [all (sampling)] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_symm_sampling()
+{
+    testprog_options="\
+-o spx.preproc.xform=all \
+-o spx.preproc.sampling=portion \
+-o spx.preproc.sampling.nr_samples=2 \
+-o spx.preproc.sampling.portion=0.4"
+    test_matrix="@abs_top_srcdir@/test/matrices/symmetric.mtx.sorted"
+    echo -n "Checking symmetrics [all (sampling)] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_mt()
+{
+    testprog_options="\
+-o spx.rt.nr_threads=2 \
+-o spx.rt.cpu_affinity=0,1 \
+-o spx.preproc.xform=all"
+    test_matrix="@abs_top_srcdir@/test/matrices/demopatt.mtx.sorted"
+    echo -n "Checking encodings [all (mt)] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_symm_mt()
+{
+    testprog_options="\
+-o spx.rt.nr_threads=2 \
+-o spx.rt.cpu_affinity=0,1 \
+-o spx.preproc.xform=all \
+-o spx.matrix.symmetric=true"
+    test_matrix="@abs_top_srcdir@/test/matrices/symmetric.mtx.sorted"
+    echo -n "Checking symmetrics [all (mt)] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_mt_sampling()
+{
+    testprog_options="\
+-o spx.rt.nr_threads=2 \
+-o spx.rt.cpu_affinity=0,1 \
+-o spx.preproc.xform=all \
+-o spx.preproc.sampling.nr_samples=1 \
+-o spx.preproc.sampling.portion=0.4"
+    test_matrix="@abs_top_srcdir@/test/matrices/demopatt.mtx.sorted"
+    echo -n "Checking encodings [all (mt, sampling)] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_encodings_all_symm_mt_sampling()
+{
+    testprog_options="\
+-o spx.rt.nr_threads=2 \
+-o spx.rt.cpu_affinity=0,1 \
+-o spx.preproc.xform=all \
+-o spx.preproc.sampling.nr_samples=1 \
+-o spx.preproc.sampling.portion=0.4 \
+-o spx.matrix.symmetric=true"
+    test_matrix="@abs_top_srcdir@/test/matrices/symmetric.mtx.sorted"
+    echo -n "Checking symmetrics [all (mt, sampling)] ... " && \
+        run_testprog $testprog_options $test_matrix && \
+        test_passed || test_failed
+}
+
+test_invalid_symm()
+{
+    testprog_options="\
+-o spx.matrix.symmetric=true"
+    test_matrix="@abs_top_srcdir@/test/matrices/demopatt.mtx.sorted"
+    echo -n "Checking symmetrics [invalid input] ... " && \
+        run_testprog $testprog_options $test_matrix || \
+        test_must_fail_normally
+}
+
+test_mmf_unsorted()
+{
+    testprog_options=""
+    test_matrix="@abs_top_srcdir@/test/matrices/demopatt.mtx.unsorted"
+    echo -n "Checking MMF [invalid input] ... " && \
+        run_testprog $testprog_options $test_matrix || \
+        test_must_fail_normally
+}
+
+# Empty output files
+echo -n '' > $TESTPROG_OUT
+echo -n '' > $TESTPROG_ERR
+
+test_encodings_deltas
+test_encodings_horizontal
+test_encodings_vertical
+test_encodings_all
+test_encodings_all_sampling
+test_encodings_all_mt
+test_encodings_all_mt_sampling
+test_encodings_all_symm
+test_encodings_all_symm_reordering
+test_encodings_all_symm_verysparse
+test_encodings_all_symm_sampling
+test_encodings_all_symm_mt
+test_encodings_all_symm_mt_sampling
+test_invalid_symm
+test_mmf_unsorted
+
+if ((NR_FAILS > 0)); then
+    echo "$NR_FAILS test(s) failed. Check $TESTPROG_ERR for details"
+else
+    echo "All tests passed!"
+fi

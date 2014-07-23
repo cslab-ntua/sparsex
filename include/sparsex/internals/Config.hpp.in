@@ -1,0 +1,27 @@
+/*
+ * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2014, Vasileios Karakasis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */
+
+/**
+ * \file Config.hpp
+ * \brief SparseX system configuration
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
+#ifndef SPARSEX_INTERNALS_CONFIG_HPP
+#define SPARSEX_INTERNALS_CONFIG_HPP
+
+#define SPX_JIT_INCLUDE         "@abs_top_srcdir@/include:@abs_top_builddir@/include"
+#define SPX_MULT_TEMPLATE_DIR   "@abs_top_srcdir@/src/templates"
+#define SPX_USE_NUMA            @SPX_USE_NUMA@
+#define CLANG_INC_SEARCH_PATH   "@CLANG_INC_SEARCH_PATH@"
+
+#endif  // SPARSEX_INTERNALS_CONFIG_HPP

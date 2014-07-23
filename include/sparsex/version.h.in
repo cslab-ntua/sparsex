@@ -1,0 +1,42 @@
+/*
+ * Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2014, Vasileios Karakasis
+ * All rights reserved.
+ *
+ * This file is distributed under the BSD License. See LICENSE.txt for details.
+ */ 
+
+/**
+ * \file version.h
+ * \brief Makes available the version of the SparseX library programmatically.
+ *
+ * This file is guaranteed to change with every release of the package.
+ *
+ * \author Computing Systems Laboratory (CSLab), NTUA
+ * \date 2011&ndash;2014
+ * \copyright This file is distributed under the BSD License. See LICENSE.txt
+ * for details.
+ */
+
+#ifndef SPARSEX_VERSION_H
+#define SPARSEX_VERSION_H
+
+/**
+ * The version number of this package.
+ * 
+ * The version number of the SparseX library is computed as follows:
+ *
+ * SPARSEX_VERSION =
+ *      100000*MAJOR_VERSION + 1000*MINOR_VERSION + PATCH_LEVEL
+ *
+ * Inversely, the major/minor versions and the patch level of the package can be
+ * computed as follows:
+ *
+ * MAJOR_VERSION = SPARSEX_VERSION / 100000     <br>
+ * MINOR_VERSION = SPARSEX_VERSION / 1000 % 100 <br>
+ * PATCH_LEVEL   = SPARSEX_VERSION % 1000       <br>
+ */
+#define SPARSEX_VERSION     @AX_PACKAGE_VERSION_NUMBER@
+#define SPARSEX_LIB_VERSION "@PACKAGE_VERSION@"
+
+#endif

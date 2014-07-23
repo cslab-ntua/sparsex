@@ -1,0 +1,104 @@
+#
+# doxygen_rules.am -- Adds rules for automatic documentation generation.
+#
+# Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
+# Copyright (C) 2014, Vasileios Karakasis
+# All righrs reserved.
+# 
+# Overview
+#
+#	This file defines the following targets:
+#	
+#		* `doc-api' that generates the API documentation of the package,
+#		  typically from header files,
+#		  
+#		* `doc-devel' that generates documentation for developers, typically
+#		   from the source code tree, and
+#		   
+#		* `doc' that generates both API and developers' documentation.
+#
+#	A number of variables used in this Makefile desciptor are defined from the
+#	`AX_PROG_DOXYGEN' macro and substituted during the configuration.
+#	Specifically, these are:
+#	
+#		* `DOXYGEN', which is the `doxygen' binary,
+#		
+#		* `DX_CONF_API', which is the configuration file for generating the API
+#		  documentation, and
+#		  
+#		* `DX_DEVEL_API', which is the configuration file for generating the
+#		  developers' documentation.
+#		
+
+RM = /bin/rm -f
+RMDIR = /bin/rmdir
+install_doc = @INSTALL_DATA@
+install_dir = @INSTALL@ -d
+
+DOXYGEN = @DOXYGEN@
+
+# Handle verbosity
+doc_verbose   = $(doc_verbose_$(V))
+doc_verbose_  = $(doc_verbose_$(AM_DEFAULT_VERBOSITY))
+doc_verbose_0 = @echo "  DOC   " $@;
+
+out_verbose   = $(out_verbose_$(V))
+out_verbose_  = $(out_verbose_$(AM_DEFAULT_VERBOSITY))
+out_verbose_0 = 1> /dev/null
+
+doc: doc-api doc-devel
+
+doc-api:
+	$(doc_verbose)$(DOXYGEN) @DX_CONF_API@ $(out_verbose)
+
+doc-devel:
+	$(doc_verbose)$(DOXYGEN) @DX_CONF_DEVEL@ $(out_verbose)
+
+# Extend default cleaning to also clean documentation files
+mostlyclean-local: clean-doc
+
+clean-doc:
+	$(RM) -r @dx_api_subdir@ @dx_devel_subdir@
+
+# Extend install and uninstall
+dir_list   = `/usr/bin/find @dx_api_subdir@ -type d`
+dir_list  += `/usr/bin/find @dx_devel_subdir@ -type d`
+file_list  = `/usr/bin/find @dx_api_subdir@ -type f`
+file_list += `/usr/bin/find @dx_devel_subdir@ -type f`
+install-data-local: doc
+	@echo -n "Installing documentation... "
+	@for d in $(dir_list); do \
+		$(install_dir) @docdir@/$$d; \
+		dirent=`/bin/ls $$d`; \
+		for e in $$dirent; do \
+			if test -f $$d/$$e; then \
+				$(install_doc) $$d/$$e @docdir@/$$d || echo "failed"; \
+			fi; \
+		done; \
+	done && echo "done"
+
+# Replace build paths in the package tag file with the installation
+# directories
+api_tagfile   = $(docdir)/$(dx_api_subdir)/$(DX_CONF_TAGFILE)
+devel_tagfile = $(docdir)/$(dx_devel_subdir)/$(DX_CONF_TAGFILE)
+
+# abs_top_srcdir must be recomputed, since autoconf just prefixes the relative
+# path with abs_top_builddir
+xabs_top_srcdir = `cd $(top_srcdir); pwd`
+install-data-hook:
+	@echo -n "Running post-installation script for documentation... "
+	@$(SED) -e "s|$(abs_top_builddir)|$(prefix)|g; s|$(xabs_top_srcdir)|$(prefix)|g" $(api_tagfile) > "$(api_tagfile).tmp" && \
+		mv -f "$(api_tagfile).tmp" $(api_tagfile) && \
+		chmod 644 $(api_tagfile) && \
+	$(SED) -e "s|$(abs_top_builddir)|$(prefix)|g; s|$(xabs_top_srcdir)|$(prefix)|g" $(devel_tagfile) > "$(devel_tagfile).tmp" && \
+		mv -f "$(devel_tagfile).tmp" $(devel_tagfile) && \
+		chmod 644 $(devel_tagfile) && echo "done"
+
+uninstall-local:
+	@echo "Uninstalling documentation..."
+	@for f in $(file_list); do \
+		echo -n "Uninstalling @docdir@/$$f... "; \
+		$(RM) @docdir@/$$f && echo "done"; \
+	done;
+
+.PHONY: doc doc-api doc-devel clean-doc
