@@ -30,6 +30,7 @@ doc doc-api doc-devel clean-doc mostlyclean-local:
 # Always install user guide, whether doxygen documentation is built or not
 install-data-local:
 	@echo -n "Installing user guide... "
+	@(MKDIR_P) @docdir@
 	@INSTALL_DATA@ $(top_srcdir)/doc/SparseX_UG.pdf @docdir@ && \
 echo "done" || echo "failed"
 
