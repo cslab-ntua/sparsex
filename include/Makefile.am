@@ -70,7 +70,7 @@ nobase_include_HEADERS = \
 
 # Fill in the correct paths before installing
 install-data-local:
-	$(SED) -e "/.*#define SPX_JIT_INCLUDE/ s/\".*\"/\"`echo $(includedir) | $(SED) -e 's/\//\\\\\//g'`\"/g; /.*#define SPX_MULT_TEMPLATE_DIR/ s/\".*\"/\"`echo $(datarootdir) | $(SED) -e 's/\//\\\\\//g'`\/templates\"/g" sparsex/internals/Config.hpp > sparsex/internals/Config.hpp.install; \
+	$(SED) -e "/.*#define SPX_JIT_INCLUDE/ s/\".*\"/\"`echo $(includedir) | $(SED) -e 's/\//\\\\\//g'`\"/g; /.*#define SPX_MULT_TEMPLATE_DIR/ s/\".*\"/\"`echo $(datarootdir) | $(SED) -e 's/\//\\\\\//g'`\/sparsex\/templates\"/g" sparsex/internals/Config.hpp > sparsex/internals/Config.hpp.install; \
 test -e $(includedir)/sparsex/internals || \
 $(MKDIR_P) $(includedir)/sparsex/internals; \
 $(install_data) sparsex/internals/Config.hpp.install $(includedir)/sparsex/internals/Config.hpp; \
