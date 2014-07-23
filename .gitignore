@@ -1,7 +1,1 @@
 *.o
-csx/csx_llvm_tmpl.llvm.bc
-csx/spmv
-csx/draw
-lib/cpu/cpuid
-lib/cpu/hwpfetch
-lib/spm/spmv
