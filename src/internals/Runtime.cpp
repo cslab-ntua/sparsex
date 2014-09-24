@@ -96,6 +96,12 @@ void RuntimeConfiguration::InitPropertyMnemonics()
 
 RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
 {
+    const char *mat_str = getenv("SYMMETRIC");
+    if (mat_str) {
+        SetProperty(RuntimeConfiguration::MatrixSymmetric, 
+                    string(mat_str));
+    }
+
     const char *mt_conf_str = getenv("MT_CONF");
     if (mt_conf_str) {
         SetProperty(RuntimeConfiguration::RtCpuAffinity, string(mt_conf_str));

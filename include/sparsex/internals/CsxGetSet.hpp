@@ -88,7 +88,7 @@ bool GetValueCsx(void *spm, IndexType row, IndexType col, ValueType *value)
     //Add boundary check for row/col
     for (size_t i = 0; i < spm_mt->nr_threads; i++) {
         csx = (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].csx;
-        if ((size_t) row <= (csx->row_start + csx->nrows)) {
+        if (row <= (csx->row_start + csx->nrows)) {
             found = SearchValue(csx, row, col, *value, false);
             break;
         }
@@ -117,9 +117,9 @@ bool GetValueCsxSym(void *spm, IndexType row, IndexType col, ValueType *value)
             spm_mt->spm_threads[i].csx;
         csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
         // Check if element is on main diagonal
-        if (row == col && ((size_t) row <= (csx->row_start + csx->nrows))) {
+        if (row == col && (row <= (csx->row_start + csx->nrows))) {
             return csx_sym->dvalues[row - csx->row_start - 1];
-        } else if ((size_t) row <= (csx->row_start + csx->nrows)) {
+        } else if (row <= (csx->row_start + csx->nrows)) {
             found = SearchValue(csx, row, col, *value, false);
             break;
         }
@@ -138,7 +138,7 @@ bool SetValueCsx(void *spm, IndexType row, IndexType col, ValueType value)
     //Add boundary check for row/col
     for (size_t i = 0; i < spm_mt->nr_threads; i++) {
         csx = (CsxMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].csx;
-        if ((size_t) row <= (csx->row_start + csx->nrows)) {
+        if (row <= (csx->row_start + csx->nrows)) {
             found = SearchValue(csx, row, col, value, true);
             break;
         }
@@ -167,10 +167,10 @@ bool SetValueCsxSym(void *spm, IndexType row, IndexType col, ValueType value)
             (CsxSymMatrix<IndexType, ValueType> *) spm_mt->spm_threads[i].csx;
         csx = (CsxMatrix<IndexType, ValueType> *) csx_sym->lower_matrix;
         // Check if element is on main diagonal
-        if (row == col && ((size_t) row <= (csx->row_start + csx->nrows))) {
+        if (row == col && (row <= (csx->row_start + csx->nrows))) {
             csx_sym->dvalues[row - csx->row_start - 1] = value;
             return true;
-        } else if ((size_t) row <= (csx->row_start + csx->nrows)) {
+        } else if (row <= (csx->row_start + csx->nrows)) {
             found = SearchValue(csx, row, col, value, true);
             break;
         }
@@ -206,10 +206,9 @@ bool SearchValue(void *spm, IndexType row, IndexType col, ValueType& value,
 
     do {
         /* Skip row if it is empty or it fails the span check */
-        if ((size_t) current_row != csx->row_start) {
-            if (((size_t) (row - 1) >
-                 ((size_t) current_row + row_info[current_row -
-                                                  csx->row_start].span))
+        if (current_row != csx->row_start) {
+            if (((row - 1) > (current_row + row_info[current_row -
+                                                     csx->row_start].span))
                 || (row_info[current_row - csx->row_start].rowptr ==
                     row_info[current_row - csx->row_start - 1].rowptr)) {
                 rows_checked++;
@@ -300,11 +299,11 @@ bool SearchValue(void *spm, IndexType row, IndexType col, ValueType& value,
             }
         } while (ctl_ptr < ctl_end);
 
-        if ((size_t) current_row == csx->row_start)
+        if (current_row == csx->row_start)
             return false;
         rows_checked++;
         current_row--;
-    } while ((size_t) current_row >= csx->row_start);
+    } while (current_row >= csx->row_start);
 
     return false;
 }

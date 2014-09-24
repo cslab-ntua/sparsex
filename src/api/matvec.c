@@ -313,7 +313,7 @@ spx_error_t spx_mat_get_entry(const spx_matrix_t *A, spx_index_t row,
     spx_option_t indexing = va_arg(ap, spx_option_t);
     va_end(ap);
 
-    if (!check_indexing(indexing)) {
+    if (indexing && !check_indexing(indexing)) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
         return SPX_FAILURE;
     } else {
@@ -357,7 +357,7 @@ spx_error_t spx_mat_set_entry(spx_matrix_t *A, spx_index_t row,
     spx_option_t indexing = va_arg(ap, spx_option_t);
     va_end(ap);
 
-    if (!check_indexing(indexing)) {
+    if (indexing && !check_indexing(indexing)) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
         return SPX_FAILURE;
     } else {
@@ -801,7 +801,7 @@ spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val,
     spx_option_t indexing = va_arg(ap, spx_option_t);
     va_end(ap);
 
-    if (!check_indexing(indexing)) {
+    if (indexing && !check_indexing(indexing)) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
         return SPX_FAILURE;
     } else {

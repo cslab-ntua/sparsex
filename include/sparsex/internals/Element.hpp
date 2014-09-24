@@ -30,6 +30,7 @@
 #include <string>
 
 using namespace std;
+using namespace sparsex::utilities;
 
 namespace sparsex {
 namespace csx {

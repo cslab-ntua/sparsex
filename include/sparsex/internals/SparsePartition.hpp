@@ -688,7 +688,9 @@ void SparsePartition<IndexType, ValueType>::PrintStats(ostream& out)
     for (Encoding::Type t = Encoding::Horizontal; t < Encoding::Max; ++t)
         if (nr_xform_patterns[t]) {
             ++nr_encoded_types;
-            out << Encoding(t) << ": " << nr_xform_patterns[t] << "\n";
+            Encoding enc(t);    //FIXME: gcc-4.7
+            out << enc << ": " << nr_xform_patterns[t] << "\n";
+            // out << Encoding(t) << ": " << nr_xform_patterns[t] << "\n";
         }
 
     out << "Encoded types = " << nr_encoded_types << ", "

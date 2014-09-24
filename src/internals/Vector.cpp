@@ -134,7 +134,10 @@ vector_t *VecCreateFromBuffInterleaved(spx_value_t *buff, size_t size,
                                        size_t *parts, int nr_parts,
                                        int *nodes, int mode)
 {
-	vector_t *v = VecCreateInterleaved(size, parts, nr_parts, nodes);
+    // Save parts since they are modified by alloc_interleaved
+    size_t *tmp = new size_t[nr_parts];
+    memcpy(tmp, parts, nr_parts * sizeof(size_t));
+	vector_t *v = VecCreateInterleaved(size, tmp, nr_parts, nodes);
     for (size_t i = 0; i < size; i++)
         v->elements[i] = buff[i];
     v->copy_mode = mode;
@@ -146,6 +149,7 @@ vector_t *VecCreateFromBuffInterleaved(spx_value_t *buff, size_t size,
     print_alloc_status("vector", check_interleaved(v->elements, parts,
                                                    nr_parts,
                                                    nodes));
+    delete[] tmp;
     return v;
 }
 
@@ -175,12 +179,16 @@ vector_t *VecCreateRandom(size_t size)
 vector_t *VecCreateRandomInterleaved(size_t size, size_t *parts, int nr_parts,
                                      int *nodes)
 {
-	vector_t *v = VecCreateInterleaved(size, parts, nr_parts, nodes);
+    // Save parts since they are modified by alloc_interleaved
+    size_t *tmp = new size_t[nr_parts];
+    memcpy(tmp, parts, nr_parts * sizeof(size_t));
+	vector_t *v = VecCreateInterleaved(size, tmp, nr_parts, nodes);
     VecInitRandRange(v, (spx_value_t) -0.1, (spx_value_t) 0.1);
 
-    print_alloc_status("vector", check_interleaved(v->elements, parts,
+    print_alloc_status("vector", check_interleaved(v->elements, tmp,
                                                    nr_parts,
                                                    nodes));
+    delete[] tmp;
     return v;
 }
 

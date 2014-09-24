@@ -18,7 +18,7 @@
  */
 
 #include <sparsex/internals/CsxKernels.hpp>
-
+#include <iostream>
 using namespace sparsex;
 using namespace sparsex::runtime;
 

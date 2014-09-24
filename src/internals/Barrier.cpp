@@ -26,16 +26,17 @@ using namespace std;
 namespace sparsex {
 namespace runtime {
 
-static atomic<int> global_sense(1);
+atomic<int> global_sense;
 atomic<int> barrier_cnt;
 
 static inline int do_spin(int *local_sense)
 {
-    unsigned long long i, spin_cnt = 300000;
+    // unsigned long long i, spin_cnt = 300000;
+    unsigned long long i, spin_cnt = 500;
 
     for (i = 0; i < spin_cnt; i++) {
         if ((*local_sense) == global_sense) {
-            return 0; 
+            return 0;
         } else {
             __asm volatile ("" : : : "memory");
         }
@@ -46,14 +47,14 @@ static inline int do_spin(int *local_sense)
 static inline void futex_wait(int *addr, int val)
 {
     int err;
-    if ((err = syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL)) < 0) {
-        exit(1);
-    }
+    if ((err = syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL)) < 0)
+        return;
 }
 
 static inline void futex_wake(int *addr, int count)
 {
     int err;
+    // Wakes at most count processes waiting on the address
     if ((err = syscall(SYS_futex, addr, FUTEX_WAKE, count)) < 0) {
         exit(1);
     }
@@ -75,7 +76,7 @@ void centralized_barrier(int *local_sense, size_t nr_threads)
     // each processor toggles its own sense
     *local_sense = !(*local_sense);
     if (atomic_fetch_sub(&barrier_cnt, 1) == 1) {
-        barrier_cnt.store(nr_threads);   // atomic store?
+        barrier_cnt.store(nr_threads);
         // last processor toggles global sense
         global_sense.store(*local_sense);
         // wake up the other threads
