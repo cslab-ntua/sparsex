@@ -98,7 +98,7 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
 {
     const char *mat_str = getenv("SYMMETRIC");
     if (mat_str) {
-        SetProperty(RuntimeConfiguration::MatrixSymmetric, 
+        SetProperty(RuntimeConfiguration::MatrixSymmetric,
                     string(mat_str));
     }
 

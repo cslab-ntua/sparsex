@@ -1,0 +1,7 @@
+Changes in SparseX v1.0.1
+=========================
+
+Minor bug fixes
+* Automake 1.14.1 support
+* Fixed bug that occured with consecutive vector allocations on NUMA platforms
+* GCC-4.7 compilation and minor fixes in thread management

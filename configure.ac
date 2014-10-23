@@ -9,7 +9,7 @@ dnl This file is distributed under the BSD License. See LICENSE.txt for details.
 dnl
 
 AC_PREREQ([2.62])
-AC_INIT([SparseX], [1.0.0], [sparsex-support@cslab.ece.ntua.gr], [sparsex])
+AC_INIT([SparseX], [1.0.1], [sparsex-support@cslab.ece.ntua.gr], [sparsex])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADERS([build_config.h])
 AC_CONFIG_MACRO_DIR([m4check])

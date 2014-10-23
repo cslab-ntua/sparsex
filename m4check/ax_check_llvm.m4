@@ -27,7 +27,9 @@ AC_DEFUN([AX_CHECK_LLVM],
           [m4_errprintn([Too few arguments to $0.]) m4_exit(1)])
 
     llvm_required_version=$1
-    AC_MSG_CHECKING([for LLVM >= $llvm_required_version])
+
+    # NOTE: We strictly support only 3.0 version, therefore `=='
+    AC_MSG_CHECKING([for LLVM == $llvm_required_version])
     AC_ARG_WITH([llvm],
                 [AS_HELP_STRING([--with-llvm=CONFIG],
                                 [use CONFIG as LLVM configuration script.])],
@@ -55,20 +57,28 @@ bitreader ipo linker bitwriter asmparser instrumentation"
 
     if test -z $seems_llvm_config; then
         AC_MSG_RESULT([no])
-        AC_MSG_ERROR([`$withval' doesn't seem like an actual dnl
+        AC_MSG_ERROR([`$llvm_config_prog' doesn't seem like an actual dnl
 llvm-config script. Please check your supplied argument.])
     fi
 
-    llvm_version=`$llvm_config_prog --version 2> /dev/null`
+    llvm_version=`$llvm_config_prog --version 2> /dev/null | \
+$SED -e 's/[^0-9]*$//g'`
     if test -z $llvm_version; then
         AC_MSG_RESULT([no])
         AC_MSG_ERROR([Could not find a proper LLVM config script. dnl 
 Tried `$llvm_config_prog' and failed.])
     fi
 
-    llvm_found=1
-    AS_VERSION_COMPARE([$llvm_version], [$llvm_required_version],
-                       [llvm_found=0])
+    # We currently strictly support only 3.0
+    if test $llvm_version == "3.0"; then
+        llvm_found=1
+    else
+        llvm_found=0
+    fi
+
+    # llvm_found=1
+    # AS_VERSION_COMPARE([$llvm_version], [$llvm_required_version],
+    #                    [llvm_found=0])
 
     if test $llvm_found -eq 0; then
         AC_MSG_RESULT([no])
