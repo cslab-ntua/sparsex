@@ -106,7 +106,7 @@ void ThreadPool::SetKernel(int kernel_id)
         workers_[i].SetJob(kernel_id);
         if (kernel_id == SPMV_MULT_SYM || kernel_id == SPMV_KERNEL_SYM) {
             spm_mt_thread_t *data = (spm_mt_thread_t *) workers_[i].data_;
-            data->sense = workers_[i].GetSense();
+            data->sense = !global_sense;
         } else if (kernel_id == IDLE) {
             workers_[i].data_ = NULL;
         }

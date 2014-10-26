@@ -31,8 +31,7 @@ atomic<int> barrier_cnt;
 
 static inline int do_spin(int *local_sense)
 {
-    // unsigned long long i, spin_cnt = 300000;
-    unsigned long long i, spin_cnt = 500;
+    unsigned long long i, spin_cnt = 30000;
 
     for (i = 0; i < spin_cnt; i++) {
         if ((*local_sense) == global_sense) {
@@ -46,16 +45,14 @@ static inline int do_spin(int *local_sense)
 
 static inline void futex_wait(int *addr, int val)
 {
-    int err;
-    if ((err = syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL)) < 0)
+    if (syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL) < 0)
         return;
 }
 
 static inline void futex_wake(int *addr, int count)
 {
-    int err;
     // Wakes at most count processes waiting on the address
-    if ((err = syscall(SYS_futex, addr, FUTEX_WAKE, count)) < 0) {
+    if (syscall(SYS_futex, addr, FUTEX_WAKE, count) < 0) {
         exit(1);
     }
 }

@@ -36,7 +36,7 @@ struct spm_mt_thread {
 	// uint64_t *col_map;
 	vector_t *x;
     vector_t *y;
-    int *sense;
+    int sense;
     double alpha;
     double beta;
 	double secs;
