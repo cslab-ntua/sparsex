@@ -33,29 +33,26 @@ using namespace std;
 namespace sparsex {
 namespace io {
 
-template <typename SortIter, typename PermIter> 
+template<typename SortIter, typename PermIter>
 struct CSR_iterator_traits
-{ 
-    typedef boost::tuple< 
-        typename std::iterator_traits<SortIter>::value_type, 
-        typename std::iterator_traits<PermIter>::value_type > 
-        value_type; 
+{
+    typedef boost::tuple<
+        typename std::iterator_traits<SortIter>::value_type,
+        typename std::iterator_traits<PermIter>::value_type> value_type;
 
-    typedef boost::tuple< 
-        typename std::iterator_traits<SortIter>::value_type&, 
-        typename std::iterator_traits<PermIter>::value_type& > 
-        ref_type; 
+    typedef boost::tuple<
+        typename std::iterator_traits<SortIter>::value_type&,
+        typename std::iterator_traits<PermIter>::value_type&> ref_type;
 };
 
 template<typename SortIter, typename PermIter>
-class CSR_iterator
-    : public boost::iterator_facade<
+class CSR_iterator :
+        public boost::iterator_facade<
     CSR_iterator<SortIter, PermIter>,
     typename CSR_iterator_traits<SortIter, PermIter>::value_type,
     std::random_access_iterator_tag,
     typename CSR_iterator_traits<SortIter, PermIter>::ref_type,
-    typename std::iterator_traits<SortIter>::difference_type
-    > 
+    typename std::iterator_traits<SortIter>::difference_type>
 {
 public:
 
@@ -69,15 +66,16 @@ private:
 
     friend class boost::iterator_core_access;
 
-    typename CSR_iterator_traits<SortIter, PermIter>::ref_type dereference() const
+    typename CSR_iterator_traits<
+        SortIter, PermIter>::ref_type dereference() const
     {
-        return (typename CSR_iterator_traits<SortIter, PermIter>
-                ::ref_type(*si_, *pi_)); 
+        return typename CSR_iterator_traits<
+            SortIter, PermIter>::ref_type(*si_, *pi_);
     }
 
     bool equal(CSR_iterator const& other) const
-    { 
-        return (si_ == other.si_); 
+    {
+        return (si_ == other.si_);
     }
 
     void increment()
@@ -98,30 +96,31 @@ private:
        pi_ += n;
     }
 
-    typename std::iterator_traits<SortIter>::difference_type distance_to(CSR_iterator const& other) const
+    typename std::iterator_traits<SortIter>::difference_type distance_to(
+        CSR_iterator const& other) const
     {
-        return (other.si_ - si_); 
+        return (other.si_ - si_);
     }
 };
 
-template <typename SortIter, typename PermIter> 
+template <typename SortIter, typename PermIter>
 CSR_iterator<SortIter, PermIter>
-get_CSR_iterator(SortIter si, PermIter pi) 
-{ 
-    return CSR_iterator<SortIter, PermIter>(si, pi); 
+get_CSR_iterator(SortIter si, PermIter pi)
+{
+    return CSR_iterator<SortIter, PermIter>(si, pi);
 }
 
-template <typename SortIter, typename PermIter> 
+template <typename SortIter, typename PermIter>
 struct CSR_Comp : public std::binary_function<
     typename CSR_iterator_traits<SortIter, PermIter>::value_type,
-    typename CSR_iterator_traits<SortIter, PermIter>::value_type, bool> 
+    typename CSR_iterator_traits<SortIter, PermIter>::value_type, bool>
 {
-    typedef typename CSR_iterator_traits<SortIter, PermIter>::value_type T; 
-    
-    bool operator()(const T& t1, const T& t2) 
-    { 
-        return (boost::get<0>(t1) < boost::get<0>(t2)); 
-    } 
+    typedef typename CSR_iterator_traits<SortIter, PermIter>::value_type T;
+
+    bool operator()(const T& t1, const T& t2)
+    {
+        return (boost::get<0>(t1) < boost::get<0>(t2));
+    }
 };
 
 } // end of namespace io

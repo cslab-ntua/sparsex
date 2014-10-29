@@ -62,7 +62,9 @@ ClangCompiler::ClangCompiler()
 
     // Setup diagnostic options
     DiagnosticOptions &diag_options = invocation_->getDiagnosticOpts();
-    diag_options.Warnings.push_back("all");     // -Wall
+
+    // FIXME: The following option crashes Clang 3.0 on certain systems!
+    // diag_options.Warnings.push_back("all");     // -Wall
     diag_options.Pedantic = 1;                  // -pedantic
     diag_options.ShowColors = 1;                // be fancy ;)
 
