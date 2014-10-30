@@ -30,8 +30,8 @@ int main(int argc, char **argv)
                             30,31,31.1,31.2,32};
 
     /* Define random x and y arrays */
-	spx_value_t *x = (spx_value_t *) malloc(sizeof(spx_value_t) * ncols);
-	spx_value_t *y = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
+    spx_value_t *x = (spx_value_t *) malloc(sizeof(spx_value_t) * ncols);
+    spx_value_t *y = (spx_value_t *) malloc(sizeof(spx_value_t) * nrows);
     spx_value_t val = 0, max = 1, min = -1;
     size_t i;
     for (i = 0; i < nrows; i++) {
