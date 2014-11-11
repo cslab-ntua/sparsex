@@ -17,6 +17,7 @@
  */
 
 #include <sparsex/internals/Barrier.hpp>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <linux/futex.h>
