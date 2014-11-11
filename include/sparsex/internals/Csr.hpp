@@ -128,6 +128,8 @@ public:
 
     // Element iterator
     class iterator;
+    // Row iterator
+    class row_iterator;
 
     iterator begin()
     {
@@ -141,8 +143,18 @@ public:
     {
         if (reordered_)
             return iterator(this, nr_nzeros_, permutation_);
-        else 
-            return iterator(this, nr_nzeros_);
+        else
+            return iterator(this, nr_rows_);
+    }
+
+    row_iterator row_begin(IndexType row_idx)
+    {
+        return row_iterator(this, row_idx);
+    }
+
+    row_iterator row_end(IndexType row_idx)
+    {
+        return row_iterator(this, row_idx+1);
     }
 
     ValueType GetValue(IndexType row, IndexType col) const;
@@ -246,30 +258,21 @@ class CSR<IndexType, ValueType>::iterator :
                              Element<IndexType, ValueType> >
 {
 public:
-    iterator(CSR<IndexType, ValueType> *csr)
+    iterator(CSR<IndexType, ValueType> *csr, IndexType row_idx)
         : csr_(csr),
-          curr_row_(0),
-          row_index_(0),
-          elem_count_(0),
-          curr_elem_(0)
-    { }
-
-    iterator(CSR<IndexType, ValueType> *csr, IndexType cnt)
-        : csr_(csr),
-          curr_row_(0),
-          row_index_(0),
-          elem_count_(0),
-          curr_elem_(0)
-    {
-        for (IndexType i = 0; i < cnt; i++)
-            ++(*this);
-    }
+          curr_row_(row_idx),
+          curr_elem_(csr_->rowptr_[row_idx]),
+          row_index_(row_idx),
+          elem_count_(csr_->rowptr_[row_idx]),
+          elem_(Element<IndexType, ValueType>(0, 0, 0))
+    {}
 
     iterator(CSR<IndexType, ValueType> *csr, const vector<size_t> &inv_perm)
         : csr_(csr),
           row_index_(0),
           elem_count_(0),
-          permutation_(inv_perm)
+          permutation_(inv_perm),
+          elem_(Element<IndexType, ValueType>(0, 0, 0))
     {
         curr_row_ = permutation_[0];
         // in case first rows are empty
@@ -283,7 +286,8 @@ public:
         : csr_(csr),
           row_index_(0),
           elem_count_(0),
-          permutation_(inv_perm)
+          permutation_(inv_perm),
+          elem_(Element<IndexType, ValueType>(0, 0, 0))
     {
         curr_row_ = permutation_[0];
         // in case first rows are empty
@@ -298,9 +302,7 @@ public:
     {
         return (csr_ == rhs.csr_ &&
                 curr_row_ == rhs.curr_row_ &&
-                curr_elem_ == rhs.curr_elem_ &&
-                row_index_ == rhs.row_index_ &&
-                elem_count_ == rhs.elem_count_);
+                curr_elem_ == rhs.curr_elem_);
     }
 
     bool operator!=(const iterator &rhs) const
@@ -342,7 +344,8 @@ public:
         }
     }
 
-    Element<IndexType, ValueType> operator*()
+public: // Access
+    Element<IndexType, ValueType> &operator*()
     {
         assert(curr_row_ <= csr_->nr_rows_ && "out of bounds");
         assert(static_cast<size_t>(curr_elem_) < csr_->nr_nzeros_
@@ -360,14 +363,141 @@ public:
 
         col = csr_->colind_[curr_elem_] + csr_->zero_based_;
         val = csr_->values_[curr_elem_];
-        return Element<IndexType, ValueType>(row, col, val);
+        elem_ = Element<IndexType, ValueType>(row, col, val);
+        return elem_;
     }
 
 private:
     CSR<IndexType, ValueType> *csr_;
-    size_t curr_row_, row_index_, elem_count_;
+    size_t curr_row_;
     IndexType curr_elem_;
+    size_t row_index_, elem_count_;
     vector<size_t> permutation_;
+    Element<IndexType, ValueType> elem_;
+};
+
+template<typename IndexType, typename ValueType>
+class CSR<IndexType, ValueType>::row_iterator :
+        public std::iterator<random_access_iterator_tag,
+                             pair<IndexType, ValueType> >
+{
+public:
+    typedef typename std::iterator<random_access_iterator_tag,
+                                   pair<IndexType, ValueType>
+                                   >::value_type value_type;
+    typedef typename std::iterator<random_access_iterator_tag, 
+                                   pair<IndexType, ValueType>
+                                   >::pointer pointer;
+    typedef typename std::iterator<random_access_iterator_tag,
+                                   pair<IndexType, ValueType>
+                                   >::reference reference;
+    typedef typename std::iterator<random_access_iterator_tag,
+                                   pair<IndexType, ValueType>
+                                   >::difference_type difference_type;
+
+    row_iterator(CSR<IndexType, ValueType> *csr, IndexType row_idx)
+        : csr_(csr),
+          curr_row_(row_idx),
+          curr_elem_(csr_->rowptr_[row_idx])
+    {}
+
+public: // Comparison
+    bool operator==(const row_iterator &rhs) const
+    {
+        return (csr_ == rhs.csr_ &&
+                curr_row_ == rhs.curr_row_ &&
+                curr_elem_ == rhs.curr_elem_);
+    }
+
+    bool operator!=(const row_iterator &rhs) const
+    {
+        return !(*this == rhs);
+    }
+
+    bool operator<(row_iterator const & other) const
+    {
+        return (curr_elem_ < other.curr_elem_);
+    }
+
+public: // Step
+    row_iterator &operator+=(difference_type n)
+    {
+        for (IndexType i = 0; i < n; i++)
+            ++(*this);
+        return *this;
+    }
+
+    row_iterator &operator-=(difference_type n)
+    {
+        for (IndexType i = 0; i < n; i++)
+            --(*this);
+        return *this;
+    }
+
+    row_iterator operator-(difference_type n)
+    {
+        row_iterator result(*this);
+        result -= n;
+        return result;
+    }
+
+    row_iterator operator+(difference_type n)
+    {
+        row_iterator result(*this);
+        result += n;
+        return result;
+    }
+
+public: // Iteration
+    row_iterator &operator--()
+    {
+        // Check if we are on same or previous row
+        IndexType last_elem =
+            csr_->rowptr_[curr_row_] - !csr_->zero_based_;
+        --curr_elem_;
+        if (curr_elem_ < last_elem)
+            curr_row_--;
+        assert(curr_row_ >0);
+        return *this;
+    }
+
+    row_iterator &operator++()
+    {
+        IndexType new_row_elem =
+            csr_->rowptr_[curr_row_+1] - !csr_->zero_based_;
+        ++curr_elem_;
+        while (new_row_elem == curr_elem_) {
+            ++curr_row_;
+            new_row_elem = csr_->rowptr_[curr_row_+1] - !csr_->zero_based_;
+        }
+
+        if (curr_row_ == csr_->nr_rows_)
+            assert(static_cast<size_t>(curr_elem_) == csr_->nr_nzeros_);
+        return *this;
+    }
+
+public: // Access
+    reference operator*()
+    {
+        assert(curr_row_ <= csr_->nr_rows_ && "out of bounds");
+        assert(static_cast<size_t>(curr_elem_) < csr_->nr_nzeros_
+               && "out of bounds");
+        p_ = move(make_pair(csr_->colind_[curr_elem_]+csr_->zero_based_,
+                            csr_->values_[curr_elem_]));
+        return p_;
+    }
+
+public: // Distance
+    difference_type operator-(const row_iterator &other) const
+    {
+        return curr_elem_ - other.curr_elem_;
+    }
+
+private:
+    CSR<IndexType, ValueType> *csr_;
+    size_t curr_row_;
+    IndexType curr_elem_;
+    pair<IndexType, ValueType> p_;
 };
 
 } // end of namespace io

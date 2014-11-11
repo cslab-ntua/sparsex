@@ -31,10 +31,10 @@ atomic<int> barrier_cnt;
 
 static inline int do_spin(int *local_sense)
 {
-    unsigned long long i, spin_cnt = 30000;
+    unsigned long long i, spin_cnt = BARRIER_TIMEOUT;
 
     for (i = 0; i < spin_cnt; i++) {
-        if ((*local_sense) == global_sense) {
+        if ((*local_sense) == global_sense.load()) {
             return 0;
         } else {
             __asm volatile ("" : : : "memory");
@@ -45,16 +45,17 @@ static inline int do_spin(int *local_sense)
 
 static inline void futex_wait(int *addr, int val)
 {
-    if (syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL) < 0)
-        return;
+    int err = syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL);
+    if (err < 0 && errno == ENOSYS)
+        syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL);
 }
 
 static inline void futex_wake(int *addr, int count)
 {
-    // Wakes at most count processes waiting on the address
-    if (syscall(SYS_futex, addr, FUTEX_WAKE, count) < 0) {
-        exit(1);
-    }
+    // Wakes at most count processes waiting on the addr
+    int err = syscall(SYS_futex, addr, FUTEX_WAKE, count);
+    if (err < 0 && errno == ENOSYS)
+        syscall(SYS_futex, addr, FUTEX_WAKE, count);
 }
 
 /*
@@ -79,8 +80,10 @@ void centralized_barrier(int *local_sense, size_t nr_threads)
         // wake up the other threads
         futex_wake((int *) &global_sense, nr_threads);
     } else {
-        if (do_spin(local_sense))
-            futex_wait((int *) &global_sense, !(*local_sense));
+        while (*local_sense != global_sense.load()) {
+            if (do_spin(local_sense))
+                futex_wait((int *) &global_sense, !(*local_sense));
+        }
     }
 }
 

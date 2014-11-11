@@ -18,6 +18,8 @@
  * for details.
  */
 
+#include <sparsex/internals/Affinity.hpp>
+#include <sparsex/internals/Config.hpp>
 #include <sparsex/internals/Vector.hpp>
 #include <sparsex/internals/logger/Logger.hpp>
 #include <cstdlib>
@@ -26,6 +28,7 @@
 #include <numa.h>
 #include <math.h>
 #include <sys/mman.h>
+#include <omp.h>
 
 using namespace std;
 
@@ -38,9 +41,10 @@ enum alloc_type {
 	ALLOC_OTHER
 };
 
-enum copy_mode {
-	SHARE = 43,
-	COPY
+enum vec_mode {
+	VEC_MODE_AS_IS = 43,
+	VEC_MODE_TUNED,
+    VEC_MODE_INVALID
 };
 
 template<typename ValueType>
@@ -57,17 +61,19 @@ vector_t *VecCreate(size_t size)
 {
 	vector_t *v = (vector_t *) malloc(sizeof(vector_t));
 	if (!v) {
-		LOG_ERROR << "malloc\n";
+		LOG_ERROR << "malloc failed\n";
+		exit(1);
+	}
+
+	v->elements = (spx_value_t *) calloc(size, sizeof(spx_value_t));
+	if (!v->elements) {
+		LOG_ERROR << "malloc failed\n";
 		exit(1);
 	}
 
 	v->size = size;
 	v->alloc_type = internal::ALLOC_STD;
-	v->elements = (spx_value_t *) calloc(size, sizeof(spx_value_t));
-	if (!v->elements) {
-		LOG_ERROR << "malloc\n";
-		exit(1);
-	}
+	v->vec_mode = internal::VEC_MODE_INVALID;
 
 	return v;
 }
@@ -75,97 +81,80 @@ vector_t *VecCreate(size_t size)
 vector_t *VecCreateOnnode(size_t size, int node)
 {
 	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t), node);
-	v->size = size;
-	v->alloc_type = internal::ALLOC_MMAP;
 	v->elements = (spx_value_t *) alloc_onnode(sizeof(spx_value_t)*size, node);
 	if (!v->elements) {
 		LOG_ERROR << "allocation failed\n";
 		exit(1);
 	}
 
-    VecInit(v, 0);
+	v->size = size;
+	v->alloc_type = internal::ALLOC_MMAP;
+	v->vec_mode = internal::VEC_MODE_INVALID;
+
 	return v;
 }
 
-vector_t *VecCreateInterleaved(size_t size, size_t *parts, int nr_parts,
-                               int *nodes)
+vector_t *VecCreateInterleaved(size_t size, size_t nr_parts, size_t *parts,
+                               int *nodes, spx_index_t *row_start,
+                               spx_index_t *row_end)
 {
 	vector_t *v = (vector_t *) alloc_onnode(sizeof(vector_t), nodes[0]);
-	v->size = size;
-	v->copy_mode = -1;
-	v->ptr_buff = NULL;
-	v->alloc_type = internal::ALLOC_MMAP;
 	v->elements = (spx_value_t *) alloc_interleaved(size*sizeof(*v->elements),
                                                     parts, nr_parts, nodes);
+	v->size = size;
+	v->alloc_type = internal::ALLOC_MMAP;
+	v->vec_mode = internal::VEC_MODE_INVALID;
     VecInit(v, 0);
+
 	return v;
 }
 
-vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, int mode)
+vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, size_t nr_parts,
+                            int *cpus, spx_index_t *row_start,
+                            spx_index_t *row_end, int mode)
 {
 	vector_t *v = (vector_t *) malloc(sizeof(vector_t));
 	if (!v) {
-		LOG_ERROR << "malloc\n";
+		LOG_ERROR << "malloc failed\n";
 		exit(1);
 	}
-	v->size = size;
-	v->alloc_type = internal::ALLOC_OTHER;
-    if (mode == internal::SHARE) {
-        v->copy_mode = internal::SHARE;
+
+    if (mode == internal::VEC_MODE_AS_IS) {
+        // We don't know how the data was allocated
+        v->vec_mode = internal::VEC_MODE_AS_IS;
         v->elements = buff;
-    } else if (mode == internal::COPY) {
-        v->copy_mode = internal::COPY;
-        v->elements = (spx_value_t *) malloc(sizeof(spx_value_t) * size);
+    } else if (mode == internal::VEC_MODE_TUNED) {
+        v->vec_mode = internal::VEC_MODE_TUNED;
+#if SPX_USE_NUMA
+        v->elements = (spx_value_t *) malloc(sizeof(spx_value_t)*size);
         if (!v->elements) {
-            LOG_ERROR << "malloc\n";
+            LOG_ERROR << "malloc failed\n";
             exit(1);
         }
-        
-        memcpy(v->elements, buff, size * sizeof(spx_value_t));
+
+        // Perform parallel copy
+        omp_set_num_threads(nr_parts);
+#pragma omp parallel
+        {
+            int tid = omp_get_thread_num();
+            setaffinity_oncpu(cpus[tid]);
+            spx_index_t start = row_start[tid];
+            spx_index_t end = row_end[tid];
+            for (spx_index_t i = start; i < end; i++)
+                v->elements[i] = buff[i];
+        }
+#else
+        v->elements = buff;
+#endif
     } else {
-        LOG_ERROR << "invalid copy-mode type";
+        LOG_ERROR << "invalid vector mode";
         exit(1);
     }
 
+    v->alloc_type = internal::ALLOC_OTHER;
+	v->size = size;
+
 	return v;
-}
-
-vector_t *VecCreateFromBuffInterleaved(spx_value_t *buff, size_t size,
-                                       size_t *parts, int nr_parts,
-                                       int *nodes, int mode)
-{
-    // Save parts since they are modified by alloc_interleaved
-    size_t *tmp = new size_t[nr_parts];
-    memcpy(tmp, parts, nr_parts * sizeof(size_t));
-	vector_t *v = VecCreateInterleaved(size, tmp, nr_parts, nodes);
-    for (size_t i = 0; i < size; i++)
-        v->elements[i] = buff[i];
-    v->copy_mode = mode;
-    if (mode == internal::SHARE)
-        v->ptr_buff = buff;
-    else if (mode == internal::COPY)
-        v->ptr_buff = NULL;
-
-    print_alloc_status("vector", check_interleaved(v->elements, parts,
-                                                   nr_parts,
-                                                   nodes));
-    delete[] tmp;
-    return v;
-}
-
-vector_t *VecCreateFromBuffOnnode(spx_value_t *buff, size_t size, int node,
-                                  int mode)
-{
-	vector_t *v = VecCreateOnnode(size, node);
-    for (size_t i = 0; i < size; i++)
-        v->elements[i] = buff[i];
-    v->copy_mode = mode;
-    if (mode == internal::SHARE)
-        v->ptr_buff = buff;
-    else if (mode == internal::COPY)
-        v->ptr_buff = NULL;
-
-    return v;
 }
 
 vector_t *VecCreateRandom(size_t size)
@@ -176,15 +165,17 @@ vector_t *VecCreateRandom(size_t size)
     return v;
 }
 
-vector_t *VecCreateRandomInterleaved(size_t size, size_t *parts, int nr_parts,
-                                     int *nodes)
+vector_t *VecCreateRandomInterleaved(size_t size, size_t nr_parts,
+                                     size_t *parts, int *nodes,
+                                     spx_index_t *row_start,
+                                     spx_index_t *row_end)
 {
     // Save parts since they are modified by alloc_interleaved
     size_t *tmp = new size_t[nr_parts];
     memcpy(tmp, parts, nr_parts * sizeof(size_t));
-	vector_t *v = VecCreateInterleaved(size, tmp, nr_parts, nodes);
+	vector_t *v = VecCreateInterleaved(size, nr_parts, tmp, nodes,
+                                       row_start, row_end);
     VecInitRandRange(v, (spx_value_t) -0.1, (spx_value_t) 0.1);
-
     print_alloc_status("vector", check_interleaved(v->elements, tmp,
                                                    nr_parts,
                                                    nodes));
@@ -201,10 +192,6 @@ void VecDestroy(vector_t *v)
 		numa_free(v->elements, sizeof(spx_value_t) * v->size);
 		numa_free(v, sizeof(vector_t));
 	} else if (v->alloc_type == internal::ALLOC_MMAP) {
-        if (v->copy_mode == internal::SHARE)
-            for (size_t i = 0; i < v->size; i++)
-                v->ptr_buff[i] = v->elements[i];
-        v->ptr_buff = NULL;
 		munmap(v->elements, sizeof(spx_value_t) * v->size);
 		munmap(v, sizeof(vector_t));
 	} else if (v->alloc_type == internal::ALLOC_OTHER) {
@@ -242,6 +229,17 @@ void VecInitRandRange(vector_t *v, spx_value_t max, spx_value_t min)
 	spx_value_t val;
 
 	for (size_t i = 0; i < v->size; i++) {
+		val = ((spx_value_t) (rand()+i) / ((spx_value_t) RAND_MAX + 1));
+		v->elements[i] = min + val*(max-min);
+	}
+}
+
+void VecInitRandRangePart(vector_t *v, spx_index_t start, spx_index_t end,
+                          spx_value_t max, spx_value_t min)
+{
+	spx_value_t val;
+
+	for (spx_index_t i = start; i < end; i++) {
 		val = ((spx_value_t) (rand()+i) / ((spx_value_t) RAND_MAX + 1));
 		v->elements[i] = min + val*(max-min);
 	}
@@ -381,8 +379,17 @@ void VecCopy(const vector_t *v1, vector_t *v2)
 {
     assert(v1->size == v2->size && "vectors for copy have different size");
 
+#if SPX_USE_NUMA
     for (size_t i = 0; i < v1->size; i++)
-        v2->elements[i] = v1->elements[i];//memcpy
+        v2->elements[i] = v1->elements[i];
+#else
+    if (v1->vec_mode == internal::VEC_MODE_INVALID &&
+        v2->vec_mode == internal::VEC_MODE_INVALID)
+        memcpy(v2->elements, v1->elements, v1->size*sizeof(spx_value_t));
+    else
+        for (size_t i = 0; i < v1->size; i++)
+            v2->elements[i] = v1->elements[i];
+#endif
 }
 
 int VecCompare(const vector_t *v1, const vector_t *v2)

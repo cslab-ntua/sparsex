@@ -70,7 +70,7 @@ void mkl_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
     sort(mt.begin(), mt.end());
     double mt_median = 
         (OUTER_LOOPS % 2) ? mt[((OUTER_LOOPS+1)/2)-1]
-        : ((mt[OUTER_LOOPS/2] + mt[OUTER_LOOPS/2+1])/2);  
+        : ((mt[OUTER_LOOPS/2-1] + mt[OUTER_LOOPS/2])/2);  
     double flops = (double)(LOOPS*nnz*2)/((double)1000*1000*mt_median);
     cout << "m: " << MATRIX
          << " mt(median): " << mt_median

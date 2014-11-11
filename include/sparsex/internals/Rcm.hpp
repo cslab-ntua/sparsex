@@ -20,7 +20,6 @@
 #define SPARSEX_INTERNALS_RCM_HPP
 
 #include <sparsex/internals/Csr.hpp>
-#include <sparsex/internals/CsrIterator.hpp>
 #include <sparsex/internals/Mmf.hpp>
 #include <sparsex/internals/logger/Logger.hpp>
 #include <boost/config.hpp>
@@ -44,6 +43,18 @@ typedef adjacency_list<vecS, vecS, undirectedS,
                        property<vertex_degree_t,int> > > Graph;
 typedef graph_traits<Graph>::vertex_descriptor Vertex;
 typedef graph_traits<Graph>::vertices_size_type size_type;
+
+template<typename IndexType, typename ValueType>
+struct ColumnCompare {
+    public:
+        bool operator() (const pair<IndexType, ValueType> &lhs,
+                         const pair<IndexType, ValueType> &rhs) const
+        {
+            if (lhs.first < rhs.first) return true;
+            if (lhs.first > rhs.first) return false;
+            return false;
+        }
+};
 
 /**
  *  @return perm      permutation from the old ordering to the new one.
@@ -282,8 +293,6 @@ void ReorderMat_CSR(CSR<IndexType, ValueType>& mat, const vector<size_t>& perm,
 
     // Apply permutation only to colind
     for (size_t i = 0; i < mat.GetNrNonzeros(); i++) {
-        // mat.colind_[i] = perm[mat.colind_[i] - !mat.IsZeroBased()] +
-        //     !mat.IsZeroBased();
         new_colind[i] = perm[mat.colind_[i] - !mat.IsZeroBased()] +
             !mat.IsZeroBased();
     }
@@ -292,16 +301,9 @@ void ReorderMat_CSR(CSR<IndexType, ValueType>& mat, const vector<size_t>& perm,
     mat.values_ = new_values;
 
     // Simultaneously sort colind and values per row
-    IndexType row_start, length;
     for (size_t i = 0; i < mat.GetNrRows(); i++) {
-        row_start = mat.rowptr_[i] - !mat.IsZeroBased();
-        length = mat.rowptr_[i+1] - mat.rowptr_[i];
-        sort(get_CSR_iterator<IndexType*, ValueType*>(
-                 &mat.colind_[row_start], &mat.values_[row_start]),
-             get_CSR_iterator<IndexType*, ValueType*>(
-                 &mat.colind_[row_start] + length,
-                 &mat.values_[row_start] + length),
-             CSR_Comp<IndexType*, ValueType*>());
+        sort(mat.row_begin(i), mat.row_end(i),
+             ColumnCompare<IndexType, ValueType>());
     }
     mat.SetReordered(inv_perm);
     //assert(inv_perm.capacity() == 0);

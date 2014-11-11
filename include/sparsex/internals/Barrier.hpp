@@ -25,6 +25,8 @@
 namespace sparsex {
 namespace runtime {
 
+#define BARRIER_TIMEOUT 300000
+
 /*
  * In a centralized barrier, every thread spins on a global “sense” flag. A
  * global count variable holds the number of threads. The global sense flag is

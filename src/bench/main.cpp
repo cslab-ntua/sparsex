@@ -35,13 +35,11 @@ static struct option long_options[] = {
 
 void PrintUsage(std::ostream &os)
 {
-    os << "Usage:  " << program_name 
+    os << "Usage: [NUM_THREADS=<num>|CPU_AFFINITY=<list>] ./bench_spmv"
        << " -f <mmf_file> [-l library]\n"
-       << "\t" << program_name
-       << " -d <directory> [-l library]\n"
        << "\t-f    Run SpMV kernel on file.\n"
        << "\t-d    Run SpMV kernel on all files in a directory.\n"
-       << "\t-l    Use one of the available libraries (MKL, pOSKI, LIBCSX).\n"
+       << "\t-l    Use one of the available libraries (MKL, pOSKI, SparseX).\n"
        << "\t-h    Print this help message and exit.\n";
 }
 

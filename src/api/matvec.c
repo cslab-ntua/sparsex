@@ -52,8 +52,11 @@ struct input {
  */
 struct partition {
     size_t nr_partitions;
-    size_t *parts;
-    int *nodes;
+    size_t *parts;  /**< Partition size in bytes for interleaved allocation */
+    int *nodes;     /**< Numa nodes for interleaved allocation */
+    int *affinity;
+    spx_index_t *row_start;
+    spx_index_t *row_end;
 };
 
 /**
@@ -124,6 +127,9 @@ static void part_alloc_struct(spx_partition_t **p)
     (*p)->nr_partitions = 0;
     (*p)->parts = NULL;
     (*p)->nodes = NULL;
+    (*p)->affinity = NULL;
+    (*p)->row_start = NULL;
+    (*p)->row_end = NULL;
 }
 
 /**
@@ -139,6 +145,18 @@ static void part_free_struct(spx_partition_t *p)
         spx_free(p->nodes);
     }
 
+    if (p->affinity) {
+        spx_free(p->affinity);
+    }
+
+    if (p->row_start) {
+        spx_free(p->row_start);
+    }
+
+    if (p->row_end) {
+        spx_free(p->row_end);
+    }
+
     spx_free(p);
 }
 
@@ -152,10 +170,8 @@ spx_input_t *spx_input_load_csr(spx_index_t *rowptr, spx_index_t *colind,
     spx_option_t indexing = va_arg(ap, spx_option_t);
     va_end(ap);
 
+    indexing = indexing - SPX_INDEX_ZERO_BASED;
     if (!check_indexing(indexing)) {
-        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
-        return SPX_INVALID_INPUT;
-    } else {
         indexing = 0;
     }
 
@@ -313,10 +329,8 @@ spx_error_t spx_mat_get_entry(const spx_matrix_t *A, spx_index_t row,
     spx_option_t indexing = va_arg(ap, spx_option_t);
     va_end(ap);
 
-    if (indexing && !check_indexing(indexing)) {
-        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
-        return SPX_FAILURE;
-    } else {
+    indexing = indexing - SPX_INDEX_ZERO_BASED;
+    if (!check_indexing(indexing)) {
         indexing = 0;
     }
 
@@ -357,10 +371,8 @@ spx_error_t spx_mat_set_entry(spx_matrix_t *A, spx_index_t row,
     spx_option_t indexing = va_arg(ap, spx_option_t);
     va_end(ap);
 
-    if (indexing && !check_indexing(indexing)) {
-        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
-        return SPX_FAILURE;
-    } else {
+    indexing = indexing - SPX_INDEX_ZERO_BASED;
+    if (!check_indexing(indexing)) {
         indexing = 0;
     }
 
@@ -476,6 +488,11 @@ spx_partition_t *spx_mat_get_partition(spx_matrix_t *A)
     part_alloc_struct(&ret);
 	ret->parts = (size_t *) malloc(sizeof(*ret->parts)*spm_mt->nr_threads);
 	ret->nodes = (int *) malloc(sizeof(*ret->nodes)*spm_mt->nr_threads);
+	ret->affinity = (int *) malloc(sizeof(*ret->affinity)*spm_mt->nr_threads);
+	ret->row_start = (spx_index_t *) malloc(sizeof(*ret->row_start)*
+                                            spm_mt->nr_threads);
+	ret->row_end = (spx_index_t *) malloc(sizeof(*ret->row_end)*
+                                          spm_mt->nr_threads);
     ret->nr_partitions = spm_mt->nr_threads;
 
     size_t i;
@@ -483,6 +500,9 @@ spx_partition_t *spx_mat_get_partition(spx_matrix_t *A)
 		spm_mt_thread_t *spm = spm_mt->spm_threads + i;
 		ret->parts[i] = spm->nr_rows * sizeof(spx_value_t);
 		ret->nodes[i] = spm->node;
+		ret->affinity[i] = spm->cpu;
+		ret->row_start[i] = spm->row_start;
+		ret->row_end[i] = spm->row_start + spm->nr_rows;
 	}
 #else
     part_alloc_struct(&ret);
@@ -655,22 +675,29 @@ spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows,
     part_alloc_struct(&ret);
 	ret->parts = (size_t *) malloc(sizeof(*ret->parts)*nr_threads);
 	ret->nodes = (int *) malloc(sizeof(*ret->nodes)*nr_threads);
+	ret->row_start = (spx_index_t *) malloc(sizeof(*ret->row_start)*nr_threads);
+	ret->row_end = (spx_index_t *) malloc(sizeof(*ret->row_end)*nr_threads);
     ret->nr_partitions = nr_threads;
 
     spx_index_t i;
+    ret->row_start[0] = row_start;
 	for (i = 0; i < nr_rows; i++) {
 		curr_nnz += rowptr[i+1] - rowptr[i];
 		if (curr_nnz >= nnz_per_split) {
-			ret->parts[split_cnt] = i + 1 - row_start;
+			ret->parts[split_cnt] = (i + 1 - row_start) * sizeof(spx_value_t);
+			ret->row_end[split_cnt] = i + 1;
 			row_start = i + 1;
 			curr_nnz = 0;
 			++split_cnt;
+            if (split_cnt < nr_threads)
+                ret->row_start[split_cnt] = row_start;
 		}
 	}
 
 	// Fill the last split.
 	if (curr_nnz < nnz_per_split && split_cnt < nr_threads) {
-		ret->parts[split_cnt] = i - row_start;
+		ret->parts[split_cnt] = (i + 1 - row_start) * sizeof(spx_value_t);
+        ret->row_end[split_cnt] = i + 1;
 	}
 
     GetNodes(ret->nodes);
@@ -716,15 +743,18 @@ spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p)
     }
 
 #if SPX_USE_NUMA
-	v = VecCreateInterleaved(size, p->parts, p->nr_partitions, p->nodes);
+	v = VecCreateInterleaved(size, p->nr_partitions, p->parts, p->nodes,
+                             p->row_start, p->row_end);
 #else
     v = VecCreate(size);
 #endif
 	return v;
 }
 
-spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, size_t size,
-                                       spx_partition_t *p, spx_copymode_t mode)
+spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff,
+                                       spx_value_t **tuned,
+                                       size_t size, spx_partition_t *p,
+                                       spx_vecmode_t mode)
 {
     /* Check validity of input arguments */
     if (!buff) {
@@ -737,18 +767,22 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, size_t size,
         return SPX_INVALID_VEC;
     }
 
-    if (!check_copymode(mode)) {
-        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid copy mode");
+    if (!check_vecmode(mode)) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid vector mode");
         return SPX_INVALID_VEC;
     }
     
     spx_vector_t *v = SPX_INVALID_VEC;
+	v = VecCreateFromBuff(buff, size, p->nr_partitions, p->affinity,
+                          p->row_start, p->row_end, mode);
 #if SPX_USE_NUMA
-	v = VecCreateFromBuffInterleaved(buff, size, p->parts, p->nr_partitions,
-                                     p->nodes, mode);
+    if (tuned)
+        *tuned = v->elements;
 #else
-    v = VecCreateFromBuff(buff, size, mode);
+    if (tuned)
+        *tuned = buff;
 #endif
+
     return v;
 }
 
@@ -762,8 +796,8 @@ spx_vector_t *spx_vec_create_random(size_t size, spx_partition_t *p)
     }
 
 #if SPX_USE_NUMA
-	v = VecCreateRandomInterleaved(size, p->parts, p->nr_partitions,
-                                   p->nodes);
+	v = VecCreateRandomInterleaved(size, p->nr_partitions, p->parts,
+                                   p->nodes, p->row_start, p->row_end);
 #else
     v = VecCreateRandom(size);
 #endif
@@ -801,10 +835,8 @@ spx_error_t spx_vec_set_entry(spx_vector_t *v, spx_index_t idx, spx_value_t val,
     spx_option_t indexing = va_arg(ap, spx_option_t);
     va_end(ap);
 
-    if (indexing && !check_indexing(indexing)) {
-        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid indexing");
-        return SPX_FAILURE;
-    } else {
+    indexing = indexing - SPX_INDEX_ZERO_BASED;
+    if (!check_indexing(indexing)) {
         indexing = 0;
     }
 
