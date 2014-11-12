@@ -35,12 +35,16 @@ static struct option long_options[] = {
 
 void PrintUsage(std::ostream &os)
 {
-    os << "Usage: [NUM_THREADS=<num>|CPU_AFFINITY=<list>] ./bench_spmv"
+    os << "Usage: [env=<value>] ./bench_spmv"
        << " -f <mmf_file> [-l library]\n"
        << "\t-f    Run SpMV kernel on file.\n"
-       << "\t-d    Run SpMV kernel on all files in a directory.\n"
        << "\t-l    Use one of the available libraries (MKL, pOSKI, SparseX).\n"
-       << "\t-h    Print this help message and exit.\n";
+       << "\t-h    Print this help message and exit.\n"
+       << "\tenv   Can be one or more of the following:\n"
+       << "\t       * OUTER_LOOPS: number of benchmark runs,\n"
+       << "\t       * LOOPS: number of SpMV iterations,\n"
+       << "\t       * NUM_THREADS: number of threads,\n"
+       << "\t       * {CPU_AFFINITY|GOMP_CPU_AFFINITY}: cpu affinity for SparseX|MKL respectively.\n";
 }
 
 static unsigned int GetOptionOuterLoops()
@@ -73,7 +77,7 @@ static unsigned long GetOptionIterations()
 
 static unsigned int GetOptionNrThreads()
 {
-    const char *threads_env = getenv("NR_THREADS");
+    const char *threads_env = getenv("NUM_THREADS");
     unsigned int ret = 1;
     
     if (threads_env) {
@@ -81,7 +85,7 @@ static unsigned int GetOptionNrThreads()
         if (ret < 0)
             ret = 0;
     }
-    
+
     return ret;
 }
 

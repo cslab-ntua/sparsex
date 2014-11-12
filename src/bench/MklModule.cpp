@@ -22,6 +22,7 @@
 #include <vector>
 #include <sched.h>
 #include <stdio.h>
+#include <omp.h>
 
 using namespace std;
 
@@ -56,6 +57,7 @@ void mkl_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
     
     /* 2. SpMV benchmarking phase */
     vector<double> mt(OUTER_LOOPS);
+    omp_set_num_threads(NR_THREADS);
     for (size_t i = 0; i < OUTER_LOOPS; i++) {
         t.Clear();
         t.Start();
