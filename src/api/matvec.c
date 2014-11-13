@@ -483,31 +483,52 @@ spx_index_t spx_mat_get_nnz(const spx_matrix_t *A)
 spx_partition_t *spx_mat_get_partition(spx_matrix_t *A)
 {
     spx_partition_t *ret = SPX_INVALID_PART;
-#if SPX_USE_NUMA
     spm_mt_t *spm_mt = (spm_mt_t *) A->csx;
     part_alloc_struct(&ret);
-	ret->parts = (size_t *) malloc(sizeof(*ret->parts)*spm_mt->nr_threads);
-	ret->nodes = (int *) malloc(sizeof(*ret->nodes)*spm_mt->nr_threads);
-	ret->affinity = (int *) malloc(sizeof(*ret->affinity)*spm_mt->nr_threads);
 	ret->row_start = (spx_index_t *) malloc(sizeof(*ret->row_start)*
                                             spm_mt->nr_threads);
 	ret->row_end = (spx_index_t *) malloc(sizeof(*ret->row_end)*
                                           spm_mt->nr_threads);
+#if SPX_USE_NUMA
+	ret->parts = (size_t *) malloc(sizeof(*ret->parts)*spm_mt->nr_threads);
+	ret->nodes = (int *) malloc(sizeof(*ret->nodes)*spm_mt->nr_threads);
+	ret->affinity = (int *) malloc(sizeof(*ret->affinity)*spm_mt->nr_threads);
     ret->nr_partitions = spm_mt->nr_threads;
+#endif
 
     size_t i;
 	for (i = 0; i < spm_mt->nr_threads; i++) {
 		spm_mt_thread_t *spm = spm_mt->spm_threads + i;
+#if SPX_USE_NUMA
 		ret->parts[i] = spm->nr_rows * sizeof(spx_value_t);
 		ret->nodes[i] = spm->node;
 		ret->affinity[i] = spm->cpu;
+#endif
 		ret->row_start[i] = spm->row_start;
 		ret->row_end[i] = spm->row_start + spm->nr_rows;
 	}
-#else
-    part_alloc_struct(&ret);
-#endif
+
     return ret;
+}
+
+spx_index_t *spx_partition_get_rs(const spx_partition_t *p)
+{
+    if (!p) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
+        return SPX_FAILURE;
+    }
+
+    return p->row_start;
+}
+
+spx_index_t *spx_partition_get_re(const spx_partition_t *p)
+{
+    if (!p) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
+        return SPX_FAILURE;
+    }
+
+    return p->row_end;
 }
 
 spx_perm_t *spx_mat_get_perm(const spx_matrix_t *A)
@@ -666,25 +687,29 @@ spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows,
                                    size_t nr_threads)
 {
     spx_partition_t *ret = SPX_INVALID_PART;
+    part_alloc_struct(&ret);
+	ret->row_start = (spx_index_t *) malloc(sizeof(*ret->row_start)*nr_threads);
+	ret->row_end = (spx_index_t *) malloc(sizeof(*ret->row_end)*nr_threads);
 #if SPX_USE_NUMA
+	ret->parts = (size_t *) malloc(sizeof(*ret->parts)*nr_threads);
+	ret->nodes = (int *) malloc(sizeof(*ret->nodes)*nr_threads);
+    ret->nr_partitions = nr_threads;
+#endif
+
 	// Compute the matrix splits.
 	size_t nnz_per_split = (rowptr[nr_rows] - 1) / nr_threads;
 	size_t curr_nnz = 0;
 	size_t row_start = 0;
 	size_t split_cnt = 0;
-    part_alloc_struct(&ret);
-	ret->parts = (size_t *) malloc(sizeof(*ret->parts)*nr_threads);
-	ret->nodes = (int *) malloc(sizeof(*ret->nodes)*nr_threads);
-	ret->row_start = (spx_index_t *) malloc(sizeof(*ret->row_start)*nr_threads);
-	ret->row_end = (spx_index_t *) malloc(sizeof(*ret->row_end)*nr_threads);
-    ret->nr_partitions = nr_threads;
-
     spx_index_t i;
+
     ret->row_start[0] = row_start;
 	for (i = 0; i < nr_rows; i++) {
 		curr_nnz += rowptr[i+1] - rowptr[i];
 		if (curr_nnz >= nnz_per_split) {
+#if SPX_USE_NUMA
 			ret->parts[split_cnt] = (i + 1 - row_start) * sizeof(spx_value_t);
+#endif
 			ret->row_end[split_cnt] = i + 1;
 			row_start = i + 1;
 			curr_nnz = 0;
@@ -696,26 +721,25 @@ spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows,
 
 	// Fill the last split.
 	if (curr_nnz < nnz_per_split && split_cnt < nr_threads) {
+#if SPX_USE_NUMA
 		ret->parts[split_cnt] = (i + 1 - row_start) * sizeof(spx_value_t);
+#endif
         ret->row_end[split_cnt] = i + 1;
 	}
 
+#if SPX_USE_NUMA
     GetNodes(ret->nodes);
-#else
-    part_alloc_struct(&ret);
 #endif
 	return ret;
 }
 
 spx_error_t spx_partition_destroy(spx_partition_t *p)
 {
-#if SPX_USE_NUMA
     /* Check validity of input argument */
     if (!p) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
         return SPX_FAILURE;
     }
-#endif
 
     /* Free allocated memory of matrix handle */
     part_free_struct(p);

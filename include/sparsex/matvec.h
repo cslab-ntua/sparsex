@@ -147,6 +147,16 @@ spx_index_t spx_mat_get_nnz(const spx_matrix_t *A);
 spx_partition_t *spx_mat_get_partition(spx_matrix_t *A);
 
 /**
+ *  Returns the starting row of each partition in the matrix.
+ */
+spx_index_t *spx_partition_get_rs(const spx_partition_t *p);
+
+/**
+ *  Returns the ending row of each partition in the matrix.
+ */
+spx_index_t *spx_partition_get_re(const spx_partition_t *p);
+
+/**
  *  Returns the permutation computed for matrix \a A by applying the Reverse
  *  Cuthill-McKee algorithm.
  */

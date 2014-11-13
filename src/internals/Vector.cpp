@@ -31,6 +31,7 @@
 #include <omp.h>
 
 using namespace std;
+using namespace sparsex::runtime;
 
 namespace internal {
 
