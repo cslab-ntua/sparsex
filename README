@@ -208,7 +208,7 @@ internal API, which requires a continuous maintenance of the JIT SparseX
 module. We are planning a more generic approach in the next releases to avoid
 such problems.
 
-GCC versions 4.6.1 and 4.8 are not supported for compiling the library.
+GCC version 4.6.1 is not currently supported for compiling the library.
 
 ==========
 8. LICENSE
