@@ -29,6 +29,7 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Target/TargetOptions.h>
 #include <boost/tokenizer.hpp>
+#include <cstdlib>
 #include <fstream>
 
 using namespace boost;
@@ -56,6 +57,11 @@ ClangCompiler::ClangCompiler()
                                        diags);
     // Compile C99
     invocation_->setLangDefaults(IK_C, LangStandard::lang_c99);
+
+    // Add a user-defined include path first, if specified
+    char *user_inc_path = getenv("SPX_JIT_INC_PATH");
+    if (user_inc_path)
+        AddIncludeSearchPath(user_inc_path, IncludePathSystem);
 
     // Setup the include path
     AddIncludeSearchPath(CLANG_INC_SEARCH_PATH, IncludePathSystem);
