@@ -51,10 +51,11 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
 
     /* 3. Vector loading */
     spx_partition_t *parts = spx_mat_get_partition(A);
+    spx_value_t *y_tuned;
     spx_vector_t *x_view = spx_vec_create_from_buff(
         x, NULL, ncols, parts, SPX_VEC_TUNE);
     spx_vector_t *y_view = spx_vec_create_from_buff(
-        y, NULL, nrows, parts, SPX_VEC_TUNE);
+        y, &y_tuned, nrows, parts, SPX_VEC_TUNE);
 
     /* Reorder vectors */
     // spx_perm_t *p = spx_mat_get_perm(A);
@@ -86,6 +87,12 @@ void sparsex_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
     /* Restore original ordering of resulting vector */
     // spx_vec_inv_reorder(y_view, p);
     // spx_vec_inv_reorder(x_view, p);
+
+    if (y_tuned != y) {
+        for (spx_index_t i = 0; i < nrows; i++)
+            y[i] = y_tuned[i];
+        free(y_tuned);
+    }
 
     /* 5. Cleanup */
     spx_input_destroy(input);

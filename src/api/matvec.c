@@ -515,7 +515,7 @@ spx_index_t *spx_partition_get_rs(const spx_partition_t *p)
 {
     if (!p) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
-        return SPX_FAILURE;
+        return NULL;
     }
 
     return p->row_start;
@@ -525,7 +525,7 @@ spx_index_t *spx_partition_get_re(const spx_partition_t *p)
 {
     if (!p) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
-        return SPX_FAILURE;
+        return NULL;
     }
 
     return p->row_end;
