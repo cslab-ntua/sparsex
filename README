@@ -221,6 +221,10 @@ such problems.
 GCC versions 4.6.1 and 4.8.2 are not currently supported for compiling the
 library.
 
+Some tests may crash when compiling with GCC 4.8 on SMP systems. The source of
+violating instructions was tracked down inside LLVM, so we recommend using
+GCC <= 4.7 for SMP systems.
+
 ==========
 8. LICENSE
 ==========

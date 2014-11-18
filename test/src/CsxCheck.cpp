@@ -23,14 +23,6 @@
 #include <sparsex/internals/Config.hpp>
 #include "CsxCheck.hpp"
 
-static vector_t *x = NULL;
-static vector_t *y = NULL;
-static vector_t **tmp = NULL;
-static size_t no_loops = 0;
-static size_t no_threads = 0;
-static size_t n = 0;
-static float secs = 0.0;
-
 using namespace sparsex::io;
 
 static void csr_spmv(CSR<spx_uindex_t, spx_value_t> *spm, vector_t *in,

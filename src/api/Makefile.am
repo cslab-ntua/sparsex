@@ -28,4 +28,5 @@ libsparsex_la_SOURCES = \
 	error.c \
 	matvec.c
 
+libsparsex_la_LDFLAGS = $(AM_LDFLAGS) -version-info 1:0:0
 libsparsex_la_LIBADD = -lsparseximpl

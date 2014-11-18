@@ -25,7 +25,6 @@ nobase_include_HEADERS = \
 	sparsex/internals/Barrier.hpp \
 	sparsex/internals/Compiler.hpp \
 	sparsex/internals/Csr.hpp \
-	sparsex/internals/CsrIterator.hpp \
 	sparsex/internals/CsxBuild.hpp \
 	sparsex/internals/CsxGetSet.hpp \
 	sparsex/internals/Csx.hpp \
