@@ -71,10 +71,10 @@ page:
 ===============
 
 * A fairly recent Linux OS
-* LLVM == 3.0 and Clang
+* LLVM/Clang 3.0
 * Boost Library >= 1.48 (regex, serialization, system, thread)
 * numactl library >= 2.0.7
-* gcc/g++ >= 4.6
+* gcc/g++ 4.6 or 4.7
 
 ===============
 3. INSTALLATION
@@ -183,6 +183,15 @@ Common pitfalls:
    variable before execution, e.g.
 
    $ export LD_LIBRARY_PATH=${LIBDIR}:$LD_LIBRARY_PATH
+
+ * In case the system include path is in a non-standard location, you should
+   instruct the SparseX JIT subsystem where to locate the system header
+   files. This can be achieved by setting the SPX_JIT_INC_PATH environment
+   variable:
+
+   $ export SPX_JIT_INC_PATH=/my/custom/system/include
+
+   Colon separated paths are also acceptable in the SPX_JIT_INC_PATH variable.
 
 ===================================
 6. COMPILING AND LINKING TO SPARSEX
