@@ -74,7 +74,7 @@ page:
 * LLVM/Clang 3.0
 * Boost Library >= 1.48 (regex, serialization, system, thread)
 * numactl library >= 2.0.7
-* gcc/g++ 4.6 or 4.7 or 4.8
+* gcc/g++ 4.6, 4.7 and 4.8
 
 ===============
 3. INSTALLATION
@@ -205,7 +205,8 @@ the mmf_example.c source file provided with SparseX can be compiled and linked
 as follows:
 
 
-$ gcc -Wall -O3 $(sparsex-config --cppflags) $(sparsex-config --ldflags) -L$(llvm-config --libdir) -o mmf_example mmf_example.c
+$ gcc -Wall -O3 $(sparsex-config --cppflags) $(sparsex-config --ldflags) \
+-L$(llvm-config --libdir) -o mmf_example mmf_example.c
 
 ===============
 7. KNOWN ISSUES
@@ -217,7 +218,8 @@ internal API, which requires a continuous maintenance of the JIT SparseX
 module. We are planning a more generic approach in the next releases to avoid
 such problems.
 
-GCC version 4.6.1 is not currently supported for compiling the library.
+GCC versions 4.6.1 and 4.8.2 are not currently supported for compiling the
+library.
 
 ==========
 8. LICENSE

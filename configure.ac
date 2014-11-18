@@ -130,7 +130,7 @@ dnl Always check for libnuma, since it is needed for linking
 AC_CHECK_LIB([numa], [numa_realloc], [],
              [
                  AC_MSG_ERROR([Could not find a proper libnuma installation dnl
-Please make sure you have installed correctly libnuma >= 2.0.8.])
+Please make sure you have installed correctly libnuma >= 2.0.7.])
              ])
 
 dnl If library benchmarks are enabled, build also the MKL and pOSKI benchmarks
