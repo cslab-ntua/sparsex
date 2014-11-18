@@ -1,0 +1,16 @@
+c678cd4 (HEAD, origin/master, origin/HEAD, master) Updated README.
+a8695fa Support for runtime configuration of the JIT include path.
+1dafcd5 Small fix in benchmarking framework in case the output vector is tuned.
+5d90c0a Updated README and added some info for sparsex-config in User's Guide.
+5b7e4bb Added API functionality to extract the split points of the matrix in a multithreaded execution, which is useful when implementing solvers.
+8240e48 Updated user's guide and unified runtime options for the benchmarking framework (help message is also improved).
+e75ea29 Missing header file.
+fa8c2cd Merge branch 'master' of ssh://scirouter.cslab.ece.ntua.gr/git/bkk/spmv
+ecd165f Small fixes all over the place.
+af82efc Updated README
+35577db Updated Doxyfiles + minor improvement in the examples.
+8f97189 Some aesthetic changes + workaround for Clang 3.0 crash
+bb3510e Merge branch 'master' of scirouter.cslab.ece.ntua.gr:/git/bkk/spmv
+afd5d73 Small fixes.
+66d4917 Improvements in the auto-configuration process.
+ab64ce5 Important fixes.

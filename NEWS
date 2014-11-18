@@ -1,7 +1,11 @@
 Changes in SparseX v1.0.1
 =========================
 
-Minor bug fixes
 * Automake 1.14.1 support
 * Fixed bug that occured with consecutive vector allocations on NUMA platforms
 * GCC-4.7 compilation and minor fixes in thread management
+* Support for custom system include path during JIT compilation through the
+  SPX_JIT_INC_PATH environment variable
+* Several minor bug fixes
+
+For a complete short commit log of the changes of this release, see ChangeLog
