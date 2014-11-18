@@ -74,7 +74,7 @@ page:
 * LLVM/Clang 3.0
 * Boost Library >= 1.48 (regex, serialization, system, thread)
 * numactl library >= 2.0.7
-* gcc/g++ 4.6 or 4.7
+* gcc/g++ 4.6 or 4.7 or 4.8
 
 ===============
 3. INSTALLATION
