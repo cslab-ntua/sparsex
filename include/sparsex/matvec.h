@@ -60,8 +60,8 @@ spx_error_t spx_input_destroy(spx_input_t *input);
 
 /**
  *  Converts the input matrix into the CSX format by applying all the options
- *  previously set with the spx_option_set() routine. In case no options have
- *  been explicitly set, the default values are used (see Table 3.2 of the
+ *  previously set with the spx_option_set() routine. In case no options
+ *  have been explicitly set, the default values are used (see Table 3.2 of the
  *  User's Guide).
  *
  *  @param[in] input        the input matrix handle.
@@ -145,6 +145,16 @@ spx_index_t spx_mat_get_nnz(const spx_matrix_t *A);
  *  Returns a partitioning object for matrix \a A.
  */
 spx_partition_t *spx_mat_get_partition(spx_matrix_t *A);
+
+/**
+ *  Returns the starting row of each partition in the matrix.
+ */
+spx_index_t *spx_partition_get_rs(const spx_partition_t *p);
+
+/**
+ *  Returns the ending row of each partition in the matrix.
+ */
+spx_index_t *spx_partition_get_re(const spx_partition_t *p);
 
 /**
  *  Returns the permutation computed for matrix \a A by applying the Reverse
@@ -279,20 +289,29 @@ spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p);
 
 /**
  *  Creates and returns a valid vector object, whose values are mapped to a
- *  user-defined array. If SPX_VEC_SHARE is set, then the input buffer will
- *  be shared with the user and modifications will directly apply to it.
- *  If SPX_VEC_COPY is selected, a copy of the input vector will be created
- *  and no modification of the original buffer will occur.
+ *  user-defined array. If SPX_VEC_AS_IS is set, then the input buffer will
+ *  be shared with the library and modifications will directly apply to it.
+ *  In this case pointers \a buff and \a tuned point to the same memory
+ *  location. If SPX_VEC_TUNE is selected, the buffer provided by the user
+ *  might be copied into an optimally allocated buffer (depending on the
+ *  platform) and \a tuned might point to this buffer. Thus, the user must
+ *  always check whether \a buff equals \a tuned. If the buffer is actually
+ *  tuned, then it should be used instead of the original. The common free()
+ *  function applies to this buffer and will have to be explicitly called by
+ *  the user.
  *
  *  @param[in] buff         the user-supplied buffer.
+ *  @param[in] tuned        the tuned buffer.
  *  @param[in] size         the size of the buffer.
  *  @param[in] p            a partitioning handle.
- *  @param[in] mode         the copy mode (either \c SPX_VEC_SHARE or
- *                          \c SPX_VEC_COPY).
+ *  @param[in] mode         the vector mode (either \c SPX_VEC_AS_IS or
+ *                          \c SPX_VEC_TUNE).
  *  @return                 a valid vector object.
  */
-spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, size_t size,
-                                       spx_partition_t *p, spx_copymode_t mode);
+spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff,
+                                       spx_value_t **tuned,
+                                       size_t size, spx_partition_t *p,
+                                       spx_vecmode_t mode);
 
 /**
  *  Creates and returns a valid vector object, whose values are randomly filled.

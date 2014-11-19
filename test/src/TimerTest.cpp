@@ -18,6 +18,7 @@
 
 #include <sparsex/internals/Timer.hpp>
 #include <stdio.h>
+#include <unistd.h>
 #include <iostream>
 
 using namespace std;

@@ -44,9 +44,9 @@ RuntimeConfiguration::PropertyMap RuntimeConfiguration::DefaultProperties()
 #else
         (PreprocHeuristic, "ratio")
 #endif
-        (PreprocXform, "none")
-        (PreprocMethod, "none")
-        (PreprocNrSamples, "10")
+        (PreprocXform, "all")
+        (PreprocMethod, "portion")
+        (PreprocNrSamples, "48")
         (PreprocSamplingPortion, "0.01")
         (PreprocWindowSize, "0")
         (MatrixSymmetric, "false")
@@ -96,12 +96,18 @@ void RuntimeConfiguration::InitPropertyMnemonics()
 
 RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
 {
-    const char *mt_conf_str = getenv("MT_CONF");
+    const char *mat_str = getenv("SYMMETRIC");
+    if (mat_str) {
+        SetProperty(RuntimeConfiguration::MatrixSymmetric,
+                    string(mat_str));
+    }
+
+    const char *mt_conf_str = getenv("CPU_AFFINITY");
     if (mt_conf_str) {
         SetProperty(RuntimeConfiguration::RtCpuAffinity, string(mt_conf_str));
     }
 
-    const char *thr_str = getenv("NR_THREADS");
+    const char *thr_str = getenv("NUM_THREADS");
     if (thr_str) {
         SetProperty(RuntimeConfiguration::RtNrThreads, string(thr_str));
     }
@@ -168,19 +174,16 @@ void RuntimeContext::CheckParams(const RuntimeConfiguration &conf)
     size_t nr_threads = conf.GetProperty<size_t>(
         RuntimeConfiguration::RtNrThreads);
 
-    if (affinity.size() != nr_threads) {
-        LOG_ERROR << "error in configuration of runtime (clash in number "
-            "of threads and affinity)\n";
-        exit(1);
-    }
-
     LOG_INFO << "Number of threads: " << nr_threads << "\n";
     stringstream os;
     os << "Thread affinity: {";
-    for (size_t i = 0; i < affinity.size(); ++i) {
+    for (size_t i = 0; i < nr_threads; ++i) {
         if (i != 0)
             os << ",";
-        os << affinity[i];
+        if (affinity.size() != nr_threads)
+            os << i;
+        else
+            os << affinity[i];
     }
 
     os << "}\n";
@@ -189,10 +192,17 @@ void RuntimeContext::CheckParams(const RuntimeConfiguration &conf)
 
 void RuntimeContext::SetRuntimeContext(const RuntimeConfiguration &conf)
 {
+    size_t nr_threads = conf.GetProperty<size_t>(
+        RuntimeConfiguration::RtNrThreads);
     cpu_affinity_ =
         ParseCpuAffinity(conf.GetProperty<string>(
                              RuntimeConfiguration::RtCpuAffinity),
                          cpu_affinity_);
+
+    if (cpu_affinity_.size() != nr_threads) {
+        for (size_t i = 1; i < nr_threads; ++i)
+            cpu_affinity_.push_back(i);
+    }
 }
 
 } // end of namespace runtime

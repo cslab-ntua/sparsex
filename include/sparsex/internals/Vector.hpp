@@ -29,33 +29,34 @@ SPX_BEGIN_C_DECLS__
 
 struct vector_struct {
     spx_value_t *elements;
-    spx_value_t *ptr_buff;
     size_t size;
     int alloc_type;
-    int copy_mode;
+    int vec_mode;
 };
 
 typedef struct vector_struct vector_t;
 
 vector_t *VecCreate(size_t size);
-vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, int mode);
-vector_t *VecCreateFromBuffInterleaved(spx_value_t *buff, size_t size,
-                                       size_t *parts, int nr_parts,
-                                       int *nodes, int mode);
-vector_t *VecCreateFromBuffOnnode(spx_value_t *buff, size_t size, int node,
-                                  int mode);
 vector_t *VecCreateOnnode(size_t size, int node);
-vector_t *VecCreateInterleaved(size_t size, size_t *parts, int nr_parts,
-                               int *nodes);
+vector_t *VecCreateInterleaved(size_t size, size_t nr_parts, size_t *parts,
+                               int *nodes, spx_index_t *row_start,
+                               spx_index_t *row_end);
+vector_t *VecCreateFromBuff(spx_value_t *buff, size_t size, size_t nr_parts,
+                            int *cpus, spx_index_t *row_start,
+                            spx_index_t *row_end, int mode);
 vector_t *VecCreateRandom(size_t size);
-vector_t *VecCreateRandomInterleaved(size_t size, size_t *parts, int nr_parts,
-                                     int *nodes);
+vector_t *VecCreateRandomInterleaved(size_t size, size_t nr_parts,
+                                     size_t *parts, int *nodes,
+                                     spx_index_t *row_start,
+                                     spx_index_t *row_end);
 void VecDestroy(vector_t *v);
 void VecInit(vector_t *v, spx_value_t val);
 void VecInitPart(vector_t *v, spx_value_t val, spx_index_t start,
                  spx_index_t end);
 void VecInitFromMap(vector_t **v, spx_value_t val, map_t *map);
 void VecInitRandRange(vector_t *v, spx_value_t max, spx_value_t min);
+void VecInitRandRangePart(vector_t *v, spx_index_t start, spx_index_t end,
+                          spx_value_t max, spx_value_t min);
 void VecSetEntry(vector_t *v, spx_index_t idx, spx_value_t val);
 void VecAdd(vector_t *v1, vector_t *v2, vector_t *v3);
 void VecAddPart(vector_t *v1, vector_t *v2, vector_t *v3, spx_index_t start,

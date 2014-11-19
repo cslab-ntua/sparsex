@@ -18,12 +18,19 @@
  */
 
 #include <sparsex/internals/CsxKernels.hpp>
+#include <iostream>
 
 using namespace sparsex;
 using namespace sparsex::runtime;
 
 vector_t **temp;
 size_t nr_threads;
+
+namespace sparsex {
+namespace runtime {
+extern atomic<int> global_sense;
+}
+}
 
 #if SPX_DISABLE_POOL
 using namespace boost;
@@ -96,7 +103,7 @@ void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
     for (size_t i = 0; i < pool.GetSize(); i++) {
         pool.SetWorkerData(i, spm_mt->spm_threads + i + 1);
     }
-    spm_mt->spm_threads[0].sense = pool.GetSense();
+    spm_mt->spm_threads[0].sense = !global_sense;
     pool.SetKernel(SPMV_KERNEL_SYM);
     centralized_barrier(pool.GetSense(), nr_threads);
     do_kernel_sym_thread(spm_mt->spm_threads);
@@ -172,7 +179,7 @@ void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
     for (size_t i = 0; i < pool.GetSize(); i++) {
         pool.SetWorkerData(i, spm_mt->spm_threads + i + 1);
     }
-    spm_mt->spm_threads[0].sense = pool.GetSense();
+    spm_mt->spm_threads[0].sense = !global_sense;
     pool.SetKernel(SPMV_MULT_SYM);
     centralized_barrier(pool.GetSense(), nr_threads);
     do_mv_sym_thread(spm_mt->spm_threads);

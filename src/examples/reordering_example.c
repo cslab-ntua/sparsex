@@ -8,7 +8,8 @@
 
 /**
  * \file reordering_example.c
- * \brief Example 3
+ * \brief Example thats applies reordering to the input matrix and uses the
+ *  symmetrix variant of CSX.
  *
  * \author Computing Systems Laboratory (CSLab), NTUA
  * \date 2011&ndash;2014
@@ -17,12 +18,28 @@
  */
 
 #include <sparsex/sparsex.h>
+#include <stdio.h>
+
+static char *program_name;
+
+void print_usage()
+{
+    fprintf(stderr, "Usage: %s <mmf_file>\n", program_name);
+}
 
 int main(int argc, char **argv)
 {
+    program_name = argv[0];
+
     /* Initialize library */
     spx_init();
     spx_log_info_console();
+
+    if (argc < 2) {
+        fprintf(stderr, "%s: too few arguments\n", program_name);
+        print_usage();
+        exit(1);
+    }
 
     /* Load matrix from MMF file */
     spx_input_t *input = spx_input_load_mmf(argv[1]);
@@ -30,10 +47,6 @@ int main(int argc, char **argv)
     /* Set tuning options */
     spx_option_set("spx.rt.nr_threads", "2");
     spx_option_set("spx.rt.cpu_affinity", "0,1");
-    spx_option_set("spx.preproc.xform", "all");
-    spx_option_set("spx.preproc.sampling", "portion");
-    spx_option_set("spx.preproc.sampling.nr_samples", "48");
-    spx_option_set("spx.preproc.sampling.portion", "0.01");
     spx_option_set("spx.matrix.symmetric", "true");
 
     /* Transform to CSX with reordering enabled */
@@ -66,8 +79,8 @@ int main(int argc, char **argv)
     elapsed_time = spx_timer_get_secs(&t);
     flops = (double) (2 * nr_loops * spx_mat_get_nnz(A)) /
         ((double) 1000 * 1000 * elapsed_time);
-    printf("Elapsed time: %lf secs\n", elapsed_time);
-    printf("FLOPS: %lf\n", flops);
+    printf("SPMV time: %lf secs\n", elapsed_time);
+    printf("MFLOPS: %lf\n", flops);
 
     /* Restore original ordering of resulting vector */
     spx_vec_inv_reorder(y, p);

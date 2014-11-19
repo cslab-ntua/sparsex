@@ -31,21 +31,16 @@ SPARSEXIMPL_LDADD = \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_THREAD_LIB) -ldl -lm
 
-check_PROGRAMS = test_spmv test_sparsex test_element test_dynarray test_timer
+check_PROGRAMS = test_sparsex test_element test_dynarray test_timer
 
-noinst_HEADERS = CsxBench.hpp
+noinst_HEADERS = CsxCheck.hpp
 
 test_sparsex_SOURCES = \
-	CsxBench.cpp \
+	CsxCheck.cpp \
 	sparsex_test.c
 test_sparsex_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
 	$(SPARSEXIMPL_LDADD)
-
-test_spmv_SOURCES = \
-	CsxBench.cpp \
-	SpmvTest.cpp
-test_spmv_LDADD = $(SPARSEXIMPL_LDADD)
 
 test_element_SOURCES = ElementTest.cpp
 test_element_LDADD = $(SPARSEXIMPL_LDADD)

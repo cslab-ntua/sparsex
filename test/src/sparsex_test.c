@@ -17,7 +17,7 @@
  */
 
 #include <sparsex/sparsex.h>
-#include "CsxBench.hpp"
+#include "CsxCheck.hpp"
 #include <stdio.h>
 #include <string.h>
 #include <getopt.h>
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
         double elapsed_time = spx_timer_get_secs(&t);
         double flops = (double) (2*loops*spx_mat_get_nnz(A)) /
             ((double) 1000*1000*elapsed_time);
-        printf("Elapsed time: %lf secs\n", elapsed_time);
+        printf("SPMV time: %lf secs\n", elapsed_time);
         printf("FLOPS: %lf\n", flops);
     }
 

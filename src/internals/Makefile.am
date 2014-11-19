@@ -8,6 +8,7 @@
 # This file is distributed under the BSD License. See LICENSE.txt for details.
 #
 
+AUTOMAKE_OPTIONS = subdir-objects
 AM_DEFAULT_VERBOSITY = 0
 ACLOCAL_AMFLAGS = -I m4check
 

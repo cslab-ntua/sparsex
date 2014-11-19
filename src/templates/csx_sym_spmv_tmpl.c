@@ -99,7 +99,7 @@ void spm_csx_sym_multiply(void *spm, vector_t *in, vector_t *out,
 	
 	y[y_indx] += yr;
 	
-	for (spx_index_t i = y_indx; i < y_end; i++) {
+	for (i = y_indx; i < y_end; i++) {
 		y[i] += x[i] * (*dv) * scale_f;
 		dv++;
 	}
