@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+# @PACKAGE_TARNAME@-config
+#
+#     @PACKAGE_NAME@ configuration helper script. This script is automatically
+#     generated from @PACKAGE_TARNAME@-config.in by autoconf.
+#
+# Copyright (C) 2014, Computing Systems Laboratory (CSLab), NTUA
+# Copyright (C) 2014, Vasileios Karakasis
+# All righrs reserved.
+#
+# This file is distributed under the BSD License. See LICENSE.txt for details.
+#
+
+program_name=$(basename $0)
+program_version=@PACKAGE_VERSION@
+
+function print_help
+{
+    cat << _EOF
+Usage: $program_name [OPTION]...
+Print installation information about the @PACKAGE_NAME@ library.
+
+  --index-type             Print the index type used in the @PACKAGE_NAME@ library.
+  --value-type             Print the value type used in the @PACKAGE_NAME@ library.
+  --cppflags               Print required C preprocessor flags.
+  --cppflags-searchpath    Print the include search path only.
+  --cxxflags               Print the compiler flags that this library was
+                               compiled with.
+  --ldflags                Print the necessary compiler flags to link against
+                               this package's libraries.
+  --ldflags-searchpath     Print the library search path only.
+  --ldflags-libsonly       Print only the libraries to link against.
+  --prefix                 Print the installation prefix for all files of this
+                               package.
+  --exec-prefix            Print the installation prefix for
+                               architecture-dependent files.
+  --docdir                 Print the installed documentation's directory.
+  --help                   Print this help message and exit.
+  --version                Print version information and exit.
+_EOF
+}
+
+function print_version
+{
+    cat << _EOF
+$program_version
+_EOF
+}
+
+# Set the basic installation directories. Other directories are set relative to
+# these by default.
+prefix="@prefix@"
+exec_prefix="@exec_prefix@"
+datarootdir="@datarootdir@"
+datadir=$datarootdir
+
+long_opts="index-type,value-type,cppflags,cppflags-searchpath,cxxflags,ldflags,ldflags-searchpath,ldflags-libsonly,prefix,exec-prefix,docdir,resourcesdir,help,version"
+
+if [ $# -eq 0 ]; then
+    print_help
+    exit 0
+fi
+
+args=$(getopt -n $(basename $0) -o "" -l $long_opts -- "$*")
+if [ $? -eq 1 ]; then
+    echo "Try \`$program_name --help' for more information." 1>&2
+    exit 1
+fi
+
+set -- $args
+
+out_string=""
+until [ -z $1 ]; do
+    case $1 in
+        "--index-type")
+            out_string="$out_string @SPX_INDEX_TYPE@" ;;
+        "--value-type")
+            out_string="$out_string @SPX_VALUE_TYPE@" ;;
+        "--cppflags")
+            out_string="$out_string -I@includedir@" ;;
+        "--cppflags-searchpath")
+            out_string="$out_string -I@includedir@" ;;
+        "--cxxflags")
+            out_string="$out_string @AX_PKG_CPPFLAGS@ @CPPFLAGS@ @AX_PKG_CXXFLAGS@ @CXXFLAGS@" ;;
+        "--ldflags")
+            out_string="$out_string -L@libdir@ -lsparsex @CLANG_LIBS@ @LLVM_LIBS@" ;;
+        "--ldflags-searchpath")
+            out_string="$out_string -L@libdir@" ;;
+        "--ldflags-libsonly")
+            out_string="$out_string -lsparsex @CLANG_LIBS@ @LLVM_LIBS@" ;;
+        "--prefix")
+            out_string="$out_string @prefix@" ;;
+        "--exec-prefix")
+            out_string="$out_string @exec_prefix@" ;;
+        "--docdir")
+            out_string="$out_string @docdir@" ;;
+        "--help")
+            print_help
+            exit 0 ;;
+        "--version")
+            print_version
+            exit 0 ;;
+        "--") ;;
+    esac
+    shift
+done
+
+echo $out_string
