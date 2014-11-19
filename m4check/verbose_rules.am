@@ -1,0 +1,20 @@
+#
+# resources_rules.am
+#
+# 	Adds rules and definitions for automatic resource bundles generation.
+#
+# Copyright (C) 2010, KRK.
+# All righrs reserved.
+#
+# Modification history:
+#
+# Date			Name	Description
+# 2010-02-15	bkk		Creation.
+#
+
+# Handle verbosity
+verbose   = $(verbose_$(V))
+verbose_  = $(verbose_$(AM_DEFAULT_VERBOSITY))
+
+verbosity_opt   = $(verbosity_opt_$(V))
+verbosity_opt_   = $(verbosity_opt_$(AM_DEFAULT_VERBOSITY))

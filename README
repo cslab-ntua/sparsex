@@ -1,0 +1,204 @@
+SparseX library v1.0.0
+**********************
+
+Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
+All rights reserved.
+
+This file is distributed under the BSD License. See LICENSE.txt for details.
+
+=====================
+CONTENTS OF THIS FILE
+=====================
+
+ 1. Introduction
+ 2. Requirements
+ 3. Installation
+ 4. Building the documentation
+ 5. Testing
+ 6. License
+ 7. Maintainers
+
+===============
+1. INTRODUCTION
+===============
+
+The SparseX library is a collection of low-level primitives written in the 
+C/C++ programming languages, that provides the means to developers of solver 
+libraries and of scientific and engineering applications to easily attain high 
+performance of the Sparse Matrix-by-Vector multiplication kernel (SpMV) on 
+modern multicore architectures.
+
+The SparseX package uses the Compressed Sparse eXtended format for sparse 
+matrices. This format seeks to minimize the memory footprint of the 
+column index array of the typical Compressed Sparse Row (CSR) format by 
+exploiting dense substructures inside the sparse matrix. Instead of storing 
+a single index for every nonzero element of the sparse matrix, CSX stores a 
+short description for each substructure found in the matrix (and selected for 
+encoding). This technique can save significant amount of main memory storage 
+and minimize the bandwidth requirements of the Sparse Matrix-Vector
+Multiplication (SpMV) kernel. Finally, the CSX format employs runtime
+code generation (using the LLVM compiler infrastructure) for emitting
+optimized SpMV routines for each encoded pattern.
+
+More information about the CSX format can be found in:
+
+V. Karakasis, T. Gkountouvas, K. Kourtis, G. Goumas, and N. Koziris. 
+"An extended compression format for the optimization of sparse matrix-vector 
+multiplication". IEEE Transactions on Parallel and Distributed Systems (TPDS),
+24(10):1930–1940, 2013. IEEE.
+
+T. Gkountouvas, V. Karakasis, K. Kourtis, G. Goumas, and N. Koziris. 
+"Improving the performance of the symmetric sparse matrix-vector multiplication
+in multicore". In 27th IEEE International Parallel & Distributed Processing 
+Symposium (IPDPS'13), Boston, MA, USA, 2013. IEEE.
+
+K. Kourtis, V. Karakasis, G. Goumas, and N. Koziris, "CSX: An extended
+compression format for SpMV on shared memory systems," 16th ACM
+SIGPLAN Annual Symposium on Principles and Practice of Parallel
+Programming (PPoPP'11) San Antonio, TX, USA, February 12-16, 2011.
+
+To download the latest version, obtain the User's Guide (which also includes 
+installation instructions), or get help using SparseX, see the SparseX home 
+page:
+
+        http://research.cslab.ece.ntua.gr/sparsex
+
+===============
+2. REQUIREMENTS
+===============
+
+* A fairly recent Linux OS
+* LLVM >= 3.0 and Clang
+* Boost Library >= 1.48 (regex, serialization, system, thread)
+* numactl library >= 2.0.7
+* gcc/g++ >= 4.6
+
+===============
+3. INSTALLATION
+===============
+
+To get the latest version of the SparseX library, you can
+
+Option 1: visit https://github.com/cslab-ntua/sparsex and download a tarball 
+          of the latest release
+
+Option 2: clone the git repository by typing
+          $ git clone git://github.com/cslab-ntua/sparsex.git
+
+The simplest way to compile this package is:
+
+    1. If the library has been downloaded in means of cloning the git 
+       repository or downloading the tarball available on the github link, 
+       you must first run:
+
+       $ autoreconf -vi
+
+       in order to remake all of the configure scripts.
+
+    2. ‘cd’ to the directory containing the package’s source code and type
+       ‘./configure’ to configure the package for your system.
+       If you have installed LLVM/Clang in a non-standard location that is 
+       not in your path, you can instruct the compilation process to use your 
+       preferred LLVM installation through the ‘--with-llvm’ configuration 
+       option (by providing the absolute path to the LLVM configuration script 
+       “llvm-config”). Similarly for the Boost library you can use the 
+       ‘--with-boostdir’ option.
+
+       $ cd SPARSEX_DIR
+       $ ./configure [options]
+
+    3. Type ‘make’ to compile the package. 
+       You can speed up the compilation by using multiple tasks with the ‘-j’ 
+       flag of make:
+
+       $ make -j8
+
+    4. Type ‘make install’ to install the library and any data files and 
+       documentation.
+       When installing into a prefix owned by root, it is recommended that the
+       package be configured and built as a regular user, and only the 
+       ‘make install’ phase executed with root privileges. By default, 
+       ‘make install’ installs the library under /usr/local/lib and include 
+       files under /usr/local/include. You can specify an installation prefix 
+       other than /usr/local by giving ‘configure’ in step 1 the option 
+       ‘--prefix=PREFIX’, where PREFIX must be an absolute directory path.
+
+       $ make install
+
+After the installation process is complete, a utility named 'sparsex-config'
+will also be installed in your ${prefix}/bin that allows either the user or 
+other programs that are dependent on the SparseX library to retrieve 
+installation information, e.g. the installation prefix of the package, 
+compiler flags etc. For more details type:
+
+       $ sparsex-config --help
+
+
+See INSTALL for more details on the installation process and the available 
+options and also refer to the library's User's Guide.
+
+=============================
+4. BUILDING THE DOCUMENTATION
+=============================
+
+During the installation process ('make install') the library's documentation 
+is also built (in html format) by default in the /doc subdirectory of the 
+installation directory. This includes the documentation of the C API (in /api) 
+and that of the C++ internal library (in /devel). However, if a developer 
+wishes to update the documentation of either the API or the internal library 
+she can simply type:
+
+       $ make doc
+
+for updating the entire documentation, or 
+
+       $ make doc-api
+       $ make doc-devel
+
+for updating separate levels.
+ 
+==========
+5. TESTING
+==========
+
+The test/src subdirectory of the installation directory includes a testing 
+utility 'test_sparsex' for the SparseX library. This is not installed by 
+default and requires you to type 'make check' in test/src/. This executable
+tests different aspects of the library and is important for verifying that the
+library works properly on your system. To facilitate the testing process, the 
+'test-sparsex.sh' script is available in the test/scripts subdirectory. Simply 
+type:
+
+        $ ./test/scripts/test-sparsex.sh 
+
+from the top level of the build directory and a number of tests will be
+performed with their progress (PASSED or FAILED) printed on stdout.
+
+Common pitfalls:
+ * In case the library has been installed in a non-standard location, you must
+   explicitly add the library directory to the LD_LIBRARY_PATH environment 
+   variable before execution, e.g.
+
+   $ export LD_LIBRARY_PATH=${LIBDIR}:$LD_LIBRARY_PATH
+
+==========
+6. LICENSE
+==========
+
+The SparseX package is distributed under the BSD Licence. See `LICENCE.txt' 
+for more information.
+
+==============
+7. MAINTAINERS
+==============
+
+The SparseX library was developed in the Computing Systems Laboratory of the
+National Technical University of Athens (NTUA) and is actively maintained by:
+
+Athena Elafrou             athena<at>cslab.ece.ntua.gr
+Vasileios Karakasis        bkk<at>cslab.ece.ntua.gr
+
+Past contributors include:
+
+Kornilios Kourtis          kkourt<at>cslab.ece.ntua.gr
+Theodoros Gkountouvas      thgoud<at>cslab.ece.ntua.gr
