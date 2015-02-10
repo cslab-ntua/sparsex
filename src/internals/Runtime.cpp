@@ -127,7 +127,6 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
     const char *samples_str = getenv("SAMPLES");
     if (samples_str) {
         // Automatically enable sampling
-        SetProperty(RuntimeConfiguration::PreprocMethod, "portion");
         SetProperty(RuntimeConfiguration::PreprocNrSamples,
                     string(samples_str));
     }
@@ -138,6 +137,12 @@ RuntimeConfiguration &RuntimeConfiguration::LoadFromEnv()
         SetProperty(RuntimeConfiguration::PreprocMethod, "portion");
         SetProperty(RuntimeConfiguration::PreprocSamplingPortion,
                     string(sampling_portion_str));
+    }
+
+    const char *sampling_str = getenv("SAMPLING");
+    if (sampling_str) {
+        SetProperty(RuntimeConfiguration::PreprocMethod, 
+                    string(sampling_str));
     }
 
     return *this;

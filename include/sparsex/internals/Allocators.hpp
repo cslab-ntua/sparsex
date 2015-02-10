@@ -313,6 +313,7 @@ public:
     typedef T* pointer;
     typedef const T* const_pointer;
     typedef T& reference;
+    typedef T&& rv_reference;
     typedef const T& const_reference;
     typedef size_t size_type;
     typedef ptrdiff_t difference_type;
@@ -376,6 +377,11 @@ public:
     void construct(pointer p, const_reference val)
     {
         new ((void *) p) value_type(val);
+    }
+
+    void construct(pointer p, rv_reference val)
+    {
+        new ((void *) p) value_type(forward<value_type>(val));
     }
 
     void destroy(pointer p)
