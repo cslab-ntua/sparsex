@@ -111,6 +111,23 @@ public:
         ++size_;
     }
 
+    void Append(T &&val)
+    {
+        if (size_ == capacity_) {
+            // Expand array
+            if (!capacity_)
+                // we were previously resized to zero, so re-initialize
+                Resize(1024);
+            else
+                Resize(2*capacity_);
+        }
+
+        // val is an rvalue so forward it as an rvalue in order to use
+        // the construct(T&&) overload and avoid the redundant copy
+        alloc_.construct(&elems_[size_], forward<T>(val));
+        ++size_;
+    }
+
     const T &GetLast() const
     {
         if (!size_)

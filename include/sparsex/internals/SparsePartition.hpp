@@ -313,6 +313,13 @@ public:
     void AppendElem(const Element<IndexType, ValueType> &e);
 
     /**
+     *  Appends a new element in the new matrix.
+     *
+     *  @e the new element to be appended; <tt>e</tt> is moved during append.
+     */
+    void AppendElem(Element<IndexType, ValueType> &&e);
+
+    /**
      *  Counts elements already allocated in the matrix.
      *
      *  @return number of elements allocated.
@@ -581,7 +588,8 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
     // IndexType row_prev = first_row;
     IndexType row_prev = 1;
     for (; pi != pnts_end; ++pi) {
-        IndexType row = (*pi).GetRow() - first_row + 1;
+        Element<IndexType, ValueType> elem(*pi);
+        IndexType row = elem.GetRow() - first_row + 1;
         if (row != row_prev) {
             assert(row > row_prev);
             if (limit && Bld.GetElemsCnt() >= limit)
@@ -591,7 +599,7 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
         }
 
         // New element's row must be set to the new value
-        Bld.AppendElem(TransformElement(*pi, make_pair(row, (*pi).GetCol())));
+        Bld.AppendElem(TransformElement(elem, make_pair(row, elem.GetCol())));
     }
 
     return elems_size_;
@@ -740,12 +748,10 @@ Transform(Encoding::Type t, IndexType rs, IndexType re)
     elems.reserve(elems_size_);
     // for (iterator p = p0; p != pe; ++p) {
     for (; p != pe; ++p) {
-        Element<IndexType, ValueType> p_new =
-            TransformElement(*p, xform_fn((*p).GetCoordinates(),
-                                          nr_rows_, nr_cols_));
-        elems.push_back(p_new);
+        elems.push_back(TransformElement(*p, xform_fn((*p).GetCoordinates(),
+                                                      nr_rows_, nr_cols_)));
     }
- 
+
     Encoding e(t);
     Encoding e_(type_);
     if (((type_ == Encoding::Horizontal || e_.IsBlockRow()) &&
@@ -924,6 +930,19 @@ void SparsePartition<IndexType, ValueType>::Builder::AppendElem(
 }
 
 template<typename IndexType, typename ValueType>
+void SparsePartition<IndexType, ValueType>::Builder::AppendElem(
+    Element<IndexType, ValueType> &&e)
+{
+    if (sp_->elems_mapped_)
+        assert(da_elems_.GetSize() < sp_->elems_size_ &&
+               "out of bounds");
+
+    // e is an rvalue so forward it as an rvalue in order to use
+    // the Append(T&&) overload and avoid the redundant copy
+    da_elems_.Append(forward<Element<IndexType, ValueType> >(e));
+}
+
+template<typename IndexType, typename ValueType>
 void SparsePartition<IndexType, ValueType>::
 Builder::NewRow(IndexType rdiff)
 {
@@ -1059,7 +1078,7 @@ void SparsePartitionSym<IndexType, ValueType>::DivideMatrix()
                 }
 
                 m1_->SetNrNonzeros(m1_->GetNrNonzeros() + 1);
-                spmbld1.AppendElem(elem);
+                spmbld1.AppendElem(move(elem));
             } else {
                 if (rows2 < i) {
                     spmbld2.NewRow(i - rows2);
@@ -1067,7 +1086,7 @@ void SparsePartitionSym<IndexType, ValueType>::DivideMatrix()
                 }
 
                 m2_->SetNrNonzeros(m2_->GetNrNonzeros() + 1);
-                spmbld2.AppendElem(elem);
+                spmbld2.AppendElem(move(elem));
             }
         }
     }

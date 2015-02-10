@@ -263,16 +263,14 @@ public:
           curr_row_(row_idx),
           curr_elem_(csr_->rowptr_[row_idx]),
           row_index_(row_idx),
-          elem_count_(csr_->rowptr_[row_idx]),
-          elem_(Element<IndexType, ValueType>(0, 0, 0))
+          elem_count_(csr_->rowptr_[row_idx])
     {}
 
     iterator(CSR<IndexType, ValueType> *csr, const vector<size_t> &inv_perm)
         : csr_(csr),
           row_index_(0),
           elem_count_(0),
-          permutation_(inv_perm),
-          elem_(Element<IndexType, ValueType>(0, 0, 0))
+          permutation_(inv_perm)
     {
         curr_row_ = permutation_[0];
         // in case first rows are empty
@@ -286,8 +284,7 @@ public:
         : csr_(csr),
           row_index_(0),
           elem_count_(0),
-          permutation_(inv_perm),
-          elem_(Element<IndexType, ValueType>(0, 0, 0))
+          permutation_(inv_perm)
     {
         curr_row_ = permutation_[0];
         // in case first rows are empty
@@ -345,7 +342,7 @@ public:
     }
 
 public: // Access
-    Element<IndexType, ValueType> &operator*()
+    Element<IndexType, ValueType> operator*()
     {
         assert(curr_row_ <= csr_->nr_rows_ && "out of bounds");
         assert(static_cast<size_t>(curr_elem_) < csr_->nr_nzeros_
@@ -363,8 +360,7 @@ public: // Access
 
         col = csr_->colind_[curr_elem_] + csr_->zero_based_;
         val = csr_->values_[curr_elem_];
-        elem_ = Element<IndexType, ValueType>(row, col, val);
-        return elem_;
+        return Element<IndexType, ValueType>(row, col, val);
     }
 
 private:
@@ -373,7 +369,6 @@ private:
     IndexType curr_elem_;
     size_t row_index_, elem_count_;
     vector<size_t> permutation_;
-    Element<IndexType, ValueType> elem_;
 };
 
 template<typename IndexType, typename ValueType>

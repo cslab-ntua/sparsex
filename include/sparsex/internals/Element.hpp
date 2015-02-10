@@ -305,7 +305,6 @@ public:
           size_(other.size_),
           inst_(other.inst_),
           marker_(other.marker_)    // steal the marker from the rvalue
-
     {
         if (size_ == 1) {
             val_ = other.val_;
@@ -324,6 +323,30 @@ public:
     {
         DestroyVals();
         DestroyMarker();
+    }
+
+    /**
+     *  Set the row of this element.
+     */ 
+    void SetRow(IndexType row)
+    {
+        row_ = row;
+    }
+
+    /**
+     *  Set the column of this element.
+     */ 
+    void SetCol(IndexType col)
+    {
+        col_ = col;
+    }
+
+    /**
+     *  Set the value of this element.
+     */ 
+    void GetValue(ValueType val)
+    {
+        val_ = val;
     }
 
     /**
@@ -504,16 +527,64 @@ public:
     friend void swap(Element<I, V> &, Element<I, V> &);
 
     /**
-     *  Assignment operator.
+     *  Assignment operator using copy and swap idiom.
+     *
+     *  @return this updated instance
+     *
+     *  @throws std::bad_alloc if other cannot be copy constructed locally.
+     */
+    // Element<IndexType, ValueType> &operator=(
+    //     Element<IndexType, ValueType> other)
+    // {
+    //     swap(*this, other);
+    //     return *this;
+    // }
+
+    /**
+     *  Copy assignment operator.
      *
      *  @return this updated instance
      *
      *  @throws std::bad_alloc if other cannot be copy constructed locally.
      */
     Element<IndexType, ValueType> &operator=(
-        Element<IndexType, ValueType> other)
+        const Element<IndexType, ValueType> &other)
     {
-        swap(*this, other);
+        row_ = other.row_;
+        col_ = other.col_;
+        size_ = other.size_;
+        inst_ = other.inst_;
+        marker_ = other.marker_->Clone();
+        if (size_ == 1) {
+            val_ = other.val_;
+        } else {
+            vals_ = new ValueType[size_];
+            copy(other.vals_, other.vals_ + size_, vals_);
+        }
+        return *this;
+    }
+
+    /**
+     *  Move assignment operator.
+     *
+     *  @return this updated instance
+     */
+    Element<IndexType, ValueType> &operator=(
+        Element<IndexType, ValueType>&& other)
+    {
+        row_ = other.row_;
+        col_ = other.col_;
+        size_ = other.size_;
+        inst_ = other.inst_;
+        marker_ = other.marker_;
+        if (size_ == 1) {
+            val_ = other.val_;
+        } else {
+            vals_ = other.vals_;
+            other.vals_ = 0;
+        }
+
+        other.marker_ = 0;
         return *this;
     }
 
