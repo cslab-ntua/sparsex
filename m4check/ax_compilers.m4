@@ -258,8 +258,8 @@ case "$ax_build_mode" in
         ax_pkg_cflags="-g -O0 -std=c99 -pedantic -fopenmp -Wall -Wno-unused-local-typedefs" ;;
     "release")
         ax_pkg_cppflags="-DNDEBUG"
-        ax_pkg_cxxflags="-O3 -std=c++0x -pedantic -fopenmp -Wall -Wno-unused-local-typedefs"
-        ax_pkg_cflags="-O3 -std=c99 -pedantic -fopenmp -Wall -Wno-unused-local-typedefs" ;;
+        ax_pkg_cxxflags="-g -O3 -std=c++0x -pedantic -fopenmp -Wall -Wno-unused-local-typedefs"
+        ax_pkg_cflags="-g -O3 -std=c99 -pedantic -fopenmp -Wall -Wno-unused-local-typedefs" ;;
     *)
         AC_MSG_ERROR(
             [@<:@BUG@:>@ should not have entered here: m4_location]) ;;
