@@ -11,7 +11,7 @@
  * \brief A generic matrix element of the internal CSX representation
  *
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \date 2011&ndash;2014
+ * \date 2011&ndash;2015
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */
@@ -326,30 +326,6 @@ public:
     }
 
     /**
-     *  Set the row of this element.
-     */ 
-    void SetRow(IndexType row)
-    {
-        row_ = row;
-    }
-
-    /**
-     *  Set the column of this element.
-     */ 
-    void SetCol(IndexType col)
-    {
-        col_ = col;
-    }
-
-    /**
-     *  Set the value of this element.
-     */ 
-    void GetValue(ValueType val)
-    {
-        val_ = val;
-    }
-
-    /**
      *  Get the size of this element.
      *
      *  @return the size of this element.
@@ -651,6 +627,7 @@ void swap(Element<IndexType, ValueType> &a, Element<IndexType, ValueType> &b)
         swap(a.vals_, b.vals_);
     else
         swap(a.val_, b.val_);
+
     swap(a.size_, b.size_);
     swap(a.inst_, b.inst_);
     swap(a.marker_, b.marker_);

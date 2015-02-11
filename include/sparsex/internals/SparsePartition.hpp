@@ -729,8 +729,8 @@ FindNewRowptrSize(Encoding::Type t)
 }
 
 template<typename IndexType, typename ValueType>
-void SparsePartition<IndexType, ValueType>::
-Transform(Encoding::Type t, IndexType rs, IndexType re)
+void SparsePartition<IndexType, ValueType>::Transform(
+    Encoding::Type t, IndexType rs, IndexType re)
 {
     if (type_ == t)
         return;
@@ -746,11 +746,9 @@ Transform(Encoding::Type t, IndexType rs, IndexType re)
     iterator pe = end(re); 
 
     elems.reserve(elems_size_);
-    // for (iterator p = p0; p != pe; ++p) {
-    for (; p != pe; ++p) {
+    for (; p != pe; ++p)
         elems.push_back(TransformElement(*p, xform_fn((*p).GetCoordinates(),
                                                       nr_rows_, nr_cols_)));
-    }
 
     Encoding e(t);
     Encoding e_(type_);
@@ -1007,16 +1005,23 @@ template<typename IndexType, typename ValueType>
 bool SparsePartition<IndexType, ValueType>::iterator::operator==(
     const iterator &pi)
 {
-    return (sp_ == pi.sp_) &&
-        (row_idx_ == pi.row_idx_) &&
-        (elem_idx_ == pi.elem_idx_);
+    return !(*this != pi);
 }
 
 template<typename IndexType, typename ValueType>
 bool SparsePartition<IndexType, ValueType>::iterator::operator!=(
     const iterator &pi)
 {
-    return !(*this == pi);
+    if (sp_ != pi.sp_)
+        return true;
+
+    if (row_idx_ != pi.row_idx_)
+        return true;
+
+    if (elem_idx_ != pi.elem_idx_)
+        return true;
+
+    return false;
 }
 
 template<typename IndexType, typename ValueType>
@@ -1024,11 +1029,12 @@ void SparsePartition<IndexType, ValueType>::iterator::operator++()
 {
     IndexType *rp = sp_->rowptr_;
     size_t rp_size = sp_->rowptr_size_;
-    
+
     assert((size_t) elem_idx_ < sp_->elems_size_);
     assert((size_t) row_idx_ < rp_size);
     while (((size_t) row_idx_ + 1) < rp_size && rp[row_idx_+1] == elem_idx_)
         row_idx_++;
+
     elem_idx_++;
 }
 
