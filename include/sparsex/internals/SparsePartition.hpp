@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2015, Computing Systems Laboratory (CSLab), NTUA.
  * Copyright (C) 2009-2011, Kornilios Kourtis
- * Copyright (C) 2009-2014, Vasileios Karakasis
+ * Copyright (C) 2009-2015, Vasileios Karakasis
  * Copyright (C) 2011-2012, Theodoros Gkountouvas
  * Copyright (C) 2013-2014, Athena Elafrou
  * All rights reserved.
@@ -14,7 +14,7 @@
  * \brief Internal representation of sparse matrice partition
  *
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \date 2011&ndash;2014
+ * \date 2011&ndash;2015
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */
@@ -262,6 +262,7 @@ private:
     size_t nr_rows_, nr_cols_, nr_nzeros_;
     Encoding::Type type_;
     Element<IndexType, ValueType> *elems_;
+    std::vector<Element<IndexType, ValueType> > elems_buffer_;
     size_t elems_size_;
     IndexType *rowptr_;
     IndexType rowptr_size_;
@@ -613,6 +614,7 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row,
     SparsePartition::Builder Bld(this, nr_rows, nr_elems);
     SetElems(pi, pnts_end, first_row, limit, Bld);
     Bld.Finalize();
+    elems_buffer_.reserve(elems_size_);
     return elems_size_;
 }
 
@@ -738,17 +740,15 @@ void SparsePartition<IndexType, ValueType>::Transform(
     if (!re)
         re = rowptr_size_ - 2;
 
-    vector<Element<IndexType, ValueType> > elems;
     typename vector<Element<IndexType, ValueType> >::iterator e0, ee, es;
     typename TransformFn<IndexType>::type xform_fn =
         GetXformFn<IndexType>(type_, t);
     iterator p = begin(rs);
     iterator pe = end(re); 
-
-    elems.reserve(elems_size_);
     for (; p != pe; ++p)
-        elems.push_back(TransformElement(*p, xform_fn((*p).GetCoordinates(),
-                                                      nr_rows_, nr_cols_)));
+        elems_buffer_.push_back(
+            TransformElement(*p, xform_fn((*p).GetCoordinates(),
+                                          nr_rows_, nr_cols_)));
 
     Encoding e(t);
     Encoding e_(type_);
@@ -772,7 +772,7 @@ void SparsePartition<IndexType, ValueType>::Transform(
         k /= old_block_align;
         re = GetRowptrSize() - 1;
         
-        e0 = elems.begin();
+        e0 = elems_buffer_.begin();
         ee = e0;
         for (IndexType i = k; i < re; i += k) {
             es = ee;
@@ -781,17 +781,18 @@ void SparsePartition<IndexType, ValueType>::Transform(
         }
 
         es = ee;
-        ee = elems.end();
+        ee = elems_buffer_.end();
         sort(es, ee);
     } else {
-        e0 = elems.begin();
-        ee = elems.end();
+        e0 = elems_buffer_.begin();
+        ee = elems_buffer_.end();
         sort(e0, ee);
     }
 
     if (elems_size_)
         SetElems(e0, ee, rs + 1, 0, elems_size_, FindNewRowptrSize(t));
-    elems.clear();
+
+    elems_buffer_.clear();
     type_ = t;
 }
 
@@ -841,10 +842,8 @@ ExtractWindow(IndexType rs, IndexType length)
 
     assert(es <= ee);
     elems.reserve(ee - es);
-    // iterator p0 = begin(rs);
     iterator p = begin(rs);
     iterator pe = end(rs + length - 1);
-    // for (iterator p = p0; p != pe; ++p)
     for (; p != pe; ++p)
         elems.push_back(*p);
 

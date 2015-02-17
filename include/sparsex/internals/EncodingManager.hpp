@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2009-2014, Computing Systems Laboratory (CSLab), NTUA.
- * Copyright (C) 2009-2014, Vasileios Karakasis
+ * Copyright (C) 2009-2015, Computing Systems Laboratory (CSLab), NTUA.
+ * Copyright (C) 2009-2015, Vasileios Karakasis
  * Copyright (C) 2010-2012, Theodoros Gkountouvas
  * Copyright (C) 2009-2011, Kornilios Kourtis
  * Copyright (C) 2013-2014, Athena Elafrou
@@ -14,7 +14,7 @@
  * \brief Delta Run-Length Encoding Manager
  *
  * \author Computing Systems Laboratory (CSLab), NTUA
- * \date 2011&ndash;2014
+ * \date 2011&ndash;2015
  * \copyright This file is distributed under the BSD License. See LICENSE.txt
  * for details.
  */
@@ -35,7 +35,6 @@
 #include <limits>
 #include <cassert>
 #include <sstream>
-#include <boost/container/vector.hpp>
 #include <boost/foreach.hpp>
 
 #define FOREACH BOOST_FOREACH
@@ -261,8 +260,7 @@ private:
      */
     void DoEncode(IndexType row_no, vector<IndexType> &xs,
                   vector<ValueType> &vs,
-                  boost::container::vector<
-                      Element<IndexType, ValueType> > &encoded);
+                  std::vector<Element<IndexType, ValueType> > &encoded);
 
     /**
      *  Encode elements for a block type of patterns.
@@ -274,8 +272,7 @@ private:
      */
     void DoEncodeBlock(IndexType row_no, vector<IndexType> &xs,
                        vector<ValueType> &vs,
-                       boost::container::vector<
-                           Element<IndexType, ValueType> > &encoded);
+                       std::vector<Element<IndexType, ValueType> > &encoded);
 
     /**
      *  Encode elements from a block when the split_blocks_ function is active.
@@ -287,8 +284,7 @@ private:
      */
     void DoEncodeBlockAlt(IndexType row_no, vector<IndexType> &xs,
                           vector<ValueType> &vs,
-                          boost::container::vector<
-                              Element<IndexType, ValueType> > &encoded);
+                          std::vector<Element<IndexType, ValueType> > &encoded);
 
     /**
      *  Encode the elements of a row.
@@ -300,7 +296,7 @@ private:
     void EncodeRow(
         typename SparsePartition<IndexType, ValueType>::iterator &rstart,
         typename SparsePartition<IndexType, ValueType>::iterator &rend,
-        boost::container::vector<Element<IndexType, ValueType> > &newrow);
+        std::vector<Element<IndexType, ValueType> > &newrow);
 
     /**
      *  Apply run-length encoding and search for patterns in elems, updating
@@ -421,10 +417,10 @@ IndexType MaxDelta(std::vector<IndexType> xs)
 }
 
 template<typename T>
-T DeltaEncode(T input, size_t &max_delta)
+T &DeltaEncode(const T &input, T &output, size_t &max_delta)
 {
-    T output;
-    typename T::iterator in, out;
+    typename T::const_iterator in;
+    typename T::iterator out;
     typename T::iterator::value_type prev, curr;
 
     output.resize(input.size());
@@ -445,19 +441,19 @@ T DeltaEncode(T input, size_t &max_delta)
 }
 
 template<typename T>
-T DeltaEncode(T input)
+T &DeltaEncode(const T &input, T &output)
 {
     size_t max_delta;
-    return DeltaEncode(input, max_delta);
+    return DeltaEncode(input, output, max_delta);
 }
 
 template<typename T>
-std::vector<RLE<typename T::iterator::value_type> >
-RLEncode(T input)
+std::vector<RLE<typename T::iterator::value_type> > &
+RLEncode(const T &input,
+         std::vector<RLE<typename T::iterator::value_type> > &output)
 {
-    typename T::iterator in;
+    typename T::const_iterator in;
     typename T::iterator::value_type curr;
-    std::vector<RLE<typename T::iterator::value_type> > output;
     RLE<typename T::iterator::value_type> rle;
 
     in = input.begin();
@@ -834,7 +830,7 @@ unsigned long EncodingManager<IndexType, ValueType>::GetTypeScore(
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
 {
-    boost::container::vector<Element<IndexType, ValueType> > new_row;
+    std::vector<Element<IndexType, ValueType> > new_row;
 
     if (type == Encoding::None)
         return;
@@ -966,7 +962,7 @@ template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
 DoEncode(IndexType row_no,
          std::vector<IndexType> &xs, std::vector<ValueType> &vs,
-         boost::container::vector<Element<IndexType, ValueType> > &encoded)
+         std::vector<Element<IndexType, ValueType> > &encoded)
 {
     typename std::vector<ValueType>::iterator vi = vs.begin();
 
@@ -980,7 +976,9 @@ DoEncode(IndexType row_no,
     }
 
     // do a delta run-length encoding of the x values
-    std::vector<RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
+    std::vector<IndexType> deltas;
+    std::vector<RLE<IndexType> > rles;
+    RLEncode(DeltaEncode(xs, deltas), rles);
 
     IndexType col = 0;
     FOREACH (RLE<IndexType> rle, rles) {
@@ -1045,12 +1043,15 @@ template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
 DoEncodeBlock(IndexType row_no,
               std::vector<IndexType> &xs, std::vector<ValueType> &vs,
-              boost::container::vector<Element<IndexType, ValueType> > &encoded)
+              std::vector<Element<IndexType, ValueType> > &encoded)
 {
     typename std::vector<ValueType>::iterator vi = vs.begin();
 
     // do a delta run-length encoding of the x values
-    std::vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
+    std::vector<IndexType> deltas;
+    std::vector<RLE<IndexType> > rles;
+    RLEncode(DeltaEncode(xs, deltas), rles);
+    //std::vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
 
     Encoding e(spm_->GetType());
 
@@ -1150,12 +1151,15 @@ template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
 DoEncodeBlockAlt(
     IndexType row_no, vector<IndexType> &xs, vector<ValueType> &vs,
-    boost::container::vector<Element<IndexType, ValueType> > &encoded)
+    std::vector<Element<IndexType, ValueType> > &encoded)
 {
     typename std::vector<ValueType>::iterator vi = vs.begin();
 
     // do a delta run-length encoding of the x values
-    std::vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
+    std::vector<IndexType> deltas;
+    std::vector<RLE<IndexType> > rles;
+    RLEncode(DeltaEncode(xs, deltas), rles);
+    //std::vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
 
     Encoding e(spm_->GetType());
 
@@ -1242,7 +1246,7 @@ template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
 EncodeRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
           typename SparsePartition<IndexType, ValueType>::iterator &rend,
-          boost::container::vector<Element<IndexType, ValueType> > &newrow)
+          std::vector<Element<IndexType, ValueType> > &newrow)
 {
     std::vector<IndexType> xs;
     std::vector<ValueType> vs;
@@ -1276,7 +1280,6 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
             std::vector<Element<IndexType, ValueType> > &elems,
             StatsCollection<StatsData> &stats)
 {
-    std::vector< RLE<IndexType> > rles;
     Encoding e(spm->GetType());
     size_t block_align = e.GetBlockAlignment();
 
@@ -1289,7 +1292,11 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
     if (xs.size() == 0)
         return;
 
-    rles = RLEncode(DeltaEncode(xs));
+    std::vector<IndexType> deltas;
+    std::vector<RLE<IndexType> > rles;
+    RLEncode(DeltaEncode(xs, deltas), rles);
+
+    //rles = RLEncode(DeltaEncode(xs));
     IndexType col = 0;
 #if !SPX_USE_NUMA
     bool last_rle_patt = false; // turn on for encoded units
@@ -1359,13 +1366,14 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
                  std::vector<Element<IndexType, ValueType> > &elems,
                  StatsCollection<StatsData> &stats)
 {
-    std::vector<RLE<IndexType> > rles;
-
     assert(block_align && "not a block type");
     if (xs.size() == 0)
         return;
         
-    rles = RLEncode(DeltaEncode(xs));
+    std::vector<IndexType> deltas;
+    std::vector<RLE<IndexType> > rles;
+    RLEncode(DeltaEncode(xs, deltas), rles);
+    //rles = RLEncode(DeltaEncode(xs));
 
     IndexType unit_start = 0;
     // typename std::vector<Element<IndexType, ValueType>*>::iterator ei =
