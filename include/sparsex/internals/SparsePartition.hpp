@@ -361,7 +361,7 @@ public:
     bool operator==(const iterator &pi);
     bool operator!=(const iterator &pi);
     void operator++();
-    Element<IndexType, ValueType> &operator*();
+    const Element<IndexType, ValueType> &operator*();
 
 private:
     SparsePartition *sp_;
@@ -589,7 +589,7 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType first_row, size_t limit,
     // IndexType row_prev = first_row;
     IndexType row_prev = 1;
     for (; pi != pnts_end; ++pi) {
-        Element<IndexType, ValueType> elem(*pi);
+        const Element<IndexType, ValueType> &elem = *pi;
         IndexType row = elem.GetRow() - first_row + 1;
         if (row != row_prev) {
             assert(row > row_prev);
@@ -744,11 +744,13 @@ void SparsePartition<IndexType, ValueType>::Transform(
     typename TransformFn<IndexType>::type xform_fn =
         GetXformFn<IndexType>(type_, t);
     iterator p = begin(rs);
-    iterator pe = end(re); 
-    for (; p != pe; ++p)
+    iterator pe = end(re);
+    for (; p != pe; ++p) {
+        const Element<IndexType, ValueType> &elem = *p;
         elems_buffer_.push_back(
-            TransformElement(*p, xform_fn((*p).GetCoordinates(),
-                                          nr_rows_, nr_cols_)));
+            TransformElement(elem, xform_fn(elem.GetCoordinates(),
+                                            nr_rows_, nr_cols_)));
+    }
 
     Encoding e(t);
     Encoding e_(type_);
@@ -1038,7 +1040,7 @@ void SparsePartition<IndexType, ValueType>::iterator::operator++()
 }
 
 template<typename IndexType, typename ValueType>
-Element<IndexType, ValueType> &
+const Element<IndexType, ValueType> &
 SparsePartition<IndexType, ValueType>::iterator::operator*()
 {
     return sp_->elems_[elem_idx_];
