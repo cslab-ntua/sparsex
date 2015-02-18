@@ -603,10 +603,11 @@ GenerateStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
         typename SparsePartition<IndexType, ValueType>::iterator ee =
             sp->end(i);
         for (; ei != ee; ++ei) {
-            Marker &m = (*ei).GetMarker();
+            const Element<IndexType, ValueType> &elem = *ei;
+            Marker &m = elem.GetMarker();
             if (!m.IsMarked(PatternMarker::InPattern)) {
-                xs.push_back((*ei).GetCol());
-                elems.push_back(*ei);
+                xs.push_back(elem.GetCol());
+                elems.push_back(elem);
                 continue;
             }
 
@@ -630,9 +631,10 @@ GenerateDeltaStats(SparsePartition<IndexType, ValueType> *sp,
         typename SparsePartition<IndexType, ValueType>::iterator ee =
             sp->end(i);
         for (; ei != ee; ++ei) {
-            Marker &em = (*ei).GetMarker();
+            const Element<IndexType, ValueType> &elem = *ei;
+            Marker &em = elem.GetMarker();
             if (!em.IsMarked(PatternMarker::InPattern))
-                xs.push_back((*ei).GetCol());
+                xs.push_back(elem.GetCol());
             else
                 em.Unmark(PatternMarker::InPattern);
 
@@ -981,7 +983,7 @@ DoEncode(IndexType row_no,
     RLEncode(DeltaEncode(xs, deltas), rles);
 
     IndexType col = 0;
-    FOREACH (RLE<IndexType> rle, rles) {
+    FOREACH (const RLE<IndexType> &rle, rles) {
         size_t rle_freq, rle_start;
         rle_freq = rle.freq;
         if (rle_freq != 1 &&
@@ -1059,7 +1061,7 @@ DoEncodeBlock(IndexType row_no,
     assert(block_align && "not a block type");
 
     IndexType col = 0;
-    FOREACH (RLE<IndexType> rle, rles) {
+    FOREACH (const RLE<IndexType> &rle, rles) {
         size_t skip_front, skip_back, nr_elem;
         col += rle.val;
         if (col == 1) {
@@ -1167,7 +1169,7 @@ DoEncodeBlockAlt(
     assert(block_align && "not a block type");
 
     IndexType col = 0;
-    FOREACH (RLE<IndexType> rle, rles) {
+    FOREACH (const RLE<IndexType> &rle, rles) {
         size_t skip_front, skip_back, nr_elem;
 
         col += rle.val;
@@ -1256,16 +1258,17 @@ EncodeRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
     IndexType row_no = (*rstart).GetRow();
     typename SparsePartition<IndexType, ValueType>::iterator &ei = rstart;
     for (; ei != rend; ++ei) {
-        if (!(*ei).IsPattern()) {
-            xs.push_back((*ei).GetCol());
-            vs.push_back((*ei).GetValue());
+        const Element<IndexType, ValueType> &elem = *ei;
+        if (!elem.IsPattern()) {
+            xs.push_back(elem.GetCol());
+            vs.push_back(elem.GetValue());
             continue;
         }
 
         if (xs.size() != 0)
             DoEncode(row_no, xs, vs, newrow);
 
-        newrow.push_back(*ei);
+        newrow.push_back(elem);
     }
 
     // Encode any remaining elements
@@ -1304,7 +1307,7 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
     typename std::vector<Element<IndexType, ValueType> >::iterator ei =
         elems.begin();
 
-    FOREACH(RLE<IndexType> &rle, rles) {
+    FOREACH(const RLE<IndexType> &rle, rles) {
 #if SPX_USE_NUMA
         size_t real_limit = min_limit_;
 #else
@@ -1381,7 +1384,7 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
     typename std::vector<Element<IndexType, ValueType> >::iterator ei =
         elems.begin();
 
-    FOREACH (RLE<IndexType> &rle, rles) {
+    FOREACH (const RLE<IndexType> &rle, rles) {
         unit_start += rle.val;
         if (rle.val == 1) {
             // Start of the real block is at `unit_start - 1' with

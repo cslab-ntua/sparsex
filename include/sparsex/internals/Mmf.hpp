@@ -268,7 +268,6 @@ public:
             }
 
             row_prev_ = elem_.GetRow();
-
             return elem_;
         }
     }

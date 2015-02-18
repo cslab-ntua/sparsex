@@ -537,6 +537,7 @@ public:
             vals_ = new ValueType[size_];
             copy(other.vals_, other.vals_ + size_, vals_);
         }
+
         return *this;
     }
 
