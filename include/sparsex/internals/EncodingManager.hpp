@@ -386,6 +386,10 @@ private:
     set<Encoding::Instantiation> encoded_inst_;
     bitset<Encoding::Max> xforms_ignore_;
     timing::TimerCollection tc_;
+    // Local buffers used during substructure mining and matrix encoding
+    std::vector<IndexType> cols_buff_;
+    std::vector<ValueType> vals_buff_;
+    std::vector<Element<IndexType, ValueType> > elems_buff_;
 };
 
 /* Helper functions */
@@ -595,8 +599,6 @@ void EncodingManager<IndexType, ValueType>::
 GenerateStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
               IndexType re, StatsCollection<StatsData> &stats)
 {
-    std::vector<IndexType> xs;
-    std::vector<Element<IndexType, ValueType> > elems;
     for (IndexType i = rs; i < re; ++i) {
         typename SparsePartition<IndexType, ValueType>::iterator ei =
             sp->begin(i);
@@ -606,15 +608,15 @@ GenerateStats(SparsePartition<IndexType, ValueType> *sp, IndexType rs,
             const Element<IndexType, ValueType> &elem = *ei;
             Marker &m = elem.GetMarker();
             if (!m.IsMarked(PatternMarker::InPattern)) {
-                xs.push_back(elem.GetCol());
-                elems.push_back(elem);
+                cols_buff_.push_back(elem.GetCol());
+                elems_buff_.push_back(elem);
                 continue;
             }
 
-            UpdateStats(sp, xs, elems, stats);
+            UpdateStats(sp, cols_buff_, elems_buff_, stats);
         }
 
-        UpdateStats(sp, xs, elems, stats);
+        UpdateStats(sp, cols_buff_, elems_buff_, stats);
     }
 }
 
@@ -694,9 +696,9 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
             // Quick fix for windows of size 0
             if (window_start >= sort_splits_[selected_splits_[i]+1] - 1)
                 break;
+
             SparsePartition<IndexType, ValueType> *window =
                 spm_->GetWindow(window_start, window_size);
-
             if (window->GetNrNonzeros() != 0) {
                 samples_nnz += sort_splits_nzeros_[selected_splits_[i]];
 
@@ -731,7 +733,6 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
         CoverageFilter cfilter(spm_->GetNrNonzeros(), min_perc_,
                                encoded_inst_);
         stats.ManipulateStats(cfilter);
-
     } else {
         if (minimize_cost_) {
             // first generate stats for the delta type
@@ -746,6 +747,7 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
             size_t block_align = e.GetBlockAlignment();
             spm_->Transform(t);
             GenerateStats(0, spm_->GetRowptrSize() - 1, stats);
+
             if (block_align && split_blocks_) {
                 // Split blocks
                 BlockSplitter bsplitter(max_limit_, spm_->GetNrNonzeros(),
@@ -832,8 +834,6 @@ unsigned long EncodingManager<IndexType, ValueType>::GetTypeScore(
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
 {
-    std::vector<Element<IndexType, ValueType> > new_row;
-
     if (type == Encoding::None)
         return;
 
@@ -848,16 +848,16 @@ void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
             spm_->begin(i);
         typename SparsePartition<IndexType, ValueType>::iterator rend =
             spm_->end(i);
-        EncodeRow(rbegin, rend, new_row);
-        size_t nr_size = new_row.size();
+        EncodeRow(rbegin, rend, elems_buff_);
+        size_t nr_size = elems_buff_.size();
         if (nr_size > 0) {
             tc_.StartTimer("Alloc");
             for (size_t i = 0; i < nr_size; ++i)
-                SpmBld.AppendElem(new_row[i]);
+                SpmBld.AppendElem(elems_buff_[i]);
             tc_.PauseTimer("Alloc");
         }
 
-        new_row.clear();
+        elems_buff_.clear();
         SpmBld.NewRow();
     }
 
@@ -1250,9 +1250,6 @@ EncodeRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
           typename SparsePartition<IndexType, ValueType>::iterator &rend,
           std::vector<Element<IndexType, ValueType> > &newrow)
 {
-    std::vector<IndexType> xs;
-    std::vector<ValueType> vs;
-
     // gather x values into xs vector until a pattern is found
     // and encode them using DoEncode()
     IndexType row_no = (*rstart).GetRow();
@@ -1260,20 +1257,20 @@ EncodeRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
     for (; ei != rend; ++ei) {
         const Element<IndexType, ValueType> &elem = *ei;
         if (!elem.IsPattern()) {
-            xs.push_back(elem.GetCol());
-            vs.push_back(elem.GetValue());
+            cols_buff_.push_back(elem.GetCol());
+            vals_buff_.push_back(elem.GetValue());
             continue;
         }
 
-        if (xs.size() != 0)
-            DoEncode(row_no, xs, vs, newrow);
+        if (cols_buff_.size() != 0)
+            DoEncode(row_no, cols_buff_, vals_buff_, newrow);
 
         newrow.push_back(elem);
     }
 
     // Encode any remaining elements
-    if (xs.size() != 0)
-        DoEncode(row_no, xs, vs, newrow);
+    if (cols_buff_.size() != 0)
+        DoEncode(row_no, cols_buff_, vals_buff_, newrow);
 }
 
 template<typename IndexType, typename ValueType>
@@ -1304,7 +1301,7 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
 #if !SPX_USE_NUMA
     bool last_rle_patt = false; // turn on for encoded units
 #endif
-    typename std::vector<Element<IndexType, ValueType> >::iterator ei =
+    typename std::vector<Element<IndexType, ValueType> >::const_iterator ei =
         elems.begin();
 
     FOREACH(const RLE<IndexType> &rle, rles) {
@@ -1372,7 +1369,7 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
     assert(block_align && "not a block type");
     if (xs.size() == 0)
         return;
-        
+
     std::vector<IndexType> deltas;
     std::vector<RLE<IndexType> > rles;
     RLEncode(DeltaEncode(xs, deltas), rles);
@@ -1381,7 +1378,7 @@ UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
     IndexType unit_start = 0;
     // typename std::vector<Element<IndexType, ValueType>*>::iterator ei =
     //     elems.begin();
-    typename std::vector<Element<IndexType, ValueType> >::iterator ei =
+    typename std::vector<Element<IndexType, ValueType> >::const_iterator ei =
         elems.begin();
 
     FOREACH (const RLE<IndexType> &rle, rles) {

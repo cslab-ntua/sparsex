@@ -306,8 +306,7 @@ public:
      */
     void AppendStats(const Encoding::Instantiation &inst, const T &data)
     {
-        InstStatsNode new_inst(inst, data);
-        root_.AppendNode(inst, new_inst);
+        root_.AppendNode(inst, InstStatsNode(inst, data));
     }
 
     /**

@@ -255,7 +255,8 @@ public:
 
     iterator end(IndexType ridx)
     {
-        return iterator(this, ridx, true);
+        struct iterator::end_tag end;
+        return iterator(this, ridx, end);
     }
 
 private:
@@ -324,7 +325,7 @@ public:
      *  Counts elements already allocated in the matrix.
      *
      *  @return number of elements allocated.
-     */
+    */
     size_t GetElemsCnt()
     {
         return da_elems_.GetSize();
@@ -357,7 +358,9 @@ class SparsePartition<IndexType, ValueType>::iterator
                            Element<IndexType, ValueType> >
 {
 public:
-    iterator(SparsePartition *sp, IndexType row_idx, bool end = false);
+    struct end_tag {};
+    iterator(SparsePartition *sp, IndexType row_idx);
+    iterator(SparsePartition *sp, IndexType row_idx, struct end_tag);
     bool operator==(const iterator &pi);
     bool operator!=(const iterator &pi);
     void operator++();
@@ -945,8 +948,8 @@ template<typename IndexType, typename ValueType>
 void SparsePartition<IndexType, ValueType>::
 Builder::NewRow(IndexType rdiff)
 {
-    size_t elems_cnt = GetElemsCnt();
-    for (IndexType i = 0; i < rdiff; i++)
+    IndexType elems_cnt = GetElemsCnt();
+    for (IndexType i = 0; i < rdiff; ++i)
         da_rowptr_.Append(elems_cnt);
 }
 
@@ -987,19 +990,22 @@ Builder::Finalize()
  */
 template<typename IndexType, typename ValueType>
 SparsePartition<IndexType, ValueType>::iterator::iterator(
-    SparsePartition *sp, IndexType r_idx, bool end)
-    : sp_(sp)
+    SparsePartition *sp, IndexType r_idx)
+    : sp_(sp),
+      row_idx_(r_idx),
+      elem_idx_(sp_->rowptr_[r_idx])
 {
-    IndexType *rp = sp_->rowptr_;
-    
     assert(r_idx < sp_->rowptr_size_);
+}
 
-    row_idx_ = r_idx;
-    if (end) {
-        elem_idx_ = rp[r_idx+1];
-    } else {
-        elem_idx_ = rp[r_idx];
-    }
+template<typename IndexType, typename ValueType>
+SparsePartition<IndexType, ValueType>::iterator::iterator(
+    SparsePartition *sp, IndexType r_idx, struct end_tag)
+    : sp_(sp),
+      row_idx_(r_idx),
+      elem_idx_(sp_->rowptr_[r_idx+1])
+{
+    assert(r_idx < sp_->rowptr_size_);
 }
 
 template<typename IndexType, typename ValueType>
@@ -1029,11 +1035,11 @@ template<typename IndexType, typename ValueType>
 void SparsePartition<IndexType, ValueType>::iterator::operator++()
 {
     IndexType *rp = sp_->rowptr_;
-    size_t rp_size = sp_->rowptr_size_;
+    IndexType rp_size = sp_->rowptr_size_;
 
     assert((size_t) elem_idx_ < sp_->elems_size_);
     assert((size_t) row_idx_ < rp_size);
-    while (((size_t) row_idx_ + 1) < rp_size && rp[row_idx_+1] == elem_idx_)
+    while (row_idx_+1 < rp_size && rp[row_idx_+1] == elem_idx_)
         row_idx_++;
 
     elem_idx_++;
@@ -1145,11 +1151,11 @@ void SparsePartitionSym<IndexType, ValueType>::MergeMatrix()
     
     spmbld->Finalize();
     temp->SetNrRows(temp->GetRowptrSize() - 1);
-    
+
     delete spmbld;
     delete lower_matrix_;
     lower_matrix_ = temp;
-    
+
     delete m1_;
     delete m2_;
 }
