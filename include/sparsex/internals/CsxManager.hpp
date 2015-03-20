@@ -263,7 +263,7 @@ CsxSymMatrix<IndexType, ValueType> *
 CsxManager<IndexType, ValueType>::MakeCsxSym()
 {
     CsxSymMatrix<IndexType, ValueType> *csx;
-    ValueType *diagonal = spm_sym_->GetDiagonal();
+    vector<ValueType> *diagonal = spm_sym_->GetDiagonal();
     IndexType diagonal_size = spm_sym_->GetDiagonalSize();
 #if SPX_USE_NUMA
     NumaAllocator &numa_alloc = NumaAllocator::GetInstance();
@@ -292,7 +292,7 @@ CsxManager<IndexType, ValueType>::MakeCsxSym()
 #endif
 
     for (IndexType i = 0; i < diagonal_size; i++)
-        csx->dvalues[i] = diagonal[i];
+        csx->dvalues[i] = diagonal->operator[](i);
 
     csx->lower_matrix = MakeCsx(true);
     return csx;

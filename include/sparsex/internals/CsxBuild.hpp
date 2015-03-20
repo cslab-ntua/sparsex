@@ -173,7 +173,6 @@ void PreprocessThread(
     // statistical data for the types in XFORM_CONF, choose the
     // best choise, encode it and proceed likewise until there is
     // no satisfying encoding.
-
     if (encseq.IsExplicit()) {
         DrleMg->EncodeSerial(encseq);
     } else {

@@ -67,7 +67,7 @@ public:
                                same number of nonzero elements) */
     } split_alg_t;
     
-    typedef typename std::vector<IndexType>::iterator sort_split_iterator;
+    typedef typename vector<IndexType>::iterator sort_split_iterator;
 
     EncodingManager(SparsePartition<IndexType, ValueType> *spm,
                     RuntimeConfiguration &config);
@@ -260,7 +260,7 @@ private:
      */
     void DoEncode(IndexType row_no, vector<IndexType> &xs,
                   vector<ValueType> &vs,
-                  std::vector<Element<IndexType, ValueType> > &encoded);
+                  vector<Element<IndexType, ValueType> > &encoded);
 
     /**
      *  Encode elements for a block type of patterns.
@@ -272,7 +272,7 @@ private:
      */
     void DoEncodeBlock(IndexType row_no, vector<IndexType> &xs,
                        vector<ValueType> &vs,
-                       std::vector<Element<IndexType, ValueType> > &encoded);
+                       vector<Element<IndexType, ValueType> > &encoded);
 
     /**
      *  Encode elements from a block when the split_blocks_ function is active.
@@ -284,7 +284,7 @@ private:
      */
     void DoEncodeBlockAlt(IndexType row_no, vector<IndexType> &xs,
                           vector<ValueType> &vs,
-                          std::vector<Element<IndexType, ValueType> > &encoded);
+                          vector<Element<IndexType, ValueType> > &encoded);
 
     /**
      *  Encode the elements of a row.
@@ -296,7 +296,7 @@ private:
     void EncodeRow(
         typename SparsePartition<IndexType, ValueType>::iterator &rstart,
         typename SparsePartition<IndexType, ValueType>::iterator &rend,
-        std::vector<Element<IndexType, ValueType> > &newrow);
+        vector<Element<IndexType, ValueType> > &newrow);
 
     /**
      *  Apply run-length encoding and search for patterns in elems, updating
@@ -309,8 +309,8 @@ private:
      *  @param stats stats of the sub-matrix so far.
      */
     void UpdateStats(SparsePartition<IndexType, ValueType> *sp,
-                     std::vector<IndexType> &xs,
-                     std::vector<Element<IndexType, ValueType> > &elems,
+                     vector<IndexType> &xs,
+                     vector<Element<IndexType, ValueType> > &elems,
                      StatsCollection<StatsData> &stats);
 
     /**
@@ -323,9 +323,9 @@ private:
      *  @param elems the elements to be searched for patterns
      *  @param align block's main dimension
      */
-    void UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
+    void UpdateStatsBlock(Encoding::Type type, vector<IndexType> &xs,
                           uint64_t align,
-                          std::vector<Element<IndexType, ValueType> > &elems,
+                          vector<Element<IndexType, ValueType> > &elems,
                           StatsCollection<StatsData> &stats);
 
     /**
@@ -379,17 +379,17 @@ private:
     bool split_blocks_;
     bool onedim_blocks_;
     split_alg_t split_type_;
-    std::vector<size_t> sort_splits_;
-    std::vector<IndexType> sort_splits_nzeros_;
+    vector<size_t> sort_splits_;
+    vector<IndexType> sort_splits_nzeros_;
     size_t *selected_splits_;
     StatsCollection<StatsData> encoded_stats_; // stats for the *encoded* types
     set<Encoding::Instantiation> encoded_inst_;
     bitset<Encoding::Max> xforms_ignore_;
     timing::TimerCollection tc_;
     // Local buffers used during substructure mining and matrix encoding
-    std::vector<IndexType> cols_buff_;
-    std::vector<ValueType> vals_buff_;
-    std::vector<Element<IndexType, ValueType> > elems_buff_;
+    vector<IndexType> cols_buff_;
+    vector<ValueType> vals_buff_;
+    vector<Element<IndexType, ValueType> > elems_buff_;
 };
 
 /* Helper functions */
@@ -403,7 +403,7 @@ struct RLE {
 //  FIXME: MaxDelta() could be possibly merged with DeltaEncode()
 // 
 template<typename IndexType>
-IndexType MaxDelta(std::vector<IndexType> xs)
+IndexType MaxDelta(vector<IndexType> xs)
 {
     IndexType prev_x, curr_x, max_delta;
 
@@ -452,9 +452,9 @@ T &DeltaEncode(const T &input, T &output)
 }
 
 template<typename T>
-std::vector<RLE<typename T::iterator::value_type> > &
+vector<RLE<typename T::iterator::value_type> > &
 RLEncode(const T &input,
-         std::vector<RLE<typename T::iterator::value_type> > &output)
+         vector<RLE<typename T::iterator::value_type> > &output)
 {
     typename T::const_iterator in;
     typename T::iterator::value_type curr;
@@ -523,6 +523,7 @@ CheckParams(RuntimeConfiguration &config)
         LOG_INFO << "* Window size: " << sort_window_size << "\n";
         LOG_INFO << "* Number of samples: " << samples_max << "\n";
     }
+
     PreprocessingHeuristic heur = config.GetProperty<PreprocessingHeuristic>(
         RuntimeConfiguration::PreprocHeuristic);
     LOG_INFO << "Compression heuristic: " << heur.GetName() << "\n";
@@ -569,6 +570,10 @@ EncodingManager(SparsePartition<IndexType, ValueType> *spm,
         selected_splits_ = 0;
     } else {
         sampling_enabled_ = true;
+        // Adjust the number of samples to the number of threads
+        int nr_threads = config_.GetProperty<int>(
+            RuntimeConfiguration::RtNrThreads);
+        samples_max_ = (size_t)ceil((float)samples_max_/nr_threads);
         assert(samples_max_ > 0 && "invalid samples number");
         if (preproc_method_.GetType() == PreprocessingMethod::FixedPortion) {
             assert(sampling_portion_ > 0 && sampling_portion_ <= 1 &&
@@ -626,7 +631,7 @@ GenerateDeltaStats(SparsePartition<IndexType, ValueType> *sp,
                    IndexType rs, IndexType re,
                    StatsCollection<StatsData> &stats)
 {
-    std::vector<IndexType> xs;
+    vector<IndexType> xs;
     for (IndexType i = rs; i < re; ++i) {
         typename SparsePartition<IndexType, ValueType>::iterator ei =
             sp->begin(i);
@@ -641,7 +646,7 @@ GenerateDeltaStats(SparsePartition<IndexType, ValueType> *sp,
                 em.Unmark(PatternMarker::InPattern);
 
             if (em.IsMarked(PatternMarker::PatternStart)) {
-                // new pattern in the row creates a new delta unit
+                // New pattern in the row creates a new delta unit
                 if (xs.size()) {
                     size_t delta_size = GetDeltaSize(MaxDelta(xs));
                     size_t npatt = iceil(xs.size(), max_limit_);
@@ -699,6 +704,11 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
 
             SparsePartition<IndexType, ValueType> *window =
                 spm_->GetWindow(window_start, window_size);
+            if (window->GetNrNonzeros() == 0) {
+                delete window;
+                break;
+            }
+
             if (window->GetNrNonzeros() != 0) {
                 samples_nnz += sort_splits_nzeros_[selected_splits_[i]];
 
@@ -735,7 +745,7 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
         stats.ManipulateStats(cfilter);
     } else {
         if (minimize_cost_) {
-            // first generate stats for the delta type
+            // First generate stats for the delta type
             GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1, stats);
         }
 
@@ -840,28 +850,35 @@ void EncodingManager<IndexType, ValueType>::Encode(Encoding::Type type)
     // Transform matrix to the desired iteration order
     spm_->Transform(type);
 
-    typename SparsePartition<IndexType, ValueType>::Builder SpmBld
-        (spm_, spm_->GetRowptrSize(), spm_->GetElemsSize());
+    vector<Element<IndexType, ValueType> > new_row;
+    int elem_idx = 0;
+    int new_rowptr_size = 1, new_elems_size = 0;
 
     for (size_t i = 0; i < spm_->GetRowptrSize() - 1; ++i) {
         typename SparsePartition<IndexType, ValueType>::iterator rbegin =
             spm_->begin(i);
         typename SparsePartition<IndexType, ValueType>::iterator rend =
             spm_->end(i);
-        EncodeRow(rbegin, rend, elems_buff_);
-        size_t nr_size = elems_buff_.size();
+        EncodeRow(rbegin, rend, new_row);
+        size_t nr_size = new_row.size();
         if (nr_size > 0) {
             tc_.StartTimer("Alloc");
             for (size_t i = 0; i < nr_size; ++i)
-                SpmBld.AppendElem(elems_buff_[i]);
+                spm_->SetElem(i+elem_idx , move(new_row[i]));
+            elem_idx += nr_size;
             tc_.PauseTimer("Alloc");
         }
 
-        elems_buff_.clear();
-        SpmBld.NewRow();
+        new_rowptr_size++;
+        new_elems_size += nr_size;
+        new_row.clear();
     }
 
-    SpmBld.Finalize();
+    spm_->SetElemsSize(new_elems_size);
+    typename vector<Element<IndexType, ValueType> >::iterator e0, ee;
+    e0 = spm_->GetElems().begin();
+    ee = e0 + new_elems_size;
+    spm_->SetRowptr(e0, ee, new_rowptr_size);
     AddIgnore(type);
 }
 
@@ -962,11 +979,10 @@ void EncodingManager<IndexType, ValueType>::OutputSortSplits(ostringstream& out)
 
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
-DoEncode(IndexType row_no,
-         std::vector<IndexType> &xs, std::vector<ValueType> &vs,
-         std::vector<Element<IndexType, ValueType> > &encoded)
+DoEncode(IndexType row_no, vector<IndexType> &xs, vector<ValueType> &vs,
+         vector<Element<IndexType, ValueType> > &encoded)
 {
-    typename std::vector<ValueType>::iterator vi = vs.begin();
+    typename vector<ValueType>::iterator vi = vs.begin();
 
     Encoding e(spm_->GetType());
     if (e.IsBlock()) {
@@ -977,9 +993,9 @@ DoEncode(IndexType row_no,
         return;
     }
 
-    // do a delta run-length encoding of the x values
-    std::vector<IndexType> deltas;
-    std::vector<RLE<IndexType> > rles;
+    // Do a delta run-length encoding of the x values
+    vector<IndexType> deltas;
+    vector<RLE<IndexType> > rles;
     RLEncode(DeltaEncode(xs, deltas), rles);
 
     IndexType col = 0;
@@ -999,7 +1015,7 @@ DoEncode(IndexType row_no,
                 rle_freq = rle.freq;
 #if !SPX_USE_NUMA
                 if (!last_elem.IsPattern()) {
-                    // include the previous element, too
+                    // Include the previous element, too
                     rle_start -= rle.val;
                     rle_freq++;
                     encoded.pop_back();
@@ -1007,7 +1023,7 @@ DoEncode(IndexType row_no,
                 }
 #endif
             } else {
-                // we are the first unit in the row
+                // We are the first unit in the row
                 rle_start = col;
                 rle_freq = rle.freq;
             }
@@ -1024,11 +1040,11 @@ DoEncode(IndexType row_no,
                 ++nr_parts;
             }
 
-            // leave col at the last element of the pattern
+            // Leave col at the last element of the pattern
             col = rle_start - rle.val;
         }
 
-        // add individual elements
+        // Add individual elements
         for (size_t i = 0; i < rle_freq; ++i) {
             col += rle.val;
             encoded.emplace_back(row_no, col, *vi++);
@@ -1043,17 +1059,16 @@ DoEncode(IndexType row_no,
 //static uint32_t nr_lines = 0;
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
-DoEncodeBlock(IndexType row_no,
-              std::vector<IndexType> &xs, std::vector<ValueType> &vs,
-              std::vector<Element<IndexType, ValueType> > &encoded)
+DoEncodeBlock(IndexType row_no, vector<IndexType> &xs, vector<ValueType> &vs,
+              vector<Element<IndexType, ValueType> > &encoded)
 {
-    typename std::vector<ValueType>::iterator vi = vs.begin();
+    typename vector<ValueType>::iterator vi = vs.begin();
 
-    // do a delta run-length encoding of the x values
-    std::vector<IndexType> deltas;
-    std::vector<RLE<IndexType> > rles;
+    // Do a delta run-length encoding of the x values
+    vector<IndexType> deltas;
+    vector<RLE<IndexType> > rles;
     RLEncode(DeltaEncode(xs, deltas), rles);
-    //std::vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
+    //vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
 
     Encoding e(spm_->GetType());
 
@@ -1135,7 +1150,7 @@ DoEncodeBlock(IndexType row_no,
                                      *vi++);
             }
         } else {
-            // add individual elements
+            // Add individual elements
             for (size_t i = 0; i < rle.freq; ++i) {
                 encoded.emplace_back(row_no, col + i*rle.val, *vi++);
             }
@@ -1151,17 +1166,16 @@ DoEncodeBlock(IndexType row_no,
 
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
-DoEncodeBlockAlt(
-    IndexType row_no, vector<IndexType> &xs, vector<ValueType> &vs,
-    std::vector<Element<IndexType, ValueType> > &encoded)
+DoEncodeBlockAlt(IndexType row_no, vector<IndexType> &xs, vector<ValueType> &vs,
+    vector<Element<IndexType, ValueType> > &encoded)
 {
-    typename std::vector<ValueType>::iterator vi = vs.begin();
+    typename vector<ValueType>::iterator vi = vs.begin();
 
-    // do a delta run-length encoding of the x values
-    std::vector<IndexType> deltas;
-    std::vector<RLE<IndexType> > rles;
+    // Do a delta run-length encoding of the x values
+    vector<IndexType> deltas;
+    vector<RLE<IndexType> > rles;
     RLEncode(DeltaEncode(xs, deltas), rles);
-    //std::vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
+    //vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
 
     Encoding e(spm_->GetType());
 
@@ -1231,7 +1245,7 @@ DoEncodeBlockAlt(
                 encoded.emplace_back(row_no, rle_start++, *vi++);
             }
         } else {
-            // add individual elements
+            // Add individual elements
             for (size_t i = 0; i < rle.freq; ++i)
                 encoded.emplace_back(row_no, col + i*rle.val, *vi++);
         }
@@ -1248,7 +1262,7 @@ template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
 EncodeRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
           typename SparsePartition<IndexType, ValueType>::iterator &rend,
-          std::vector<Element<IndexType, ValueType> > &newrow)
+          vector<Element<IndexType, ValueType> > &newrow)
 {
     // gather x values into xs vector until a pattern is found
     // and encode them using DoEncode()
@@ -1276,8 +1290,8 @@ EncodeRow(typename SparsePartition<IndexType, ValueType>::iterator &rstart,
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
 UpdateStats(SparsePartition<IndexType, ValueType> *spm,
-            std::vector<IndexType> &xs,
-            std::vector<Element<IndexType, ValueType> > &elems,
+            vector<IndexType> &xs,
+            vector<Element<IndexType, ValueType> > &elems,
             StatsCollection<StatsData> &stats)
 {
     Encoding e(spm->GetType());
@@ -1292,8 +1306,8 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
     if (xs.size() == 0)
         return;
 
-    std::vector<IndexType> deltas;
-    std::vector<RLE<IndexType> > rles;
+    vector<IndexType> deltas;
+    vector<RLE<IndexType> > rles;
     RLEncode(DeltaEncode(xs, deltas), rles);
 
     //rles = RLEncode(DeltaEncode(xs));
@@ -1301,7 +1315,7 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
 #if !SPX_USE_NUMA
     bool last_rle_patt = false; // turn on for encoded units
 #endif
-    typename std::vector<Element<IndexType, ValueType> >::const_iterator ei =
+    typename vector<Element<IndexType, ValueType> >::const_iterator ei =
         elems.begin();
 
     FOREACH(const RLE<IndexType> &rle, rles) {
@@ -1321,7 +1335,7 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
             size_t patt_nnz = real_nnz;
             size_t patt_npatterns = real_nnz / max_limit_ + (rem_nnz != 0);
             if (rem_nnz && rem_nnz < min_limit_) {
-                // remove the pattern for the remainder elements; too short
+                // Remove the pattern for the remainder elements; too short
                 --patt_npatterns;
                 patt_nnz -= rem_nnz;
             } else {
@@ -1361,24 +1375,21 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
 
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::
-UpdateStatsBlock(Encoding::Type type, std::vector<IndexType> &xs,
-                 size_t block_align,
-                 std::vector<Element<IndexType, ValueType> > &elems,
+UpdateStatsBlock(Encoding::Type type, vector<IndexType> &xs, size_t block_align,
+                 vector<Element<IndexType, ValueType> > &elems,
                  StatsCollection<StatsData> &stats)
 {
     assert(block_align && "not a block type");
     if (xs.size() == 0)
         return;
 
-    std::vector<IndexType> deltas;
-    std::vector<RLE<IndexType> > rles;
+    vector<IndexType> deltas;
+    vector<RLE<IndexType> > rles;
     RLEncode(DeltaEncode(xs, deltas), rles);
     //rles = RLEncode(DeltaEncode(xs));
 
     IndexType unit_start = 0;
-    // typename std::vector<Element<IndexType, ValueType>*>::iterator ei =
-    //     elems.begin();
-    typename std::vector<Element<IndexType, ValueType> >::const_iterator ei =
+    typename vector<Element<IndexType, ValueType> >::const_iterator ei =
         elems.begin();
 
     FOREACH (const RLE<IndexType> &rle, rles) {
@@ -1540,7 +1551,6 @@ void EncodingManager<IndexType, ValueType>::DoComputeSortSplitsByNNZ()
         } else {
             sort_splits_.pop_back();
             sort_splits_.push_back(nr_rows);
-            
         }    
     }
 }
@@ -1560,8 +1570,8 @@ void EncodingManager<IndexType, ValueType>::DoCheckSortByRows()
 template<typename IndexType, typename ValueType>
 void EncodingManager<IndexType, ValueType>::DoCheckSortByNNZ()
 {
-    assert(sort_window_size_ <= spm_->GetElemsSize() && "invalid sort window");
-    if (sampling_portion_ == 0 || sort_window_size_ == spm_->GetElemsSize())
+    assert(sort_window_size_ <= spm_->GetNrNonzeros() && "invalid sort window");
+    if (sampling_portion_ == 0 || sort_window_size_ == spm_->GetNrNonzeros())
         sampling_enabled_ = false;
     else
         sampling_enabled_ = true;
