@@ -182,14 +182,8 @@ private:
  *  set of non-zero values belonging to the substructure and the coordinates
  *  (row, column) of the upper leftmost element of the instantiation.
  *
- *  This class is immutable with the exception of allowing to set a non-standard
- *  element marker (see Element::SetMarker, Marker). There is no way to alter an
- *  already constructed Element, except by a constructing a new one (see
- *  TransformElement). This does not pose an overhead since this class supplies
- *  a move constructor for efficient "copies" from short-lived rvalues. The
- *  design decision for the immutability of the Element class was mandated by
- *  clarity and maintenance reasons, since generic elements are used throughout
- *  the internals of SparseX library and we wanted a single control point.
+ *  This class supplies a move constructor and assignment operator for
+ *  efficient copies and assignments from short-lived rvalues.
  *
  *  @see Marker, PatternMarker
  */
@@ -436,6 +430,15 @@ public:
     }
 
     /**
+     *  Transform the coordinates of this element.
+     */
+    void TransformCoordinates(pair<IndexType, IndexType> new_coord)
+    {
+        row_ = new_coord.first;
+        col_ = new_coord.second;
+    }
+
+    /**
      *  Set the marker of this element.
      *
      *  The supplied marker m is copied internally.
@@ -632,29 +635,6 @@ void swap(Element<IndexType, ValueType> &a, Element<IndexType, ValueType> &b)
     swap(a.size_, b.size_);
     swap(a.inst_, b.inst_);
     swap(a.marker_, b.marker_);
-}
-
-/**
- *  Copy and transform an element.
- *
- *  @param elem the element to transform
- *  @param new_coord the coordinates of the transformed element as an std::pair
- *         of row and column.
- *  @return a copy of elem move to the new coordinates
- */
-template<typename IndexType, typename ValueType>
-Element<IndexType, ValueType>
-TransformElement(const Element<IndexType, ValueType> &elem,
-                 pair<IndexType, IndexType> new_coord)
-{
-    if (elem.GetSize() > 1) {
-        return Element<IndexType, ValueType>(new_coord.first, new_coord.second,
-                                             &elem.GetValues(), elem.GetSize(),
-                                             elem.GetInstantiation());
-    } else {
-        return Element<IndexType, ValueType>(new_coord.first, new_coord.second,
-                                             elem.GetValue());
-    }
 }
 
 /**
