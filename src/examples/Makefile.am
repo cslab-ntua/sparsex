@@ -23,7 +23,7 @@ AM_LDFLAGS	= \
 	-L$(top_builddir)/src/internals/.libs \
 	$(AX_LDFLAGS)
 
-noinst_PROGRAMS = mmf_example csr_example reordering_example advanced_example
+noinst_PROGRAMS = mmf_example csr_example reordering_example advanced_example matrix_caching_example_p1 matrix_caching_example_p2
 
 mmf_example_SOURCES = \
 	mmf_example.c
@@ -36,6 +36,12 @@ reordering_example_SOURCES = \
 
 advanced_example_SOURCES = \
 	advanced_example.c
+
+matrix_caching_example_p1_SOURCES = \
+	matrix_caching_example_p1.c
+
+matrix_caching_example_p2_SOURCES = \
+	matrix_caching_example_p2.c
 
 mmf_example_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
@@ -50,5 +56,13 @@ reordering_example_LDADD = \
 	-ldl -lm
 
 advanced_example_LDADD = \
+	$(top_builddir)/src/api/.libs/libsparsex.la \
+	-ldl -lm
+
+matrix_caching_example_p1_LDADD = \
+	$(top_builddir)/src/api/.libs/libsparsex.la \
+	-ldl -lm
+
+matrix_caching_example_p2_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
 	-ldl -lm

@@ -31,7 +31,8 @@ SPARSEXIMPL_LDADD = \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_THREAD_LIB) -ldl -lm
 
-check_PROGRAMS = test_sparsex test_element test_dynarray test_timer
+check_PROGRAMS = test_sparsex test_element test_dynarray test_timer \
+	test_binary_p1 test_binary_p2
 
 noinst_HEADERS = CsxCheck.hpp
 
@@ -50,3 +51,9 @@ test_dynarray_LDADD = $(SPARSEXIMPL_LDADD)
 
 test_timer_SOURCES = TimerTest.cpp
 test_timer_LDADD = $(SPARSEXIMPL_LDADD)
+
+test_binary_p1_SOURCES = BinaryTest_p1.cpp
+test_binary_p1_LDADD = $(SPARSEXIMPL_LDADD)
+
+test_binary_p2_SOURCES = BinaryTest_p2.cpp
+test_binary_p2_LDADD = $(SPARSEXIMPL_LDADD)

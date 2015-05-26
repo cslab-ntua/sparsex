@@ -25,7 +25,6 @@ using namespace std;
 extern string MATRIX; 
 extern unsigned int OUTER_LOOPS;
 extern unsigned long LOOPS;
-extern unsigned int NR_THREADS;
 extern Timer t;
 
 /* SpMV kernel implemented with SparseX */

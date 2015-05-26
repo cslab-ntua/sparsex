@@ -160,9 +160,10 @@ static void part_free_struct(spx_partition_t *p)
     spx_free(p);
 }
 
-spx_input_t *spx_input_load_csr(spx_index_t *rowptr, spx_index_t *colind, 
-                                spx_value_t *values, spx_index_t nrows, 
-                                spx_index_t ncols, ...)
+spx_input_t *spx_input_load_csr(const spx_index_t *rowptr,
+                                const spx_index_t *colind, 
+                                const spx_value_t *values,
+                                spx_index_t nrows, spx_index_t ncols, ...)
 {
     /* Check optional arguments */
     va_list ap;
@@ -447,6 +448,7 @@ spx_matrix_t *spx_mat_restore(const char *filename)
         return SPX_INVALID_MAT;
     }
 
+    CreatePool();
     return A;
 }
 
@@ -480,7 +482,7 @@ spx_index_t spx_mat_get_nnz(const spx_matrix_t *A)
     return  A->nnz;
 }
 
-spx_partition_t *spx_mat_get_partition(spx_matrix_t *A)
+spx_partition_t *spx_mat_get_partition(const spx_matrix_t *A)
 {
     spx_partition_t *ret = SPX_INVALID_PART;
     spm_mt_t *spm_mt = (spm_mt_t *) A->csx;
@@ -547,7 +549,7 @@ spx_perm_t *spx_mat_get_perm(const spx_matrix_t *A)
 }
 
 spx_error_t spx_matvec_mult(spx_value_t alpha, const spx_matrix_t *A, 
-                            spx_vector_t *x, spx_vector_t *y)
+                            const spx_vector_t *x, spx_vector_t *y)
 {
     /* Check validity of input arguments */
     if (!A) {
@@ -582,7 +584,7 @@ spx_error_t spx_matvec_mult(spx_value_t alpha, const spx_matrix_t *A,
 }
 
 spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A, 
-                              spx_vector_t *x, spx_value_t beta,
+                              const spx_vector_t *x, spx_value_t beta,
                               spx_vector_t *y)
 {
     /* Check validity of input arguments */
@@ -619,9 +621,10 @@ spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
 
 spx_error_t spx_matvec_kernel_csr(spx_matrix_t **A, 
                                   spx_index_t nrows, spx_index_t ncols,
-                                  spx_index_t *rowptr, spx_index_t *colind, 
-                                  spx_value_t *values,
-                                  spx_value_t alpha, spx_vector_t *x, 
+                                  const spx_index_t *rowptr,
+                                  const spx_index_t *colind, 
+                                  const spx_value_t *values,
+                                  spx_value_t alpha, const spx_vector_t *x, 
                                   spx_value_t beta, spx_vector_t *y)
 {
     /* Check validity of input arguments */
@@ -683,8 +686,8 @@ spx_error_t spx_mat_destroy(spx_matrix_t *A)
     return SPX_SUCCESS;
 }
 
-spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows, 
-                                   size_t nr_threads)
+spx_partition_t *spx_partition_csr(const spx_index_t *rowptr,
+                                   spx_index_t nr_rows, size_t nr_threads)
 {
     spx_partition_t *ret = SPX_INVALID_PART;
     part_alloc_struct(&ret);
@@ -757,7 +760,7 @@ void spx_options_set_from_env()
     SetPropertiesFromEnv();
 }
 
-spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p)
+spx_vector_t *spx_vec_create(size_t size, const spx_partition_t *p)
 {
     spx_vector_t *v = SPX_INVALID_VEC;
 
@@ -775,9 +778,8 @@ spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p)
 	return v;
 }
 
-spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff,
-                                       spx_value_t **tuned,
-                                       size_t size, spx_partition_t *p,
+spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, spx_value_t **tuned,
+                                       size_t size, const spx_partition_t *p,
                                        spx_vecmode_t mode)
 {
     /* Check validity of input arguments */
@@ -810,7 +812,7 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff,
     return v;
 }
 
-spx_vector_t *spx_vec_create_random(size_t size, spx_partition_t *p)
+spx_vector_t *spx_vec_create_random(size_t size, const spx_partition_t *p)
 {
     spx_vector_t *v = SPX_INVALID_VEC;
 

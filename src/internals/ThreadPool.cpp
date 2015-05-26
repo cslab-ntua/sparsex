@@ -58,7 +58,7 @@ void ThreadPool::InitThreads(size_t nr_threads)
         workers_.resize(size_);
 
     for (size_t i = 0; i < size_; i++) {
-        workers_[i].SetId(i);
+        workers_[i].SetId(i+1);
         // You can pass a member function pointer as the function, provided you
         // supply a suitable object pointer as the first argument
         // workers_[i].thread_ = make_shared<boost::thread>
@@ -72,6 +72,8 @@ void ThreadPool::InitThreads(size_t nr_threads)
 
 void ThreadPool::Run(Worker &worker)
 {
+    RuntimeContext &rt_context = RuntimeContext::GetInstance();
+	setaffinity_oncpu(rt_context.GetAffinity(worker.id_));
     centralized_barrier(worker.GetSense(), size_ + 1);
 
     // Wait for the main thread to set a kernel to be executed

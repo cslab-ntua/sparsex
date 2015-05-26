@@ -28,7 +28,6 @@ using namespace std;
 
 extern string MATRIX; 
 extern unsigned int OUTER_LOOPS;
-extern unsigned int NR_THREADS;
 extern unsigned long LOOPS;
 extern Timer t;
 
@@ -58,7 +57,6 @@ void mkl_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
     
     /* 2. SpMV benchmarking phase */
     vector<double> mt(OUTER_LOOPS);
-    omp_set_num_threads(NR_THREADS);
     for (size_t i = 0; i < OUTER_LOOPS; i++) {
         t.Clear();
         t.Start();

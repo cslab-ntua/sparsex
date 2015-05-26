@@ -420,35 +420,53 @@ IndexType MaxDelta(vector<IndexType> xs)
     return max_delta;
 }
 
+// template<typename T>
+// T &DeltaEncode(const T &input, T &output, size_t &max_delta)
+// {
+//     typename T::const_iterator in;
+//     typename T::iterator out;
+//     typename T::iterator::value_type prev, curr;
+
+//     output.resize(input.size());
+//     in = input.begin();
+//     out = output.begin();
+//     prev = *out++ = *in++;
+//     max_delta = 0;
+//     while (in < input.end()) {
+//         curr = *in++;
+//         size_t delta = curr - prev;
+//         *out++ = delta;
+//         if (delta > max_delta)
+//             max_delta = delta;
+//         prev = curr;
+//     }
+
+//     return output;
+// }
+
+// template<typename T>
+// T &DeltaEncode(const T &input, T &output)
+// {
+//     size_t max_delta;
+//     return DeltaEncode(input, output, max_delta);
+// }
+
 template<typename T>
-T &DeltaEncode(const T &input, T &output, size_t &max_delta)
+void DeltaEncode(T &data, size_t &max_delta)
 {
-    typename T::const_iterator in;
-    typename T::iterator out;
-    typename T::iterator::value_type prev, curr;
-
-    output.resize(input.size());
-    in = input.begin();
-    out = output.begin();
-    prev = *out++ = *in++;
     max_delta = 0;
-    while (in < input.end()) {
-        curr = *in++;
-        size_t delta = curr - prev;
-        *out++ = delta;
-        if (delta > max_delta)
-            max_delta = delta;
-        prev = curr;
+    for (size_t i = data.size() - 1; i > 0; --i) {
+        data[i] -= data[i-1];
+        if (static_cast<size_t>(data[i]) > max_delta)
+            max_delta = data[i];
     }
-
-    return output;
 }
 
 template<typename T>
-T &DeltaEncode(const T &input, T &output)
+void DeltaEncode(T &data)
 {
     size_t max_delta;
-    return DeltaEncode(input, output, max_delta);
+    DeltaEncode(data, max_delta);
 }
 
 template<typename T>
@@ -786,9 +804,9 @@ void EncodingManager<IndexType, ValueType>::GenAllStats(
             //     else
             //         deltas_to_encode_[t].insert(tmp->first);
             // }
-                if (minimize_cost_)
-                    GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1,
-                                       stats);
+            if (minimize_cost_)
+                GenerateDeltaStats(spm_, 0, spm_->GetRowptrSize() - 1,
+                                   stats);
         }
     }
 }
@@ -994,9 +1012,12 @@ DoEncode(IndexType row_no, vector<IndexType> &xs, vector<ValueType> &vs,
     }
 
     // Do a delta run-length encoding of the x values
-    vector<IndexType> deltas;
+    // vector<IndexType> deltas;
+    // vector<RLE<IndexType> > rles;
+    // RLEncode(DeltaEncode(xs, deltas), rles);
     vector<RLE<IndexType> > rles;
-    RLEncode(DeltaEncode(xs, deltas), rles);
+    DeltaEncode(xs);
+    RLEncode(xs, rles);
 
     IndexType col = 0;
     FOREACH (const RLE<IndexType> &rle, rles) {
@@ -1065,9 +1086,12 @@ DoEncodeBlock(IndexType row_no, vector<IndexType> &xs, vector<ValueType> &vs,
     typename vector<ValueType>::iterator vi = vs.begin();
 
     // Do a delta run-length encoding of the x values
-    vector<IndexType> deltas;
+    // vector<IndexType> deltas;
+    // vector<RLE<IndexType> > rles;
+    // RLEncode(DeltaEncode(xs, deltas), rles);
     vector<RLE<IndexType> > rles;
-    RLEncode(DeltaEncode(xs, deltas), rles);
+    DeltaEncode(xs);
+    RLEncode(xs, rles);
     //vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
 
     Encoding e(spm_->GetType());
@@ -1172,9 +1196,12 @@ DoEncodeBlockAlt(IndexType row_no, vector<IndexType> &xs, vector<ValueType> &vs,
     typename vector<ValueType>::iterator vi = vs.begin();
 
     // Do a delta run-length encoding of the x values
-    vector<IndexType> deltas;
+    // vector<IndexType> deltas;
+    // vector<RLE<IndexType> > rles;
+    // RLEncode(DeltaEncode(xs, deltas), rles);
     vector<RLE<IndexType> > rles;
-    RLEncode(DeltaEncode(xs, deltas), rles);
+    DeltaEncode(xs);
+    RLEncode(xs, rles);
     //vector< RLE<IndexType> > rles = RLEncode(DeltaEncode(xs));
 
     Encoding e(spm_->GetType());
@@ -1306,9 +1333,12 @@ UpdateStats(SparsePartition<IndexType, ValueType> *spm,
     if (xs.size() == 0)
         return;
 
-    vector<IndexType> deltas;
+    // vector<IndexType> deltas;
+    // vector<RLE<IndexType> > rles;
+    // RLEncode(DeltaEncode(xs, deltas), rles);
     vector<RLE<IndexType> > rles;
-    RLEncode(DeltaEncode(xs, deltas), rles);
+    DeltaEncode(xs);
+    RLEncode(xs, rles);
 
     //rles = RLEncode(DeltaEncode(xs));
     IndexType col = 0;
@@ -1383,9 +1413,12 @@ UpdateStatsBlock(Encoding::Type type, vector<IndexType> &xs, size_t block_align,
     if (xs.size() == 0)
         return;
 
-    vector<IndexType> deltas;
+    // vector<IndexType> deltas;
+    // vector<RLE<IndexType> > rles;
+    // RLEncode(DeltaEncode(xs, deltas), rles);
     vector<RLE<IndexType> > rles;
-    RLEncode(DeltaEncode(xs, deltas), rles);
+    DeltaEncode(xs);
+    RLEncode(xs, rles);
     //rles = RLEncode(DeltaEncode(xs));
 
     IndexType unit_start = 0;

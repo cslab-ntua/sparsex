@@ -166,7 +166,6 @@ public:
     IndexType *rowptr_;
     IndexType *colind_;
     ValueType *values_;
-    ValueType *dvalues_;
     size_t nr_rows_, nr_cols_, nr_nzeros_;
 private:
     bool zero_based_, symmetric_, reordered_;

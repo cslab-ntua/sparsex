@@ -30,8 +30,9 @@ using namespace sparsex;
 /**
  *  Wrapper routines.
  */
-void *CreateCSR(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
-                spx_index_t nr_rows, spx_index_t nr_cols, int zero_based)
+void *CreateCSR(const spx_index_t *rowptr, const spx_index_t *colind,
+                const spx_value_t *values, spx_index_t nr_rows,
+                spx_index_t nr_cols, int zero_based)
 {
     SparseMatrix<CSR<spx_index_t, spx_value_t> > *matrix =
         new SparseMatrix<CSR<spx_index_t, spx_value_t> >(rowptr, colind, values,

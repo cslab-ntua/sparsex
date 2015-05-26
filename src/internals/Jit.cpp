@@ -32,7 +32,7 @@ CsxExecutionEngine &CsxJitInit(void)
     return CsxExecutionEngine::CreateEngine();
 }
 
-void CsxExecutionEngine::AddModule(Module *mod)
+void CsxExecutionEngine::AddModule(llvm::Module *mod)
 {
     if (!llvm_engine_) {
         string errmsg;

@@ -24,6 +24,7 @@
 #include <sparsex/internals/Config.hpp>
 #include <sparsex/internals/Csx.hpp>
 #include <sparsex/internals/Jit.hpp>
+#include <sparsex/internals/Runtime.hpp>
 #include <sparsex/internals/logger/Logger.hpp>
 
 #if SPX_USE_NUMA
@@ -304,6 +305,12 @@ spm_mt_t *RestoreCsx(const char *filename, IndexType **permutation)
             *permutation = new IndexType[csx->ncols];
             ia >> boost::serialization::make_array(*permutation, csx->ncols);
         }
+
+        RuntimeConfiguration &config = RuntimeConfiguration::GetInstance();
+        config.SetProperty(RuntimeConfiguration::RtNrThreads,
+                           to_string(nr_threads));
+        RuntimeContext &rt_context = RuntimeContext::GetInstance();
+        rt_context.SetRuntimeContext(config);
 
         // Initialize the CSX JIT execution engine
         CsxExecutionEngine &engine = CsxJitInit();

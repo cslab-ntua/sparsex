@@ -24,7 +24,13 @@
 #include <clang/Basic/Version.h>
 #include <clang/CodeGen/CodeGenAction.h>
 #include <clang/Frontend/CodeGenOptions.h>
-#include <clang/Frontend/HeaderSearchOptions.h>
+#if CLANG_MAJOR_VERSION == 3
+#   if CLANG_VERSION_MINOR == 0
+#       include <clang/Frontend/HeaderSearchOptions.h>
+#   elif CLANG_VERSION_MINOR == 5
+#       include <clang/Lex/HeaderSearchOptions.h>
+#   endif
+#endif
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Target/TargetOptions.h>
@@ -44,11 +50,24 @@ ClangCompiler::ClangCompiler()
       debug_mode_(false), log_stream_(&cerr)
 {
     // Set-up the clang compiler
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
     TextDiagnosticPrinter *diag_client =
         new TextDiagnosticPrinter(errs(), DiagnosticOptions());
+#   elif CLANG_VERSION_MINOR == 5
+    TextDiagnosticPrinter *diag_client =
+        new TextDiagnosticPrinter(errs(), new DiagnosticOptions());
+#   endif
+#endif
 
     IntrusiveRefCntPtr<DiagnosticIDs> diag_id(new DiagnosticIDs());
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
     DiagnosticsEngine diags(diag_id, diag_client);
+#   elif CLANG_VERSION_MINOR == 5
+    DiagnosticsEngine diags(diag_id, 0, diag_client);
+#   endif
+#endif
 
     // Create a dummy invocation of the compiler, so as to set it up
     // and we will replace the source file afterwards
@@ -56,7 +75,14 @@ ClangCompiler::ClangCompiler()
     CompilerInvocation::CreateFromArgs(*invocation_, dummy_argv, dummy_argv,
                                        diags);
     // Compile C99
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
     invocation_->setLangDefaults(IK_C, LangStandard::lang_c99);
+#   elif CLANG_VERSION_MINOR == 5
+    invocation_->setLangDefaults(*(invocation_->getLangOpts()),
+                                 IK_C, LangStandard::lang_c99);
+#   endif
+#endif
 
     // Add a user-defined include path first, if specified
     char *user_inc_path = getenv("SPX_JIT_INC_PATH");
@@ -78,8 +104,8 @@ ClangCompiler::ClangCompiler()
     SetCodeGenOptions();
 }
 
-Module *ClangCompiler::Compile(const string &source,
-                               LLVMContext *context) const
+llvm::Module *ClangCompiler::Compile(const string &source,
+                                     LLVMContext *context) const
 {
     // write the source to a temporary file and invoke the compiler
     string temp_tmpl = ".tmp_XXXXXX";
@@ -89,22 +115,37 @@ Module *ClangCompiler::Compile(const string &source,
     SourceToFile(tmpfile, source);
 
     FrontendOptions &opts = invocation_->getFrontendOpts();
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
     opts.Inputs.clear();    // clear any old inputs
     opts.Inputs.push_back(make_pair(IK_C, tmpfile));
-
-//    compiler_->setInvocation(invocation_.get());
+#   elif CLANG_VERSION_MINOR == 5
+    opts.Inputs.clear();    // clear any old inputs
+    opts.Inputs.push_back(FrontendInputFile(tmpfile, IK_C));
+#   endif
+#endif
+    
+    // compiler_->setInvocation(invocation_.get());
     compiler_->setInvocation(invocation_);
 
     // Setup diagnostics for the compilation process itself
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
     const char *const dummy_argv[] = { "" };
     compiler_->createDiagnostics(1, dummy_argv);
+#   elif CLANG_VERSION_MINOR == 5
+    compiler_->createDiagnostics();
+#   endif
+#endif
+
     if (!compiler_->hasDiagnostics()) {
         *log_stream_ << "createDiagnostics() failed\n";
         return 0;
     }
 
     // Compile and emit LLVM IR
-    OwningPtr<CodeGenAction> llvm_codegen(new EmitLLVMOnlyAction(context));
+    // OwningPtr<CodeGenAction> llvm_codegen(new EmitLLVMOnlyAction(context));
+    CodeGenAction *llvm_codegen(new EmitLLVMOnlyAction(context));
     if (!compiler_->ExecuteAction(*llvm_codegen)) {
         *log_stream_ << "compilation failed: "
                      << "generated source is in " << tmpfile << "\n";
@@ -119,10 +160,18 @@ Module *ClangCompiler::Compile(const string &source,
 
 void ClangCompiler::AddIncludeSearchPath(const string &inc_path, Options type)
 {
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
     bool is_user_path = true;
+#   endif
+#endif
     frontend::IncludeDirGroup inc_group = frontend::Angled;
     if (type == IncludePathSystem) {
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
         is_user_path = false;
+#   endif
+#endif
         inc_group = frontend::System;
     }
 
@@ -134,26 +183,46 @@ void ClangCompiler::AddIncludeSearchPath(const string &inc_path, Options type)
     tokenizer<char_separator<char> >::iterator tok_iter;
     for (tok_iter = path_tokens.begin();
          tok_iter != path_tokens.end(); ++tok_iter)
-        header_search.AddPath(*tok_iter, inc_group,
-                              is_user_path, false, false);
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
+        header_search.AddPath(*tok_iter, inc_group, is_user_path,
+                              false, false);
+#   elif CLANG_VERSION_MINOR == 5
+        header_search.AddPath(*tok_iter, inc_group, false, false);
+#   endif
+#endif
 }
 
 void ClangCompiler::SetCodeGenOptions()
 {
     CodeGenOptions &codegen_options = invocation_->getCodeGenOpts();
     codegen_options.OptimizationLevel = (debug_mode_) ? 0 : 3;
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
     codegen_options.DebugInfo = debug_mode_;
+    codegen_options.Inlining = (debug_mode_) ? CodeGenOptions::NoInlining :
+        CodeGenOptions::NormalInlining;
+#   elif CLANG_VERSION_MINOR == 5
+    codegen_options.setDebugInfo((debug_mode_) ? CodeGenOptions::FullDebugInfo :
+                                 CodeGenOptions::NoDebugInfo);
+    codegen_options.setInlining((debug_mode_) ? CodeGenOptions::NoInlining :
+                                CodeGenOptions::NormalInlining);
+#   endif
+#endif
     codegen_options.DataSections = debug_mode_;
     codegen_options.FunctionSections = debug_mode_;
     codegen_options.EmitDeclMetadata = debug_mode_;
     codegen_options.UnrollLoops = !debug_mode_;
     codegen_options.RelaxedAliasing = !debug_mode_;
-    codegen_options.Inlining = (debug_mode_) ? CodeGenOptions::NoInlining :
-        CodeGenOptions::NormalInlining;
-    codegen_options.RelaxedAliasing = !debug_mode_;
     // Enable debugging from GDB
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
     JITEmitDebugInfo = debug_mode_; // llvm global
-
+#   elif CLANG_VERSION_MINOR == 5
+    // No longer a global but a member of class TargetOptions
+#   endif
+#endif
+    
     PreprocessorOptions &preproc_options = invocation_->getPreprocessorOpts();
     if (debug_mode_) {
         preproc_options.addMacroDef("SPX_DEBUG");

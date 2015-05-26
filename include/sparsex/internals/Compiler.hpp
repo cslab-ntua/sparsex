@@ -20,9 +20,16 @@
 #ifndef SPARSEX_INTERNALS_COMPILER_HPP
 #define SPARSEX_INTERNALS_COMPILER_HPP
 
-#include <clang/Frontend/DiagnosticOptions.h>
+#include <clang/Basic/Version.inc>
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
+#       include <clang/Frontend/DiagnosticOptions.h>
+#       include <llvm/Module.h>
+#   elif CLANG_VERSION_MINOR == 5
+#       include <llvm/IR/Module.h>
+#   endif
+#endif
 #include <clang/Frontend/CompilerInstance.h>
-#include <llvm/Module.h>
 #include <iostream>
 #include <cassert>
 #include <llvm/Support/ManagedStatic.h>
@@ -53,7 +60,7 @@ public:
         // CompilerInstance
     };
 
-    Module *Compile(const string &source, LLVMContext *context) const;
+    llvm::Module *Compile(const string &source, LLVMContext *context) const;
 
     void KeepTemporaries(bool keep)
     {
@@ -93,7 +100,8 @@ private:
     // Set up the code generation options depending on debug mode
     void SetCodeGenOptions();
     CompilerInvocation *invocation_;
-    OwningPtr<CompilerInstance> compiler_;
+    // OwningPtr<CompilerInstance> compiler_;
+    CompilerInstance *compiler_;
     bool keep_temporaries_;
     bool debug_mode_;
     ostream *log_stream_;

@@ -22,7 +22,7 @@
 
 #include <sparsex/internals/Vector.hpp>
 
-typedef void (*spmv_fn_t)(void *matrix, vector_t *in, vector_t *out,
+typedef void (*spmv_fn_t)(const void *matrix, const vector_t *in, vector_t *out,
                           spx_value_t scale_f, vector_t *local_buff);
 
 #endif  // SPARSEX_INTERNALS_SPMV_METHOD_H
