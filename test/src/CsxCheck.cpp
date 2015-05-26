@@ -30,9 +30,9 @@ static void csr_spmv(CSR<spx_uindex_t, spx_value_t> *spm, vector_t *in,
 {
 	spx_value_t *x = in->elements;
 	spx_value_t *y = out->elements;
-	spx_value_t *values = spm->values_;
-	spx_uindex_t *row_ptr = spm->rowptr_;
-	spx_uindex_t *col_ind = spm->colind_;
+	const spx_value_t *values = spm->values_;
+	const spx_uindex_t *row_ptr = spm->rowptr_;
+	const spx_uindex_t *col_ind = spm->colind_;
 	const spx_uindex_t row_start = 0;
 	const spx_uindex_t row_end = spm->GetNrRows();
 	register spx_value_t yr;

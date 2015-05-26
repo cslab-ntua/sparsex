@@ -36,8 +36,10 @@
  *                          \c SPX_INDEX_ONE_BASED).
  *  @return                 a handle to the input matrix.
  */
-spx_input_t *spx_input_load_csr(spx_index_t *rowptr, spx_index_t *colind,
-                                spx_value_t *values, spx_index_t nr_rows, 
+spx_input_t *spx_input_load_csr(const spx_index_t *rowptr,
+                                const spx_index_t *colind,
+                                const spx_value_t *values,
+                                spx_index_t nr_rows, 
                                 spx_index_t nr_cols, ...);
 
 /**
@@ -144,7 +146,7 @@ spx_index_t spx_mat_get_nnz(const spx_matrix_t *A);
 /**
  *  Returns a partitioning object for matrix \a A.
  */
-spx_partition_t *spx_mat_get_partition(spx_matrix_t *A);
+spx_partition_t *spx_mat_get_partition(const spx_matrix_t *A);
 
 /**
  *  Returns the starting row of each partition in the matrix.
@@ -175,7 +177,7 @@ spx_perm_t *spx_mat_get_perm(const spx_matrix_t *A);
  *  @return                 an error code.
  */
 spx_error_t spx_matvec_mult(spx_value_t alpha, const spx_matrix_t *A,
-                            spx_vector_t *x, spx_vector_t *y);
+                            const spx_vector_t *x, spx_vector_t *y);
 
 /**
  *  Performs a matrix-vector multiplication of the following form:
@@ -191,7 +193,7 @@ spx_error_t spx_matvec_mult(spx_value_t alpha, const spx_matrix_t *A,
  *  @return                 an error code.
  */
 spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
-                              spx_vector_t *x, spx_value_t beta,
+                              const spx_vector_t *x, spx_value_t beta,
                               spx_vector_t *y);
 
 /**
@@ -225,9 +227,10 @@ spx_error_t spx_matvec_kernel(spx_value_t alpha, const spx_matrix_t *A,
  */
 spx_error_t spx_matvec_kernel_csr(spx_matrix_t **A, 
                                   spx_index_t nr_rows, spx_index_t nr_cols,
-                                  spx_index_t *rowptr, spx_index_t *colind, 
-                                  spx_value_t *values,
-                                  spx_value_t alpha, spx_vector_t *x, 
+                                  const spx_index_t *rowptr,
+                                  const spx_index_t *colind, 
+                                  const spx_value_t *values,
+                                  spx_value_t alpha, const spx_vector_t *x,
                                   spx_value_t beta, spx_vector_t *y);
 
 /**
@@ -249,8 +252,8 @@ spx_error_t spx_mat_destroy(spx_matrix_t *A);
  *  @param[in] nr_threads   number of partitions of the matrix.
  *  @return                 an error code.
  */
-spx_partition_t *spx_partition_csr(spx_index_t *rowptr, spx_index_t nr_rows, 
-                                   size_t nr_threads);
+spx_partition_t *spx_partition_csr(const spx_index_t *rowptr,
+                                   spx_index_t nr_rows, size_t nr_threads);
 
 /**
  *  Releases any memory internally used by the partition
@@ -285,7 +288,7 @@ void spx_options_set_from_env();
  *  @param[in] p            a partitioning handle.
  *  @return                 a valid vector object.
  */
-spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p);
+spx_vector_t *spx_vec_create(size_t size, const spx_partition_t *p);
 
 /**
  *  Creates and returns a valid vector object, whose values are mapped to a
@@ -308,9 +311,8 @@ spx_vector_t *spx_vec_create(size_t size, spx_partition_t *p);
  *                          \c SPX_VEC_TUNE).
  *  @return                 a valid vector object.
  */
-spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff,
-                                       spx_value_t **tuned,
-                                       size_t size, spx_partition_t *p,
+spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, spx_value_t **tuned,
+                                       size_t size, const spx_partition_t *p,
                                        spx_vecmode_t mode);
 
 /**
@@ -320,7 +322,7 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff,
  *  @param[in] p            a partitioning handle.
  *  @return                 a valid vector object.
  */
-spx_vector_t *spx_vec_create_random(size_t size, spx_partition_t *p);
+spx_vector_t *spx_vec_create_random(size_t size, const spx_partition_t *p);
 
 /**
  *  Initializes the vector object \a v with \a val.

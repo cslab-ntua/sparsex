@@ -24,7 +24,7 @@ static char *program_name;
 
 void print_usage()
 {
-    fprintf(stderr, "Usage: %s <mmf_file>\n", program_name);
+    fprintf(stderr, "Usage: %s <mmf_file>\n", basename(program_name));
 }
 
 int main(int argc, char **argv)

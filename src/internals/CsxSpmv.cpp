@@ -28,7 +28,6 @@ namespace sparsex {
 void do_mv_thread(void *args)
 {
 	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
-	setaffinity_oncpu(spm_thread->cpu);
 	spmv_fn_t fn = spm_thread->spmv_fn;
     double ALPHA = spm_thread->alpha;
 
@@ -38,7 +37,6 @@ void do_mv_thread(void *args)
 void do_mv_sym_thread(void *args)
 {
 	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
-	setaffinity_oncpu(spm_thread->cpu);
 	spmv_fn_t fn = spm_thread->spmv_fn;
     double ALPHA = spm_thread->alpha;
 	int id = spm_thread->id;
@@ -54,7 +52,6 @@ void do_mv_sym_thread(void *args)
 void do_kernel_thread(void *args)
 {
 	spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
-	setaffinity_oncpu(spm_thread->cpu);
 	spmv_fn_t fn = spm_thread->spmv_fn;
     double ALPHA = spm_thread->alpha;
     double BETA = spm_thread->beta;
@@ -70,7 +67,6 @@ void do_kernel_thread(void *args)
 void do_kernel_sym_thread(void *args)
 {
     spm_mt_thread_t *spm_thread = (spm_mt_thread_t *) args;
-	setaffinity_oncpu(spm_thread->cpu);
 	spmv_fn_t fn = spm_thread->spmv_fn;
     double ALPHA = spm_thread->alpha;
     double BETA = spm_thread->beta;

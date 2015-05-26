@@ -30,16 +30,23 @@
 #include <sparsex/internals/SpmvMethod.hpp>
 #include <sparsex/internals/TemplateText.hpp>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/Module.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Analysis/Verifier.h>
+#if CLANG_VERSION_MAJOR == 3
+#   if CLANG_VERSION_MINOR == 0
+#       include <llvm/Analysis/Verifier.h>
+#       include <llvm/LLVMContext.h>
+#       include <llvm/Module.h>
+#       include <llvm/Target/TargetData.h>
+#   elif CLANG_VERSION_MINOR == 5
+#       include <llvm/IR/LLVMContext.h>
+#       include <llvm/IR/Module.h>
+#       include <llvm/IR/Verifier.h>
+#   endif
+#endif
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
 #include <llvm/PassManager.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/Target/TargetData.h>
+#include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
@@ -73,9 +80,9 @@ public:
         return engine;
     }
 
-    void AddModule(Module *mod);
+    void AddModule(llvm::Module *mod);
 
-    void RemoveModule(Module *mod)
+    void RemoveModule(llvm::Module *mod)
     {
         llvm_engine_->removeModule(mod);
     }
@@ -136,7 +143,7 @@ public:
 
 private:
     // Compile C99 source code into an LLVM module
-    Module *DoCompile(const string &source) const;
+    llvm::Module *DoCompile(const string &source) const;
 
     //
     // Obsolete -- all code optimizations are handled by ClangCompiler
@@ -160,7 +167,7 @@ private:
     TemplateText *GetSymMultTemplate(Encoding::Type type);
 
     CsxManager<IndexType, ValueType> *csxmg_;
-    Module *module_;
+    llvm::Module *module_;
     CsxExecutionEngine *engine_;
     LLVMContext *context_;
     ClangCompiler *compiler_;
@@ -775,7 +782,7 @@ void CsxJit<IndexType, ValueType>::GenCode(ostream &log)
 }
 
 template<typename IndexType, typename ValueType>
-Module *CsxJit<IndexType, ValueType>::DoCompile(const string &source) const
+llvm::Module *CsxJit<IndexType, ValueType>::DoCompile(const string &source) const
 {
     if (compiler_->DebugMode())
         compiler_->KeepTemporaries(true);

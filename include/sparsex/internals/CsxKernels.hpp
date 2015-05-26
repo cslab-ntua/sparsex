@@ -41,14 +41,14 @@
 
 SPX_BEGIN_C_DECLS__
 
-void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
-                vector_t *y);
-void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
-                    vector_t *y);
-void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
-                  vector_t *y, spx_value_t beta);
-void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
-                      vector_t *y, spx_value_t beta);
+void MatVecMult(const spm_mt_t *spm_mt, const vector_t *x,
+                spx_value_t alpha, vector_t *y);
+void MatVecMult_sym(const spm_mt_t *spm_mt, const vector_t *x,
+                    spx_value_t alpha, vector_t *y);
+void MatVecKernel(const spm_mt_t *spm_mt, const vector_t *x,
+                  spx_value_t alpha, vector_t *y, spx_value_t beta);
+void MatVecKernel_sym(const spm_mt_t *spm_mt, const vector_t *x,
+                      spx_value_t alpha, vector_t *y, spx_value_t beta);
 
 SPX_END_C_DECLS__
 

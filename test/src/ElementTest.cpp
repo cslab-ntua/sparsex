@@ -64,13 +64,13 @@ int main()
     typename TransformFn<int>::type rev_xform_fn =
         GetXformFn<int>(Encoding::Diagonal, Encoding::Horizontal);
 
-    Element<int, float> xformed =
-        TransformElement(elem, xform_fn(elem.GetCoordinates(), 10, 10));
+    Element<int, float> xformed = elem;
+    xformed.TransformCoordinates(xform_fn(elem.GetCoordinates(), 10, 10));
     cout << xformed << " (xformed)\n";
 
-    Element<int, float> xformed_back =
-        TransformElement(xformed,
-                         rev_xform_fn(xformed.GetCoordinates(), 10, 10));
+    Element<int, float> xformed_back = xformed;
+    xformed_back.TransformCoordinates(rev_xform_fn(xformed.GetCoordinates(),
+                                                   10, 10));
     assert(xformed_back == elem);
 
     Element<int, float> single(1, 1, 4.3);

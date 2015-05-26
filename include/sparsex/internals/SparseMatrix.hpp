@@ -40,8 +40,6 @@ using namespace sparsex::utilities;
 namespace sparsex {
 namespace csx {
 
-double internal_time, csx_time, dump_time;
- 
 namespace internal {
 
 template<class MatrixType>
@@ -92,11 +90,14 @@ public:
     //                         "with a non-floating point value type");
 
     // CSR-specific constructor
-    SparseMatrix(idx_t *rowptr, idx_t *colind, val_t *values,
+    SparseMatrix(const idx_t *rowptr, const idx_t *colind, const val_t *values,
                  idx_t nr_rows, idx_t nr_cols, bool zero_based)
-        : InputPolicy(boost::interprocess::forward<idx_t*>(rowptr),
-                      boost::interprocess::forward<idx_t*>(colind), 
-                      boost::interprocess::forward<val_t*>(values),
+        : InputPolicy(boost::interprocess::forward<idx_t*>(
+                          const_cast<idx_t*>(rowptr)),
+                      boost::interprocess::forward<idx_t*>(
+                          const_cast<idx_t*>(colind)), 
+                      boost::interprocess::forward<val_t*>(
+                          const_cast<val_t*>(values)),
                       boost::interprocess::forward<idx_t>(nr_rows),
                       boost::interprocess::forward<idx_t>(nr_cols),
                       boost::interprocess::forward<bool>(zero_based)),
@@ -227,7 +228,7 @@ private:
         stringstream os;
         os << "\n==== GENERAL TIMING STATISTICS ====\n";
         timers_.PrintAllTimers(os);
-        LOG_VERBOSE << os.str();
+        LOG_INFO << os.str();
 
         // Cleanup
         delete spi;

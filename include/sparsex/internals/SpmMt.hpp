@@ -34,7 +34,7 @@ struct spm_mt_thread {
 	void *data;
 	map_t *map;
 	// uint64_t *col_map;
-	vector_t *x;
+	const vector_t *x;
     vector_t *y;
     int sense;
     double alpha;

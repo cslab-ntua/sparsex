@@ -8,8 +8,8 @@
  */
 
 /**
- * \file mmf_example.c
- * \brief Read matrix from MMF file and tune it into the CSX format.
+ * \file matrix_caching_example_p2.c
+ * \brief Read CSX matrix from a binary file.
  *
  * \author Computing Systems Laboratory (CSLab), NTUA
  * \date 2011&ndash;2014
@@ -24,7 +24,7 @@ static char *program_name;
 
 void print_usage()
 {
-    fprintf(stderr, "Usage: %s <mmf_file>\n", program_name);
+    fprintf(stderr, "Usage: %s <binary_file>\n", program_name);
 }
 
 int main(int argc, char **argv)
@@ -41,16 +41,14 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    /* Load matrix from MMF file */
-    spx_input_t *input = spx_input_load_mmf(argv[1]);
+    /* Load matrix from binary file */
+    spx_matrix_t *A = spx_mat_restore(argv[1]);
 
-    /* Set tuning options */
-    spx_option_set("spx.rt.nr_threads", "2");
-    spx_option_set("spx.rt.cpu_affinity", "0,1");
-    /* spx_option_set("spx.matrix.symmetric", "true"); */
-
-    /* Transform to CSX */
-    spx_matrix_t *A = spx_mat_tune(input);
+    /* Change some values in the matrix */
+    spx_index_t row = 1, col = 1;
+    spx_value_t value = 0.42;
+    spx_mat_set_entry(A, row, col, value);
+    /* ... */
 
     /* Create random x and y vectors */
     spx_partition_t *parts = spx_mat_get_partition(A);
@@ -78,7 +76,6 @@ int main(int argc, char **argv)
     printf("MFLOPS: %lf\n", flops);
 
     /* Cleanup */
-    spx_input_destroy(input);
     spx_mat_destroy(A);
     spx_partition_destroy(parts);
     spx_vec_destroy(x);

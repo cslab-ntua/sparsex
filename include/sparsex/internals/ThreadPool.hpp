@@ -19,8 +19,10 @@
 #ifndef SPARSEX_INTERNALS_THREAD_POOL_HPP
 #define SPARSEX_INTERNALS_THREAD_POOL_HPP
 
+#include <sparsex/internals/Affinity.hpp>
 #include <sparsex/internals/Barrier.hpp>
 #include <sparsex/internals/CsxSpmv.hpp>
+#include <sparsex/internals/Runtime.hpp>
 #include <atomic>
 #include <boost/thread/thread.hpp>
 #include <vector>

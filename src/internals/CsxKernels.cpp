@@ -37,8 +37,8 @@ using namespace boost;
 static barrier *bar;
 #endif
 
-void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
-                  vector_t *y, spx_value_t beta)
+void MatVecKernel(const spm_mt_t *spm_mt, const vector_t *x,
+                  spx_value_t alpha, vector_t *y, spx_value_t beta)
 {
     nr_threads = spm_mt->nr_threads;
 
@@ -71,8 +71,8 @@ void MatVecKernel(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 #endif
 }
 
-void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
-                      vector_t *y, spx_value_t beta)
+void MatVecKernel_sym(const spm_mt_t *spm_mt, const vector_t *x,
+                      spx_value_t alpha, vector_t *y, spx_value_t beta)
 {
 	nr_threads = spm_mt->nr_threads;
     temp = spm_mt->local_buffers;
@@ -111,7 +111,7 @@ void MatVecKernel_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 #endif
 }
 
-void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
+void MatVecMult(const spm_mt_t *spm_mt, const vector_t *x, spx_value_t alpha,
                 vector_t *y)
 {
     nr_threads = spm_mt->nr_threads;
@@ -146,8 +146,8 @@ void MatVecMult(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha,
 #endif
 }
 
-void MatVecMult_sym(spm_mt_t *spm_mt, vector_t *x, spx_value_t alpha, 
-                    vector_t *y)
+void MatVecMult_sym(const spm_mt_t *spm_mt, const vector_t *x,
+                    spx_value_t alpha, vector_t *y)
 {
 	nr_threads = spm_mt->nr_threads;
     temp = spm_mt->local_buffers;

@@ -199,7 +199,7 @@ public:
     }
 
     static void CheckParams(const RuntimeConfiguration &config);
-    void SetRuntimeContext(const RuntimeConfiguration &conf);
+    void SetRuntimeContext(const RuntimeConfiguration &config);
 
     size_t GetNrThreads() const
     {

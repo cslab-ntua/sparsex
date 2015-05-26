@@ -27,8 +27,9 @@ SPX_BEGIN_C_DECLS__
 /**
  *  SparseMatrix wrapper functions.
  */
-void *CreateCSR(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
-                spx_index_t nr_rows, spx_index_t nr_cols, int zero_based);
+void *CreateCSR(const spx_index_t *rowptr, const spx_index_t *colind,
+                const spx_value_t *values, spx_index_t nr_rows,
+                spx_index_t nr_cols, int zero_based);
 void *CreateMMF(const char *filename,
                 spx_index_t *nr_rows, spx_index_t *nr_cols, spx_index_t *nnz);
 void *ReorderCSR(void *matrix, spx_index_t **permutation);

@@ -32,7 +32,7 @@ atomic<int> barrier_cnt;
 
 static inline int do_spin(int *local_sense)
 {
-    unsigned long long i, spin_cnt = BARRIER_TIMEOUT;
+    volatile int i, spin_cnt = BARRIER_TIMEOUT;
 
     for (i = 0; i < spin_cnt; i++) {
         if ((*local_sense) == global_sense.load()) {
@@ -41,6 +41,7 @@ static inline int do_spin(int *local_sense)
             __asm volatile ("" : : : "memory");
         }
     }
+
     return 1;
 }
 
