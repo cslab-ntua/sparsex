@@ -118,7 +118,7 @@ AX_CHECK_BOOST_LIB([regex])
 AX_CHECK_BOOST_LIB([serialization])
 AX_CHECK_BOOST_LIB([system])
 AX_CHECK_BOOST_LIB([thread])
-AX_CHECK_LLVM([3.0], [3.5.0])
+AX_CHECK_STRICT_LLVM(["3.5.0" "3.0"])
 AX_CHECK_MKL
 AX_CHECK_POSKI
 AC_CHECK_LIB([pthread], [pthread_create], [],
