@@ -53,8 +53,10 @@ int main(int argc, char **argv)
     timer.Clear();
     timer.Start();
     for (int i = 0; iter != iter_end, i < count; ++iter, i++) {
-        SetValueCsx<int, double>(spm_mt, (*iter).GetRow(), (*iter).GetCol(), 0.42);
+        SetValueCsx<int, double>(spm_mt, (*iter).GetRow(),
+                                 (*iter).GetCol(), 0.42);
     }
+
     timer.Pause();
     double assign_time = timer.ElapsedTime();
     cout << "=== END BENCHMARK ===" << endl;

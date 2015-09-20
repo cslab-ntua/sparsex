@@ -432,7 +432,7 @@ public:
     /**
      *  Transform the coordinates of this element.
      */
-    void TransformCoordinates(pair<IndexType, IndexType> new_coord)
+    void Transform(pair<IndexType, IndexType> new_coord)
     {
         row_ = new_coord.first;
         col_ = new_coord.second;
