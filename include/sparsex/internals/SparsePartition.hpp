@@ -527,7 +527,7 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType row_start,
         }
     
         // Element's row must be set to the new value
-        elem.TransformCoordinates(make_pair(row, elem.GetCol()));
+        elem.Transform(make_pair(row, elem.GetCol()));
         elems_.push_back(move(elem));
         elem_cnt++;
     }
@@ -691,9 +691,8 @@ void SparsePartition<IndexType, ValueType>::Transform(
     e0 = elems_.begin();
     ee = e0 + elems_size_;
     for (; e0 != ee; ++e0) {
-        (*e0).TransformCoordinates(
-            xform_fn(make_pair((*e0).GetRow()-rs, (*e0).GetCol()),
-                     nr_rows_, nr_cols_));
+        (*e0).Transform(xform_fn(make_pair((*e0).GetRow()-rs, (*e0).GetCol()),
+                                 nr_rows_, nr_cols_));
     }
 
     Encoding e(t);
@@ -792,8 +791,8 @@ GetWindow(IndexType rs, IndexType length)
     p_start = ret->elems_.begin();
     p_end = ret->elems_.end();
     for (; p_start != p_end; ++p_start) {
-        (*p_start).TransformCoordinates(make_pair((*p_start).GetRow()-rs,
-                                                  (*p_start).GetCol()));
+        (*p_start).Transform(make_pair((*p_start).GetRow() - rs,
+                                       (*p_start).GetCol()));
     }
 
     p_start = ret->elems_.begin();
@@ -823,8 +822,8 @@ PutWindow(SparsePartition<IndexType, ValueType> *window)
         // Adjust element rows if putting window back to an horizontal matrix
         for (size_t i = 0; i < window->elems_size_; ++i) {
             Element<IndexType, ValueType> &e = window->elems_[i];
-            e.TransformCoordinates(make_pair(static_cast<IndexType>
-                                             (e.GetRow() + rs), e.GetCol()));
+            e.Transform(
+                make_pair(static_cast<IndexType>(e.GetRow() + rs), e.GetCol()));
         }
     }
 
@@ -1100,7 +1099,7 @@ SetElems(IterT &pi, const IterT &pnts_end, IndexType row_start,
             }
 
             // Element's row must be set to the new value
-            elem.TransformCoordinates(make_pair(row, col));
+            elem.Transform(make_pair(row, col));
             lower_matrix_->elems_.push_back(move(elem));
             elem_cnt++;
         } else if (row_start + row - 1 == col) {

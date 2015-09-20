@@ -65,11 +65,11 @@ int main()
         GetXformFn<int>(Encoding::Diagonal, Encoding::Horizontal);
 
     Element<int, float> xformed = elem;
-    xformed.TransformCoordinates(xform_fn(elem.GetCoordinates(), 10, 10));
+    xformed.Transform(xform_fn(elem.GetCoordinates(), 10, 10));
     cout << xformed << " (xformed)\n";
 
     Element<int, float> xformed_back = xformed;
-    xformed_back.TransformCoordinates(rev_xform_fn(xformed.GetCoordinates(),
+    xformed_back.Transform(rev_xform_fn(xformed.GetCoordinates(),
                                                    10, 10));
     assert(xformed_back == elem);
 
