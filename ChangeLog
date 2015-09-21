@@ -1,3 +1,15 @@
+	ChangeLog v1.0.2
+830f671 Style enhancements.
+939f710 Enhancements in LLVM configure checks.
+290f36f SparseX now supports both clang-llvm-3.0 and clang-llvm-3.5.
+29d9119 Major changes in preprocessing
+208e9cd Minor changes to preprocessing
+80a3aec Preprocessing performance improvements
+282627d Minor preprocessing improvements
+43a42bc Store-forwarding fix for IndexType = int for x86_64 arch.
+590a4bc Small changes to activate move semantics for Element class.
+
+	ChangeLog v1.0.1
 a8695fa Support for runtime configuration of the JIT include path.
 1dafcd5 Small fix in benchmarking framework in case the output vector is tuned.
 5b7e4bb Added API functionality to extract the split points of the matrix in a multithreaded execution, which is useful when implementing solvers.
