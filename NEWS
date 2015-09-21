@@ -1,3 +1,10 @@
+Changes in SparseX v1.0.2
+=========================
+
+* Significant performance improvements in matrix preprocessing
+* Support of Clang 3.5
+
+
 Changes in SparseX v1.0.1
 =========================
 
