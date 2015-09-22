@@ -1,7 +1,7 @@
-SparseX library v1.0.1
+SparseX library v1.0.2
 **********************
 
-Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
+Copyright (C) 2011-2015, Computing Systems Laboratory (CSLab), NTUA.
 All rights reserved.
 
 This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -249,7 +249,7 @@ The SparseX library was developed in the Computing Systems Laboratory of the
 National Technical University of Athens (NTUA) and is actively maintained by:
 
 Athena Elafrou             athena<at>cslab.ece.ntua.gr
-Vasileios Karakasis        karakasis<at>lrz.de
+Vasileios Karakasis        bkk<at>cslab.ece.ntua.gr
 
 Past contributors include:
 
