@@ -20,7 +20,6 @@
 #define SPARSEX_INTERNALS_RCM_HPP
 
 #include <sparsex/internals/Csr.hpp>
-#include <sparsex/internals/CsrIterator.hpp>
 #include <sparsex/internals/Mmf.hpp>
 #include <sparsex/internals/logger/Logger.hpp>
 #include <boost/config.hpp>
@@ -39,11 +38,23 @@ using namespace boost;
 #define bad_reorder 0
 
 typedef pair<size_t, size_t> Pair;
-typedef adjacency_list<vecS, vecS, undirectedS, 
+typedef adjacency_list<vecS, vecS, undirectedS,
                        property<vertex_color_t, default_color_type,
                        property<vertex_degree_t,int> > > Graph;
 typedef graph_traits<Graph>::vertex_descriptor Vertex;
 typedef graph_traits<Graph>::vertices_size_type size_type;
+
+template<typename IndexType, typename ValueType>
+struct ColumnCompare {
+    public:
+        bool operator() (const pair<IndexType, ValueType> &lhs,
+                         const pair<IndexType, ValueType> &rhs) const
+        {
+            if (lhs.first < rhs.first) return true;
+            if (lhs.first > rhs.first) return false;
+            return false;
+        }
+};
 
 /**
  *  @return perm      permutation from the old ordering to the new one.
@@ -53,7 +64,7 @@ typedef graph_traits<Graph>::vertices_size_type size_type;
 void FindPerm(vector<size_t>& perm, vector<size_t>& inv_perm, Graph& graph);
 
 /**
- *  Loads matrix from an MMF file and applies the reverse Cuthill-Mckee 
+ *  Loads matrix from an MMF file and applies the reverse Cuthill-Mckee
  *  reordering algorithm
  *
  *  @param file_name   name of the file where the matrix is kept.
@@ -71,7 +82,7 @@ template<typename IndexType, typename ValueType>
 void DoReorder_RCM(MMF<IndexType, ValueType>& mat, vector<size_t>& perm);
 
 /**
- *  Loads matrix from CSR format and applies the reverse Cuthill-Mckee 
+ *  Loads matrix from CSR format and applies the reverse Cuthill-Mckee
  *  reordering algorithm
  *
  *  @param rowptr      array "rowptr" of CSR format.
@@ -107,7 +118,7 @@ void FindPerm(vector<size_t>& perm, vector<size_t>& invperm, Graph& graph)
     }
 
     // Original ordering
-    property_map<Graph, vertex_index_t>::type 
+    property_map<Graph, vertex_index_t>::type
         index_map = get(vertex_index, graph);
 
     size_t ob = bandwidth(graph);
@@ -134,7 +145,7 @@ void FindPerm(vector<size_t>& perm, vector<size_t>& invperm, Graph& graph)
 
     size_t nb = bandwidth(graph, make_iterator_property_map
                           (&perm[0], index_map, perm[0]));
-    LOG_INFO << "Final Bandwidth: " << nb << "\n"; 
+    LOG_INFO << "Final Bandwidth: " << nb << "\n";
 }
 
 template<typename IndexType, typename ValueType>
@@ -151,7 +162,7 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
     } else {
         nr_edges = mat.GetNrNonzeros();
     }
-        
+
     Pair *edges = new Pair[nr_edges];
 
     typename MMF<IndexType, ValueType>::iterator iter = mat.begin();
@@ -190,7 +201,7 @@ Graph& ConstructGraph_MMF(Graph& graph, MMF<IndexType, ValueType>& mat)
 
 template<typename IndexType, typename ValueType>
 void ReorderMat_MMF(MMF<IndexType, ValueType>& mat, const vector<size_t>& perm)
-{    
+{
     for (size_t i = 0; i < mat.GetNrNonzeros(); i++) {
         pair<IndexType, ValueType> coord = mat.GetCoordinates(i);
         mat.SetCoordinates(i, perm[coord.first-1] + 1,
@@ -202,10 +213,10 @@ void ReorderMat_MMF(MMF<IndexType, ValueType>& mat, const vector<size_t>& perm)
 
 template<typename IndexType, typename ValueType>
 void DoReorder_RCM(MMF<IndexType, ValueType>& mat, vector<size_t> &perm)
-{    
+{
     vector<size_t> inv_perm;
 
-    LOG_INFO << "Reordering input matrix...\n"; 
+    LOG_INFO << "Reordering input matrix...\n";
     // Construct graph
     Graph graph(mat.GetNrRows());
     try {
@@ -234,7 +245,7 @@ Graph& ConstructGraph_CSR(Graph& graph, IterT& iter, const IterT& iter_end,
     } else {
         nr_edges = nr_nzeros;
     }
-        
+
     Pair *edges = new Pair[nr_edges];
     size_t index = 0;
     if (symmetric) {
@@ -276,14 +287,12 @@ void ReorderMat_CSR(CSR<IndexType, ValueType>& mat, const vector<size_t>& perm,
 {
     // Have to work on a copy of colind and values if CSR structures are not
     // be shared
-	IndexType *new_colind = new IndexType[mat.GetNrNonzeros()];
-	ValueType *new_values = new ValueType[mat.GetNrNonzeros()];
+    IndexType *new_colind = new IndexType[mat.GetNrNonzeros()];
+    ValueType *new_values = new ValueType[mat.GetNrNonzeros()];
     memcpy(new_values, mat.values_, sizeof(ValueType) * mat.GetNrNonzeros());
 
     // Apply permutation only to colind
     for (size_t i = 0; i < mat.GetNrNonzeros(); i++) {
-        // mat.colind_[i] = perm[mat.colind_[i] - !mat.IsZeroBased()] +
-        //     !mat.IsZeroBased();
         new_colind[i] = perm[mat.colind_[i] - !mat.IsZeroBased()] +
             !mat.IsZeroBased();
     }
@@ -292,16 +301,9 @@ void ReorderMat_CSR(CSR<IndexType, ValueType>& mat, const vector<size_t>& perm,
     mat.values_ = new_values;
 
     // Simultaneously sort colind and values per row
-    IndexType row_start, length;
     for (size_t i = 0; i < mat.GetNrRows(); i++) {
-        row_start = mat.rowptr_[i] - !mat.IsZeroBased();
-        length = mat.rowptr_[i+1] - mat.rowptr_[i];
-        sort(get_CSR_iterator<IndexType*, ValueType*>
-             (&mat.colind_[row_start], &mat.values_[row_start]), 
-             get_CSR_iterator<IndexType*, ValueType*>
-             (&mat.colind_[row_start] + length,
-              &mat.values_[row_start] + length), 
-             CSR_Comp<IndexType*, ValueType*>());
+        sort(mat.row_begin(i), mat.row_end(i),
+             ColumnCompare<IndexType, ValueType>());
     }
     mat.SetReordered(inv_perm);
     //assert(inv_perm.capacity() == 0);
@@ -314,7 +316,7 @@ void DoReorder_RCM(CSR<IndexType, ValueType>& mat, vector<size_t>& perm)
     typename CSR<IndexType, ValueType>::iterator iter_end = mat.end();
     vector<size_t> inv_perm;
 
-    LOG_INFO << "Reordering input matrix...\n"; 
+    LOG_INFO << "Reordering input matrix...\n";
     // Construct graph
     Graph graph(mat.GetNrRows());
     try {

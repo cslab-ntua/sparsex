@@ -1,4 +1,4 @@
-SparseX library v1.0.0
+SparseX library v1.0.1
 **********************
 
 Copyright (C) 2011-2014, Computing Systems Laboratory (CSLab), NTUA.
@@ -15,8 +15,11 @@ CONTENTS OF THIS FILE
  3. Installation
  4. Building the documentation
  5. Testing
- 6. License
- 7. Maintainers
+ 6. Compiling and linking to SparseX
+ 7. Known Issues
+ 8. License
+ 9. Support
+10. Maintainers
 
 ===============
 1. INTRODUCTION
@@ -68,10 +71,10 @@ page:
 ===============
 
 * A fairly recent Linux OS
-* LLVM >= 3.0 and Clang
+* LLVM/Clang 3.0
 * Boost Library >= 1.48 (regex, serialization, system, thread)
 * numactl library >= 2.0.7
-* gcc/g++ >= 4.6
+* gcc/g++ 4.6, 4.7 and 4.8
 
 ===============
 3. INSTALLATION
@@ -181,22 +184,72 @@ Common pitfalls:
 
    $ export LD_LIBRARY_PATH=${LIBDIR}:$LD_LIBRARY_PATH
 
+ * In case the system include path is in a non-standard location, you should
+   instruct the SparseX JIT subsystem where to locate the system header
+   files. This can be achieved by setting the SPX_JIT_INC_PATH environment
+   variable:
+
+   $ export SPX_JIT_INC_PATH=/my/custom/system/include
+
+   Colon separated paths are also acceptable in the SPX_JIT_INC_PATH variable.
+
+===================================
+6. COMPILING AND LINKING TO SPARSEX
+===================================
+
+In order to link your code to the SparseX sparse kernel optimization library,
+you should first make sure that LLVM/Clang 3.0 and Boost >= 1.48 are already
+installed in the system. The compilation and linking process is really easy
+thanks to the `sparsex-config' utility provided with the library. For example,
+the mmf_example.c source file provided with SparseX can be compiled and linked
+as follows:
+
+
+$ gcc -Wall -O3 $(sparsex-config --cppflags) $(sparsex-config --ldflags) \
+-L$(llvm-config --libdir) -o mmf_example mmf_example.c
+
+===============
+7. KNOWN ISSUES
+===============
+
+Currently, we strictly support LLVM/Clang 3.0. Unfortunately, almost every new
+release of LLVM introduces a set of non-backwards compatible changes to the
+internal API, which requires a continuous maintenance of the JIT SparseX
+module. We are planning a more generic approach in the next releases to avoid
+such problems.
+
+GCC versions 4.6.1 and 4.8.2 are not currently supported for compiling the
+library.
+
+Some tests may crash when compiling with GCC 4.8 on SMP systems. The source of
+violating instructions was tracked down inside LLVM, so we recommend using
+GCC <= 4.7 for SMP systems.
+
 ==========
-6. LICENSE
+8. LICENSE
 ==========
 
 The SparseX package is distributed under the BSD Licence. See `LICENCE.txt' 
 for more information.
 
-==============
-7. MAINTAINERS
-==============
+==========
+9. SUPPORT
+==========
+
+For any issues related to the SparseX library or for reporting bugs, please send
+us at
+
+sparsex-support<at>cslab.ece.ntua.gr
+
+===============
+10. MAINTAINERS
+===============
 
 The SparseX library was developed in the Computing Systems Laboratory of the
 National Technical University of Athens (NTUA) and is actively maintained by:
 
 Athena Elafrou             athena<at>cslab.ece.ntua.gr
-Vasileios Karakasis        bkk<at>cslab.ece.ntua.gr
+Vasileios Karakasis        karakasis<at>lrz.de
 
 Past contributors include:
 

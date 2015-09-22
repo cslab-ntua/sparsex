@@ -22,6 +22,7 @@
 namespace sparsex {
 namespace runtime {
 
+extern atomic<int> global_sense;
 extern atomic<int> barrier_cnt;
 
 ThreadPool::~ThreadPool()
@@ -31,8 +32,15 @@ ThreadPool::~ThreadPool()
     centralized_barrier(GetSense(), size_ + 1);
 
     for (size_t i = 0; i < size_; i++) {
-        if (workers_[i].thread_->joinable())
-            workers_[i].thread_->join();
+        if (workers_[i].thread_->joinable()) {
+            try {
+                workers_[i].thread_->join();
+            } catch (exception &e) {
+                LOG_ERROR << e.what() << "\n";
+                // Don't exit() in a dtor, because exit() could have been already
+                // called on completion of main()
+            }
+        }
     }
 }
 
@@ -44,6 +52,7 @@ void ThreadPool::InitThreads(size_t nr_threads)
     }
 
     size_ = nr_threads;
+    global_sense = 1;
     barrier_cnt = nr_threads + 1;
     if (size_)
         workers_.resize(size_);
@@ -97,7 +106,7 @@ void ThreadPool::SetKernel(int kernel_id)
         workers_[i].SetJob(kernel_id);
         if (kernel_id == SPMV_MULT_SYM || kernel_id == SPMV_KERNEL_SYM) {
             spm_mt_thread_t *data = (spm_mt_thread_t *) workers_[i].data_;
-            data->sense = workers_[i].GetSense();
+            data->sense = !global_sense;
         } else if (kernel_id == IDLE) {
             workers_[i].data_ = NULL;
         }

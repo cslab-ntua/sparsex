@@ -117,7 +117,6 @@ public:
         return rowptr_size_;
     }
 
-    // FIXME: are really necessary the setters?
     void SetNrRows(size_t nr_rows)
     {
         nr_rows_ = nr_rows;
@@ -688,7 +687,8 @@ void SparsePartition<IndexType, ValueType>::PrintStats(ostream& out)
     for (Encoding::Type t = Encoding::Horizontal; t < Encoding::Max; ++t)
         if (nr_xform_patterns[t]) {
             ++nr_encoded_types;
-            out << Encoding(t) << ": " << nr_xform_patterns[t] << "\n";
+            Encoding enc(t);
+            out << enc << ": " << nr_xform_patterns[t] << "\n";
         }
 
     out << "Encoded types = " << nr_encoded_types << ", "

@@ -57,9 +57,9 @@ typedef spx_index_t spx_perm_t;
 typedef int spx_option_t;
 
 /**
- *  Vector copy-mode type.
+ *  Vector data-mode type.
  */
-typedef int spx_copymode_t;
+typedef unsigned int spx_vecmode_t;
 
 /**
  *  @defgroup invalid_handles_group Invalid handle types
@@ -98,33 +98,31 @@ typedef int spx_copymode_t;
 /**
  *  Reorder the input matrix. @sa spx_mat_tune()
  */
-#define SPX_MAT_REORDER          42
+#define SPX_MAT_REORDER         42
 
 /**
- *  The user and the library agree to share a vector. The user promises not to 
- *  free, reallocate or modify the corresponding array (except through the
- *  interface's set-value routine, @sa spx_vec_set_entry()), while the library
- *  promises to directly update the input array values.
+ *  @sa spx_vec_create_from_buff(). When this option is set,
+ *  the buffer provided by the user will be used as is in the newly
+ *  created vector handle.
  */
-#define SPX_VEC_SHARE            43
+#define SPX_VEC_AS_IS           43
 
 /**
- *  The library makes a copy of the input array. The user is henceforth allowed 
- *  to free, reallocate or modify the corresponding array, without affecting
- *  the previously created vector object, while the library will only modify
- *  its internal copy.
+ *  @sa spx_vec_create_from_buff(). When this option is set,
+ *  the buffer provided by the user will be copied into an optimally
+ *  allocated buffer, that will be returned to the user for further use.
  */
-#define SPX_VEC_COPY             44
+#define SPX_VEC_TUNE            44
 
 /**
  *  Array indices start at 0.
  */
-#define SPX_INDEX_ZERO_BASED     0
+#define SPX_INDEX_ZERO_BASED    45
 
 /**
  *  Array indices start at 1.
  */
-#define SPX_INDEX_ONE_BASED      1
+#define SPX_INDEX_ONE_BASED     46
 /**
  *  @}
  */
@@ -135,16 +133,17 @@ typedef int spx_copymode_t;
 static inline
 int check_indexing(spx_option_t base)
 {
-    return (base == 0 || base == 1);
+    return (base == SPX_INDEX_ZERO_BASED || base == SPX_INDEX_ONE_BASED);
 }
 
 /**
- *  Checks copy mode validity.
+ *  Checks data mode validity for vectors created with 
+ *  spx_vec_create_from_buff().
  */
 static inline
-int check_copymode(spx_copymode_t mode)
+int check_vecmode(spx_vecmode_t mode)
 {
-    return (mode == SPX_VEC_SHARE || mode == SPX_VEC_COPY);
+    return (mode == SPX_VEC_AS_IS || mode == SPX_VEC_TUNE);
 }
 
 

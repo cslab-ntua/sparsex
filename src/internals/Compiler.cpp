@@ -29,6 +29,7 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Target/TargetOptions.h>
 #include <boost/tokenizer.hpp>
+#include <cstdlib>
 #include <fstream>
 
 using namespace boost;
@@ -57,12 +58,19 @@ ClangCompiler::ClangCompiler()
     // Compile C99
     invocation_->setLangDefaults(IK_C, LangStandard::lang_c99);
 
+    // Add a user-defined include path first, if specified
+    char *user_inc_path = getenv("SPX_JIT_INC_PATH");
+    if (user_inc_path)
+        AddIncludeSearchPath(user_inc_path, IncludePathSystem);
+
     // Setup the include path
     AddIncludeSearchPath(CLANG_INC_SEARCH_PATH, IncludePathSystem);
 
     // Setup diagnostic options
     DiagnosticOptions &diag_options = invocation_->getDiagnosticOpts();
-    diag_options.Warnings.push_back("all");     // -Wall
+
+    // FIXME: The following option crashes Clang 3.0 on certain systems!
+    // diag_options.Warnings.push_back("all");     // -Wall
     diag_options.Pedantic = 1;                  // -pedantic
     diag_options.ShowColors = 1;                // be fancy ;)
 

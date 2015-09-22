@@ -9,7 +9,7 @@ dnl This file is distributed under the BSD License. See LICENSE.txt for details.
 dnl
 
 AC_PREREQ([2.62])
-AC_INIT([SparseX], [1.0.0], [sparsex-support@cslab.ece.ntua.gr], [sparsex])
+AC_INIT([SparseX], [1.0.1], [sparsex-support@cslab.ece.ntua.gr], [sparsex])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADERS([build_config.h])
 AC_CONFIG_MACRO_DIR([m4check])
@@ -130,7 +130,7 @@ dnl Always check for libnuma, since it is needed for linking
 AC_CHECK_LIB([numa], [numa_realloc], [],
              [
                  AC_MSG_ERROR([Could not find a proper libnuma installation dnl
-Please make sure you have installed correctly libnuma >= 2.0.8.])
+Please make sure you have installed correctly libnuma >= 2.0.7.])
              ])
 
 dnl If library benchmarks are enabled, build also the MKL and pOSKI benchmarks

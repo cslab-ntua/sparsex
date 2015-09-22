@@ -88,7 +88,6 @@ public:
         return instance;
     }
 
-    ~ThreadPool();
 	void InitThreads(size_t nr_threads);
     void Run(Worker &worker);
     void SetKernel(int kernel_id);
@@ -116,6 +115,7 @@ private:
 
     ThreadPool() : sense_(1), size_(0), work_done_(false) {}
     ThreadPool(ThreadPool const&);
+    ~ThreadPool();
     ThreadPool& operator=(ThreadPool const&);
 };
 

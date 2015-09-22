@@ -23,7 +23,7 @@ AM_LDFLAGS	= \
 	-L$(top_builddir)/src/internals/.libs \
 	$(AX_LDFLAGS)
 
-noinst_PROGRAMS = mmf_example csr_example reordering_example
+noinst_PROGRAMS = mmf_example csr_example reordering_example advanced_example
 
 mmf_example_SOURCES = \
 	mmf_example.c
@@ -34,17 +34,21 @@ csr_example_SOURCES = \
 reordering_example_SOURCES = \
 	reordering_example.c
 
+advanced_example_SOURCES = \
+	advanced_example.c
+
 mmf_example_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS) -ldl -lm
+	-ldl -lm
 
 csr_example_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS) -ldl -lm
+	-ldl -lm
 
 reordering_example_LDADD = \
 	$(top_builddir)/src/api/.libs/libsparsex.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS) -ldl -lm
+	-ldl -lm
+
+advanced_example_LDADD = \
+	$(top_builddir)/src/api/.libs/libsparsex.la \
+	-ldl -lm

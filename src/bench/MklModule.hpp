@@ -25,8 +25,8 @@
 
 #include "Timer.hpp"
 #include <sparsex/types.h>
-#include <mkl.h>
 #include <iostream>
+#include <mkl.h>
 
 void mkl_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
               spx_index_t nrows, spx_index_t ncols, spx_index_t nnz,

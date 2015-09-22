@@ -115,11 +115,6 @@ public:
         return zero_based_;
     }
 
-    bool IsReordered() const
-    {
-        return reordered_;
-    }
-
     void GetCoordinates(IndexType idx, IndexType &row, IndexType &col)
     {
         row = matrix_[idx].row;
@@ -138,26 +133,6 @@ public:
              CooElemSorter<IndexType, ValueType>());
     }
 
-    /*void Print(ostream &os) const
-    {
-        os << "Elements of Matrix" << endl;
-        os << "------------------" << endl;
-        if (symmetric_ || col_wise_) {
-            for (size_t i = 0; i < matrix_.size(); i++) {
-                os << matrix_[i].row << " " << matrix_[i].col << " "
-                   << matrix_[i].val << endl;
-            }
-        }//  else {
-        //     iterator iter = begin();
-        //     iterator iter_end = end();
-        //     for (;iter != iter_end; ++iter) {
-        //         cout << (*iter).row << " " << (*iter).col << " "
-        //              << (*iter).val << endl;
-        //     }
-        // }
-        os << endl;
-        }*/
-
     void InitMatrix(size_t size)
     {
         matrix_.reserve(size);
@@ -170,11 +145,6 @@ public:
         matrix_.push_back(elem);
     }
 
-    void SetReordered()
-    {
-        reordered_ = true;
-    }
-
     class iterator;
     iterator begin();
     iterator end();
@@ -182,7 +152,7 @@ public:
 private:
     IndexType nr_rows_, nr_cols_, nr_nzeros_;
     ifstream in;
-    bool symmetric_, col_wise_, zero_based_, reordered_;
+    bool symmetric_, col_wise_, zero_based_;
     int file_mode_;     // 0 for MMF files, 1 for regular files
     vector<CooElem<IndexType, ValueType> > matrix_;
 
@@ -207,9 +177,6 @@ private:
     void ParseMmfSizeLine(vector<string> &arguments); 
     void DoLoadMmfMatrix();
     bool GetNext(IndexType &y, IndexType &x, ValueType &val);
-
-// protected:
-//     ~MMF() {}
 };
 
 template<typename IndexType, typename ValueType>
@@ -224,7 +191,7 @@ public:
         mmf_(mmf),
         cnt_(cnt)
     {
-        if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_)
+        if (mmf_->symmetric_ || mmf_->col_wise_)
             return;
 
         // this is the initializer
@@ -248,21 +215,19 @@ public:
     void operator++()
     {
         ++cnt_;
-        if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_) {
+        if (mmf_->symmetric_ || mmf_->col_wise_) {
             return;
         }
         this->DoSet();
     }
 
-    CooElem<IndexType, ValueType> operator*()
+    CooElem<IndexType, ValueType> &operator*()
     {
-        if (mmf_->symmetric_ || mmf_->col_wise_ || mmf_->reordered_) {
+        if (mmf_->symmetric_ || mmf_->col_wise_) {
             return mmf_->matrix_[cnt_];
         } else {
             if (!valid_) {
-                // LOG<logging::error>(__FILE__, __LINE__, __FUNCTION__, 
-                //                     "Requesting dereference, but mmf ended "
-                //                     "(cnt: ", cnt_, "/", mmf_->nr_nzeros_,").");
+                cout << "Requesting dereference, but mmf ended\n";
                 exit(1);
             }
             assert(valid_);
@@ -291,7 +256,7 @@ typename MMF<IndexType, ValueType>::iterator MMF<IndexType, ValueType>::begin()
 template<typename IndexType, typename ValueType>
 typename MMF<IndexType, ValueType>::iterator MMF<IndexType, ValueType>::end()
 {
-    if (this->symmetric_ || this->col_wise_ || this->reordered_) {
+    if (this->symmetric_ || this->col_wise_) {
         return iterator(this, matrix_.size());
     } else {
         return iterator(this, nr_nzeros_);
@@ -327,7 +292,6 @@ MMF<IndexType, ValueType>::MMF(const char* filename)
     symmetric_(false), 
     col_wise_(true),
     zero_based_(false),
-    reordered_(false),
     file_mode_(0)
 {
     try {
@@ -336,7 +300,7 @@ MMF<IndexType, ValueType>::MMF(const char* filename)
             throw ios_base::failure("");
         }
     } catch (ios_base::failure &e) {
-//        LOG_ERROR("MMF file error.");
+        cout << "MMF file error.\n";
         exit(1);
     }
     vector<string> arguments;
@@ -358,7 +322,7 @@ void MMF<IndexType, ValueType>::ParseMmfHeaderLine(vector<string> &arguments)
         if (arguments[0].length() > 2 && arguments[0][0] == '%'&&
             arguments[0][1] == '%') {
             // Header exists but is erroneous so exit
-//            LOG_ERROR("invalid header line in MMF file.");
+            cout << "invalid header line in MMF file.\n";
             exit(1);
         } else {
             // Parse as size line
@@ -369,7 +333,7 @@ void MMF<IndexType, ValueType>::ParseMmfHeaderLine(vector<string> &arguments)
 
     size_t length;
     if ((length = arguments.size()) < 5) {
-//        LOG_ERROR("less arguments in header line of MMF file.");
+        cout << "less arguments in header line of MMF file.\n";
         exit(1);
     }
 
@@ -379,12 +343,12 @@ void MMF<IndexType, ValueType>::ParseMmfHeaderLine(vector<string> &arguments)
     }
 
     if (arguments[1] != names_[Matrix]) {
-//        LOG_ERROR("unsupported object in header line of MMF file.");
+        cout << "unsupported object in header line of MMF file.\n";
         exit(1);
     }
 
     if (arguments[2] != names_[Coordinate]) {
-//        LOG_ERROR("unsupported matrix format in header line of MMF file.");
+        cout << "unsupported matrix format in header line of MMF file.\n";
         exit(1);
     }
 
@@ -393,7 +357,7 @@ void MMF<IndexType, ValueType>::ParseMmfHeaderLine(vector<string> &arguments)
     } else if (arguments[4] == names_[Symmetric]) {
         symmetric_ = true;
     } else {
-//        LOG_ERROR("unsupported symmetry in header line of MMF file.");
+        cout << "unsupported symmetry in header line of MMF file.\n";
         exit(1);
     }
     
@@ -421,7 +385,7 @@ void MMF<IndexType, ValueType>::ParseMmfSizeLine(vector<string> &arguments)
             in.ignore(numeric_limits<streamsize>::max(), '\n');
         }
         if (!DoRead(in, arguments)) {
-//            LOG_ERROR("size line error in MMF file.");
+            cout << "size line error in MMF file.\n";
             exit(1);
         }
     }
@@ -438,7 +402,7 @@ void MMF<IndexType, ValueType>::DoLoadMmfMatrix()
         matrix_.reserve(nr_nzeros_ << 1);
         for (IndexType i = 0; i < nr_nzeros_; i++) {
             if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
-//                LOG_ERROR("Requesting dereference, but mmf ended.");
+                cout << "Requesting dereference, but mmf ended.\n";
                 exit(1);
             }
             matrix_.push_back(elem);
@@ -453,7 +417,7 @@ void MMF<IndexType, ValueType>::DoLoadMmfMatrix()
         matrix_.reserve(nr_nzeros_);
         for (IndexType i = 0; i < nr_nzeros_; i++) {
             if (!MMF::GetNext(elem.row, elem.col, elem.val)) {
-//                LOG_ERROR("Requesting dereference, but mmf ended.");
+                cout << "Requesting dereference, but mmf ended.\n";
                 exit(1);
             }
             matrix_.push_back(elem);
@@ -503,7 +467,7 @@ bool DoRead(ifstream &in, vector<string> &arguments)
             return false;
         }
     } catch (ios_base::failure &e) {
-//        LOG_ERROR("error reading from MMF file:" + (string) e.what());
+        cout << "error reading from MMF file:" + (string) e.what() + "\n";
         exit(1);
     }
 
@@ -524,7 +488,7 @@ void ParseElement(vector<string> &arguments, IndexType &y, IndexType &x,
         x = boost::lexical_cast<IndexType,string>(arguments[1]);
         v = boost::lexical_cast<ValueType,string>(arguments[2]);
     } else {
-//        LOG_ERROR("bad input, less arguments in line of MMF file.");
+        cout << "bad input, less arguments in line of MMF file.\n";
         exit(1);
     }
 }

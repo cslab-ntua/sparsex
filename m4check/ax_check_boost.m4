@@ -27,9 +27,14 @@ AC_DEFUN([AX_CHECK_BOOST],
     boost_required_version=$1
     AC_MSG_CHECKING([for Boost library >= $boost_required_version])
     AC_ARG_WITH([boostdir],
-                [AS_HELP_STRING([--with-boostdir=DIR],
-                                [use Boost library installed in DIR.])],
+                [AS_HELP_STRING([--with-boostdir=PREFIX],
+                                [search for Boost library (headers and binaries) installed in PREFIX.])],
                 [], [with_boostdir=check])
+
+    AC_ARG_WITH([boostlibdir],
+                [AS_HELP_STRING([--with-boostlibdir=DIR],
+                                [search Boost library binaries in DIR.])],
+                [], [])
 
      if test x"$with_boostdir" = x"check"; then
          search_dirs=$system_dirs
@@ -52,7 +57,11 @@ AC_DEFUN([AX_CHECK_BOOST],
              [
                  boost_found=1
                  BOOST_CPPFLAGS="-I$d/include"
-                 BOOST_LDFLAGS="-L$d/lib"
+                 if test ! -z $with_boostlibdir; then
+                     BOOST_LDFLAGS="-L$with_boostlibdir"
+                 else
+                     BOOST_LDFLAGS="-L$d/lib"
+                 fi
                  boost_version=`./conftest$EXEEXT`
                  boost_version=`echo $boost_version | $SED -e 's/_/./g'`
                  AS_VERSION_COMPARE([$boost_version],

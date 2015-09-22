@@ -254,12 +254,12 @@ case "$ax_build_mode" in
     "debug")
         # undefine NDEBUG; LLVM doesn't want it
         ax_pkg_cppflags="-UNDEBUG -DSPX_DEBUG=1"
-        ax_pkg_cxxflags="-g -O0 -std=c++0x -pedantic -Wall -Woverloaded-virtual"
-        ax_pkg_cflags="-g -O0 -std=c99 -pedantic -Wall" ;;
+        ax_pkg_cxxflags="-g -O0 -std=c++0x -pedantic -fopenmp -Wall -Woverloaded-virtual -Wno-unused-local-typedefs"
+        ax_pkg_cflags="-g -O0 -std=c99 -pedantic -fopenmp -Wall -Wno-unused-local-typedefs" ;;
     "release")
         ax_pkg_cppflags="-DNDEBUG"
-        ax_pkg_cxxflags="-O3 -std=c++0x -pedantic -Wall"
-        ax_pkg_cflags="-O3 -std=c99 -pedantic -Wall" ;;
+        ax_pkg_cxxflags="-O3 -std=c++0x -pedantic -fopenmp -Wall -Wno-unused-local-typedefs"
+        ax_pkg_cflags="-O3 -std=c99 -pedantic -fopenmp -Wall -Wno-unused-local-typedefs" ;;
     *)
         AC_MSG_ERROR(
             [@<:@BUG@:>@ should not have entered here: m4_location]) ;;
