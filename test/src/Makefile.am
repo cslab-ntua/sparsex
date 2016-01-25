@@ -29,7 +29,8 @@ SPARSEXIMPL_LDADD = \
 	$(BOOST_REGEX_LIB) \
 	$(BOOST_SERIALIZATION_LIB) \
 	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_THREAD_LIB) -ldl -lm
+	$(BOOST_THREAD_LIB) \
+	$(BOOST_ATOMIC_LIB) -ldl -lm
 
 check_PROGRAMS = test_sparsex test_element test_dynarray test_timer \
 	test_binary_p1 test_binary_p2

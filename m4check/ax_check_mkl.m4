@@ -96,6 +96,8 @@ AC_DEFUN([AX_CHECK_MKL],
         
         MKL_LIBS="-lmkl_intel_lp64 -lmkl_core"
         if test x"$ax_cxx" == x"g++"; then
+            # Uncomment this if you want MKL to use Intel OpenMP, despite g++ compiler
+            # MKL_LIBS="$MKL_LIBS -lmkl_intel_thread -liomp5 -ldl -lpthread -lm"
             MKL_LIBS="$MKL_LIBS -lmkl_gnu_thread -ldl -lpthread -lm"
         elif test x"$ax_cxx" == x"icpc"; then
             MKL_LIBS="$MKL_LIBS -lmkl_intel_thread -lpthread -lm"

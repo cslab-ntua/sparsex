@@ -26,7 +26,7 @@
 
 using namespace std;
 
-extern string MATRIX; 
+extern string MATRIX;
 extern unsigned int OUTER_LOOPS;
 extern unsigned long LOOPS;
 extern Timer t;
@@ -54,7 +54,7 @@ void mkl_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
         pointerB[i] = rowptr[i];
         pointerE[i] = rowptr[i+1];
     }
-    
+
     /* 2. SpMV benchmarking phase */
     vector<double> mt(OUTER_LOOPS);
     for (size_t i = 0; i < OUTER_LOOPS; i++) {
@@ -62,16 +62,16 @@ void mkl_spmv(spx_index_t *rowptr, spx_index_t *colind, spx_value_t *values,
         t.Start();
         for (size_t j = 0; j < LOOPS; j++) {
             mkl_dcsrmv(&transa, &nrows, &ncols, &ALPHA, matdescra, values,
-                       colind, pointerB, pointerE, x, &BETA, y);            
+                       colind, pointerB, pointerE, x, &BETA, y);
         }
         t.Pause();
         mt[i] = t.ElapsedTime();
     }
 
     sort(mt.begin(), mt.end());
-    double mt_median = 
+    double mt_median =
         (OUTER_LOOPS % 2) ? mt[((OUTER_LOOPS+1)/2)-1]
-        : ((mt[OUTER_LOOPS/2-1] + mt[OUTER_LOOPS/2])/2);  
+        : ((mt[OUTER_LOOPS/2-1] + mt[OUTER_LOOPS/2])/2);
     double flops = (double)(LOOPS*nnz*2)/((double)1000*1000*mt_median);
     cout << "m: " << MATRIX
          << " mt(median): " << mt_median

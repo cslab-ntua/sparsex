@@ -64,10 +64,10 @@ llvm-config script. Please check your supplied argument.])
     fi
 
     llvm_version=`$llvm_config_prog --version 2> /dev/null | \
-$SED -e 's/[^0-9]*$//g'`
+$SED -e 's/@<:@^0-9@:>@*$//g'`
     if test -z $llvm_version; then
         AC_MSG_RESULT([no])
-        AC_MSG_ERROR([Could not find a proper LLVM config script. dnl 
+        AC_MSG_ERROR([Could not find a proper LLVM config script. dnl
 Tried `$llvm_config_prog' and failed.])
     fi
 
@@ -147,9 +147,9 @@ dnl    LIBS="$CLANG_LIBS $LLVM_LIBS $LIBS"
     if test $llvm_version == "3.5.0"; then
         AC_CHECK_LIB([z], [compress2], [],
             [AC_MSG_ERROR([Could not find zlib library required by dnl
-$llvm_version.])])
-        AC_CHECK_LIB([tinfo], [crc32], [],
+LLVM $llvm_version.])])
+        AC_CHECK_LIB([ncurses], [crc32], [],
             [AC_MSG_ERROR([Could not find tinfo library required by dnl
-$llvm_version.])])
+LLVM $llvm_version.])])
     fi
 ])
