@@ -104,11 +104,18 @@ Please check your installation of LLVM and Clang.])
     fi
 
     dnl Required Clang libs
-    CLANG_LIBS="-lclangFrontendTool -lclangFrontend -lclangDriver dnl
--lclangSerialization -lclangCodeGen -lclangParse -lclangSema dnl
--lclangRewriteFrontend -lclangRewrite -lclangStaticAnalyzerFrontend dnl
--lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangAnalysis dnl
--lclangEdit -lclangAST -lclangLex -lclangBasic"
+    clang_libs="-lclangFrontendTool -lclangFrontend -lclangDriver dnl
+    -lclangSerialization -lclangCodeGen -lclangParse -lclangSema"
+    if test $llvm_version == "3.5.0"; then
+        clang_libs="$clang_libs -lclangRewriteFrontend"
+    fi
+    clang_libs="$clang_libs -lclangRewrite -lclangStaticAnalyzerFrontend dnl
+    -lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangAnalysis"
+    if test $llvm_version == "3.5.0"; then
+        clang_libs="$clang_libs -lclangEdit"
+    fi
+    clang_libs="$clang_libs -lclangAST -lclangLex -lclangBasic"
+    CLANG_LIBS=$clang_libs
 
     # dnl Retrieve all Clang's internal libs
     # clang_libfiles=`$llvm_config_prog --libdir`/libclang*
