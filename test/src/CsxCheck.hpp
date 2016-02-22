@@ -47,9 +47,9 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
     *nrows = mmf.GetNrRows();
     *ncols = mmf.GetNrCols();
     *nnz = mmf.GetNrNonzeros();
-	*values = new ValueType[mmf.GetNrNonzeros()];
-	*colind = new IndexType[mmf.GetNrNonzeros()];
-	*rowptr = new IndexType[mmf.GetNrRows() + 1];
+    *values = new ValueType[mmf.GetNrNonzeros()];
+    *colind = new IndexType[mmf.GetNrNonzeros()];
+    *rowptr = new IndexType[mmf.GetNrRows() + 1];
 
     typename MMF<IndexType, ValueType>::iterator iter = mmf.begin();
     typename MMF<IndexType, ValueType>::iterator iter_end = mmf.end();   
@@ -57,24 +57,24 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
     IndexType row, col;
     ValueType val;
 
-	(*rowptr)[row_i++] = val_i;
+    (*rowptr)[row_i++] = val_i;
     for (;iter != iter_end; ++iter) {
         row = (*iter).GetRow() - 1;
         col = (*iter).GetCol() - 1;
         val = (*iter).GetValue();
-		assert(row >= row_prev);
-		if (row != row_prev) {
-			for (IndexType i = 0; i < row - row_prev; i++) {
-				(*rowptr)[row_i++] = val_i;
+        assert(row >= row_prev);
+        if (row != row_prev) {
+            for (IndexType i = 0; i < row - row_prev; i++) {
+                (*rowptr)[row_i++] = val_i;
             }
-			row_prev = row;
-		}
-		(*values)[val_i] = val;
-		(*colind)[val_i] = col;
-		val_i++;
+            row_prev = row;
+        }
+        (*values)[val_i] = val;
+        (*colind)[val_i] = col;
+        val_i++;
     }
 
-	(*rowptr)[row_i++] = val_i;
+    (*rowptr)[row_i++] = val_i;
 }
 
 /**
@@ -82,16 +82,18 @@ void MMFtoCSR(const char *filename, IndexType **rowptr, IndexType **colind,
  *  implementation.
  */
 template<typename IndexType, typename ValueType>
-void CheckResult(vector_t *result, vector_t *x, char *mmf_name)
+void CheckResult(vector_t *result, ValueType alpha, vector_t *x,
+                 char *matrix_file)
 {
     CSR<IndexType, ValueType> *csr = new CSR<IndexType, ValueType>;
-    MMFtoCSR<IndexType, ValueType>(mmf_name, &csr->rowptr_, &csr->colind_,
+    MMFtoCSR<IndexType, ValueType>(matrix_file, &csr->rowptr_, &csr->colind_,
                                    &csr->values_, &csr->nr_rows_,
                                    &csr->nr_cols_, &csr->nr_nzeros_);
 
     cout << "Checking... " << flush;
-	vector_t *y_csr = VecCreate(csr->nr_rows_);
+    vector_t *y_csr = VecCreate(csr->nr_rows_);
     csr_spmv(csr, x, y_csr);
+    VecScale(y_csr, y_csr, alpha);
     if (VecCompare(y_csr, result) < 0)
         exit(1);
     cout << "Check Passed" << endl;
@@ -106,7 +108,8 @@ void CheckResult(vector_t *result, vector_t *x, char *mmf_name)
 #endif
 
 SPX_BEGIN_C_DECLS__
-void check_result(vector_t *result, vector_t *x, char *filename);
+void check_result(vector_t *result, double alpha, vector_t *x,
+                  char *matrix_file);
 SPX_END_C_DECLS__
 
 #endif // SPARSEX_TEST_CHECK_HPP

@@ -62,11 +62,12 @@ int main(int argc, char **argv)
     spx_log_verbose_console();
 
     char c;
-    char *filename = NULL;
+    char *matrix_file = NULL;
     char *option;
     int option_index = 0;
     int enable_timing = 0;
     int enable_reordering = 0;
+    const spx_value_t alpha = 0.5;
 
     program_name = argv[0];
     while ((c = getopt_long(argc, argv, "o:rth", long_options,
@@ -98,10 +99,10 @@ int main(int argc, char **argv)
 	}
 
 	argv = &argv[optind];
-	filename = argv[0];
+	matrix_file = argv[0];
 
     /* Load matrix from MMF file */
-    spx_input_t *input = spx_input_load_mmf(filename);
+    spx_input_t *input = spx_input_load_mmf(matrix_file);
     if (input == SPX_INVALID_INPUT) {
         SETERROR_0(SPX_ERR_INPUT_MAT);
         exit(1);
@@ -150,7 +151,7 @@ int main(int argc, char **argv)
         spx_vec_reorder(x, p);
     }
 
-    /* Run a matrix-vector multiplication: y <-- A*x */
+    /* Run a matrix-vector multiplication: y <-- alpha*A*x */
     spx_timer_t t;
     if (enable_timing) {
         spx_timer_clear(&t);
@@ -158,16 +159,17 @@ int main(int argc, char **argv)
     }
     
     for (size_t i = 0; i < loops; i++) {
-        spx_matvec_mult(1, A, x, y);
+        spx_matvec_mult(alpha, A, x, y);
     }
 
     if (enable_timing) {
         spx_timer_pause(&t);
         double elapsed_time = spx_timer_get_secs(&t);
-        double flops = (double) (2*loops*spx_mat_get_nnz(A)) /
+        double flops = (double) (2*loops*spx_mat_get_nnz(A) + 
+                                 spx_mat_get_nrows(A)) /
             ((double) 1000*1000*elapsed_time);
         printf("SPMV time: %lf secs\n", elapsed_time);
-        printf("FLOPS: %lf\n", flops);
+        printf("MFLOPS: %lf\n", flops);
     }
 
     /* Restore original ordering of resulting vector */
@@ -177,7 +179,7 @@ int main(int argc, char **argv)
     }
 
     /* Check the result */
-    check_result(y, x, filename);
+    check_result(y, alpha, x, matrix_file);
 
     /* Cleanup */
     spx_input_destroy(input);
