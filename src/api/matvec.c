@@ -788,19 +788,24 @@ spx_vector_t *spx_vec_create_from_buff(spx_value_t *buff, spx_value_t **tuned,
         return SPX_INVALID_VEC;
     }
 
-    if (p == SPX_INVALID_PART) {
-        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
-        return SPX_INVALID_VEC;
-    }
-
     if (!check_vecmode(mode)) {
         SETERROR_1(SPX_ERR_ARG_INVALID, "invalid vector mode");
         return SPX_INVALID_VEC;
     }
-    
+
+    if (p == SPX_INVALID_PART && mode == SPX_VEC_TUNE) {
+        SETERROR_1(SPX_ERR_ARG_INVALID, "invalid partition handle");
+        return SPX_INVALID_VEC;
+    }
+
     spx_vector_t *v = SPX_INVALID_VEC;
-	v = VecCreateFromBuff(buff, size, p->nr_partitions, p->affinity,
-                          p->row_start, p->row_end, mode);
+    if (mode == SPX_VEC_TUNE) {
+        v = VecCreateFromBuff(buff, size, p->nr_partitions, p->affinity,
+                              p->row_start, p->row_end, mode);
+    } else {
+        v = VecCreateFromBuff(buff, size, -1, NULL, NULL, NULL, mode);
+    }
+
 #if SPX_USE_NUMA
     if (tuned)
         *tuned = v->elements;
