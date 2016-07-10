@@ -19,6 +19,7 @@ nobase_include_HEADERS = \
 	sparsex/timing.h \
 	sparsex/types.h \
 	sparsex/internals/cdecl.h \
+	sparsex/internals/futex.h \
 	sparsex/internals/numa_util.h \
 	sparsex/internals/Affinity.hpp \
 	sparsex/internals/Allocators.hpp \

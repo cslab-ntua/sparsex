@@ -23,6 +23,7 @@ AM_LDFLAGS  = $(AX_LDFLAGS)
 
 lib_LTLIBRARIES = libsparseximpl.la
 libsparseximpl_la_SOURCES = \
+	futex.c \
 	numa_util.c \
 	Affinity.cpp \
 	Barrier.cpp \

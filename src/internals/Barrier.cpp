@@ -17,10 +17,6 @@
  */
 
 #include <sparsex/internals/Barrier.hpp>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <linux/futex.h>
 
 using namespace std;
 
@@ -43,21 +39,6 @@ static inline int do_spin(int *local_sense)
     }
 
     return 1;
-}
-
-static inline void futex_wait(int *addr, int val)
-{
-    int err = syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL);
-    if (err < 0 && errno == ENOSYS)
-        syscall(SYS_futex, addr, FUTEX_WAIT, val, NULL);
-}
-
-static inline void futex_wake(int *addr, int count)
-{
-    // Wakes at most count processes waiting on the addr
-    int err = syscall(SYS_futex, addr, FUTEX_WAKE, count);
-    if (err < 0 && errno == ENOSYS)
-        syscall(SYS_futex, addr, FUTEX_WAKE, count);
 }
 
 /*
