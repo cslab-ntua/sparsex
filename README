@@ -1,7 +1,7 @@
-SparseX library v1.0.2
+SparseX library v1.1
 **********************
 
-Copyright (C) 2011-2015, Computing Systems Laboratory (CSLab), NTUA.
+Copyright (C) 2011-2017, Computing Systems Laboratory (CSLab), NTUA.
 All rights reserved.
 
 This file is distributed under the BSD License. See LICENSE.txt for details.
@@ -45,6 +45,11 @@ optimized SpMV routines for each encoded pattern.
 
 More information about the CSX format can be found in:
 
+A. Elafrou, V. Karakasis, T. Gkountouvas, K. Kourtis, G. Goumas, and N. Koziris.
+"SparseX: a Library for High-Performance Sparse Matrix-Vector Multiplication
+on Multicore Platforms". ACM Transactions on Mathematical Software (TOMS),
+accepted.
+
 V. Karakasis, T. Gkountouvas, K. Kourtis, G. Goumas, and N. Koziris. 
 "An extended compression format for the optimization of sparse matrix-vector 
 multiplication". IEEE Transactions on Parallel and Distributed Systems (TPDS),
@@ -71,10 +76,10 @@ page:
 ===============
 
 * A fairly recent Linux OS
-* LLVM/Clang 3.0
-* Boost Library >= 1.48 (regex, serialization, system, thread)
+* LLVM/Clang >= 4.0.0
+* Boost Library >= 1.48 (regex, serialization, system)
 * numactl library >= 2.0.7
-* gcc/g++ 4.6, 4.7 and 4.8
+* gcc/g++ >= 4.8
 
 ===============
 3. INSTALLATION
@@ -212,18 +217,11 @@ $ gcc -Wall -O3 $(sparsex-config --cppflags) $(sparsex-config --ldflags) \
 7. KNOWN ISSUES
 ===============
 
-Currently, we strictly support LLVM/Clang 3.0. Unfortunately, almost every new
-release of LLVM introduces a set of non-backwards compatible changes to the
+Currently, we strictly support LLVM/Clang >= 4.0.0. Unfortunately, almost every
+new release of LLVM introduces a set of non-backwards compatible changes to the
 internal API, which requires a continuous maintenance of the JIT SparseX
 module. We are planning a more generic approach in the next releases to avoid
 such problems.
-
-GCC versions 4.6.1 and 4.8.2 are not currently supported for compiling the
-library.
-
-Some tests may crash when compiling with GCC 4.8 on SMP systems. The source of
-violating instructions was tracked down inside LLVM, so we recommend using
-GCC <= 4.7 for SMP systems.
 
 ==========
 8. LICENSE
