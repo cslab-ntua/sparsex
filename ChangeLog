@@ -1,3 +1,13 @@
+	ChangeLog v1.1.0
+46c7269 Updated SparseX version in configuration files.
+4f31e92 Updated README.
+39254d0 Re-design of SparseX's JIT component to use LLVM/Clang's MCJIT engine.
+e8946ff Moved Linux-based futex wrapper in a seperate C module.
+1e9ad14 Small change in vector API to simplify usage.
+e8d17ba Updated testing utility to check y = alpha*A*x. Also fixed FLOPS computation.
+1eef307 Small fix in llvm/clang configuration file.
+ead8529 Configuration script improvements.
+
 	ChangeLog v1.0.2
 830f671 Style enhancements.
 939f710 Enhancements in LLVM configure checks.
