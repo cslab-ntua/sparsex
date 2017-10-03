@@ -22,9 +22,9 @@ AM_CFLAGS = $(AX_CFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
 AM_LDFLAGS = $(AX_LDFLAGS)
 
-# Convenience library
 lib_LTLIBRARIES = libsparseximpl.la
 libsparseximpl_la_SOURCES = \
+	futex.c \
 	numa_util.c \
 	Affinity.cpp \
 	Barrier.cpp \

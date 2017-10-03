@@ -98,6 +98,20 @@ try using the `--with-llvm' option.])
     LLVM_LIBS=`$llvm_config_prog --libs $with_llvm_components`
     LLVM_SYSTEM_LIBS=`$llvm_config_prog --system-libs`
 
+    dnl The zlib and tinfo (or ncurses) libraries need to be linked for llvm-3.5
+    if test $llvm_version == "3.5.0"; then
+        AC_CHECK_LIB([z], [compress2], [],
+            [AC_MSG_ERROR([Could not find zlib library required by dnl
+LLVM $llvm_version.])])
+        crc32_found=1
+        AC_CHECK_LIB([ncurses], [crc32], [], [crc32_found=0]) 
+        if test $crc32_found -eq 0; then
+            AC_CHECK_LIB([tinfo], [crc32], [],
+            [AC_MSG_ERROR([Could not find tinfo or ncurses library required by dnl
+LLVM $llvm_version.])])
+        fi
+    fi
+
     dnl Check for Clang
     CLANG_PREFIX=`$llvm_config_prog --prefix`
     AX_CHECK_PROG([clang], [CLANG], [$CLANG_PREFIX/bin])

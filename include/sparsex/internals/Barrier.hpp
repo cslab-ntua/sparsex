@@ -21,6 +21,7 @@
 
 #include <atomic>
 #include <cstdlib>
+#include <sparsex/internals/futex.h>
 
 namespace sparsex {
   namespace runtime {
