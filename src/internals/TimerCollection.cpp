@@ -20,18 +20,18 @@
 #include <sparsex/internals/TimerCollection.hpp>
 
 namespace sparsex {
-namespace timing {
+  namespace timing {
 
-void TimerCollection::PrintAllTimers(ostream &os) const
-{
-    boost::unordered_map<const char *, Timer>::const_iterator it;
+    void TimerCollection::PrintAllTimers(ostream &os) const
+    {
+      boost::unordered_map<const char *, Timer>::const_iterator it;
 
-    for (it = timers_.cbegin(); it != timers_.cend(); ++it) {
+      for (it = timers_.cbegin(); it != timers_.cend(); ++it) {
         Timer tm = it->second;
         double t = tm.ElapsedTime();
         os << tm.GetDescription() << ": " << t << "\n";
+      }
     }
-}
 
-} // end of namespace timing
+  } // end of namespace timing
 } // end of namespace sparsex

@@ -31,16 +31,16 @@ SPX_BEGIN_C_DECLS__
  */
 static inline void set_bit(uint8_t *byte, int bit)
 {
-    assert(bit >= 0);
-    assert(bit < 8);
-    *byte |= (1<<bit);
+  assert(bit >= 0);
+  assert(bit < 8);
+  *byte |= (1<<bit);
 }
 
 static inline int test_bit(uint8_t *byte, int bit)
 {
-    assert(bit >= 0);
-    assert(bit < 8);
-    return (*byte & (1<<bit));
+  assert(bit >= 0);
+  assert(bit < 8);
+  return (*byte & (1<<bit));
 }
 
 // Ctl Array is a byte-based array storing (compressed)
@@ -66,75 +66,72 @@ static inline int test_bit(uint8_t *byte, int bit)
 #define CTL_PATTERN_MASK ~(1<<CTL_NR_BIT | 1<<CTL_RJMP_BIT)
 
 /* Encode and Decode functions for Ctl arrays */
-
 static inline uint64_t u8_get(uint8_t **ctl)
 {
-    uint8_t ret = **ctl;
-    (*ctl)++;
+  uint8_t ret = **ctl;
+  (*ctl)++;
 
-    return (uint64_t)ret;
+  return (uint64_t)ret;
 }
 
 static inline uint64_t u16_get(uint8_t **ctl)
 {
-    uint16_t ret, **u16;
+  uint16_t ret, **u16;
 
-    u16 = (uint16_t **)ctl;
-    ret = **u16;
-    (*u16)++;
+  u16 = (uint16_t **)ctl;
+  ret = **u16;
+  (*u16)++;
 
-    return (uint64_t)ret;
+  return (uint64_t)ret;
 }
 
 static inline uint64_t u32_get(uint8_t **ctl)
 {
-    uint32_t ret, **u32;
+  uint32_t ret, **u32;
 
-    u32 = (uint32_t **)ctl;
-    ret = **u32;
-    (*u32)++;
+  u32 = (uint32_t **)ctl;
+  ret = **u32;
+  (*u32)++;
 
-    return (uint64_t)ret;
+  return (uint64_t)ret;
 }
 
 static inline uint64_t u64_get(uint8_t **ctl)
 {
-    uint64_t ret, **u64;
+  uint64_t ret, **u64;
 
-    u64 = (uint64_t **)ctl;
-    ret = **u64;
-    (*u64)++;
+  u64 = (uint64_t **)ctl;
+  ret = **u64;
+  (*u64)++;
 
-    return ret;
+  return ret;
 }
 
 static inline uint64_t ul_get(uint8_t **ctl)
 {
-    unsigned long ret;
-    unsigned shift = 7;
-    unsigned long uc;
+  unsigned long ret;
+  unsigned shift = 7;
+  unsigned long uc;
 
-    ret = u8_get(ctl);
-    if (ret <= 127)
-        goto end;
+  ret = u8_get(ctl);
+  if (ret <= 127)
+    goto end;
 
-    ret -= 128;
-    for (;;){
-        uc = u8_get(ctl);
-        if (uc <= 127){
-            ret += (uc<<shift);
-            break;
-        }
-        uc -= 128;
-        ret += (uc<<shift);
-        shift += 7;
+  ret -= 128;
+  for (;;){
+    uc = u8_get(ctl);
+    if (uc <= 127){
+      ret += (uc<<shift);
+      break;
     }
-end:
-    return ret;
+    uc -= 128;
+    ret += (uc<<shift);
+    shift += 7;
+  }
+ end:
+  return ret;
 }
 
 SPX_END_C_DECLS__
 
 #endif // SPARSEX_INTERNALS_CTL_UTIL_HPP
-
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

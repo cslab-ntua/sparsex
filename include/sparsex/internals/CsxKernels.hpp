@@ -27,15 +27,8 @@
 
 #include <sparsex/internals/Affinity.hpp>
 #include <sparsex/internals/CsxSpmv.hpp>
-
-#if SPX_DISABLE_POOL
-#   include <boost/thread/barrier.hpp>
-#   include <boost/thread/thread.hpp>
-#   include <vector>
-#else
-#   include <sparsex/internals/Barrier.hpp>
-#   include <sparsex/internals/ThreadPool.hpp>
-#endif
+#include <sparsex/internals/Barrier.hpp>
+#include <sparsex/internals/ThreadPool.hpp>
 
 #endif
 

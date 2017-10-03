@@ -24,47 +24,47 @@
 using namespace std;
 
 namespace sparsex {
-namespace timing {
+  namespace timing {
 
-void Timer::Start()
-{
-    if (gettimeofday(&timestamp_, NULL) < 0) {
+    void Timer::Start()
+    {
+      if (gettimeofday(&timestamp_, NULL) < 0) {
         cerr << "timer error: gettimeofday()" << endl;
         exit(1);
+      }
     }
-}
 
-void Timer::Pause()
-{
-    struct timeval t_stop;
-    struct timeval t_interval;
+    void Timer::Pause()
+    {
+      struct timeval t_stop;
+      struct timeval t_interval;
 
-    if (gettimeofday(&t_stop, NULL) < 0) {
+      if (gettimeofday(&t_stop, NULL) < 0) {
         cerr << "timer error: gettimeofday()" << endl;
         exit(1);
+      }
+
+      timersub(&t_stop, &timestamp_, &t_interval);
+      timeradd(&elapsed_time_, &t_interval, &elapsed_time_);
     }
 
-    timersub(&t_stop, &timestamp_, &t_interval);
-    timeradd(&elapsed_time_, &t_interval, &elapsed_time_);
-}
+    void Timer::Stop()
+    {
+      Timer::Pause();
+      Timer::Clear();
+    }
 
-void Timer::Stop()
-{
-    Timer::Pause();
-    Timer::Clear();
-}
+    void Timer::Clear()
+    {
+      timerclear(&elapsed_time_);
+      timerclear(&timestamp_);
+    }
 
-void Timer::Clear()
-{
-    timerclear(&elapsed_time_);
-    timerclear(&timestamp_);
-}
+    double Timer::ElapsedTime()
+    {
+      return (elapsed_time_.tv_sec + 
+	      elapsed_time_.tv_usec / (double) 1000000); //USEC_PER_SEC
+    }
 
-double Timer::ElapsedTime()
-{
-    return (elapsed_time_.tv_sec + 
-            elapsed_time_.tv_usec / (double) 1000000);//USEC_PER_SEC
-}
-
-} // end of namespace timing
+  } // end of namespace timing
 } // end of namespace sparsex

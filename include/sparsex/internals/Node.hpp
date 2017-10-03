@@ -30,43 +30,44 @@
 using namespace std;
 
 namespace sparsex {
-namespace csx {
+  namespace csx {
 
-/**
- *  Keeps data of an encoding sequence.
- */
-class Node {
-public:
-    Node(uint32_t depth);
-    ~Node() {}
+    /**
+     *  Keeps data of an encoding sequence.
+     */
+    class Node {
+    public:
+      Node(uint32_t depth);
+      ~Node() {}
     
-    void PrintNode();
+      void PrintNode();
 
-    /**
-     *  Ignore the type for the encoding sequence examined.
-     *
-     *  @param type type which is ignored.
-     */
-    void Ignore(Encoding::Type type);
+      /**
+       *  Ignore the type for the encoding sequence examined.
+       *
+       *  @param type type which is ignored.
+       */
+      void Ignore(Encoding::Type type);
 
-    /**
-     *  Copies a node to a new one and inserts an extra type in the end of the
-     *  encoding sequence.
-     *  
-     *  @param type   type which is inserted in the end.
-     *  @param deltas deltas corresponding to type inserted.
-     */
-    Node MakeChild(Encoding::Type type, set<uint64_t> deltas);
+      /**
+       *  Copies a node to a new one and inserts an extra type in the end of the
+       *  encoding sequence.
+       *  
+       *  @param type   type which is inserted in the end.
+       *  @param deltas deltas corresponding to type inserted.
+       */
+      Node MakeChild(Encoding::Type type, set<uint64_t> deltas);
 
-private:
-    uint32_t depth_;
-    map<Encoding::Type, set<uint64_t> > deltas_path_;
-    Encoding::Type *type_path_;
-    Encoding::Type *type_ignore_;
-    template<typename IndexType, typename ValueType> friend class EncodingManager;
-};
+    private:
+      uint32_t depth_;
+      map<Encoding::Type, set<uint64_t> > deltas_path_;
+      Encoding::Type *type_path_;
+      Encoding::Type *type_ignore_;
+      template<typename IndexType, typename ValueType>
+      friend class EncodingManager;
+    };
 
-} // end of namespace csx
+  } // end of namespace csx
 } // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_NODE_HPP

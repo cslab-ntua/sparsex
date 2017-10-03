@@ -22,15 +22,15 @@
 #include <sparsex/internals/CsxUtil.hpp>
 
 namespace sparsex {
-namespace csx {
+  namespace csx {
 
-const unsigned long DeltaIdOffset = 0;
-const unsigned long PatternIdOffset = 10000;
+    const unsigned long DeltaIdOffset = 0;
+    const unsigned long PatternIdOffset = 10000;
 
-unsigned long GetPatternId(size_t delta_size)
-{
-    return (delta_size << 3) + DeltaIdOffset;
-}
+    unsigned long GetPatternId(size_t delta_size)
+    {
+      return (delta_size << 3) + DeltaIdOffset;
+    }
 
-} // end of namespace csx
+  } // end of namespace csx
 } // end of namespace sparsex

@@ -21,35 +21,33 @@
 #include <sparsex/internals/CsxBuild.hpp>
 
 namespace sparsex {
-namespace csx {
+  namespace csx {
 
-spm_mt_t *PrepareSpmMt()
-{
-    spm_mt_t *spm_mt;
-    RuntimeConfiguration &rt_config = RuntimeConfiguration::GetInstance();
-    RuntimeContext &rt_context = RuntimeContext::GetInstance();
+    spm_mt_t *PrepareSpmMt()
+    {
+      spm_mt_t *spm_mt;
+      RtConfig &rt_config = RtConfig::GetInstance();
+      RtCtx &rt_context = RtCtx::GetInstance();
 
-    spm_mt = new spm_mt_t;
-    spm_mt->nr_threads = rt_context.GetNrThreads();
-    spm_mt->local_buffers = NULL;
+      spm_mt = new spm_mt_t;
+      spm_mt->nr_threads = rt_context.GetNrThreads();
+      spm_mt->local_buffers = NULL;
 #if SPX_USE_NUMA
-    spm_mt->interleaved = false;
+      spm_mt->interleaved = false;
 #endif
-    spm_mt->symmetric =
-        rt_config.GetProperty<bool>(RuntimeConfiguration::MatrixSymmetric);
-    spm_mt->spm_threads = new spm_mt_thread_t[rt_context.GetNrThreads()];
-    for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
+      spm_mt->symmetric =
+        rt_config.GetProperty<bool>(RtConfig::MatrixSymmetric);
+      spm_mt->spm_threads = new spm_mt_thread_t[rt_context.GetNrThreads()];
+      for (size_t i = 0; i < rt_context.GetNrThreads(); i++) {
         spm_mt->spm_threads[i].cpu = rt_context.GetAffinity(i);
         spm_mt->spm_threads[i].node =
-            numa_node_of_cpu(rt_context.GetAffinity(i));
+	  numa_node_of_cpu(rt_context.GetAffinity(i));
         spm_mt->spm_threads[i].id = i;
         spm_mt->spm_threads[i].sense = 0;
+      }
+
+      return spm_mt;
     }
 
-    return spm_mt;
-}
-
-} // end of namespace csx
+  } // end of namespace csx
 } // end of namespace sparsex
-
-// vim:expandtab:tabstop=8:shiftwidth=4:softtabstop=4

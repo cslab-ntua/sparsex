@@ -14,9 +14,13 @@ dnl AX_CHECK_STRICT_LLVM(required_version)
 dnl
 dnl     Check for a specific set of versions of LLVM
 dnl
+dnl     AC_SUBST(LLVM_LIBDIR)
 dnl     AC_SUBST(LLVM_CPPFLAGS)
 dnl     AC_SUBST(LLVM_LDFLAGS)
 dnl     AC_SUBST(LLVM_LIBS)
+dnl     AC_SUBST(LLVM_SYSTEM_LIBS)
+dnl     AC_SUBST(CLANG_LIBS)
+dnl     AC_SUBST(CLANG_INC_SEARCH_PATH)
 dnl
 
 AC_DEFUN([AX_CHECK_STRICT_LLVM],
@@ -42,9 +46,7 @@ AC_DEFUN([AX_CHECK_STRICT_LLVM],
     fi
 
     dnl Default LLVM components required by SparseX
-    default_llvm_components="core analysis executionengine jit native dnl
-nativecodegen codegen option bitreader ipo linker bitwriter asmparser dnl
-instrumentation"
+    default_llvm_components="coroutines coverage lto core mcjit native option"
 
     AC_ARG_WITH([llvm-components],
                 [AS_HELP_STRING([--with-llvm-components@<:@=COMPONENTS@:>@],
@@ -90,10 +92,11 @@ try using the `--with-llvm' option.])
     fi
 
     dnl Everything's fine with LLVM; set the variables
+    LLVM_LIBDIR=`$llvm_config_prog --libdir`
     LLVM_CPPFLAGS=`$llvm_config_prog --cppflags`
     LLVM_LDFLAGS=`$llvm_config_prog --ldflags`
-    LLVM_LIBS=`$llvm_config_prog --libs`
-    #  $with_llvm_components 2> /dev/null
+    LLVM_LIBS=`$llvm_config_prog --libs $with_llvm_components`
+    LLVM_SYSTEM_LIBS=`$llvm_config_prog --system-libs`
 
     dnl Check for Clang
     CLANG_PREFIX=`$llvm_config_prog --prefix`
@@ -104,32 +107,12 @@ Please check your installation of LLVM and Clang.])
     fi
 
     dnl Required Clang libs
-    clang_libs="-lclangFrontendTool -lclangFrontend -lclangDriver dnl
-    -lclangSerialization -lclangCodeGen -lclangParse -lclangSema"
-    if test $llvm_version == "3.5.0"; then
-        clang_libs="$clang_libs -lclangRewriteFrontend"
-    fi
-    clang_libs="$clang_libs -lclangRewrite -lclangStaticAnalyzerFrontend dnl
-    -lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangAnalysis"
-    if test $llvm_version == "3.5.0"; then
-        clang_libs="$clang_libs -lclangEdit"
-    fi
-    clang_libs="$clang_libs -lclangAST -lclangLex -lclangBasic"
-    CLANG_LIBS=$clang_libs
-
-    # dnl Retrieve all Clang's internal libs
-    # clang_libfiles=`$llvm_config_prog --libdir`/libclang*
-    # clang_libs=""
-    # for libf in $clang_libfiles; do
-    #     soname=`basename $libf`
-    #     libname=`echo $soname | sed -e 's/^lib//' | sed -e 's/\..*//'`
-    #     clang_libs="$clang_libs -l$libname"
-    # done
-    
-    # dnl Surround libraries with appropriate linker flags to allow random search
-    # dnl FIXME: these flags work for gcc only
-    # clang_libs="-Wl,--start-group $clang_libs -Wl,--end-group"
-    # CLANG_LIBS="$clang_libs"
+    CLANG_LIBS="-lclangCodeGen -lclangAST -lclangASTMatchers -lclangAnalysis dnl
+-lclangBasic -lclangDriver -lclangEdit -lclangFrontend -lclangFrontendTool dnl
+-lclangLex -lclangParse -lclangSema -lclangEdit -lclangRewrite dnl
+-lclangRewriteFrontend -lclangStaticAnalyzerFrontend dnl
+-lclangStaticAnalyzerCheckers -lclangStaticAnalyzerCore -lclangSerialization dnl
+-lclangToolingCore -lclangTooling -lclangFormat"
 
     dnl Retrieve Clang's system header search path
     clang_inc_search_dirs=`${CLANG_PREFIX}/bin/clang -E -v -xc -std=c99 - dnl
@@ -143,20 +126,9 @@ Please check your installation of LLVM and Clang.])
     dnl Substitute the variables and return
     AC_SUBST([LLVM_CPPFLAGS])
     AC_SUBST([LLVM_LDFLAGS])
+    AC_SUBST([LLVM_LIBDIR])
     AC_SUBST([LLVM_LIBS])
+    AC_SUBST([LLVM_SYSTEM_LIBS])
     AC_SUBST([CLANG_LIBS])
     AC_SUBST([CLANG_INC_SEARCH_PATH])
-
-    dnl Add to LIBS
-dnl    LIBS="$CLANG_LIBS $LLVM_LIBS $LIBS"
-
-    dnl The zlib and libtinfo libraries need to be linked for llvm-3.5
-    if test $llvm_version == "3.5.0"; then
-        AC_CHECK_LIB([z], [compress2], [],
-            [AC_MSG_ERROR([Could not find zlib library required by dnl
-LLVM $llvm_version.])])
-        AC_CHECK_LIB([ncurses], [crc32], [],
-            [AC_MSG_ERROR([Could not find tinfo library required by dnl
-LLVM $llvm_version.])])
-    fi
 ])

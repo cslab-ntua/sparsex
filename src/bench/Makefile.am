@@ -17,7 +17,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/bench \
 	$(AX_CPPFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
-AM_LDFLAGS	= \
+AM_LDFLAGS = \
 	-L$(top_builddir)/src/api/.libs \
 	$(AX_LDFLAGS)
 
@@ -31,7 +31,6 @@ noinst_HEADERS = \
 	Timer.hpp
 
 noinst_PROGRAMS = bench_spmv
-
 bench_spmv_SOURCES = \
 	Bench.cpp \
 	main.cpp \
@@ -52,11 +51,9 @@ AM_LDFLAGS += $(POSKI_LDFLAGS)
 bench_spmv_SOURCES += PoskiModule.cpp
 endif
 
+bench_spmv_LDFLAGS = -rpath $(LLVM_LIBDIR)
 bench_spmv_LDADD = \
-	$(top_builddir)/src/api/.libs/libsparsex.la \
-	$(top_builddir)/src/internals/.libs/libsparseximpl.la \
-	$(CLANG_LIBS) \
-	$(LLVM_LIBS) -ldl -lm
+	$(top_builddir)/src/api/.libs/libsparsex.la
 
 if SPX_BUILD_BENCH_MKL
 bench_spmv_LDADD += $(MKL_LIBS)

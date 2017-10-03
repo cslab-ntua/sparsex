@@ -66,6 +66,10 @@ AX_CHECK_CPPFLAGS
 dnl Initialize libtool after compilers; its sets CFLAGS otherwise
 LT_PREREQ([2.2.2])
 LT_INIT
+dnl Some distributions are patched to ignore dependencies in a way that may
+dnl break our build, so we re-enable them for our project
+link_all_deplibs=yes
+link_all_deplibs_CXX=yes
 
 dnl --enable-bench option
 AC_ARG_ENABLE([bench],
@@ -118,8 +122,7 @@ AX_CHECK_BOOST_LIB([atomic])
 AX_CHECK_BOOST_LIB([regex])
 AX_CHECK_BOOST_LIB([serialization])
 AX_CHECK_BOOST_LIB([system])
-AX_CHECK_BOOST_LIB([thread])
-AX_CHECK_STRICT_LLVM(["3.5.0" "3.0"])
+AX_CHECK_STRICT_LLVM(["5.0.0" "4.0.1" "4.0.0"])
 AX_CHECK_MKL
 AX_CHECK_POSKI
 AC_CHECK_LIB([pthread], [pthread_create], [],

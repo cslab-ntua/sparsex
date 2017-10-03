@@ -21,100 +21,100 @@
 
 void spx_log_disable_all()
 {
-    DisableLogging();
+  DisableLogging();
 }
 
 void spx_log_error_console()
 {
-    EnableErrorConsole();
+  EnableErrorConsole();
 }
 
 void spx_log_warning_console()
 {
-    EnableWarningConsole();
+  EnableWarningConsole();
 }
 
 void spx_log_info_console()
 {
-    EnableInfoConsole();
+  EnableInfoConsole();
 }
 
 void spx_log_verbose_console()
 {
-    EnableVerboseConsole();
+  EnableVerboseConsole();
 }
 
 void spx_log_debug_console()
 {
-    EnableDebugConsole();
+  EnableDebugConsole();
 }
 
 void spx_log_error_file()
 {
-    EnableErrorFile();
+  EnableErrorFile();
 }
 
 void spx_log_warning_file()
 {
-    EnableWarningFile();
+  EnableWarningFile();
 }
 
 void spx_log_info_file()
 {
-    EnableInfoFile();
+  EnableInfoFile();
 }
 
 void spx_log_debug_file()
 {
-    EnableDebugFile();
+  EnableDebugFile();
 }
 
 void spx_log_all_console()
 {
-    EnableAllConsole();
+  EnableAllConsole();
 }
 
 void spx_log_all_file(const char *file)
 {
-    EnableAllFile(file);
+  EnableAllFile(file);
 }
 
 void spx_log_set_file(const char *file)
 {
-    UseFile(file);
+  UseFile(file);
 }
 
 void spx_init()
 {
-    EnableWarningConsole();
+  EnableWarningConsole();
 }
 
 void spx_finalize()
 {
-    /* Cleanups */
+  /* Cleanups */
 }
 
 void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
                       const char *function)
 {
-    void *ret;
-    ret = malloc(x);
-    if (!ret) {
-        err_handle(SPX_ERR_MEM_ALLOC, sourcefile, lineno, function, NULL);
-        exit(1);
-    }
+  void *ret;
+  ret = malloc(x);
+  if (!ret) {
+    err_handle(SPX_ERR_MEM_ALLOC, sourcefile, lineno, function, NULL);
+    exit(1);
+  }
 
-    return ret;
+  return ret;
 }
 
 void free_internal(void *ptr, const char *sourcefile, unsigned long lineno,
                    const char *function)
 {
-    if (!ptr) {
-        err_handle(SPX_ERR_MEM_FREE, sourcefile, lineno, function, NULL);
-        exit(1);
-    }
+  if (!ptr) {
+    err_handle(SPX_ERR_MEM_FREE, sourcefile, lineno, function, NULL);
+    exit(1);
+  }
 
-    free(ptr);
-    ptr = NULL;
+  free(ptr);
+  ptr = NULL;
 }

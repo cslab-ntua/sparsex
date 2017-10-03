@@ -27,37 +27,37 @@
 using namespace std;
 
 namespace sparsex {
-namespace timing {
+  namespace timing {
 
-class TimerCollection
-{
-public:
-    TimerCollection() {}
-
-    void CreateTimer(const char *name, const char *description)
+    class TimerCollection
     {
+    public:
+      TimerCollection() {}
+
+      void CreateTimer(const char *name, const char *description)
+      {
         timers_.emplace(name, Timer(description));
-    }
+      }
 
-    void StartTimer(const char *name)
-    {
+      void StartTimer(const char *name)
+      {
         timers_[name].Start();
-    }
+      }
 
-    void PauseTimer(const char *name)
-    {
+      void PauseTimer(const char *name)
+      {
         timers_[name].Pause();
-    }
+      }
 
-    void PrintAllTimers(ostream &os) const;
+      void PrintAllTimers(ostream &os) const;
 
-private:
-    boost::unordered_map<const char *, Timer> timers_;
-    TimerCollection(const TimerCollection &); // Do not implement
-    TimerCollection &operator=(const TimerCollection &); // Do not implement
-};
+    private:
+      boost::unordered_map<const char *, Timer> timers_;
+      TimerCollection(const TimerCollection &); // Do not implement
+      TimerCollection &operator=(const TimerCollection &); // Do not implement
+    };
 
-} // end of namespace timing
+  } // end of namespace timing
 } // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_TIMING_FRAMEWORK_HPP

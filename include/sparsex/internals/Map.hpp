@@ -21,9 +21,9 @@
 
 ///> The definition of map used for symmetric sparse matrices.
 typedef struct map {
-    unsigned int length;
-    unsigned int *cpus;
-    unsigned int *elems_pos;
+  unsigned int length;
+  unsigned int *cpus;
+  unsigned int *elems_pos;
 } map_t;
 
-#endif /* SPARSEX_INTERNALS_MAP_HPP */
+#endif  // SPARSEX_INTERNALS_MAP_HPP

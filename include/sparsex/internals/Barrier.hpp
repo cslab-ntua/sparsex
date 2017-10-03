@@ -23,24 +23,24 @@
 #include <cstdlib>
 
 namespace sparsex {
-namespace runtime {
+  namespace runtime {
 
 #define BARRIER_TIMEOUT 300000
 
-/*
- * In a centralized barrier, every thread spins on a global “sense” flag. A
- * global count variable holds the number of threads. The global sense flag is
- * initially set to an initial state to indicate that the barrier hasn’t been 
- * reached. When a thread reaches the barrier, it decrements the global count to
- * indicate that it has reached the barrier. The last thread to reach the
- * barrier resets count to the number of threads, and toggles the global
- * “sense”, which indicates to the other threads spinning (or sleeping) that
- * all threads have reached the barrier. At this point, all threads stop
- * spinning and continue execution.
- */
-void centralized_barrier(int *local_sense, size_t nr_threads);
+    /*
+     * In a centralized barrier, every thread spins on a global “sense” flag. A
+     * global count variable holds the number of threads. The global sense flag
+     * is initially set to an initial state to indicate that the barrier hasn’t
+     * been reached. When a thread reaches the barrier, it decrements the global
+     * count to indicate that it has reached the barrier. The last thread to
+     * reach the barrier resets count to the number of threads, and toggles the
+     * global “sense”, which indicates to the other threads spinning (or
+     * sleeping) that all threads have reached the barrier. At this point, all
+     * threads stop spinning and continue execution.
+     */
+    void centralized_barrier(int *local_sense, size_t nr_threads);
 
-} // end of namespace runtime
+  } // end of namespace runtime
 } // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_BARRIER_HPP

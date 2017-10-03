@@ -26,26 +26,26 @@ using namespace sparsex::timing;
 
 int main()
 {
-    Timer timer;
+  Timer timer;
 
-	cout << "sleeping for 1 second and reporting:\n";
-	timer.Start();
-	sleep(1);
-	timer.Pause();
-	cout << "timed %lf secs\n", timer.ElapsedTime();
+  cout << "sleeping for 1 second and reporting:\n";
+  timer.Start();
+  sleep(1);
+  timer.Pause();
+  cout << "timed %lf secs\n", timer.ElapsedTime();
 
-    timer.Clear();
-	cout << "sleeping 2 times for 1 second and reporting:\n";
-	timer.Start();
-	sleep(1);
-	timer.Pause();
+  timer.Clear();
+  cout << "sleeping 2 times for 1 second and reporting:\n";
+  timer.Start();
+  sleep(1);
+  timer.Pause();
 
-	sleep(1);
+  sleep(1);
 
-	timer.Start();
-	sleep(1);
-	timer.Pause();
-	cout << "timed %lf secs\n", timer.ElapsedTime();
+  timer.Start();
+  sleep(1);
+  timer.Pause();
+  cout << "timed %lf secs\n", timer.ElapsedTime();
 	
-	return 0;
+  return 0;
 }

@@ -123,7 +123,6 @@ AC_DEFUN([AX_CHECK_BOOST_LIB],
           [$1], [regex], [boost_release=1.18.0],
           [$1], [serialization], [boost_release=1.32.0],
           [$1], [system], [boost_release=1.35.0],
-          [$1], [thread], [boost_release=1.25.0],
           [$1], [unit_test_framework], [boost_release=1.21.0],
           [boost_release=1.11])
 

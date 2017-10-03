@@ -26,66 +26,66 @@
 using namespace std;
 
 namespace sparsex {
-namespace timing {
+  namespace timing {
 
-class Timer
-{
-public:
+    class Timer
+    {
+    public:
 
-    Timer()
+      Timer()
         : description_(),
           elapsed_time_(),
           timestamp_()
-    {
+      {
         Clear();
-    }
+      }
 
-    Timer(string desc)
+      Timer(string desc)
         : description_(desc), 
           elapsed_time_(), 
           timestamp_()  
-    {
+      {
         Clear();
-    }
+      }
 
-    Timer(const char *desc, const char *desc2)
+      Timer(const char *desc, const char *desc2)
         : description_((string) desc), 
           elapsed_time_(), 
           timestamp_()
-    {
+      {
         Clear();
-    }
+      }
 
-    ~Timer() {}
+      ~Timer() {}
 
-    void Start();
-    void Pause();
-    void Stop();
-    void Clear();
-    double ElapsedTime();
+      void Start();
+      void Pause();
+      void Stop();
+      void Clear();
+      double ElapsedTime();
 
-    void SetDescription(const char *desc)
-    {
+      void SetDescription(const char *desc)
+      {
         description_ = (string) desc;
-    }
+      }
 
-    void SetDescription(string desc)
-    {
+      void SetDescription(string desc)
+      {
         description_ = desc;
-    }
+      }
 
-    string GetDescription()
-    {
+      string GetDescription()
+      {
         return description_;
-    }
+      }
 
-private:
-    string description_;
-    struct timeval elapsed_time_;
-    struct timeval timestamp_;
-};
+    private:
+      string description_;
+      struct timeval elapsed_time_;
+      struct timeval timestamp_;
+    };
 
-} // end of namespace timing
+  } // end of namespace timing
 } // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_TIMER_HPP

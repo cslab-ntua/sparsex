@@ -23,38 +23,38 @@
 #include <sched.h>
 
 namespace sparsex {
-namespace runtime {
+  namespace runtime {
 
-void setaffinity_oncpu(unsigned int cpu)
-{
-	cpu_set_t cpu_mask;
+    void setaffinity_oncpu(unsigned int cpu)
+    {
+      cpu_set_t cpu_mask;
 
-	CPU_ZERO(&cpu_mask);
-	CPU_SET(cpu, &cpu_mask);
+      CPU_ZERO(&cpu_mask);
+      CPU_SET(cpu, &cpu_mask);
 
-	int err = sched_setaffinity(0, sizeof(cpu_set_t), &cpu_mask);
-	if (err) {
-		LOG_ERROR << "sched_setaffinity failed\n";
-		exit(1);
-	}
-}
+      int err = sched_setaffinity(0, sizeof(cpu_set_t), &cpu_mask);
+      if (err) {
+	LOG_ERROR << "sched_setaffinity failed\n";
+	exit(1);
+      }
+    }
 
-int get_cpu_count()
-{
-    cpu_set_t cpu_mask;
+    int get_cpu_count()
+    {
+      cpu_set_t cpu_mask;
 
-    CPU_ZERO(&cpu_mask);
-    int err = sched_getaffinity(0, sizeof(cpu_set_t), &cpu_mask);
-	if (err) {
-		LOG_ERROR << "sched_getaffinity failed\n";
-		exit(1);
-	}
+      CPU_ZERO(&cpu_mask);
+      int err = sched_getaffinity(0, sizeof(cpu_set_t), &cpu_mask);
+      if (err) {
+	LOG_ERROR << "sched_getaffinity failed\n";
+	exit(1);
+      }
 
-    int count = CPU_COUNT(&cpu_mask);
-    printf("%d\n", count);
+      int count = CPU_COUNT(&cpu_mask);
+      printf("%d\n", count);
     
-    return count;
-}
+      return count;
+    }
 
-} // end of namespace runtime
+  } // end of namespace runtime
 } // end of namespace sparsex

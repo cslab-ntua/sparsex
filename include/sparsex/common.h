@@ -273,7 +273,7 @@ void spx_finalize();
  *  A malloc() wrapper.
  */
 #define spx_malloc(type, size) \
-	(type *) malloc_internal(size, __FILE__, __LINE__, __FUNCTION__)
+	(type *) malloc_internal(size, __FILE__, __LINE__, __func__)
 void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
                       const char *function);
 
@@ -281,7 +281,7 @@ void *malloc_internal(size_t x, const char *sourcefile, unsigned long lineno,
  *  A free() wrapper.
  */
 #define spx_free(object) \
-    free_internal(object, __FILE__, __LINE__, __FUNCTION__)
+    free_internal(object, __FILE__, __LINE__, __func__)
 void free_internal(void *ptr, const char *sourcefile, unsigned long lineno,
                    const char *function);
 

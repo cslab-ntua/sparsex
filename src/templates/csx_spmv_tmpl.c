@@ -36,7 +36,7 @@
 // are present
 static void align_ptr(uint8_t **ctl, int align)
 {
-	*ctl = ALIGN(*ctl, align);
+  *ctl = ALIGN(*ctl, align);
 }
 #pragma GCC diagnostic pop
 
@@ -44,16 +44,16 @@ static void align_ptr(uint8_t **ctl, int align)
 static void ctl_print(uint8_t *ctl, spx_index_t start, spx_index_t end,
                       const char *descr)
 {
-	for (spx_index_t i = start; i < end; i++) {
-		printf("%s[%ld]: %p = %d\n", descr, i, &ctl[i], ctl[i]);
-        fflush(stdout);
-    }
+  for (spx_index_t i = start; i < end; i++) {
+    printf("%s[%ld]: %p = %d\n", descr, i, &ctl[i], ctl[i]);
+    fflush(stdout);
+  }
 }
 
 static void deref(void *ptr)
 {
-	volatile unsigned long val = *((unsigned long *) ptr);
-	val++;
+  volatile unsigned long val = *((unsigned long *) ptr);
+  val++;
 }
 #endif
 
@@ -66,36 +66,36 @@ ${spmv_func_definitions}
 void spm_csx_multiply(void *spm, vector_t *in, vector_t *out,
                       spx_value_t scale_f, vector_t *local_out /* unused */)
 {
-	csx_matrix_t *csx = (csx_matrix_t *) spm;
-	spx_value_t *x = in->elements;
-	spx_value_t *y = out->elements;
-	spx_value_t *v = csx->values;
-	spx_value_t *x_curr = x;
-	spx_value_t *y_curr = y + csx->row_start;
-	register spx_value_t yr = 0;
-	uint8_t *ctl = csx->ctl;
-	uint8_t *ctl_end = ctl + csx->ctl_size;
-	uint8_t size, flags;
-	uint8_t patt_id;
+  csx_matrix_t *csx = (csx_matrix_t *) spm;
+  spx_value_t *x = in->elements;
+  spx_value_t *y = out->elements;
+  spx_value_t *v = csx->values;
+  spx_value_t *x_curr = x;
+  spx_value_t *y_curr = y + csx->row_start;
+  register spx_value_t yr = 0;
+  uint8_t *ctl = csx->ctl;
+  uint8_t *ctl_end = ctl + csx->ctl_size;
+  uint8_t size, flags;
+  uint8_t patt_id;
 
-    /* uint8_t *ctl_start = ctl; */
-   /* ctl_print(ctl, 0, csx->ctl_size, "ctl"); */
-	do {
-		flags = *ctl++;
-		size = *ctl++;
-		if (test_bit(&flags, CTL_NR_BIT)) {
-			*y_curr += yr;
-			yr = 0;
-			${new_row_hook}
-			x_curr = x;
-		}
+  /* uint8_t *ctl_start = ctl; */
+  /* ctl_print(ctl, 0, csx->ctl_size, "ctl"); */
+  do {
+    flags = *ctl++;
+    size = *ctl++;
+    if (test_bit(&flags, CTL_NR_BIT)) {
+      *y_curr += yr;
+      yr = 0;
+      ${new_row_hook}
+      x_curr = x;
+    }
 
-		${next_x}
-		patt_id = flags & CTL_PATTERN_MASK;
-		${body_hook}
-        /* printf("ctl moved at %zd bytes\n", ctl - ctl_start); */
-        /* fflush(stdout); */
-	} while (ctl < ctl_end);
+    ${next_x}
+    patt_id = flags & CTL_PATTERN_MASK;
+    ${body_hook}
+    /* printf("ctl moved at %zd bytes\n", ctl - ctl_start); */
+    /* fflush(stdout); */
+  } while (ctl < ctl_end);
 
-	*y_curr += yr;
+  *y_curr += yr;
 }

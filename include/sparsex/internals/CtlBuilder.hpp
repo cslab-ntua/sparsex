@@ -28,45 +28,45 @@
 using namespace sparsex::utilities;
 
 namespace sparsex {
-namespace csx {
+  namespace csx {
 
-class CtlBuilder
-{
-public:
-    CtlBuilder(size_t size_hint)
+    class CtlBuilder
+    {
+    public:
+      CtlBuilder(size_t size_hint)
         : ctl_da_(CtlDynamicArray(size_hint))
-    { }
+      { }
 
-    size_t GetCtlSize() const
-    {
+      size_t GetCtlSize() const
+      {
         return ctl_da_.GetSize();
-    }
+      }
 
-    uint8_t *Finalize()
-    {
+      uint8_t *Finalize()
+      {
         // ctl_da_.ShrinkToFit();
         return ctl_da_.TakeElems();
-    }
+      }
 
-    void AppendCtlHead(bool nr, size_t rowjmp, uint8_t id, uint8_t size,
-                       size_t ucol, size_t ucol_size, bool full_colind);
-    void AppendVariableInt(unsigned long val);
-    void AppendFixedInt(unsigned long val, size_t nr_bytes);
+      void AppendCtlHead(bool nr, size_t rowjmp, uint8_t id, uint8_t size,
+			 size_t ucol, size_t ucol_size, bool full_colind);
+      void AppendVariableInt(unsigned long val);
+      void AppendFixedInt(unsigned long val, size_t nr_bytes);
 
-private:
-    void AlignCtl(size_t boundary);
+    private:
+      void AlignCtl(size_t boundary);
 
 #if SPX_USE_NUMA
-    typedef DynamicArray<uint8_t, reallocator<uint8_t, NumaAllocator> >
-    CtlDynamicArray;
+      typedef DynamicArray<uint8_t, reallocator<uint8_t, NumaAllocator> >
+      CtlDynamicArray;
 #else
-    typedef DynamicArray<uint8_t> CtlDynamicArray;
+      typedef DynamicArray<uint8_t> CtlDynamicArray;
 #endif
 
-    CtlDynamicArray ctl_da_;
-};
+      CtlDynamicArray ctl_da_;
+    };
 
-} // end of namespace csx
+  } // end of namespace csx
 } // end of namespace sparsex
 
 #endif  // SPARSEX_INTERNALS_CTL_BUILDER_HPP

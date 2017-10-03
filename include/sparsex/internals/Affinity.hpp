@@ -25,12 +25,12 @@
 #include <sched.h>
 
 namespace sparsex {
-namespace runtime {
+  namespace runtime {
 
-void setaffinity_oncpu(unsigned int cpu);
-int get_cpu_count();
+    void setaffinity_oncpu(unsigned int cpu);
+    int get_cpu_count();
 
-} // end of namespace runtime
+  } // end of namespace runtime
 } // end of namespace sparsex
 
 #endif // SPARSEX_INTERNALS_AFFINITY_HPP

@@ -28,10 +28,10 @@
 SPX_BEGIN_C_DECLS__
 
 struct vector_struct {
-    spx_value_t *elements;
-    size_t size;
-    int alloc_type;
-    int vec_mode;
+  spx_value_t *elements;
+  size_t size;
+  int alloc_type;
+  int vec_mode;
 };
 
 typedef struct vector_struct vector_t;

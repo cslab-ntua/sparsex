@@ -97,7 +97,7 @@ typedef void (*spx_errhandler_t) (spx_error_t, const char *, unsigned long,
  *  @param[in] code     nonzero error code, see the list above
  */
 #define SETERROR_0(code) \
-    spx_err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, NULL)
+    spx_err_get_handler()(code, __FILE__, __LINE__, __func__, NULL)
 
 /**
  *  @ingroup seterror_group 
@@ -105,14 +105,14 @@ typedef void (*spx_errhandler_t) (spx_error_t, const char *, unsigned long,
  *  @param[in] message  error message, if NULL a default error message is used
  */
 #define SETERROR_1(code, message) \
-    spx_err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, message)
+    spx_err_get_handler()(code, __FILE__, __LINE__, __func__, message)
 
 /**
  *  @ingroup seterror_group 
  *  @param[in] code     nonzero error code, see the list above
  */
 #define SETWARNING(code) \
-    spx_err_get_handler()(code, __FILE__, __LINE__, __FUNCTION__, NULL)
+    spx_err_get_handler()(code, __FILE__, __LINE__, __func__, NULL)
 
 /**
  *  Default error handler that is called through the macros #SETERROR_0/1

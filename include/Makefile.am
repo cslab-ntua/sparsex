@@ -23,11 +23,12 @@ nobase_include_HEADERS = \
 	sparsex/internals/Affinity.hpp \
 	sparsex/internals/Allocators.hpp \
 	sparsex/internals/Barrier.hpp \
-	sparsex/internals/Compiler.hpp \
 	sparsex/internals/Csr.hpp \
+	sparsex/internals/CodeExecutor.hpp \
+	sparsex/internals/Csx.hpp \
 	sparsex/internals/CsxBuild.hpp \
 	sparsex/internals/CsxGetSet.hpp \
-	sparsex/internals/Csx.hpp \
+	sparsex/internals/CsxJit.hpp \
 	sparsex/internals/CsxKernels.hpp \
 	sparsex/internals/CsxManager.hpp \
 	sparsex/internals/CsxSaveRestore.hpp \
@@ -41,8 +42,8 @@ nobase_include_HEADERS = \
 	sparsex/internals/EncodingManager.hpp \
 	sparsex/internals/Encodings.hpp \
 	sparsex/internals/Facade.hpp \
+	sparsex/internals/JitCompiler.hpp \
 	sparsex/internals/JitConfig.hpp \
-	sparsex/internals/Jit.hpp \
 	sparsex/internals/JitUtil.hpp \
 	sparsex/internals/Map.hpp \
 	sparsex/internals/Mmf.hpp \

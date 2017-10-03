@@ -18,15 +18,18 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = $(AX_CFLAGS)
 AM_CXXFLAGS = $(AX_CXXFLAGS)
-AM_LDFLAGS	= \
+AM_LDFLAGS = \
 	-L$(top_builddir)/src/internals/.libs \
 	$(AX_LDFLAGS)
 
 lib_LTLIBRARIES = libsparsex.la
+# Dummy C++ source to cause C++ linking
+nodist_EXTRA_libsparsex_la_SOURCES = dummy.cxx
 libsparsex_la_SOURCES = \
 	common.c \
 	error.c \
 	matvec.c
 
-libsparsex_la_LDFLAGS = $(AM_LDFLAGS) -version-info 1:0:0
-libsparsex_la_LIBADD = -lsparseximpl
+libsparsex_la_LDFLAGS = -version-info 1:2:0
+libsparsex_la_LIBADD = \
+	$(top_builddir)/src/internals/.libs/libsparseximpl.la
