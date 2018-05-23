@@ -107,9 +107,9 @@ namespace sparsex {
       // Create SourceManager
       instance_->createSourceManager(instance_->getFileManager());
       // Create Preprocessor using the invocation, file, and source managers
-      instance_->createPreprocessor(clang::TU_Complete);      
+      instance_->createPreprocessor(clang::TU_Complete);
     }
-  
+
     unique_ptr<llvm::Module>
     ClangCompiler::Compile(const string &source) const
     {
@@ -121,7 +121,7 @@ namespace sparsex {
       // Set the input file for compilation
       clang::FrontendOptions &frontend_opts = instance_->getFrontendOpts();
       frontend_opts.Inputs.clear(); // clear any old inputs
-#if CLANG_VERSION_MAJOR == 5
+#if CLANG_VERSION_MAJOR == 5 || CLANG_VERSION_MAJOR == 6
       frontend_opts.Inputs.push_back(clang::FrontendInputFile
 				     (tmpfile, clang::InputKind::C));
 #elif CLANG_VERSION_MAJOR == 4
@@ -148,7 +148,7 @@ namespace sparsex {
       // Note: takeModule() returns a unique_ptr<>
       return llvm_codegen->takeModule();
     }
-  
+
     void
     ClangCompiler::AddIncludeSearchPath(const string &inc_path, Options type)
     {
@@ -156,10 +156,10 @@ namespace sparsex {
       if (type == IncludePathSystem) {
 	inc_group = clang::frontend::System;
       }
-    
+
       clang::HeaderSearchOptions &header_search =
 	invocation_->getHeaderSearchOpts();
-    
+
       boost::char_separator<char> path_sep(":");
       boost::tokenizer<boost::char_separator<char> > path_tokens(inc_path,
 								 path_sep);
@@ -168,6 +168,6 @@ namespace sparsex {
 	   tok_iter != path_tokens.end(); ++tok_iter)
 	header_search.AddPath(*tok_iter, inc_group, false, false);
     }
-  
+
   } // end of namespace jit
 } // end of namespace sparsex
