@@ -110,7 +110,7 @@ The simplest way to compile this package is:
        preferred LLVM installation through the ‘--with-llvm’ configuration 
        option (by providing the absolute path to the LLVM configuration script 
        “llvm-config”). Similarly for the Boost library you can use the 
-       ‘--with-boostdir’ option.
+       ‘--with-boostdir’, ‘--with-boostlibdir’ options.
 
        $ cd SPARSEX_DIR
        $ ./configure [options]

@@ -122,7 +122,7 @@ AX_CHECK_BOOST_LIB([atomic])
 AX_CHECK_BOOST_LIB([regex])
 AX_CHECK_BOOST_LIB([serialization])
 AX_CHECK_BOOST_LIB([system])
-AX_CHECK_STRICT_LLVM(["5.0.0" "4.0.1" "4.0.0"])
+AX_CHECK_STRICT_LLVM(["6.0.0" "5.0.0" "4.0.1" "4.0.0"])
 AX_CHECK_MKL
 AX_CHECK_POSKI
 AC_CHECK_LIB([pthread], [pthread_create], [],
