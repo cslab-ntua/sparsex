@@ -82,3 +82,11 @@ src/examples/matrix_caching_example_p2
 src/examples/mmf_example
 src/examples/reordering_example
 src/internals/logger/.dirstamp
+
+# Generated after building tests
+test/src/test_binary_p1
+test/src/test_binary_p2
+test/src/test_dynarray
+test/src/test_element
+test/src/test_sparsex
+test/src/test_timer
