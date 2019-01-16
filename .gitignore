@@ -90,3 +90,7 @@ test/src/test_dynarray
 test/src/test_element
 test/src/test_sparsex
 test/src/test_timer
+
+# Generated as test output
+test_sparsex.err
+test_sparsex.out
