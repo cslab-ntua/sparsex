@@ -70,3 +70,15 @@ include/sparsex/internals/Config.hpp
 include/sparsex/version.h
 scripts/sparsex-config
 test/scripts/test-sparsex.sh
+
+# Generated after building
+*.lo
+.libs
+*.la
+src/examples/advanced_example
+src/examples/csr_example
+src/examples/matrix_caching_example_p1
+src/examples/matrix_caching_example_p2
+src/examples/mmf_example
+src/examples/reordering_example
+src/internals/logger/.dirstamp
